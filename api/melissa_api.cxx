@@ -48,20 +48,16 @@ int getCommSize()
 
 struct ServerRank
 {
-  void * data_push_connection;
   void * data_request_connection;
 
-  ServerRank(const char * addr_push, const char * addr_request)
+  ServerRank(const char * addr_request)
   {
-    data_push_connection = zmq_socket (context, ZMQ_PUSH);
-    zmq_connect (data_push_connection, addr_push);
     data_request_connection = zmq_socket (context, ZMQ_REQ);
     zmq_connect (data_request_connection, addr_request);
   }
 
   ~ServerRank()
   {
-    zmq_close(data_push_connection);
     zmq_close(data_request_connection);
   }
 
@@ -75,11 +71,11 @@ struct ServerRank
     buf[1] = getRank();
     buf[2] = current_state_id;
     buf[3] = timestamp; // TODO: is incremented on the server or client side
-    zmq_msg_send(data_push_connection, &msg, ZMQ_SNDMORE);
+    zmq_msg_send(data_request_connection, &msg, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
     zmq_msg_init_data(&msg, values, doubles_to_send * sizeof(double), NULL, NULL);
-    zmq_msg_send(data_push_connection, &msg, 0);
+    zmq_msg_send(data_request_connection, &msg, 0);
     zmq_msg_close(&msg);
   }
 
@@ -88,26 +84,17 @@ struct ServerRank
 // receive a first message that is 1 if we want to change the state, otherwise 0
 // the first message also contains out_current_state_id and out_timestamp
 // the 2nd message just consists of doubles that will be put into out_values
-    zmq_msg_t msg;
-    zmq_msg_init_size(&msg, 2 * sizeof(int));
-    int * buf = zmq_msg_data(&msg);
-    buf[0] = getSimuId();
-    buf[1] = getRank();
-    zmq_msg_send(data_request_connection, &msg, 0);
-    zmq_msg_close(&msg);
-
 
     zmq_msg_init(&msg);
     zmq_msg_recv(data_request_connection, &msg, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
-    buf = zmq_msg_data(&msg);
+    int * buf = zmq_msg_data(&msg);
     *out_current_state_id = buf[0];
     *out_timestamp = buf[1];
-    int changed_new_state = buf[2];
-    assert(changed_new_state == 0 || changed_new_state == 1);
+    DataMessageType type = buf[2];
     zmq_msg_close(&msg);
 
-    if (changed_new_state == 1)
+    if (type == CHANGE_STATE)
     {
       int more;
       size_t more_size = sizeof (more);
@@ -118,8 +105,15 @@ struct ServerRank
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
       zmq_msg_close(&msg);
     }
+    else if (type == QUIT)
+    {
+      melissa_finalize();
+    }
+    else
+    {
+      assert(type == KEEP_STATE);
+    }
   }
-
 };
 
 
@@ -160,16 +154,17 @@ struct Field {
     }
   }
 
+  // TODO: this will crash if there are more than two fields? maybe use dealer socket that supports send send recv recv scheme.
   void putState(double * values) {
+    // send every state part to the right server rank
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
-      // send state to server.
       csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp);
     }
   }
 
   void getState(double * values) {
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
-      // receive state from server.
+      // receive state parts from every serverrank.
       csr->server_rank->receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
     }
   }
@@ -284,7 +279,7 @@ void first_melissa_init(MPI_Comm comm_)
   // Fill server ranks array...
   for (int i = 0; i < server.comm_size; ++i)
   {
-    server_ranks.push_back(new ServerRank(server.port_names[i], server.port_names[i+server.comm_size]));
+    server_ranks.push_back(new ServerRank(server.port_names[i]));
   }
 }
 
@@ -343,10 +338,9 @@ void melissa_expose(const char *field_name, double *values)
 
 void melissa_finalize()
 {
-  // TODO: close all connections
+  // TODO: close all connections [should be DONE]
+  // TODO: free all pointers?
   // not an api function anymore but activated if a finalization message is received.
-  // dirty but working:
-  //
   for (auto sr = server_ranks.begin(); sr < server_ranks.end(); sr++)
   {
     delete *sr;
