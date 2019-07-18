@@ -3,3 +3,11 @@ enum ConfigurationMessageType {
   REGISTER_FIELD
 };
 
+
+enum DataMessageType {
+  CHANGE_STATE,
+  KEEP_STATE,
+  QUIT
+};
+
+
