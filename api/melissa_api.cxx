@@ -48,17 +48,17 @@ int getCommSize()
 
 struct ServerRank
 {
-  void * data_request_connection;
+  void * data_request_socket;
 
   ServerRank(const char * addr_request)
   {
-    data_request_connection = zmq_socket (context, ZMQ_REQ);
-    zmq_connect (data_request_connection, addr_request);
+    data_request_socket = zmq_socket (context, ZMQ_REQ);
+    zmq_connect (data_request_socket, addr_request);
   }
 
   ~ServerRank()
   {
-    zmq_close(data_request_connection);
+    zmq_close(data_request_socket);
   }
 
   void send(double * values, size_t doubles_to_send, int current_state_id, int timestamp)
@@ -71,11 +71,11 @@ struct ServerRank
     buf[1] = getRank();
     buf[2] = current_state_id;
     buf[3] = timestamp; // TODO: is incremented on the server or client side
-    zmq_msg_send(data_request_connection, &msg, ZMQ_SNDMORE);
+    zmq_msg_send(data_request_socket, &msg, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
     zmq_msg_init_data(&msg, values, doubles_to_send * sizeof(double), NULL, NULL);
-    zmq_msg_send(data_request_connection, &msg, 0);
+    zmq_msg_send(data_request_socket, &msg, 0);
     zmq_msg_close(&msg);
   }
 
@@ -86,7 +86,7 @@ struct ServerRank
 // the 2nd message just consists of doubles that will be put into out_values
 
     zmq_msg_init(&msg);
-    zmq_msg_recv(data_request_connection, &msg, 0);
+    zmq_msg_recv(data_request_socket, &msg, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
     int * buf = zmq_msg_data(&msg);
     *out_current_state_id = buf[0];
@@ -98,10 +98,10 @@ struct ServerRank
     {
       int more;
       size_t more_size = sizeof (more);
-      zmq_getsockopt (data_request_connection, ZMQ_RCVMORE, &more, &more_size);
+      zmq_getsockopt (data_request_socket, ZMQ_RCVMORE, &more, &more_size);
       assert(more);
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
-      zmq_msg_recv(data_request_connection, &msg, 0);
+      zmq_msg_recv(data_request_socket, &msg, 0);
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
       zmq_msg_close(&msg);
     }
@@ -345,8 +345,6 @@ void melissa_finalize()
   {
     delete *sr;
   }
-
-  // TODO change name from connections to sockets!
 
   zmq_ctx_destroy(context);
   exit(0);
