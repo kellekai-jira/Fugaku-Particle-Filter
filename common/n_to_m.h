@@ -1,6 +1,6 @@
 #include <vector>
 
-struct n_to_m {
+struct n_to_m {  // TODO: rename datatype into Part
   int rank_simu;
   int local_offset_simu;
 

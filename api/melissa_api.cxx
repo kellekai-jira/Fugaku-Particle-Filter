@@ -12,6 +12,9 @@
 #include "../common/messages.h"
 #include "../common/n_to_m.h"
 
+#include "../common/utils.h"
+// TODO: localhost behaviour (if hostname == myhostname replace by localhost ...)
+
 // Forward declarations:
 void melissa_finalize();
 
@@ -99,10 +102,7 @@ struct ServerRank
 
     if (type == CHANGE_STATE)
     {
-      int more;
-      size_t more_size = sizeof (more);
-      zmq_getsockopt (data_request_socket, ZMQ_RCVMORE, &more, &more_size);
-      assert(more);
+      assert_more_zmq_messages(data_request_socket);
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
       zmq_msg_recv(data_request_socket, &msg, 0);
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
@@ -173,18 +173,11 @@ struct Field {
   }
 };
 
-enum Phase {
-  PHASE_INIT,
-  PHASE_SIMULATION,
-  PHASE_FINAL
-};
-
-Phase phase = PHASE_INIT;
 
 map<string, Field> fields;
 
 
-
+// TODO: kill if no server response for a timeout...
 
 struct ConfigurationConnection
 {
@@ -217,10 +210,7 @@ struct ConfigurationConnection
 
     size_t port_names_size = out_server->comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char);
 
-    int more;
-    size_t more_size = sizeof (more);
-    zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
-    assert(more);
+    assert_more_zmq_messages(socket);
     zmq_msg_init(&msg);
     zmq_msg_recv(socket, &msg, 0);
 
@@ -236,15 +226,12 @@ struct ConfigurationConnection
   void register_field(const char * field_name, int local_vect_sizes[])
   {
     zmq_msg_t msg;
-    zmq_msg_init_size(&msg, sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) + sizeof(int));
-    void * buf = zmq_msg_data(&msg);
+    zmq_msg_init_size(&msg, sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) );
+    int * buf = zmq_msg_data(&msg);
     int type = REGISTER_FIELD;
-    memcpy(buf, &type, sizeof(int));
-    buf += sizeof(ConfigurationMessageType);
-    strcpy(buf, field_name);
-    buf += MPI_MAX_PROCESSOR_NAME * sizeof(char);
-    int comm_size = getCommSize();
-    memcpy(buf, &comm_size, sizeof(int));
+    buf[0] = type;
+    buf[1] = getCommSize();
+    strcpy(&buf[2], field_name);
     zmq_msg_send(socket, &msg, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
@@ -301,6 +288,8 @@ void melissa_init(const char *field_name,
 
   // create field
   Field newField;
+  newField.current_state_id = getSimuId(); // We are beginning like this...
+  newField.timestamp = 0;
   newField.local_vect_size = local_vect_size;
   int local_vect_sizes[getCommSize()];
     // synchronize local_vect_sizes and
@@ -340,6 +329,7 @@ void melissa_expose(const char *field_name, double *values)
 
 void melissa_finalize()
 {
+  phase = PHASE_FINAL;
   // TODO: close all connections [should be DONE]
   // TODO: free all pointers?
   // not an api function anymore but activated if a finalization message is received.

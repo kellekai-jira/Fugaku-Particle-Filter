@@ -1,13 +1,13 @@
 enum ConfigurationMessageType {
-  REGISTER_SIMU_ID,
-  REGISTER_FIELD
+  REGISTER_SIMU_ID = 0,
+  REGISTER_FIELD   = 1
 };
 
 
 enum DataMessageType {
-  CHANGE_STATE,
-  KEEP_STATE,
-  QUIT
+  CHANGE_STATE = 0,
+  KEEP_STATE   = 1,
+  QUIT         = 2
 };
 
 
