@@ -12,6 +12,8 @@
 #include "../common/messages.h"
 #include "../common/n_to_m.h"
 
+// Forward declarations:
+void melissa_finalize();
 
 using namespace std;
 
@@ -45,6 +47,7 @@ int getCommSize()
   MPI_Comm_size(comm, &size);
   return size;
 }
+
 
 struct ServerRank
 {
@@ -84,7 +87,7 @@ struct ServerRank
 // receive a first message that is 1 if we want to change the state, otherwise 0
 // the first message also contains out_current_state_id and out_timestamp
 // the 2nd message just consists of doubles that will be put into out_values
-
+    zmq_msg_t msg;
     zmq_msg_init(&msg);
     zmq_msg_recv(data_request_socket, &msg, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
@@ -335,7 +338,6 @@ void melissa_expose(const char *field_name, double *values)
   // TODO: this will block other fields!
 }
 
-
 void melissa_finalize()
 {
   // TODO: close all connections [should be DONE]
@@ -349,4 +351,3 @@ void melissa_finalize()
   zmq_ctx_destroy(context);
   exit(0);
 }
-
