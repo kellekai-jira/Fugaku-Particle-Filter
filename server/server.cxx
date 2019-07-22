@@ -443,13 +443,18 @@ int main(int argc, char * argv[])
 	zmq_pollitem_t items [2];
 	items[0].socket = data_response_socket;
 	items[0].events = ZMQ_POLLIN;
+  int rc;
 	if (comm_rank == 0)
 	{
 		items[1].socket = configuration_socket;
 		items[1].events = ZMQ_POLLIN;
+  	rc = zmq_poll (items, 2, -1);
 	}
+  else
+  {
+  	rc = zmq_poll (items, 1, -1);
+  }
 	/* Poll for events indefinitely */
-	int rc = zmq_poll (items, 2, -1);
 	assert (rc >= 0); /* Returned events will be stored in items[].revents */
 	while (true)
 	{
