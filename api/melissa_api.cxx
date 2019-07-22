@@ -34,7 +34,7 @@ MPI_Comm comm;
 /**
  * Returns simulation's rank
  */
-int getRank()
+int getCommRank()
 {
   int rank;
   MPI_Comm_rank(comm, &rank);
@@ -74,7 +74,7 @@ struct ServerRank
     zmq_msg_init_size(&msg, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     buf[0] = getSimuId();
-    buf[1] = getRank();
+    buf[1] = getCommRank();
     buf[2] = current_state_id;
     buf[3] = timestamp; // TODO: is incremented on the server or client side
     strcpy(reinterpret_cast<char*>(&buf[4]), field_name);
@@ -151,7 +151,7 @@ struct Field {
     vector<n_to_m> parts = calculate_n_to_m(server.comm_size, getCommSize(), local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
-      if (part->rank_simu == getRank())
+      if (part->rank_simu == getCommRank())
       {
         connected_server_ranks.push_back({part->send_count, part->local_offset_simu, server_ranks[part->rank_server]});
       }
@@ -261,7 +261,7 @@ void first_melissa_init(MPI_Comm comm_)
 {
   context = zmq_ctx_new ();
   comm = comm_;
-  if (getRank() == 0) {
+  if (getCommRank() == 0) {
     ccon = new ConfigurationConnection();
     ccon->register_simu_id(&server);
   }
@@ -301,7 +301,7 @@ void melissa_init(const char *field_name,
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
       local_vect_sizes, getCommSize(), MPI_INT,
       comm);
-  if (getRank() == 0 && getSimuId() == 0)
+  if (getCommRank() == 0 && getSimuId() == 0)
   {
     // Tell the server which kind of data he has to expect
     ccon->register_field(field_name, local_vect_sizes);
