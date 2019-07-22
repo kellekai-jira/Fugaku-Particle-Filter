@@ -23,8 +23,8 @@ using namespace std;
 // zmq context:
 void *context;
 
-const char * getSimuId() {
-  return getenv("MELISSA_SIMU_ID");
+const int getSimuId() {
+  return atoi(getenv("MELISSA_SIMU_ID"));
 }
 
 
@@ -72,17 +72,17 @@ struct ServerRank
     // send simuid, rank, stateid, timestamp, field_name next message: doubles
     zmq_msg_t msg;
     zmq_msg_init_size(&msg, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
-    int * buf = zmq_msg_data(&msg);
+    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     buf[0] = getSimuId();
     buf[1] = getRank();
     buf[2] = current_state_id;
     buf[3] = timestamp; // TODO: is incremented on the server or client side
-    strcpy(&buf[4], field_name);
-    zmq_msg_send(data_request_socket, &msg, ZMQ_SNDMORE);
+    strcpy(reinterpret_cast<char*>(&buf[4]), field_name);
+    zmq_msg_send(&msg, data_request_socket, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
     zmq_msg_init_data(&msg, values, doubles_to_send * sizeof(double), NULL, NULL);
-    zmq_msg_send(data_request_socket, &msg, 0);
+    zmq_msg_send(&msg, data_request_socket, 0);
     zmq_msg_close(&msg);
   }
 
@@ -93,19 +93,19 @@ struct ServerRank
 // the 2nd message just consists of doubles that will be put into out_values
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    zmq_msg_recv(data_request_socket, &msg, 0);
+    zmq_msg_recv(&msg, data_request_socket, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
-    int * buf = zmq_msg_data(&msg);
+    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     *out_current_state_id = buf[0];
     *out_timestamp = buf[1];
-    DataMessageType type = buf[2];
+    int type = buf[2];
     zmq_msg_close(&msg);
 
     if (type == CHANGE_STATE)
     {
       assert_more_zmq_messages(data_request_socket);
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
-      zmq_msg_recv(data_request_socket, &msg, 0);
+      zmq_msg_recv(&msg, data_request_socket, 0);
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
       zmq_msg_close(&msg);
     }
@@ -133,11 +133,11 @@ struct ConnectedServerRank {
 struct Server
 {
   int comm_size = 0;
-  char * port_names = NULL;
+  char * port_names;
 
   ~Server() {
-    if (port_names != NULL)
-      free(port_names);
+  	// TODO: probably not the best idea to only have a destructor!
+  	delete [] port_names;
   }
 };
 Server server;
@@ -200,11 +200,11 @@ struct ConfigurationConnection
     buf += sizeof(ConfigurationMessageType);
     int simu_id = getSimuId();
     memcpy(buf, &simu_id, sizeof(int));
-    zmq_msg_send(socket, &msg, 0);
+    zmq_msg_send(&msg, socket, 0);
     zmq_msg_close(&msg);
 
 
-    zmq_msg_recv(socket, &msg, 0);
+    zmq_msg_recv(&msg, socket, 0);
     assert(zmq_msg_size(&msg) == sizeof(int));
     memcpy(&out_server->comm_size, zmq_msg_data(&msg), sizeof(int));
     zmq_msg_close(&msg);
@@ -213,11 +213,12 @@ struct ConfigurationConnection
 
     assert_more_zmq_messages(socket);
     zmq_msg_init(&msg);
-    zmq_msg_recv(socket, &msg, 0);
+    zmq_msg_recv(&msg, socket, 0);
 
     assert(zmq_msg_size(&msg) == port_names_size);
 
-    out_server->port_names = malloc(port_names_size);
+    out_server->port_names = new char[port_names_size]();
+//    out_server->port_names = new char[port_names_size];
     memcpy(out_server->port_names, zmq_msg_data(&msg), port_names_size);
 
     zmq_msg_close(&msg);
@@ -228,20 +229,20 @@ struct ConfigurationConnection
   {
     zmq_msg_t msg;
     zmq_msg_init_size(&msg, sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) );
-    int * buf = zmq_msg_data(&msg);
+    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     int type = REGISTER_FIELD;
     buf[0] = type;
     buf[1] = getCommSize();
-    strcpy(&buf[2], field_name);
-    zmq_msg_send(socket, &msg, ZMQ_SNDMORE);
+    strcpy(reinterpret_cast<char*>(&buf[2]), field_name);
+    zmq_msg_send(&msg, socket, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
     zmq_msg_init_data(&msg, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
-    zmq_msg_send(socket, &msg, 0);
+    zmq_msg_send(&msg, socket, 0);
     zmq_msg_close(&msg);
 
     zmq_msg_init(&msg);
-    zmq_msg_recv(socket, &msg, 0);
+    zmq_msg_recv(&msg, socket, 0);
     // ack
     assert(zmq_msg_size(&msg) == 0);
     zmq_msg_close(&msg);
@@ -270,7 +271,7 @@ void first_melissa_init(MPI_Comm comm_)
   // Fill server ranks array...
   for (int i = 0; i < server.comm_size; ++i)
   {
-    server_ranks.push_back(new ServerRank(server.port_names[i]));
+    server_ranks.push_back(new ServerRank(&server.port_names[i]));
   }
 }
 
@@ -278,6 +279,9 @@ void melissa_init(const char *field_name,
                        const int  local_vect_size,
                        MPI_Comm comm_)
 {
+  // We do not allow multiple fiels:
+  assert(fields.size() == 0);
+
   static bool is_first_melissa_init = true;
 
   if (is_first_melissa_init) {
@@ -304,7 +308,7 @@ void melissa_init(const char *field_name,
   }
 
   // Calculate to which server ports the local part of the field will connect
-  newField.initConnections(local_vect_size);
+  newField.initConnections(local_vect_sizes);
 
   fields.emplace(string(field_name), newField);
 }

@@ -1,8 +1,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
+#include <unistd.h>
 
-#include <mpi>
+#include <mpi.h>
 
 enum Phase {
   PHASE_INIT,
