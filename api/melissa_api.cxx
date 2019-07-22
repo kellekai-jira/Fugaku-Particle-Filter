@@ -67,16 +67,17 @@ struct ServerRank
     zmq_close(data_request_socket);
   }
 
-  void send(double * values, size_t doubles_to_send, int current_state_id, int timestamp)
+  void send(double * values, size_t doubles_to_send, int current_state_id, int timestamp, const char * field_name)
   {
-    // send simuid, rank, stateid, timestamp, next message: doubles
+    // send simuid, rank, stateid, timestamp, field_name next message: doubles
     zmq_msg_t msg;
-    zmq_msg_init_size(&msg, 4*sizeof(int));
+    zmq_msg_init_size(&msg, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
     int * buf = zmq_msg_data(&msg);
     buf[0] = getSimuId();
     buf[1] = getRank();
     buf[2] = current_state_id;
     buf[3] = timestamp; // TODO: is incremented on the server or client side
+    strcpy(&buf[4], field_name);
     zmq_msg_send(data_request_socket, &msg, ZMQ_SNDMORE);
     zmq_msg_close(&msg);
 
@@ -158,10 +159,10 @@ struct Field {
   }
 
   // TODO: this will crash if there are more than two fields? maybe use dealer socket that supports send send recv recv scheme.
-  void putState(double * values) {
+  void putState(double * values, const char * field_name) {
     // send every state part to the right server rank
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
-      csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp);
+      csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp, field_name);
     }
   }
 
@@ -321,7 +322,7 @@ void melissa_expose(const char *field_name, double *values)
   }
 
   // Now Send data to the melissa server
-  fields[field_name].putState(values);
+  fields[field_name].putState(values, field_name);
   // and request new data
   fields[field_name].getState(values);
   // TODO: this will block other fields!

@@ -13,6 +13,10 @@
 #include "../common/n_to_m.h"
 #include "../common/utils.h"
 
+// TODO: configure this somehow better:
+const int ENSEMBLE_SIZE = 1;
+const int SIMULATIONS_COUNT = 1;
+const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 
 using namespace std;
 
@@ -47,16 +51,19 @@ struct EnsembleMember
 
 struct Field {
 // index: state id.
-  vector<EnsembleMember> ensemble_members
+  EnsembleMember ensemble_members[];
+  ensemble_size;
 
   int local_vect_sizes_simu[];
   int simu_comm_size;
   vector<n_to_m> parts;
 
-  Field(int simu_comm_size)
+  Field(int simu_comm_size_, int ensemble_size_)
   {
     simu_comm_size = simu_comm_size_;
     local_vect_sizes_simu = new int[simu_comm_size];
+    ensemble_size = ensemble_size_;
+    ensemble_members = new EnsembleMember[ensemble_size];
   }
 
   // TODO: naming: server_comm size or ranks_server? same for simu!
@@ -67,10 +74,10 @@ struct Field {
     parts = calculate_n_to_m(server_comm_size, simu_comm_size, local_vect_sizes_simu);
   }
 
-
   ~Field()
   {
     delete [] local_vect_sizes_simu;
+    delete [] ensemble_members;
   }
 
   void addEnsembleMember(int comm_size_simu)
@@ -82,8 +89,12 @@ struct Field {
 map<string, Field*> fields;
 
 struct ConnectedSimulationRank {
-  int simu_rank;
   void * connection_identy = NULL;
+  ConnectedSimulationRank(void * connection_identy_)
+  {
+    connection_identy = connection_identy_;
+  }
+
   ~ConnectedSimulationRank() {
     if (connection_identy != NULL) {
       free(connection_identy);
@@ -94,7 +105,11 @@ struct ConnectedSimulationRank {
 struct Simulation  // Model process runner
 {
   int simu_state; // -1: doing nothing. Number i: propagating state i.
-  map<ConnectedSimulationRank> connected_simulation_ranks; // TODO: rename in SimulationRankConnection, also on server side?
+  // simu_rank, simulations rank
+  map<int, ConnectedSimulationRank> connected_simulation_ranks; // TODO: rename in SimulationRankConnection, also on server side?
+
+  // contract id (to keep them in order)
+  map<int, stateid>
 
   Simulation() {
     simu_state = -1;
@@ -102,7 +117,7 @@ struct Simulation  // Model process runner
 };
 
 // simu_id, Simulation:
-map<int, Simulation> simulations;
+vector<int, Simulation> simulations;
 
 
 // Server comm_size and Server rank
@@ -139,7 +154,7 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 
     int simu_comm_size = buf[1];
 
-    Field *newField = new Field(simu_comm_size);
+    Field *newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
     const char field_name[MPI_MAX_PROCESSOR_NAME];
     stcpy(field_name, buf[2]);
@@ -152,7 +167,6 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
     zmq_msg_close(&msg);
 
     fields.emplace(field_name, newField);
-    parts = calculate_n_to_m(comm_size,
   }
   else
   {
@@ -183,7 +197,7 @@ void broadcast_field_information_and_calculate_parts() {
       MPI_BCast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1: fieldname
       MPI_BCast(&simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
 
-      Field * newField = new Field(simu_comm_size);
+      Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
       MPI_BCast(newField->local_vect_sizes_simu, simu_comm_size,
           MPI_INT, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
@@ -193,8 +207,42 @@ void broadcast_field_information_and_calculate_parts() {
       fields.emplace(field_name, newField);
     }
   }
+}
 
-  // generate parts:
+void broadcast_simu_ids()
+{
+  int simu_id_count = simulations.size();
+  if (rank == 0)
+  {
+    int simu_ids[simu_id_count];
+
+    MPI_BCast(&simu_id_count, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 1:simu_id_count
+
+    int index = 0;
+    for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+    {
+      simu_ids[index] = simu_it->first;
+      index++;
+    }
+
+    MPI_BCast(simu_ids, simu_id_count, MPI_INT, 0, MPI_COMM_WORLD);             // 2:simu_ids
+  }
+  else
+  {
+    MPI_BCast(&simu_id_count, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 1:simu_id_count
+
+    int simu_ids[simu_id_count];
+
+    MPI_BCast(simu_ids, simu_id_count, MPI_INT, 0, MPI_COMM_WORLD);             // 2:simu_ids
+
+    for (int i = 0; i < simu_id_count; i++)
+    {
+      // TODO: see if inserts only if new!
+      // TODO: new simulations must be always have no work.
+      simulations.emplace(simu_ids[i], Simulation());
+      // TODO: do we need to remove old simulations?
+    }
+  }
 
 }
 
@@ -269,13 +317,14 @@ int main(int argc, char * argv[])
     {
         if (rank == 0)
         {
-          // check if initialization finished
-
-          if (simu_state.size() == 1 && fields.size() == 1)
+          // check if initialization on rank 0 finished
+          // (rank 0 does some more intitialization than the other server ranks)
+          if (simulations.size() == SIMULATIONS_COUNT && fields.size() == FIELDS_COUNT)
           {
             // TODO: check fields!
             // propagate all fields to the other server clients on first message receive!
             broadcast_field_information_and_calculate_parts();
+            broadcast_simu_ids();
             phase = PHASE_SIMULATION;
           }
         }
@@ -284,6 +333,7 @@ int main(int argc, char * argv[])
           // Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
           // propagate all fields to the other server clients on first message receive!
           broadcast_field_information_and_calculate_parts();
+          broadcast_simu_ids();
           phase = PHASE_SIMULATION;
         }
     }
@@ -308,30 +358,34 @@ int main(int argc, char * argv[])
       void * identity = malloc(zmq_msg_size(&identity_msg));
       memcpy(identity, zmq_msg_data(&identity_msg), zmq_msg_size(&identity_msg));
 
-      assert(zmq_msg_size(&header_msg) == 4 * sizeof(int));
+      assert(zmq_msg_size(&header_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
       int * header_buf = zmq_msg_data(&header_msg);
       int simu_id = header_buf[0];
       int simu_rank = header_buf[1];
-      int simu_state_id = header_buf[2];
+      int simu_state_id = header_buf[2];  // = ensemble_member_id;
+      // TODO: assert simu_state_id. assert simu_rank is one that may connect. assert simu_timestamp is good.
       int simu_timestamp = header_buf[3];
       char field_name[MPI_MAX_PROCESSOR_NAME];
       strcpy(field_name, header_buf[4]);
 
-      assert(zmq_msg_size(&data_msg) == getPart(field_name, simu_rank).send_counts * sizeof(double));
-      memcpy(, zmq_msg_data(&data_msg), zmq_msg_size(&data_msg));
-
-
-
-      // Save connection in open connections
-      basically copy identity pointer...
-      if (simulations[
-      simulations.emplace(
       // Save state part in background_states.
-      // in simulations data structure save that this sim has a free worker [optional?]
-      // check if all data was received. If yes: start Update step to calculate next analysis state
+      // in simulations data structure save that this sim has a free worker [optional?] TODO?
+      assert(zmq_msg_size(&data_msg) == getPart(field_name, simu_rank).send_count * sizeof(double));
+      memcpy(fields[field_name].ensemble_members[simu_state_id], zmq_msg_data(&data_msg), zmq_msg_size(&data_msg));
+
+      // Save connection
+      basically copy identity pointer...
+
+      // The simulations object is needed in case we have more ensemble members than connected simulations!
+      auto ret = simulations[simu_id].connected_simulation_ranks.emplace(simu_rank, ConnectedSimulationRank(identity))
+      assert(ret.second); // true if was inserted. this ensures that we do not connect twice to the same simulation rank...
+      // whcih atm can not even happen if more than one fields as they do there communication one after another.
+      // TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
+
+      // check if all data was received. If yes: start Update step to calculate next analysis state TODO
       // After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
-      //
-      //
+      for (auto simulations[
+
       // if not: ask rank 0 which state id to send to which simu id next. [TODO, atm we do not do this as every simuid propagates only one state. (MPI_BCast),
       // TODO: check ret values!
       // TODO: remove compile warnings!
