@@ -48,7 +48,7 @@ struct Part
 
 struct EnsembleMember
 {
-	double *state_analysis;
+	double *state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
 	double *state_background;
 	int size;
 	int received_state_background = 0;
@@ -423,7 +423,7 @@ int main(int argc, char * argv[])
 	if (comm_rank == 0)
 	{
 		configuration_socket = zmq_socket(context, ZMQ_REP);
-		zmq_bind(configuration_socket, "tcp://*:4000");
+		zmq_bind(configuration_socket, "tcp://*:4000");  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
 
 	}
 
@@ -443,24 +443,26 @@ int main(int argc, char * argv[])
 	zmq_pollitem_t items [2];
 	items[0].socket = data_response_socket;
 	items[0].events = ZMQ_POLLIN;
-  int rc;
 	if (comm_rank == 0)
 	{
 		items[1].socket = configuration_socket;
 		items[1].events = ZMQ_POLLIN;
-  	rc = zmq_poll (items, 2, -1);
 	}
-  else
-  {
-  	rc = zmq_poll (items, 1, -1);
-  }
-	/* Poll for events indefinitely */
-	assert (rc >= 0); /* Returned events will be stored in items[].revents */
 	while (true)
 	{
 		// Wait for requests
-		// answer them
+		/* Poll for events indefinitely */
+		int rc;
+		if (comm_rank == 0) {
+			rc = zmq_poll (items, 2, -1);
+		}
+		else
+		{
+			rc = zmq_poll (items, 1, -1);
+		}
+		assert (rc >= 0); /* Returned events will be stored in items[].revents */
 
+		// answer requests
 		if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
 		{
 			answer_configuration_message(configuration_socket, data_response_port_names);

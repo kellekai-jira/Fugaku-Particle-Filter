@@ -301,7 +301,7 @@ void melissa_init(const char *field_name,
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
       local_vect_sizes, getCommSize(), MPI_INT,
       comm);
-  if (getCommRank() == 0 && getSimuId() == 0)
+  if (getCommRank() == 0 && getSimuId() == 1)
   {
     // Tell the server which kind of data he has to expect
     ccon->register_field(field_name, local_vect_sizes);

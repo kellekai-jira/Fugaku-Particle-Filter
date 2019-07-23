@@ -1,3 +1,3 @@
 #!/bin/bash
-rm test.o
-g++ -std=c++11 -c -fPIC  melissa_api.cxx -o test.o -lmpi -lzmq -I../../melissa/install/include -L../../melissa/install/lib -I/usr/include/mpi -L/usr/lib
+rm libmelissa_api.so
+g++ -g -std=c++11 -fPIC  melissa_api.cxx -shared -o libmelissa_api.so -I../../melissa/install/include -I/usr/include/mpi

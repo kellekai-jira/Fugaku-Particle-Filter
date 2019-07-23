@@ -1,0 +1,44 @@
+#include <mpi.h>
+#include <cassert>
+#include <vector>
+#include <algorithm>
+
+#include "../api/melissa_api.h"
+
+const int GLOBAL_VECT_SIZE = 40;
+
+using namespace std;
+
+int main(int argc, char * args[])
+{
+
+	int comm_size;
+	int comm_rank;
+
+	MPI_Init(NULL, NULL);
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+
+	assert(GLOBAL_VECT_SIZE % comm_size == 0);  // need to use a good vect size!
+	int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
+
+	melissa_init("state1",
+			local_vect_size,
+			MPI_COMM_WORLD);  // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+	bool timestepping = true;
+	vector<double> state1(local_vect_size);
+	fill(state1.begin(), state1.end(), comm_rank);
+
+	while (timestepping)
+	{
+		for (auto it = state1.begin(); it != state1.end(); it++)
+		{
+			*it += comm_size;
+		}
+
+		/*timestepping = */ melissa_expose("state1", state1.data());
+	}
+	MPI_Finalize();
+}
+
+
