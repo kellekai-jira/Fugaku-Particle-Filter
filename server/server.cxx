@@ -25,6 +25,8 @@ using namespace std;
 
 const int TAG_NEW_TASK = 42;
 
+int IDENTITY_SIZE = 0;
+
 // Server comm_size and Server rank
 int comm_size;
 int comm_rank;
@@ -154,17 +156,22 @@ struct NewTask {
 
 const Task NO_WORK = Task{-1,-1};
 
+void delete_array(void * data, void * hint)
+{
+	delete [] data;
+}
+
 struct ConnectedSimulationRank {
-	// contract id (to keep them in order)
+	// task id (to keep them in order)
 	map<int, Task> waiting_tasks;
 
 	Task current_task = NO_WORK;
 
-	void * connection_identy = NULL;
+	void * connection_identity = NULL;
 
 	~ConnectedSimulationRank() {
-		if (connection_identy != NULL) {
-			free(connection_identy);
+		if (connection_identity != NULL) {
+			free(connection_identity);
 		}
 	}
 
@@ -184,34 +191,47 @@ struct ConnectedSimulationRank {
 		// then delete it from thye waiting_tasks list.
 		auto first_elem = waiting_tasks.begin();
 
-		int header[3] = { first_elem->second.state_id, current_timestamp, CHANGE_STATE };
+		//int header[3] = { first_elem->second.state_id, current_timestamp, CHANGE_STATE };  this does not work as send is non blocking...
+		int * header = new int[3];  // needto do it like this to be sure it stays in memory as send is non blocking!
+		header[0] = first_elem->second.state_id;
+		header[1] = current_timestamp;
+		header[2] = CHANGE_STATE;
 
 		zmq_msg_t identity_msg;
 		zmq_msg_t empty_msg;
 		zmq_msg_t header_msg;
 		zmq_msg_t data_msg;
 
-		zmq_msg_init_data(&identity_msg, &connection_identy, sizeof(void), NULL, NULL);
+		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_array, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
-		zmq_msg_init_size(&empty_msg, 0);
+		//zmq_msg_init_size(&empty_msg, 0);
+		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
-		zmq_msg_init_data(&header_msg, reinterpret_cast<void*>(header), 3 * sizeof(int), NULL, NULL);
+		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
 		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
+		// we do not know when it will really send. send is non blocking!
 
 		zmq_msg_init_data(&data_msg, reinterpret_cast<void*>(fields.begin()->second->ensemble_members[first_elem->second.state_id].state_analysis),
-				fields.begin()->second->getPart(simu_rank).send_count, NULL, NULL);
+				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
 
-		zmq_msg_close(&identity_msg);
-		zmq_msg_close(&empty_msg);
-		zmq_msg_close(&header_msg);
-		zmq_msg_close(&data_msg);
+		D("Server sending %d bytes for state %d, timestamp=%d",
+				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
+				header[0], header[1]);
+
+		zmq_msg_send(&data_msg, data_response_socket, 0);
+
+		// TODO: don't close messages after send! see other send's too..
+//		zmq_msg_close(&identity_msg);
+//		zmq_msg_close(&empty_msg);
+//		zmq_msg_close(&header_msg);
+//		zmq_msg_close(&data_msg);
 
 		current_task = first_elem->second;
 		waiting_tasks.erase(first_elem);
 		// close connection:
-		connection_identy = NULL;
+		connection_identity = NULL;
 
 		return true;
 	}
@@ -258,6 +278,7 @@ map<int, Simulation> simulations;
 void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
 {
 	zmq_msg_t msg;
+	zmq_msg_init(&msg);
 	zmq_msg_recv(&msg, configuration_socket, 0);
 	int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
 	if (buf[0] == REGISTER_SIMU_ID) {
@@ -289,13 +310,19 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		Field *newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
 		char field_name[MPI_MAX_PROCESSOR_NAME];
-		strcpy(field_name, reinterpret_cast<char*>(buf[2]));
+		strcpy(field_name, reinterpret_cast<char*>(&buf[2]));
 		zmq_msg_close(&msg);
 
-		assert_more_zmq_messages(data_response_socket);
+		assert_more_zmq_messages(configuration_socket);
+    zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
 		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(int));
 		memcpy (newField->local_vect_sizes_simu, zmq_msg_data(&msg), simu_comm_size * sizeof(int));
+		zmq_msg_close(&msg);
+
+		// ack
+		zmq_msg_init(&msg);
+		zmq_msg_send(&msg, configuration_socket, 0);
 		zmq_msg_close(&msg);
 
 		fields.emplace(field_name, newField);
@@ -345,6 +372,7 @@ vector<int> unscheduled_tasks;
 // returns true if it scheduled a new task for the given simuid
 bool create_new_task(int simuid)
 {
+	assert(comm_rank == 0);
 	static int task_id = 0;
 	task_id++;
 	assert(comm_rank == 0);
@@ -375,14 +403,16 @@ bool create_new_task(int simuid)
 void init_new_timestamp()
 {
 	current_timestamp++;
-	assert(unscheduled_tasks.size() == 0);
-	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
-		unscheduled_tasks.push_back(i);
-		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
-		{
-			auto &member = field_it->second->ensemble_members[i];
-			assert(member.received_state_background = member.size);
-			member.received_state_background = 0;
+	if (comm_rank == 0) {
+		assert(unscheduled_tasks.size() == 0);
+		for (int i = 0; i < ENSEMBLE_SIZE; i++) {
+			unscheduled_tasks.push_back(i);
+			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
+			{
+				auto &member = field_it->second->ensemble_members[i];
+				assert(member.received_state_background = member.size);
+				member.received_state_background = 0;
+			}
 		}
 	}
 }
@@ -408,8 +438,6 @@ void do_update_step()
 
 int main(int argc, char * argv[])
 {
-	init_new_timestamp();
-
 	MPI_Init(NULL, NULL);
 	context = zmq_ctx_new ();
 
@@ -423,7 +451,9 @@ int main(int argc, char * argv[])
 	if (comm_rank == 0)
 	{
 		configuration_socket = zmq_socket(context, ZMQ_REP);
-		zmq_bind(configuration_socket, "tcp://*:4000");  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
+		int rc = zmq_bind(configuration_socket, "tcp://*:4000");  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
+		ZMQ_CHECK(rc);
+		assert(rc == 0);
 
 	}
 
@@ -468,6 +498,7 @@ int main(int argc, char * argv[])
 			answer_configuration_message(configuration_socket, data_response_port_names);
 		}
 
+		// coming from fresh init...
 		if (phase == PHASE_INIT)
 		{
 			if (comm_rank == 0)
@@ -479,6 +510,8 @@ int main(int argc, char * argv[])
 					// TODO: check fields!
 					// propagate all fields to the other server clients on first message receive!
 					broadcast_field_information_and_calculate_parts();
+					init_new_timestamp();
+
 					phase = PHASE_SIMULATION;
 				}
 			}
@@ -487,6 +520,7 @@ int main(int argc, char * argv[])
 				// Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
 				// propagate all fields to the other server clients on first message receive!
 				broadcast_field_information_and_calculate_parts();
+				init_new_timestamp();
 				phase = PHASE_SIMULATION;
 			}
 		}
@@ -499,6 +533,7 @@ int main(int argc, char * argv[])
 			zmq_msg_init(&data_msg);
 
 			zmq_msg_recv(&identity_msg, data_response_socket, 0);
+			//uint32_t routing_id = zmq_msg_routing_id (&identity_msg); assert (routing_id);
 
 			assert_more_zmq_messages(data_response_socket);
 			zmq_msg_recv(&empty_msg, data_response_socket, 0);
@@ -506,9 +541,12 @@ int main(int argc, char * argv[])
 			zmq_msg_recv(&header_msg, data_response_socket, 0);
 			assert_more_zmq_messages(data_response_socket);
 			zmq_msg_recv(&data_msg, data_response_socket, 0);
-			assert_more_zmq_messages(data_response_socket);
 
-			void * identity = malloc(zmq_msg_size(&identity_msg));
+			assert(IDENTITY_SIZE == 0 || IDENTITY_SIZE == zmq_msg_size(&identity_msg));
+
+			IDENTITY_SIZE = zmq_msg_size(&identity_msg);
+
+			void * identity = malloc(IDENTITY_SIZE);
 			memcpy(identity, zmq_msg_data(&identity_msg), zmq_msg_size(&identity_msg));
 
 			assert(zmq_msg_size(&header_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
@@ -518,7 +556,7 @@ int main(int argc, char * argv[])
 			int simu_state_id = header_buf[2];  // = ensemble_member_id;
 			int simu_timestamp = header_buf[3];
 			char field_name[MPI_MAX_PROCESSOR_NAME];
-			strcpy(field_name, reinterpret_cast<char*>(header_buf[4]));
+			strcpy(field_name, reinterpret_cast<char*>(&header_buf[4]));
 
 			// The simulations object is needed in case we have more ensemble members than connected simulations!
 			Simulation &simu = find_or_insert_simulation(simu_id);
@@ -530,6 +568,7 @@ int main(int argc, char * argv[])
 			// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 			assert (simu_timestamp == 0 || simu_timestamp == current_timestamp);
+
 
 			// Save state part in background_states.
 			n_to_m & part = fields[field_name]->getPart(simu_rank);
@@ -543,7 +582,7 @@ int main(int argc, char * argv[])
 
 
 			// Save connection - basically copy identity pointer...
-			simu.connected_simulation_ranks[simu_rank].connection_identy = identity;
+			simu.connected_simulation_ranks[simu_rank].connection_identity = identity;
 			simu.connected_simulation_ranks[simu_rank].current_task = NO_WORK;
 
 			// whcih atm can not even happen if more than one fields as they do there communication one after another.
@@ -570,28 +609,31 @@ int main(int argc, char * argv[])
 
 			// REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
 
-		// check if all data was received. If yes: start Update step to calculate next analysis state
-		bool finished = true;
-		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
+		if (phase == PHASE_SIMULATION)
 		{
-			for (int i = 0; i != field_it->second->ensemble_size; i++)
+			// check if all data was received. If yes: start Update step to calculate next analysis state
+			bool finished = true;
+			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 			{
-				finished = field_it->second->ensemble_members[i].finished();
+				for (int i = 0; i != field_it->second->ensemble_size; i++)
+				{
+					finished = field_it->second->ensemble_members[i].finished();
+					if (!finished)
+						break;
+				}
 				if (!finished)
 					break;
 			}
-			if (!finished)
-				break;
-		}
 
-		if (finished)
-		{
-			do_update_step();
-			init_new_timestamp();
-			// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
-			for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+			if (finished)
 			{
-				create_new_task(simu_it->first);
+				do_update_step();
+				init_new_timestamp();
+				// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
+				for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+				{
+					create_new_task(simu_it->first);
+				}
 			}
 		}
 

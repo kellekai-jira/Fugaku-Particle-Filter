@@ -2,8 +2,19 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <unistd.h>
+#include <cassert>
+#include <zmq.h>
 
 #include <mpi.h>
+
+
+//#ifdef __DEBUG
+#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+//#else
+//#define D(...)
+//#endif
+
+#define ZMQ_CHECK(x) if (x != 0) { D("zmq error: %s" , zmq_strerror(zmq_errno())); }
 
 enum Phase {
   PHASE_INIT,
@@ -19,6 +30,14 @@ inline void assert_more_zmq_messages(void * socket)
   size_t more_size = sizeof (more);
   zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
   assert(more);
+}
+
+inline void assert_no_more_zmq_messages(void * socket)
+{
+  int more;
+  size_t more_size = sizeof (more);
+  zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+  assert(more == 0);
 }
 
 /**

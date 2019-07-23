@@ -96,6 +96,8 @@ struct ServerRank
     zmq_msg_recv(&msg, data_request_socket, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
+    D("Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
+    		zmq_msg_size(&msg), 3 * sizeof(int), buf[0], buf[1]);
     *out_current_state_id = buf[0];
     *out_timestamp = buf[1];
     int type = buf[2];
@@ -106,8 +108,11 @@ struct ServerRank
       assert_more_zmq_messages(data_request_socket);
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
       zmq_msg_recv(&msg, data_request_socket, 0);
+      D("Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
+      		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
       zmq_msg_close(&msg);
+      assert_no_more_zmq_messages(data_request_socket);
     }
     else if (type == QUIT)
     {
@@ -187,6 +192,7 @@ struct ConfigurationConnection
   {
     socket = zmq_socket (context, ZMQ_REQ);
     const char * port_name = getenv("MELISSA_SERVER_MASTER_NODE");
+    D("connecting to %s", port_name);
     zmq_connect (socket, port_name);
   }
 
@@ -203,7 +209,7 @@ struct ConfigurationConnection
     zmq_msg_send(&msg, socket, 0);
     zmq_msg_close(&msg);
 
-
+    zmq_msg_init(&msg);
     zmq_msg_recv(&msg, socket, 0);
     assert(zmq_msg_size(&msg) == sizeof(int));
     memcpy(&out_server->comm_size, zmq_msg_data(&msg), sizeof(int));
@@ -301,7 +307,7 @@ void melissa_init(const char *field_name,
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
       local_vect_sizes, getCommSize(), MPI_INT,
       comm);
-  if (getCommRank() == 0 && getSimuId() == 1)
+  if (getCommRank() == 0 && getSimuId() == 1)  //TODO: start simuid at 0... other wise not logical!
   {
     // Tell the server which kind of data he has to expect
     ccon->register_field(field_name, local_vect_sizes);
