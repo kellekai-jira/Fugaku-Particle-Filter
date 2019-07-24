@@ -136,6 +136,7 @@ struct ServerRank
     }
     else if (type == END_SIMULATION)
     {
+    	zmq_msg_close(&msg);
       melissa_finalize();
     }
     else

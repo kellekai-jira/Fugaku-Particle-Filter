@@ -20,7 +20,7 @@ const int ENSEMBLE_SIZE = 1;
 const int SIMULATIONS_COUNT = 1;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIME = 600;  // 10 min max timeout for simulations.
-const int TIMESTEPS = 100;
+const int MAX_TIMESTAMP = 100;
 
 using namespace std;
 
@@ -217,7 +217,6 @@ struct ConnectedSimulationRank {
 		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
-		//zmq_msg_init_size(&empty_msg, 0);
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
@@ -257,12 +256,11 @@ struct ConnectedSimulationRank {
 		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
-		//zmq_msg_init_size(&empty_msg, 0);
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
 		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
-		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
+		zmq_msg_send(&header_msg, data_response_socket, 0);
 
 		connection_identity = NULL;
 	}
@@ -463,6 +461,7 @@ void init_new_timestamp()
 		}
 	}
 }
+
 Simulation & find_or_insert_simulation(int simu_id)
 {
 	auto res = simulations.find(simu_id);
@@ -485,7 +484,7 @@ void do_update_step()
 
 int main(int argc, char * argv[])
 {
-	assert(TIMESTEPS > 1);
+	assert(MAX_TIMESTAMP > 1);
 
 	int major, minor, patch;
 	zmq_version (&major, &minor, &patch);
@@ -680,11 +679,14 @@ int main(int argc, char * argv[])
 			if (finished)
 			{
 				do_update_step();
-				if (current_timestamp >= TIMESTEPS)
+
+				if (current_timestamp >= MAX_TIMESTAMP)
 				{
 					end_all_simulations();
 					break;
 				}
+
+				init_new_timestamp();
 
 				// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
 				for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
@@ -726,6 +728,11 @@ int main(int argc, char * argv[])
 
 	D("Ending Server.");
 	// TODO: check if we need to delete some more stuff!
+  zmq_close(data_response_socket);
+  if (comm_rank == 0)
+  {
+		zmq_close(configuration_socket);
+  }
 	zmq_ctx_destroy(context);
 	MPI_Finalize();
 
