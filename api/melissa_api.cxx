@@ -96,8 +96,6 @@ struct ServerRank
     zmq_msg_recv(&msg, data_request_socket, 0);
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-    D("Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
-    		zmq_msg_size(&msg), 3 * sizeof(int), buf[0], buf[1]);
     *out_current_state_id = buf[0];
     *out_timestamp = buf[1];
     int type = buf[2];
@@ -108,8 +106,10 @@ struct ServerRank
       assert_more_zmq_messages(data_request_socket);
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
       zmq_msg_recv(&msg, data_request_socket, 0);
+
       D("Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
       		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
+
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
       zmq_msg_close(&msg);
       assert_no_more_zmq_messages(data_request_socket);
@@ -332,8 +332,10 @@ void melissa_expose(const char *field_name, double *values)
   }
 
   // Now Send data to the melissa server
+  D("Simulation put state");
   fields[field_name].putState(values, field_name);
   // and request new data
+  D("Simulation get state");
   fields[field_name].getState(values);
   // TODO: this will block other fields!
 }

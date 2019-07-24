@@ -14,7 +14,7 @@
 //#define D(...)
 //#endif
 
-#define ZMQ_CHECK(x) if (x != 0) { D("zmq error: %s" , zmq_strerror(zmq_errno())); }
+#define ZMQ_CHECK(x) if (x == -1) { D("zmq error: %s" , zmq_strerror(zmq_errno())); }
 
 enum Phase {
   PHASE_INIT,
