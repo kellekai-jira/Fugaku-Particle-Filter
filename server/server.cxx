@@ -287,17 +287,19 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		assert(buf[1] > 0);  // simu_id  > 0 TODO: why? can't i delete this line?
 		// we add the simulation if we first receive data from it.
 		zmq_msg_close(&msg);
+		D("Server registering Simu ID %d", buf[1]);
 
-		zmq_msg_init_size(&msg, sizeof(int));
-		buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
+		zmq_msg_t msg_reply1, msg_reply2;
+		zmq_msg_init_size(&msg_reply1, sizeof(int));
+		buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
 		*buf = comm_size;
-		zmq_msg_send(&msg, configuration_socket, ZMQ_SNDMORE);
-		zmq_msg_close(&msg);
+		zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
+		//zmq_msg_close(&msg);
 
-		zmq_msg_init_data(&msg, data_response_port_names,
+		zmq_msg_init_data(&msg_reply2, data_response_port_names,
 				comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char), NULL, NULL);
-		zmq_msg_send(&msg, configuration_socket, 0);
-		zmq_msg_close(&msg);
+		zmq_msg_send(&msg_reply2, configuration_socket, 0);
+		//zmq_msg_close(&msg);
 	}
 	else if (buf[0] == REGISTER_FIELD)
 	{
@@ -312,6 +314,7 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		char field_name[MPI_MAX_PROCESSOR_NAME];
 		strcpy(field_name, reinterpret_cast<char*>(&buf[2]));
 		zmq_msg_close(&msg);
+		D("Server registering Field %s", field_name);
 
 		assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
@@ -321,9 +324,10 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		zmq_msg_close(&msg);
 
 		// ack
-		zmq_msg_init(&msg);
-		zmq_msg_send(&msg, configuration_socket, 0);
-		zmq_msg_close(&msg);
+		zmq_msg_t msg_reply;
+		zmq_msg_init(&msg_reply);
+		zmq_msg_send(&msg_reply, configuration_socket, 0);
+		//zmq_msg_close
 
 		fields.emplace(field_name, newField);
 	}
@@ -440,7 +444,7 @@ int main(int argc, char * argv[])
 {
 	int major, minor, patch;
 	zmq_version (&major, &minor, &patch);
-	D("Current 0MQ version is %d.%d.%d\n", major, minor, patch);
+	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
 	MPI_Init(NULL, NULL);
 	context = zmq_ctx_new ();
 

@@ -70,20 +70,20 @@ struct ServerRank
   void send(double * values, size_t doubles_to_send, int current_state_id, int timestamp, const char * field_name)
   {
     // send simuid, rank, stateid, timestamp, field_name next message: doubles
-    zmq_msg_t msg;
-    zmq_msg_init_size(&msg, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
-    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-    buf[0] = getSimuId();
-    buf[1] = getCommRank();
-    buf[2] = current_state_id;
-    buf[3] = timestamp; // TODO: is incremented on the server or client side
-    strcpy(reinterpret_cast<char*>(&buf[4]), field_name);
-    zmq_msg_send(&msg, data_request_socket, ZMQ_SNDMORE);
-    zmq_msg_close(&msg);
+    zmq_msg_t msg_header, msg_data;
+    zmq_msg_init_size(&msg_header, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
+    int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_header));
+    header[0] = getSimuId();
+    header[1] = getCommRank();
+    header[2] = current_state_id;
+    header[3] = timestamp; // TODO: is incremented on the server or client side
+    strcpy(reinterpret_cast<char*>(&header[4]), field_name);
+    zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE);
+    //zmq_msg_close(&msg_header);
 
-    zmq_msg_init_data(&msg, values, doubles_to_send * sizeof(double), NULL, NULL);
-    zmq_msg_send(&msg, data_request_socket, 0);
-    zmq_msg_close(&msg);
+    zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
+    zmq_msg_send(&msg_data, data_request_socket, 0);
+    //zmq_msg_close(&msg_header);
   }
 
   void receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
@@ -198,60 +198,60 @@ struct ConfigurationConnection
 
   void register_simu_id(Server * out_server)
   {
-    zmq_msg_t msg;
-    zmq_msg_init_size(&msg, sizeof(int) + sizeof(int));
-    void * buf = zmq_msg_data(&msg);
+    zmq_msg_t msg_request, msg_reply;
+    zmq_msg_init_size(&msg_request, sizeof(int) + sizeof(int));
+    void * buf = zmq_msg_data(&msg_request);
     int type = REGISTER_SIMU_ID;
     memcpy(buf, &type, sizeof(int));
     buf += sizeof(ConfigurationMessageType);
     int simu_id = getSimuId();
     memcpy(buf, &simu_id, sizeof(int));
-    zmq_msg_send(&msg, socket, 0);
-    zmq_msg_close(&msg);
+    zmq_msg_send(&msg_request, socket, 0);
+    //zmq_msg_close(&msg);
 
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, socket, 0);
-    assert(zmq_msg_size(&msg) == sizeof(int));
-    memcpy(&out_server->comm_size, zmq_msg_data(&msg), sizeof(int));
-    zmq_msg_close(&msg);
+    zmq_msg_init(&msg_reply);
+    zmq_msg_recv(&msg_reply, socket, 0);
+    assert(zmq_msg_size(&msg_reply) == sizeof(int));
+    memcpy(&out_server->comm_size, zmq_msg_data(&msg_reply), sizeof(int));
+    zmq_msg_close(&msg_reply);
 
     size_t port_names_size = out_server->comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char);
 
     assert_more_zmq_messages(socket);
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, socket, 0);
+    zmq_msg_init(&msg_reply);
+    zmq_msg_recv(&msg_reply, socket, 0);
 
-    assert(zmq_msg_size(&msg) == port_names_size);
+    assert(zmq_msg_size(&msg_reply) == port_names_size);
 
     out_server->port_names = new char[port_names_size]();
 //    out_server->port_names = new char[port_names_size];
-    memcpy(out_server->port_names, zmq_msg_data(&msg), port_names_size);
+    memcpy(out_server->port_names, zmq_msg_data(&msg_reply), port_names_size);
 
-    zmq_msg_close(&msg);
+    zmq_msg_close(&msg_reply);
   }
 
   // TODO: high water mark and so on?
   void register_field(const char * field_name, int local_vect_sizes[])
   {
-    zmq_msg_t msg;
-    zmq_msg_init_size(&msg, sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) );
-    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
+    zmq_msg_t msg_header, msg_local_vect_sizes, msg_reply;
+    zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) );
+    int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_header));
     int type = REGISTER_FIELD;
-    buf[0] = type;
-    buf[1] = getCommSize();
-    strcpy(reinterpret_cast<char*>(&buf[2]), field_name);
-    zmq_msg_send(&msg, socket, ZMQ_SNDMORE);
-    zmq_msg_close(&msg);
+    header[0] = type;
+    header[1] = getCommSize();
+    strcpy(reinterpret_cast<char*>(&header[2]), field_name);
+    zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE);
+    //zmq_msg_close(&msg);
 
-    zmq_msg_init_data(&msg, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
-    zmq_msg_send(&msg, socket, 0);
-    zmq_msg_close(&msg);
+    zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
+    zmq_msg_send(&msg_local_vect_sizes, socket, 0);
+    //zmq_msg_close(&msg);
 
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, socket, 0);
+    zmq_msg_init(&msg_reply);
+    zmq_msg_recv(&msg_reply, socket, 0);
     // ack
-    assert(zmq_msg_size(&msg) == 0);
-    zmq_msg_close(&msg);
+    assert(zmq_msg_size(&msg_reply) == 0);
+    zmq_msg_close(&msg_reply);
   }
 
 
