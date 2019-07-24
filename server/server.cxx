@@ -20,7 +20,7 @@ const int ENSEMBLE_SIZE = 1;
 const int SIMULATIONS_COUNT = 1;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIME = 600;  // 10 min max timeout for simulations.
-const int MAX_TIMESTAMP = 100;
+const int MAX_TIMESTAMP = 5;
 
 using namespace std;
 
@@ -347,12 +347,13 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		char field_name[MPI_MAX_PROCESSOR_NAME];
 		strcpy(field_name, reinterpret_cast<char*>(&buf[2]));
 		zmq_msg_close(&msg);
-		D("Server registering Field %s", field_name);
+		D("Server registering Field %s, simu_comm_size = %d", field_name, simu_comm_size);
 
 		assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
 		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(int));
+		// TODO: can be done 0copy!
 		memcpy (newField->local_vect_sizes_simu, zmq_msg_data(&msg), simu_comm_size * sizeof(int));
 		zmq_msg_close(&msg);
 
@@ -519,7 +520,7 @@ int main(int argc, char * argv[])
 
 	char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];
 	MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
-			data_response_port_names, MPI_MAX_PROCESSOR_NAME * comm_size, MPI_CHAR, 0, MPI_COMM_WORLD);
+			data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 	while (true)
 	{
@@ -624,6 +625,7 @@ int main(int argc, char * argv[])
 			D("<- Server received %d/%d bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
 					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
 
+			D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
 			if (simu_timestamp == current_timestamp)
 			{
 				fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part.local_offset_server,

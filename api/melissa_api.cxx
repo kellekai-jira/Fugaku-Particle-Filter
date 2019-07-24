@@ -102,18 +102,20 @@ struct ServerRank
 
     D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
     		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
+    D("values[0] = %.3f", values[0]);
     zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
     zmq_msg_send(&msg_data, data_request_socket, 0);
   }
 
   void receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
   {
-// receive a first message that is 1 if we want to change the state, otherwise 0
+// receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
 // the first message also contains out_current_state_id and out_timestamp
 // the 2nd message just consists of doubles that will be put into out_values
     zmq_msg_t msg;
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, data_request_socket, 0);
+    D("Received message size = %d", zmq_msg_size(&msg));
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     *out_current_state_id = buf[0];
@@ -291,7 +293,11 @@ void first_melissa_init(MPI_Comm comm_)
     ccon->register_simu_id(&server);
   }
   MPI_Bcast(&server.comm_size, 1, MPI_INT, 0, comm);
-  MPI_Bcast(&server.port_names, server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
+  if (getCommRank() != 0) {
+  	server.port_names = new char[server.comm_size]();
+  }
+  MPI_Bcast(server.port_names, server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
+
 
   // Fill server ranks array...
   for (int i = 0; i < server.comm_size; ++i)
@@ -324,8 +330,11 @@ void melissa_init(const char *field_name,
   int local_vect_sizes[getCommSize()];
     // synchronize local_vect_sizes and
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
-      local_vect_sizes, getCommSize(), MPI_INT,
+      local_vect_sizes, 1, MPI_INT,
       comm);
+
+  D("vect sizes: %d %d", local_vect_sizes[0], local_vect_sizes[1]);
+
   if (getCommRank() == 0 && getSimuId() == 0)  // TODO: what happens if simu_id 0 crashes? make this not dependend from the simuid. the server can ask the simulation after it's registration to give field infos!
   {
     // Tell the server which kind of data he has to expect
@@ -377,5 +386,4 @@ void melissa_finalize()
   }
 
   zmq_ctx_destroy(context);
-  exit(0);
 }
