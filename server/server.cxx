@@ -438,6 +438,9 @@ void do_update_step()
 
 int main(int argc, char * argv[])
 {
+	int major, minor, patch;
+	zmq_version (&major, &minor, &patch);
+	D("Current 0MQ version is %d.%d.%d\n", major, minor, patch);
 	MPI_Init(NULL, NULL);
 	context = zmq_ctx_new ();
 
@@ -445,7 +448,7 @@ int main(int argc, char * argv[])
 
 	// Get the rank of the process
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
-	void * configuration_socket;
+	void * configuration_socket = NULL;
 
 	// Start sockets:
 	if (comm_rank == 0)
@@ -470,27 +473,24 @@ int main(int argc, char * argv[])
 	MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
 			data_response_port_names, MPI_MAX_PROCESSOR_NAME * comm_size, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-	zmq_pollitem_t items [2];
-	items[0].socket = data_response_socket;
-	items[0].events = ZMQ_POLLIN;
-	if (comm_rank == 0)
-	{
-		items[1].socket = configuration_socket;
-		items[1].events = ZMQ_POLLIN;
-	}
 	while (true)
 	{
 		// Wait for requests
 		/* Poll for events indefinitely */
-		int rc;
-		if (comm_rank == 0) {
-			rc = zmq_poll (items, 2, -1);
+		// REM: the poll item needs to be recreated all the time!
+		zmq_pollitem_t items [2] = {
+				{data_response_socket, 0, ZMQ_POLLIN, 0},
+				{configuration_socket, 0, ZMQ_POLLIN, 0}
+		};
+		if (comm_rank == 0)
+		{
+			ZMQ_CHECK(zmq_poll (items, 2, -1));
 		}
 		else
 		{
-			rc = zmq_poll (items, 1, -1);
+			ZMQ_CHECK(zmq_poll (items, 1, -1));
 		}
-		assert (rc >= 0); /* Returned events will be stored in items[].revents */
+		/* Returned events will be stored in items[].revents */
 
 		// answer requests
 		if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
