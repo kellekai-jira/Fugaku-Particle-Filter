@@ -52,22 +52,22 @@ struct EnsembleMember
 {
 	double *state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
 	double *state_background;
-	int size;
+	int local_state_size;  // TODO: actually I can save this in the field! not here!
 	int received_state_background = 0;
 
-	void set_ensemble_size(int size_)
+	void set_state_size(int local_state_size_)
 	{
 		// TODO: if this is called 2 we get memory leaks. This is a dirty replacement of a con
-		size = size_;
+		local_state_size = local_state_size_;
 
 		// TODO: replace all mallocs by new? Actually it is dirty to use new[].... better use a vector. but I'm not sure if that is compatible with c and our double arrays ;) https://stackoverflow.com/questions/4754763/object-array-initialization-without-default-constructor
-		state_analysis = new double[size];
-		state_background = new double[size];
+		state_analysis = new double[local_state_size];
+		state_background = new double[local_state_size];
 	}
 
 	~EnsembleMember()
 	{
-		if (size != 0) {
+		if (local_state_size != 0) {
 			delete [] state_analysis;
 			delete [] state_background;
 		}
@@ -75,7 +75,7 @@ struct EnsembleMember
 
 	bool finished()
 	{
-		return size == received_state_background;
+		return local_state_size == received_state_background;
 	}
 
 	void store_background_state_part(int local_offset, double * values, int amount_of_doubles)
@@ -100,10 +100,6 @@ struct Field {
 		local_vect_sizes_simu = new int[simu_comm_size];
 		ensemble_size = ensemble_size_;
 		ensemble_members = new EnsembleMember[ensemble_size];
-		for (int i = 0; i < ensemble_size; ++i)
-		{
-			ensemble_members[i].set_ensemble_size(ensemble_size);
-		}
 	}
 
 	// TODO: naming: server_comm size or ranks_server? same for simu!
@@ -112,6 +108,20 @@ struct Field {
 	void calculate_parts(int server_comm_size)
 	{
 		parts = calculate_n_to_m(server_comm_size, simu_comm_size, local_vect_sizes_simu);
+		int local_state_size = 0;
+		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
+		{
+			if (part_it->rank_server == comm_rank)
+			{
+				local_state_size += part_it->send_count;
+			}
+		}
+
+		for (int i = 0; i < ensemble_size; ++i)
+		{
+
+			ensemble_members[i].set_state_size(local_state_size);  // low: better naming: local state size is in doubles not in bytes!
+		}
 	}
 
 	/// Finds the part of the field with the specified simu_rank.
@@ -216,7 +226,7 @@ struct ConnectedSimulationRank {
 		zmq_msg_init_data(&data_msg, reinterpret_cast<void*>(fields.begin()->second->ensemble_members[first_elem->second.state_id].state_analysis),
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
 
-		D("Server sending %d bytes for state %d, timestamp=%d",
+		D("-> Server sending %d bytes for state %d, timestamp=%d",
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
 				header[0], header[1]);
 
@@ -284,7 +294,7 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 	if (buf[0] == REGISTER_SIMU_ID) {
 		// Register Simu ID
 		assert(zmq_msg_size(&msg) == 2 * sizeof(int));
-		assert(buf[1] > 0);  // simu_id  > 0 TODO: why? can't i delete this line?
+		assert(buf[1] >= 0);  // don't allow negative simu_ids
 		// we add the simulation if we first receive data from it.
 		zmq_msg_close(&msg);
 		D("Server registering Simu ID %d", buf[1]);
@@ -373,8 +383,9 @@ void broadcast_field_information_and_calculate_parts() {
 }
 
 vector<int> unscheduled_tasks;
-// returns true if it scheduled a new task for the given simuid
-bool create_new_task(int simuid)
+/// returns true if it scheduled a new task for the given simuid
+/// schedules a new task on a model task runner
+bool schedule_new_task(int simuid)
 {
 	assert(comm_rank == 0);
 	static int task_id = 0;
@@ -414,7 +425,7 @@ void init_new_timestamp()
 			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 			{
 				auto &member = field_it->second->ensemble_members[i];
-				assert(member.received_state_background = member.size);
+				assert(member.received_state_background = member.local_state_size);
 				member.received_state_background = 0;
 			}
 		}
@@ -577,6 +588,8 @@ int main(int argc, char * argv[])
 			// Save state part in background_states.
 			n_to_m & part = fields[field_name]->getPart(simu_rank);
 			assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
+			D("<- Server received %d/%d bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
+					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
 
 			if (simu_timestamp == current_timestamp)
 			{
@@ -592,6 +605,7 @@ int main(int argc, char * argv[])
 			// whcih atm can not even happen if more than one fields as they do there communication one after another.
 			// TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
 
+
 			zmq_msg_close(&identity_msg);
 			zmq_msg_close(&empty_msg);
 			zmq_msg_close(&header_msg);
@@ -604,7 +618,7 @@ int main(int argc, char * argv[])
 			if (!got_task && comm_rank == 0)
 				{
 					// schedule something new on this model task runner/ simulation!
-					create_new_task(simu_id);
+					schedule_new_task(simu_id);
 
 					// try to run it directly:
 					simu.connected_simulation_ranks[simu_rank].try_to_start_task(simu_rank);
@@ -636,7 +650,10 @@ int main(int argc, char * argv[])
 				// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
 				for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
 				{
-					create_new_task(simu_it->first);
+					if (schedule_new_task(simu_it->first)) {
+						// normally we arrive always here if there are not more model task runners than ensemble members.
+						simu_it->second.try_to_start_task();
+					}
 				}
 			}
 		}

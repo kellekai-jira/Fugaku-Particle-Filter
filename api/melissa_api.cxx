@@ -81,6 +81,8 @@ struct ServerRank
     zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE);
     //zmq_msg_close(&msg_header);
 
+    D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
+    		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
     zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
     zmq_msg_send(&msg_data, data_request_socket, 0);
     //zmq_msg_close(&msg_header);
@@ -107,7 +109,7 @@ struct ServerRank
       zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
       zmq_msg_recv(&msg, data_request_socket, 0);
 
-      D("Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
+      D("<- Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
       		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
 
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
@@ -307,7 +309,7 @@ void melissa_init(const char *field_name,
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
       local_vect_sizes, getCommSize(), MPI_INT,
       comm);
-  if (getCommRank() == 0 && getSimuId() == 1)  //TODO: start simuid at 0... other wise not logical!
+  if (getCommRank() == 0 && getSimuId() == 0)  // TODO: what happens if simu_id 0 crashes? make this not dependend from the simuid. the server can ask the simulation after it's registration to give field infos!
   {
     // Tell the server which kind of data he has to expect
     ccon->register_field(field_name, local_vect_sizes);
@@ -332,10 +334,8 @@ void melissa_expose(const char *field_name, double *values)
   }
 
   // Now Send data to the melissa server
-  D("Simulation put state");
   fields[field_name].putState(values, field_name);
   // and request new data
-  D("Simulation get state");
   fields[field_name].getState(values);
   // TODO: this will block other fields!
 }

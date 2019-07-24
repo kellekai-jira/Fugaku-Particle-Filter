@@ -22,7 +22,7 @@ int main(int argc, char * args[])
 	assert(GLOBAL_VECT_SIZE % comm_size == 0);  // need to use a good vect size!
 	int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
 
-	melissa_init("state1",
+	melissa_init("variableX",
 			local_vect_size,
 			MPI_COMM_WORLD);  // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 	bool timestepping = true;
@@ -36,7 +36,7 @@ int main(int argc, char * args[])
 			*it += comm_size;
 		}
 
-		/*timestepping = */ melissa_expose("state1", state1.data());
+		/*timestepping = */ melissa_expose("variableX", state1.data());
 	}
 	MPI_Finalize();
 }
