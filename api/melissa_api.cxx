@@ -99,13 +99,11 @@ struct ServerRank
     header[3] = timestamp; // TODO: is incremented on the server or client side
     strcpy(reinterpret_cast<char*>(&header[4]), field_name);
     zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE);
-    //zmq_msg_close(&msg_header);
 
     D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
     		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
     zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
     zmq_msg_send(&msg_data, data_request_socket, 0);
-    //zmq_msg_close(&msg_header);
   }
 
   void receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
@@ -229,7 +227,6 @@ struct ConfigurationConnection
     int simu_id = getSimuId();
     memcpy(buf, &simu_id, sizeof(int));
     zmq_msg_send(&msg_request, socket, 0);
-    //zmq_msg_close(&msg);
 
     zmq_msg_init(&msg_reply);
     zmq_msg_recv(&msg_reply, socket, 0);
@@ -263,11 +260,9 @@ struct ConfigurationConnection
     header[1] = getCommSize();
     strcpy(reinterpret_cast<char*>(&header[2]), field_name);
     zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE);
-    //zmq_msg_close(&msg);
 
     zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
     zmq_msg_send(&msg_local_vect_sizes, socket, 0);
-    //zmq_msg_close(&msg);
 
     zmq_msg_init(&msg_reply);
     zmq_msg_recv(&msg_reply, socket, 0);

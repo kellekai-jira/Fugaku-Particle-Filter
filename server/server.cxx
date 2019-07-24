@@ -232,14 +232,9 @@ struct ConnectedSimulationRank {
 
 		zmq_msg_send(&data_msg, data_response_socket, 0);
 
-		// TODO: don't close messages after send! see other send's too..
-//		zmq_msg_close(&identity_msg);
-//		zmq_msg_close(&empty_msg);
-//		zmq_msg_close(&header_msg);
-//		zmq_msg_close(&data_msg);
-
 		current_task = first_elem->second;
 		waiting_tasks.erase(first_elem);
+
 		// close connection:
 		connection_identity = NULL;
 
@@ -304,12 +299,10 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
 		*buf = comm_size;
 		zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
-		//zmq_msg_close(&msg);
 
 		zmq_msg_init_data(&msg_reply2, data_response_port_names,
 				comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char), NULL, NULL);
 		zmq_msg_send(&msg_reply2, configuration_socket, 0);
-		//zmq_msg_close(&msg);
 	}
 	else if (buf[0] == REGISTER_FIELD)
 	{
@@ -337,7 +330,6 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		zmq_msg_t msg_reply;
 		zmq_msg_init(&msg_reply);
 		zmq_msg_send(&msg_reply, configuration_socket, 0);
-		//zmq_msg_close
 
 		fields.emplace(field_name, newField);
 	}
@@ -660,7 +652,7 @@ int main(int argc, char * argv[])
 
 
 		// TODO: check ret values!
-		// TODO: remove compile warnings!		zmq_msg_close(&data_msg);
+		// TODO: remove compile warnings!
 
 		if (phase == PHASE_SIMULATION && comm_rank != 0)
 		{

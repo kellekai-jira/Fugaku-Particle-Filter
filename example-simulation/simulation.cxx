@@ -37,6 +37,8 @@ int main(int argc, char * args[])
 		}
 
 		/*timestepping = */ melissa_expose("variableX", state1.data());
+
+		// TODO: print output to see what happens!
 	}
 	MPI_Finalize();
 }
