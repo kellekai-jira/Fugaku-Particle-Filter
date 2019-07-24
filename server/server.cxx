@@ -20,6 +20,7 @@ const int ENSEMBLE_SIZE = 1;
 const int SIMULATIONS_COUNT = 1;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIME = 600;  // 10 min max timeout for simulations.
+const int TIMESTEPS = 100;
 
 using namespace std;
 
@@ -166,9 +167,10 @@ struct NewTask {
 
 const Task NO_WORK = Task{-1,-1};
 
-void delete_array(void * data, void * hint)
+void delete_int_array(void * data, void * hint)
 {
-	delete [] data;
+	//delete [] data;
+	delete [] reinterpret_cast<int*>(data);
 }
 
 struct ConnectedSimulationRank {
@@ -212,7 +214,7 @@ struct ConnectedSimulationRank {
 		zmq_msg_t header_msg;
 		zmq_msg_t data_msg;
 
-		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_array, NULL);
+		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
 		//zmq_msg_init_size(&empty_msg, 0);
@@ -239,6 +241,30 @@ struct ConnectedSimulationRank {
 		connection_identity = NULL;
 
 		return true;
+	}
+
+	void end() {
+		assert(connection_identity != NULL);
+		int * header = new int[3];  // needto do it like this to be sure it stays in memory as send is non blocking!
+		header[0] = -1;
+		header[1] = current_timestamp;
+		header[2] = END_SIMULATION;
+
+		zmq_msg_t identity_msg;
+		zmq_msg_t empty_msg;
+		zmq_msg_t header_msg;
+
+		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
+		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
+
+		//zmq_msg_init_size(&empty_msg, 0);
+		zmq_msg_init(&empty_msg);
+		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
+
+		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
+		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
+
+		connection_identity = NULL;
 	}
 };
 
@@ -271,6 +297,12 @@ struct Simulation  // Model process runner
 	void try_to_start_task() {// todo: replace fields.begin() by field as there will be only on field soon.
 		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
 			cs->second.try_to_start_task(cs->first);
+		}
+	}
+
+	void end() {
+		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
+			cs->second.end();
 		}
 	}
 };
@@ -407,6 +439,14 @@ bool schedule_new_task(int simuid)
 	}
 }
 
+void end_all_simulations()
+{
+	for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+	{
+		simu_it->second.end();
+	}
+}
+
 void init_new_timestamp()
 {
 	current_timestamp++;
@@ -445,6 +485,8 @@ void do_update_step()
 
 int main(int argc, char * argv[])
 {
+	assert(TIMESTEPS > 1);
+
 	int major, minor, patch;
 	zmq_version (&major, &minor, &patch);
 	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
@@ -638,7 +680,12 @@ int main(int argc, char * argv[])
 			if (finished)
 			{
 				do_update_step();
-				init_new_timestamp();
+				if (current_timestamp >= TIMESTEPS)
+				{
+					end_all_simulations();
+					break;
+				}
+
 				// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
 				for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
 				{
@@ -677,7 +724,9 @@ int main(int argc, char * argv[])
    // TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
 	// TODO: check if we need to kill some simulations...
 
+	D("Ending Server.");
 	// TODO: check if we need to delete some more stuff!
 	zmq_ctx_destroy(context);
 	MPI_Finalize();
+
 }

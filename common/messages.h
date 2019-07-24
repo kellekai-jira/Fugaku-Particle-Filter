@@ -5,9 +5,9 @@ enum ConfigurationMessageType {
 
 
 enum DataMessageType {
-  CHANGE_STATE = 0,
-  KEEP_STATE   = 1,
-  QUIT         = 2
+  CHANGE_STATE   = 0,
+  KEEP_STATE     = 1,
+  END_SIMULATION = 2
 };
 
 

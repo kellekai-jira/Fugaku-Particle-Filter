@@ -36,7 +36,7 @@ int main(int argc, char * args[])
 			*it += comm_size;
 		}
 
-		/*timestepping = */ melissa_expose("variableX", state1.data());
+		timestepping = melissa_expose("variableX", state1.data());
 
 		// TODO: print output to see what happens!
 	}

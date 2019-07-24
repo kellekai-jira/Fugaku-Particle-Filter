@@ -134,13 +134,14 @@ struct ServerRank
       zmq_msg_close(&msg);
       assert_no_more_zmq_messages(data_request_socket);
     }
-    else if (type == QUIT)
+    else if (type == END_SIMULATION)
     {
       melissa_finalize();
     }
     else
     {
       assert(type == KEEP_STATE);
+      // TODO: unimplemented
     }
   }
 };
@@ -336,7 +337,10 @@ void melissa_init(const char *field_name,
   fields.emplace(string(field_name), newField);
 }
 
-void melissa_expose(const char *field_name, double *values)
+bool end_requested = false;
+
+/// returns false if simulation should end now.
+bool melissa_expose(const char *field_name, double *values)
 {
   assert(phase != PHASE_FINAL);
   if (phase == PHASE_INIT) {
@@ -352,11 +356,16 @@ void melissa_expose(const char *field_name, double *values)
   fields[field_name].putState(values, field_name);
   // and request new data
   fields[field_name].getState(values);
+
   // TODO: this will block other fields!
+
+  return end_requested == false;
 }
 
 void melissa_finalize()
 {
+	D("End Simulation.");
+	end_requested = true;
   phase = PHASE_FINAL;
   // TODO: close all connections [should be DONE]
   // TODO: free all pointers?

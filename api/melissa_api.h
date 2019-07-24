@@ -15,7 +15,7 @@ void melissa_init(const char *field_name,
                        MPI_Comm comm_);  // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 
 
-void melissa_expose(const char *field_name, double *values);
+bool melissa_expose(const char *field_name, double *values);
 
 
 
