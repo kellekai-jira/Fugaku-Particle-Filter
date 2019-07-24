@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <unistd.h>
+
 #include "../api/melissa_api.h"
 
 const int GLOBAL_VECT_SIZE = 40;
@@ -35,6 +37,9 @@ int main(int argc, char * args[])
 		{
 			*it += comm_size;
 		}
+
+		// simulate some calculation
+		usleep(100000);
 
 		timestepping = melissa_expose("variableX", state1.data());
 

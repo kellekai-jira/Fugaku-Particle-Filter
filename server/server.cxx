@@ -16,7 +16,7 @@
 #include <time.h>
 
 // TODO: configure this somehow better:
-const int ENSEMBLE_SIZE = 1;
+const int ENSEMBLE_SIZE = 20;
 const int SIMULATIONS_COUNT = 1;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIME = 600;  // 10 min max timeout for simulations.
