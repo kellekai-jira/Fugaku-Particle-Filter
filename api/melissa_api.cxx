@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include <string>
+
 // memcopy:
 #include <cstring>
 
@@ -14,6 +16,7 @@
 
 #include "../common/utils.h"
 // TODO: localhost behaviour (if hostname == myhostname replace by localhost ...)
+
 
 // Forward declarations:
 void melissa_finalize();
@@ -30,6 +33,21 @@ const int getSimuId() {
 
 /// Communicator used for simulation
 MPI_Comm comm;
+
+
+/// if node name = my nodename, replace by localhost!
+string fix_port_name(const char * port_name_)
+{
+	string port_name(port_name_);
+	char my_port_name[MPI_MAX_PROCESSOR_NAME];
+	melissa_get_node_name(my_port_name);
+	int found = port_name.find(my_port_name);
+	// check if found and if hostname is between tcp://<nodename>:port
+	if (found != string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_port_name)] == ':') {
+		port_name = port_name.substr(0, found) + "localhost" + port_name.substr(found + strlen(my_port_name));
+	}
+	return port_name;
+}
 
 /**
  * Returns simulation's rank
@@ -59,7 +77,9 @@ struct ServerRank
   ServerRank(const char * addr_request)
   {
     data_request_socket = zmq_socket (context, ZMQ_REQ);
-    zmq_connect (data_request_socket, addr_request);
+    string cleaned_addr = fix_port_name(addr_request);
+    D("Data Request Connection to %s", cleaned_addr.c_str());
+    zmq_connect (data_request_socket, cleaned_addr.c_str());
   }
 
   ~ServerRank()
@@ -193,9 +213,9 @@ struct ConfigurationConnection
   ConfigurationConnection()
   {
     socket = zmq_socket (context, ZMQ_REQ);
-    const char * port_name = getenv("MELISSA_SERVER_MASTER_NODE");
-    D("connecting to %s", port_name);
-    zmq_connect (socket, port_name);
+    string port_name = fix_port_name(getenv("MELISSA_SERVER_MASTER_NODE"));
+    D("Configuration Connection to %s", port_name.c_str());
+    zmq_connect (socket, port_name.c_str());
   }
 
   void register_simu_id(Server * out_server)
