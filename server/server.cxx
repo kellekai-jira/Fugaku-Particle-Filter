@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include <vector>
+
 #include <mpi.h>
 #include "zmq.h"
 
@@ -80,19 +82,15 @@ struct EnsembleMember
 
 struct Field {
 	// index: state id.
-	EnsembleMember * ensemble_members;
-	int ensemble_size;
+	vector<EnsembleMember> ensemble_members;
 
-	int * local_vect_sizes_simu;
-	int simu_comm_size;
+	vector<int> local_vect_sizes_simu;
 	vector<n_to_m> parts;
 
 	Field(int simu_comm_size_, int ensemble_size_)
 	{
-		simu_comm_size = simu_comm_size_;
-		local_vect_sizes_simu = new int[simu_comm_size];
-		ensemble_size = ensemble_size_;
-		ensemble_members = new EnsembleMember[ensemble_size];
+		local_vect_sizes_simu.resize(simu_comm_size_);
+		ensemble_members.resize(ensemble_size_);
 	}
 
 	// TODO: naming: server_comm size or ranks_server? same for simu!
@@ -100,7 +98,7 @@ struct Field {
 	/// simulations
 	void calculate_parts(int server_comm_size)
 	{
-		parts = calculate_n_to_m(server_comm_size, simu_comm_size, local_vect_sizes_simu);
+		parts = calculate_n_to_m(server_comm_size, local_vect_sizes_simu);
 		int local_state_size = 0;
 		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
 		{
@@ -110,10 +108,10 @@ struct Field {
 			}
 		}
 
-		for (int i = 0; i < ensemble_size; ++i)
+		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
 		{
 
-			ensemble_members[i].set_state_size(local_state_size);  // low: better naming: local state size is in doubles not in bytes!
+			ens_it->set_state_size(local_state_size);  // low: better naming: local state size is in doubles not in bytes!
 		}
 	}
 
@@ -127,13 +125,6 @@ struct Field {
 			}
 		}
 		assert(false); // Did not find the part!
-	}
-
-
-	~Field()
-	{
-		delete [] local_vect_sizes_simu;
-		delete [] ensemble_members;
 	}
 
 };
@@ -352,7 +343,7 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		zmq_msg_recv(&msg, configuration_socket, 0);
 		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(int));
 		// TODO: can be done 0copy!
-		memcpy (newField->local_vect_sizes_simu, zmq_msg_data(&msg), simu_comm_size * sizeof(int));
+		memcpy (newField->local_vect_sizes_simu.data(), zmq_msg_data(&msg), simu_comm_size * sizeof(int));
 		zmq_msg_close(&msg);
 
 		// ack
@@ -380,8 +371,9 @@ void broadcast_field_information_and_calculate_parts() {
 		if (comm_rank == 0) {
 			strcpy(field_name, field_it->first.c_str());
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
-			MPI_Bcast(&field_it->second->simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);  // 2:simu_comm_size
-			MPI_Bcast(&field_it->second->local_vect_sizes_simu, field_it->second->simu_comm_size,
+			int simu_comm_size = field_it->second->local_vect_sizes_simu.size();
+			MPI_Bcast(&simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
+			MPI_Bcast(&field_it->second->local_vect_sizes_simu, simu_comm_size,
 					MPI_INT, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_simu
 
 			field_it->second->calculate_parts(comm_size);
@@ -393,7 +385,7 @@ void broadcast_field_information_and_calculate_parts() {
 
 			Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
-			MPI_Bcast(newField->local_vect_sizes_simu, simu_comm_size,
+			MPI_Bcast(newField->local_vect_sizes_simu.data(), simu_comm_size,
 					MPI_INT, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
 
 			newField->calculate_parts(comm_size);
@@ -479,6 +471,13 @@ void do_update_step()
 	// TODO
 	printf("Doing update step...\n");
 	MPI_Barrier(MPI_COMM_WORLD);
+	for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
+	{
+		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
+		{
+			fill(ens_it->state_analysis.begin(), ens_it->state_analysis.end(), 0);
+		}
+	}
 }
 
 int main(int argc, char * argv[])
@@ -666,9 +665,9 @@ int main(int argc, char * argv[])
 			bool finished = true;
 			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 			{
-				for (int i = 0; i != field_it->second->ensemble_size; i++)
+				for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
 				{
-					finished = field_it->second->ensemble_members[i].finished();
+					finished = ens_it->finished();
 					if (!finished)
 						break;
 				}

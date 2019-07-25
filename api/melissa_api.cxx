@@ -97,7 +97,10 @@ struct ServerRank
 
     D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
     		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
-    D("values[0] = %.3f", values[0]);
+    D("values[0]  = %.3f", values[0]);
+    D("values[1]  = %.3f", values[1]);
+    D("values[5]  = %.3f", values[5]);
+    D("values[35] = %.3f", values[35]);
     zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
     ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
   }
@@ -165,8 +168,8 @@ struct Field {
   int timestamp;
   int local_vect_size;
   vector<ConnectedServerRank> connected_server_ranks;
-  void initConnections(int local_vect_sizes[]) {
-    vector<n_to_m> parts = calculate_n_to_m(server.comm_size, getCommSize(), local_vect_sizes);
+  void initConnections(const vector<int> &local_vect_sizes) {
+    vector<n_to_m> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
       if (part->rank_simu == getCommRank())
@@ -318,10 +321,10 @@ void melissa_init(const char *field_name,
   newField.current_state_id = getSimuId(); // We are beginning like this...
   newField.timestamp = 0;
   newField.local_vect_size = local_vect_size;
-  int local_vect_sizes[getCommSize()];
+  vector<int> local_vect_sizes(getCommSize());
     // synchronize local_vect_sizes and
   MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
-      local_vect_sizes, 1, MPI_INT,
+      local_vect_sizes.data(), 1, MPI_INT,
       comm);
 
   D("vect sizes: %d %d", local_vect_sizes[0], local_vect_sizes[1]);
@@ -329,7 +332,7 @@ void melissa_init(const char *field_name,
   if (getCommRank() == 0 && getSimuId() == 0)  // TODO: what happens if simu_id 0 crashes? make this not dependend from the simuid. the server can ask the simulation after it's registration to give field infos!
   {
     // Tell the server which kind of data he has to expect
-    ccon->register_field(field_name, local_vect_sizes);
+    ccon->register_field(field_name, local_vect_sizes.data());
   }
 
   // Calculate to which server ports the local part of the field will connect

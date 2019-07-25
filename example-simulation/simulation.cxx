@@ -35,7 +35,8 @@ int main(int argc, char * args[])
 	{
 		for (auto it = state1.begin(); it != state1.end(); it++)
 		{
-			*it += comm_size;
+			//*it += comm_size;
+			*it += comm_rank;
 		}
 
 		// simulate some calculation

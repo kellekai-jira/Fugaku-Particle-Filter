@@ -10,8 +10,9 @@ struct n_to_m {  // TODO: rename datatype into Part
   int send_count;
 };
 
-std::vector<n_to_m> calculate_n_to_m(int ranks_server, int ranks_simu, int local_vect_sizes_simu[])
+std::vector<n_to_m> calculate_n_to_m(int ranks_server, const std::vector<int> &local_vect_sizes_simu)
 {
+	int ranks_simu = local_vect_sizes_simu.size();
   std::vector <n_to_m> parts;
   int local_vect_sizes_server[ranks_server];
   int global_vect_size = 0;
