@@ -1,5 +1,18 @@
 #!/bin/bash
 
+
+# compile:
+set +e
+rundir=$PWD
+cd ..
+./compile.sh
+cd $rundir
+
+unset +e
+
+
+
+
 killall xterm
 
 precommand="xterm_gdb"
