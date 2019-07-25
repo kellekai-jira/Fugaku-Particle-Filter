@@ -53,7 +53,7 @@ inline void assert_no_more_zmq_messages(void * socket)
  * The node name
  *
  *******************************************************************************/
-void melissa_get_node_name (char *node_name)
+void melissa_get_node_name (char *node_name, size_t buf_len)
 {
     struct ifaddrs *ifap, *ifa;
     struct sockaddr_in *sa;
@@ -69,7 +69,8 @@ void melissa_get_node_name (char *node_name)
             addr = inet_ntoa(sa->sin_addr);
             if (strcmp (ifa->ifa_name, "ib0") == 0)
             {
-                sprintf(node_name, "%s", addr);
+            	  assert(strlen(node_name) <= buf_len);
+                strcpy(node_name, addr);
                 ok = 1;
                 break;
             }
@@ -77,6 +78,6 @@ void melissa_get_node_name (char *node_name)
     }
     if (ok == 0)
     {
-      gethostname(node_name, MPI_MAX_PROCESSOR_NAME);
+      gethostname(node_name, buf_len);
     }
 }

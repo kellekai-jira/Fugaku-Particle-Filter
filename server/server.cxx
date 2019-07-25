@@ -17,9 +17,8 @@
 
 // TODO: configure this somehow better:
 const int ENSEMBLE_SIZE = 20;
-const int SIMULATIONS_COUNT = 1;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
-const long long MAX_SIMULATION_TIME = 600;  // 10 min max timeout for simulations.
+const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
 const int MAX_TIMESTAMP = 5;
 
 using namespace std;
@@ -40,7 +39,7 @@ int current_timestamp = 0;  // will effectively start at 1.
 long long get_due_date() {
 	time_t seconds;
 	seconds = time (NULL);
-	return seconds + MAX_SIMULATION_TIME;
+	return seconds + MAX_SIMULATION_TIMEOUT;
 }
 struct Part
 {
@@ -51,8 +50,8 @@ struct Part
 
 struct EnsembleMember
 {
-	double *state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
-	double *state_background;
+	vector<double> state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
+	vector<double> state_background;
 	int local_state_size;  // TODO: actually I can save this in the field! not here!
 	int received_state_background = 0;
 
@@ -62,16 +61,10 @@ struct EnsembleMember
 		local_state_size = local_state_size_;
 
 		// TODO: replace all mallocs by new? Actually it is dirty to use new[].... better use a vector. but I'm not sure if that is compatible with c and our double arrays ;) https://stackoverflow.com/questions/4754763/object-array-initialization-without-default-constructor
-		state_analysis = new double[local_state_size];
-		state_background = new double[local_state_size];
-	}
-
-	~EnsembleMember()
-	{
-		if (local_state_size != 0) {
-			delete [] state_analysis;
-			delete [] state_background;
-		}
+		state_analysis.reserve(local_state_size);
+		state_analysis.resize(local_state_size);
+		state_background.reserve(local_state_size);
+		state_background.resize(local_state_size);
 	}
 
 	bool finished()
@@ -81,7 +74,9 @@ struct EnsembleMember
 
 	void store_background_state_part(int local_offset, double * values, int amount_of_doubles)
 	{
-		memcpy(reinterpret_cast<void*>(&state_background[local_offset]), reinterpret_cast<void*>(values), amount_of_doubles * sizeof(double));
+		D("before_assert %d %d %d", amount_of_doubles, local_offset, state_background.size());
+		assert(amount_of_doubles + local_offset <= state_background.size());
+		copy(values, values + amount_of_doubles, state_background.data() + local_offset);
 		received_state_background += amount_of_doubles;
 	}
 };
@@ -224,7 +219,8 @@ struct ConnectedSimulationRank {
 		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
 		// we do not know when it will really send. send is non blocking!
 
-		zmq_msg_init_data(&data_msg, reinterpret_cast<void*>(fields.begin()->second->ensemble_members[first_elem->second.state_id].state_analysis),
+		zmq_msg_init_data(&data_msg,
+				(fields.begin()->second->ensemble_members[first_elem->second.state_id].state_analysis.data() + fields.begin()->second->getPart(simu_rank).local_offset_server),
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
 
 		D("-> Server sending %d bytes for state %d, timestamp=%d",
@@ -515,7 +511,7 @@ int main(int argc, char * argv[])
 	zmq_bind(data_response_socket, data_response_port_name);
 
 	char hostname[MPI_MAX_PROCESSOR_NAME];
-	melissa_get_node_name(hostname);
+	melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
 	sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+comm_rank);
 
 	char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];

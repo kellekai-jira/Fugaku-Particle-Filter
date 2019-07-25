@@ -40,8 +40,8 @@ string fix_port_name(const char * port_name_)
 {
 	string port_name(port_name_);
 	char my_port_name[MPI_MAX_PROCESSOR_NAME];
-	melissa_get_node_name(my_port_name);
-	int found = port_name.find(my_port_name);
+	melissa_get_node_name(my_port_name, MPI_MAX_PROCESSOR_NAME);
+	size_t found = port_name.find(my_port_name);
 	// check if found and if hostname is between tcp://<nodename>:port
 	if (found != string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_port_name)] == ':') {
 		port_name = port_name.substr(0, found) + "localhost" + port_name.substr(found + strlen(my_port_name));
@@ -162,12 +162,7 @@ struct ConnectedServerRank {
 struct Server
 {
   int comm_size = 0;
-  char * port_names;
-
-  ~Server() {
-  	// TODO: probably not the best idea to only have a destructor!
-  	delete [] port_names;
-  }
+  vector<char> port_names;
 };
 Server server;
 
@@ -246,9 +241,10 @@ struct ConfigurationConnection
 
     assert(zmq_msg_size(&msg_reply) == port_names_size);
 
-    out_server->port_names = new char[port_names_size]();
-//    out_server->port_names = new char[port_names_size];
-    memcpy(out_server->port_names, zmq_msg_data(&msg_reply), port_names_size);
+    out_server->port_names.resize(port_names_size);
+
+    copy(reinterpret_cast<char*>(zmq_msg_data(&msg_reply)),
+    		reinterpret_cast<char*>(zmq_msg_data(&msg_reply)) + port_names_size, out_server->port_names.begin());
 
     zmq_msg_close(&msg_reply);
   }
@@ -294,15 +290,16 @@ void first_melissa_init(MPI_Comm comm_)
   }
   MPI_Bcast(&server.comm_size, 1, MPI_INT, 0, comm);
   if (getCommRank() != 0) {
-  	server.port_names = new char[server.comm_size]();
+  	server.port_names.resize(server.comm_size);
   }
-  MPI_Bcast(server.port_names, server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
+  D("port_names_size= %d", server.port_names.size());
+  MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
 
 
   // Fill server ranks array...
   for (int i = 0; i < server.comm_size; ++i)
   {
-    server_ranks.push_back(new ServerRank(&server.port_names[i]));
+    server_ranks.push_back(new ServerRank(&server.port_names.data()[i]));
   }
 }
 
@@ -360,6 +357,7 @@ bool melissa_expose(const char *field_name, double *values)
     // Now we are sure all fields are registered.
     // we do not need this anymore:
     delete ccon;
+    ccon = NULL;
   }
 
   // Now Send data to the melissa server
@@ -380,6 +378,9 @@ void melissa_finalize()
   // TODO: close all connections [should be DONE]
   // TODO: free all pointers?
   // not an api function anymore but activated if a finalization message is received.
+  if (ccon != NULL) {
+  	delete ccon;
+  }
   for (auto sr = server_ranks.begin(); sr < server_ranks.end(); sr++)
   {
     delete *sr;
