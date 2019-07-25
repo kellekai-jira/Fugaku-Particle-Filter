@@ -95,7 +95,7 @@ struct ServerRank
     strcpy(reinterpret_cast<char*>(&header[4]), field_name);
     ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE));
 
-    D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
+    D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %lu bytes",
     		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
     D("values[0]  = %.3f", values[0]);
     D("values[1]  = %.3f", values[1]);
@@ -113,7 +113,7 @@ struct ServerRank
     zmq_msg_t msg;
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, data_request_socket, 0);
-    D("Received message size = %d", zmq_msg_size(&msg));
+    D("Received message size = %lu", zmq_msg_size(&msg));
     assert(zmq_msg_size(&msg) == 3 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     *out_current_state_id = buf[0];
@@ -130,7 +130,7 @@ struct ServerRank
 
       zmq_msg_recv(&msg, data_request_socket, 0);
 
-      D("<- Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
+      D("<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d",
       		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
 
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
@@ -299,7 +299,7 @@ void first_melissa_init(MPI_Comm comm_)
   if (getCommRank() != 0) {
   	server.port_names.resize(server.comm_size * MPI_MAX_PROCESSOR_NAME);
   }
-  D("port_names_size= %d", server.port_names.size());
+  D("port_names_size= %lu", server.port_names.size());
   MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
 
 
@@ -383,7 +383,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
 	MPI_Barrier(comm);
   //sleep(3);
 	D("End Simulation.");
-  D("server_ranks: %d", server_ranks.size());
+  D("server_ranks: %lu", server_ranks.size());
 	end_requested = true;
   phase = PHASE_FINAL;
   // TODO: close all connections [should be DONE]

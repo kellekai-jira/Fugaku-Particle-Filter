@@ -24,7 +24,7 @@ using namespace std;
 
 const int TAG_NEW_TASK = 42;
 
-int IDENTITY_SIZE = 0;
+unsigned int IDENTITY_SIZE = 0;
 
 // Server comm_size and Server rank
 int comm_size;
@@ -73,7 +73,8 @@ struct EnsembleMember
 
 	void store_background_state_part(const n_to_m & part, const double * values)
 	{
-		D("before_assert %d %d %d", part.send_count, part.local_offset_server, state_background.size());
+		D("before_assert %d %d %lu", part.send_count, part.local_offset_server, state_background.size());
+		// TODO https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi
 		assert(part.send_count + part.local_offset_server <= state_background.size());
 		copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
 		received_state_background += part.send_count;
@@ -211,7 +212,7 @@ struct ConnectedSimulationRank {
 				(fields.begin()->second->ensemble_members.at(first_elem->second.state_id).state_analysis.data() + fields.begin()->second->getPart(simu_rank).local_offset_server),
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
 
-		D("-> Server sending %d bytes for state %d, timestamp=%d",
+		D("-> Server sending %lu bytes for state %d, timestamp=%d",
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
 				header[0], header[1]);
 		D("local server offset %d, sendcount=%d", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).send_count);
@@ -621,7 +622,7 @@ int main(int argc, char * argv[])
 			// Save state part in background_states.
 			n_to_m & part = fields[field_name]->getPart(simu_rank);
 			assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
-			D("<- Server received %d/%d bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
+			D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
 					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
 			D("local server offset %d, sendcount=%d", part.local_offset_server, part.send_count);
 
