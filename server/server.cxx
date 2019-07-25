@@ -71,12 +71,12 @@ struct EnsembleMember
 		return local_state_size == received_state_background;
 	}
 
-	void store_background_state_part(int local_offset, double * values, int amount_of_doubles)
+	void store_background_state_part(const n_to_m & part, const double * values)
 	{
-		D("before_assert %d %d %d", amount_of_doubles, local_offset, state_background.size());
-		assert(amount_of_doubles + local_offset <= state_background.size());
-		copy(values, values + amount_of_doubles, state_background.data() + local_offset);
-		received_state_background += amount_of_doubles;
+		D("before_assert %d %d %d", part.send_count, part.local_offset_server, state_background.size());
+		assert(part.send_count + part.local_offset_server <= state_background.size());
+		copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
+		received_state_background += part.send_count;
 	}
 };
 
@@ -208,12 +208,14 @@ struct ConnectedSimulationRank {
 		// we do not know when it will really send. send is non blocking!
 
 		zmq_msg_init_data(&data_msg,
-				(fields.begin()->second->ensemble_members[first_elem->second.state_id].state_analysis.data() + fields.begin()->second->getPart(simu_rank).local_offset_server),
+				(fields.begin()->second->ensemble_members.at(first_elem->second.state_id).state_analysis.data() + fields.begin()->second->getPart(simu_rank).local_offset_server),
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
 
 		D("-> Server sending %d bytes for state %d, timestamp=%d",
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
 				header[0], header[1]);
+		D("local server offset %d, sendcount=%d", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).send_count);
+		print_vector(fields.begin()->second->ensemble_members.at(first_elem->second.state_id).state_analysis);
 
 		zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -475,7 +477,7 @@ void do_update_step()
 	{
 		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
 		{
-			fill(ens_it->state_analysis.begin(), ens_it->state_analysis.end(), 0);
+			fill(ens_it->state_analysis.begin(), ens_it->state_analysis.end(), 0.0);
 		}
 	}
 }
@@ -572,6 +574,7 @@ int main(int argc, char * argv[])
 		}
 		if (phase == PHASE_SIMULATION && (items[0].revents & ZMQ_POLLIN))
 		{
+			// TODO: move to send and receive function as on api side...
 			zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
 			zmq_msg_init(&identity_msg);
 			zmq_msg_init(&empty_msg);
@@ -579,7 +582,6 @@ int main(int argc, char * argv[])
 			zmq_msg_init(&data_msg);
 
 			zmq_msg_recv(&identity_msg, data_response_socket, 0);
-			//uint32_t routing_id = zmq_msg_routing_id (&identity_msg); assert (routing_id);
 
 			assert_more_zmq_messages(data_response_socket);
 			zmq_msg_recv(&empty_msg, data_response_socket, 0);
@@ -621,12 +623,14 @@ int main(int argc, char * argv[])
 			assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
 			D("<- Server received %d/%d bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
 					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
+			D("local server offset %d, sendcount=%d", part.local_offset_server, part.send_count);
 
 			D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
 			if (simu_timestamp == current_timestamp)
 			{
-				fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part.local_offset_server,
-						reinterpret_cast<double*>(zmq_msg_data(&data_msg)), part.send_count);
+				// zero copy is unfortunately for send only. so copy internally...
+				fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part,
+						reinterpret_cast<double*>(zmq_msg_data(&data_msg)));
 			}
 
 

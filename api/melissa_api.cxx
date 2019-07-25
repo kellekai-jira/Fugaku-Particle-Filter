@@ -82,7 +82,7 @@ struct ServerRank
     zmq_close(data_request_socket);
   }
 
-  void send(double * values, size_t doubles_to_send, int current_state_id, int timestamp, const char * field_name)
+  void send(double * values, const size_t doubles_to_send, const int current_state_id, const int timestamp, const char * field_name)
   {
     // send simuid, rank, stateid, timestamp, field_name next message: doubles
     zmq_msg_t msg_header, msg_data;
@@ -124,13 +124,21 @@ struct ServerRank
     if (type == CHANGE_STATE)
     {
       assert_more_zmq_messages(data_request_socket);
-      zmq_msg_init_data(&msg, out_values, doubles_expected * sizeof(double), NULL, NULL);
+
+      // zero copy is for sending only!
+      zmq_msg_init(&msg);
+
       zmq_msg_recv(&msg, data_request_socket, 0);
 
       D("<- Simulation got %d bytes, expected %d bytes... for state %d, timestamp=%d",
       		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
 
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
+
+      double * buf = reinterpret_cast<double*>(zmq_msg_data(&msg));
+      copy(buf, buf + doubles_expected, out_values);
+
+      print_vector(vector<double>(out_values, out_values + doubles_expected));
       zmq_msg_close(&msg);
       assert_no_more_zmq_messages(data_request_socket);
     }
@@ -183,6 +191,7 @@ struct Field {
   void putState(double * values, const char * field_name) {
     // send every state part to the right server rank
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
+    	D("put state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
       csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp, field_name);
     }
   }
@@ -190,6 +199,7 @@ struct Field {
   void getState(double * values) {
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
+    	D("get state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
       csr->server_rank->receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
     }
   }

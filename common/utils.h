@@ -7,12 +7,20 @@
 
 #include <mpi.h>
 
-
 //#ifdef __DEBUG
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 //#else
 //#define D(...)
 //#endif
+void print_vector (const std::vector<double> &vec)
+{
+	printf("[");
+	for (auto it = vec.begin(); it != vec.end(); it++)
+	{
+		printf("%.3f,", *it);
+	}
+	printf("]\n");
+}
 
 #define ZMQ_CHECK(x) if (x == -1) { D("zmq error: %s" , zmq_strerror(zmq_errno())); }
 
