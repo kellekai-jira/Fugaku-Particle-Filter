@@ -47,6 +47,8 @@
                                 								
                                 <option id="gnu.cpp.compiler.option.dialect.std.1154634424" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.c++11" valueType="enumerated"/>
                                 								
+                                <option id="gnu.cpp.compiler.option.other.other.77719821" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fbounds-check" valueType="string"/>
+                                								
                                 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.2091618185" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
                                 							
                             </tool>
@@ -177,6 +179,8 @@
                                 								
                                 <option id="gnu.cpp.compiler.option.other.pic.1558089487" name="Position Independent Code (-fPIC)" superClass="gnu.cpp.compiler.option.other.pic" useByScannerDiscovery="false" value="true" valueType="boolean"/>
                                 								
+                                <option id="gnu.cpp.compiler.option.other.other.1686977973" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fbounds-check" valueType="string"/>
+                                								
                                 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.27699560" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
                                 							
                             </tool>
@@ -300,6 +304,8 @@
                                 </option>
                                 								
                                 <option id="gnu.cpp.compiler.option.dialect.std.704059127" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.c++11" valueType="enumerated"/>
+                                								
+                                <option id="gnu.cpp.compiler.option.other.other.1347331528" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fbounds-check" valueType="string"/>
                                 								
                                 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1887060288" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
                                 							

@@ -45,8 +45,8 @@ int main(int argc, char * args[])
 
 		// TODO: print output to see what happens!
 	}
-  MPI_Barrier(MPI_COMM_WORLD);
-	MPI_Finalize();
+	int ret = MPI_Finalize();
+	assert(ret == MPI_SUCCESS);
 }
 
 

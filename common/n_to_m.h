@@ -37,7 +37,7 @@ std::vector<n_to_m> calculate_n_to_m(int ranks_server, int ranks_simu, int local
   parts.push_back({0, 0, 0, 0, 0});
   int index_in_simu = 0;
   int index_in_server = 0;
-  n_to_m * last = &parts[0];
+  n_to_m * last = parts.data();
 
   for (int i = 0; i < global_vect_size; i++)
   {

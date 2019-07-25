@@ -3,11 +3,6 @@
 #include <cstdlib>
 #include <cassert>
 
-#include <string>
-
-// memcopy:
-#include <cstring>
-
 #include <mpi.h>
 #include "zmq.h"
 
@@ -98,13 +93,13 @@ struct ServerRank
     header[2] = current_state_id;
     header[3] = timestamp; // TODO: is incremented on the server or client side
     strcpy(reinterpret_cast<char*>(&header[4]), field_name);
-    zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE);
+    ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE));
 
     D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %d bytes",
     		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
     D("values[0] = %.3f", values[0]);
     zmq_msg_init_data(&msg_data, values, doubles_to_send * sizeof(double), NULL, NULL);
-    zmq_msg_send(&msg_data, data_request_socket, 0);
+    ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
   }
 
   void receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
@@ -137,8 +132,7 @@ struct ServerRank
       assert_no_more_zmq_messages(data_request_socket);
     }
     else if (type == END_SIMULATION)
-    {
-    	zmq_msg_close(&msg);
+    { // TODO use zmq cpp for less errors!
       melissa_finalize();
     }
     else
@@ -225,7 +219,7 @@ struct ConfigurationConnection
     buf += sizeof(ConfigurationMessageType);
     int simu_id = getSimuId();
     memcpy(buf, &simu_id, sizeof(int));
-    zmq_msg_send(&msg_request, socket, 0);
+    ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
 
     zmq_msg_init(&msg_reply);
     zmq_msg_recv(&msg_reply, socket, 0);
@@ -259,10 +253,10 @@ struct ConfigurationConnection
     header[0] = type;
     header[1] = getCommSize();
     strcpy(reinterpret_cast<char*>(&header[2]), field_name);
-    zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE);
+    ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
 
     zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
-    zmq_msg_send(&msg_local_vect_sizes, socket, 0);
+    ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, 0));
 
     zmq_msg_init(&msg_reply);
     zmq_msg_recv(&msg_reply, socket, 0);
@@ -278,7 +272,7 @@ struct ConfigurationConnection
 
 
 };
-ConfigurationConnection *ccon;
+ConfigurationConnection *ccon = NULL;
 
 void first_melissa_init(MPI_Comm comm_)
 {
@@ -290,7 +284,7 @@ void first_melissa_init(MPI_Comm comm_)
   }
   MPI_Bcast(&server.comm_size, 1, MPI_INT, 0, comm);
   if (getCommRank() != 0) {
-  	server.port_names.resize(server.comm_size);
+  	server.port_names.resize(server.comm_size * MPI_MAX_PROCESSOR_NAME);
   }
   D("port_names_size= %d", server.port_names.size());
   MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
@@ -370,9 +364,13 @@ bool melissa_expose(const char *field_name, double *values)
   return end_requested == false;
 }
 
-void melissa_finalize()
+void melissa_finalize()  // TODO: when using more serverranks, wait until an end message was received from every before really ending... or actually not. as we always have only an open connection to one server rank...
 {
+  //sleep(3);
+	MPI_Barrier(comm);
+  //sleep(3);
 	D("End Simulation.");
+  D("server_ranks: %d", server_ranks.size());
 	end_requested = true;
   phase = PHASE_FINAL;
   // TODO: close all connections [should be DONE]
@@ -381,10 +379,15 @@ void melissa_finalize()
   if (ccon != NULL) {
   	delete ccon;
   }
+
+
   for (auto sr = server_ranks.begin(); sr < server_ranks.end(); sr++)
   {
     delete *sr;
   }
 
+
+  //sleep(3);
+  D("Destroying context");
   zmq_ctx_destroy(context);
 }

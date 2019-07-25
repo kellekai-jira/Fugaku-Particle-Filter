@@ -3,9 +3,6 @@
 #include <cstdlib>
 #include <cassert>
 
-// memcopy:
-#include <cstring>
-
 #include <mpi.h>
 #include "zmq.h"
 
@@ -16,7 +13,7 @@
 #include <time.h>
 
 // TODO: configure this somehow better:
-const int ENSEMBLE_SIZE = 20;
+const int ENSEMBLE_SIZE = 5;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
 const int MAX_TIMESTAMP = 5;
@@ -239,7 +236,10 @@ struct ConnectedSimulationRank {
 	}
 
 	void end() {
-		assert(connection_identity != NULL);
+		// some connection_identities will be 0 if some simulation ranks are connected to another server rank at the moment.
+		if (connection_identity == NULL)
+			return;
+
 		int * header = new int[3];  // needto do it like this to be sure it stays in memory as send is non blocking!
 		header[0] = -1;
 		header[1] = current_timestamp;
@@ -257,6 +257,8 @@ struct ConnectedSimulationRank {
 
 		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
 		zmq_msg_send(&header_msg, data_response_socket, 0);
+
+		D("Send end message");
 
 		connection_identity = NULL;
 	}
@@ -726,6 +728,8 @@ int main(int argc, char * argv[])
 
 	D("Ending Server.");
 	// TODO: check if we need to delete some more stuff!
+	// wait 3 seconds to finish sending...
+	//sleep(3);
   zmq_close(data_response_socket);
   if (comm_rank == 0)
   {
