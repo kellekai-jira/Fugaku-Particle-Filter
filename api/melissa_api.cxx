@@ -25,7 +25,6 @@ const int getSimuId() {
   return atoi(getenv("MELISSA_SIMU_ID"));
 }
 
-
 /// Communicator used for simulation
 MPI_Comm comm;
 
@@ -156,7 +155,7 @@ struct ServerRank
 
 
 // TODO: there is probably a better data type for this.
-vector<ServerRank*> server_ranks;
+vector<ServerRank*> server_ranks; // TODO We probably do not even need this. it is enough to create the server rank if needed!
 
 struct ConnectedServerRank {
   int send_count;
@@ -200,6 +199,13 @@ struct Field {
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
     	D("get state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
+
+    	// do not try to receive if we are finalizeing already. Even check if the last receive might have started finalization.
+    	if (phase == PHASE_FINAL)
+    	{
+    		return;
+    	}
+
       csr->server_rank->receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
     }
   }
@@ -302,11 +308,14 @@ void first_melissa_init(MPI_Comm comm_)
   D("port_names_size= %lu", server.port_names.size());
   MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
 
+  D("Portnames %s , %s ", server.port_names.data(), server.port_names.data() + MPI_MAX_PROCESSOR_NAME);
+
 
   // Fill server ranks array...
   for (int i = 0; i < server.comm_size; ++i)
   {
-    server_ranks.push_back(new ServerRank(&server.port_names.data()[i]));
+  	// TODO: do not connect to unneeded server ranks!  as we have only one field one can do this now.
+    server_ranks.push_back(new ServerRank(server.port_names.data() + i * MPI_MAX_PROCESSOR_NAME));
   }
 }
 
@@ -351,7 +360,6 @@ void melissa_init(const char *field_name,
   fields.emplace(string(field_name), newField);
 }
 
-bool end_requested = false;
 
 /// returns false if simulation should end now.
 bool melissa_expose(const char *field_name, double *values)
@@ -374,7 +382,7 @@ bool melissa_expose(const char *field_name, double *values)
 
   // TODO: this will block other fields!
 
-  return end_requested == false;
+  return phase != PHASE_FINAL;
 }
 
 void melissa_finalize()  // TODO: when using more serverranks, wait until an end message was received from every before really ending... or actually not. as we always have only an open connection to one server rank...
@@ -384,7 +392,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
   //sleep(3);
 	D("End Simulation.");
   D("server_ranks: %lu", server_ranks.size());
-	end_requested = true;
+
   phase = PHASE_FINAL;
   // TODO: close all connections [should be DONE]
   // TODO: free all pointers?

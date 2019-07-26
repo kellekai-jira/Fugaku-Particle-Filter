@@ -8,9 +8,11 @@ cd ..
 ./compile.sh
 cd $rundir
 
-unset +e
+unset -e
 
-
+lib_paths="/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib"
+sim_exe="/home/friese/workspace/melissa-da/build_example-simulation/example_simulation"
+server_exe="/home/friese/workspace/melissa-da/build_server/melissa_server"
 
 
 killall xterm
@@ -27,18 +29,25 @@ then
   precommand=""
 fi
 
-sleep 3
 
-LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib xterm_gdb /home/friese/workspace/melissa-da/build_server/melissa_server &
+mpirun -n 2 \
+  -x LD_LIBRARY_PATH=$lib_paths \
+  xterm_gdb $server_exe &
 
 sleep 3
 
 for i in `seq 0 0`;
 do
-  echo start simu id $i
-  mpirun -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/example_simulation &
+  #echo start simu id $i
+  mpirun -n 1 \
+    -x MELISSA_SIMU_ID=$i \
+    -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" \
+    -x LD_LIBRARY_PATH=$lib_paths \
+    $precommand $sim_exe &
+
 #LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so mpirun -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/example_simulation &
 
+  echo .
 done
 
 # trap ctrl-c and call ctrl_c()

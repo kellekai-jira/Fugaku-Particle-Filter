@@ -7,18 +7,25 @@
 
 #include <mpi.h>
 
+#include <iostream>
+
 //#ifdef __DEBUG
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 //#else
 //#define D(...)
 //#endif
-void print_vector (const std::vector<double> &vec)
+
+template <typename T>
+void print_vector (const std::vector<T> &vec)
 {
 	printf("[");
 	for (auto it = vec.begin(); it != vec.end(); it++)
 	{
-		printf("%.3f,", *it);
+		//printf("%.3f,", *it);
+		std::cout << *it << ", ";
 	}
+	std::cout.flush();
+
 	printf("]\n");
 }
 

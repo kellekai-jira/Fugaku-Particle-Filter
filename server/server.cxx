@@ -215,7 +215,7 @@ struct ConnectedSimulationRank {
 		D("-> Server sending %lu bytes for state %d, timestamp=%d",
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
 				header[0], header[1]);
-		D("local server offset %d, sendcount=%d", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).send_count);
+		D("local server offset %d, local simu offset %d, sendcount=%d", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).local_offset_simu, fields.begin()->second->getPart(simu_rank).send_count);
 		print_vector(fields.begin()->second->ensemble_members.at(first_elem->second.state_id).state_analysis);
 
 		zmq_msg_send(&data_msg, data_response_socket, 0);
@@ -292,6 +292,7 @@ struct Simulation  // Model process runner
 
 	void end() {
 		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
+			D("xxx end connected simulation rank...");
 			cs->second.end();
 		}
 	}
@@ -376,7 +377,11 @@ void broadcast_field_information_and_calculate_parts() {
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
 			int simu_comm_size = field_it->second->local_vect_sizes_simu.size();
 			MPI_Bcast(&simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
-			MPI_Bcast(&field_it->second->local_vect_sizes_simu, simu_comm_size,
+
+			D("local_vect_sizes");
+			print_vector(field_it->second->local_vect_sizes_simu);
+
+			MPI_Bcast(field_it->second->local_vect_sizes_simu.data(), simu_comm_size,
 					MPI_INT, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_simu
 
 			field_it->second->calculate_parts(comm_size);
@@ -388,6 +393,8 @@ void broadcast_field_information_and_calculate_parts() {
 
 			Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
+			D("local_vect_sizes");
+			print_vector(newField->local_vect_sizes_simu);
 			MPI_Bcast(newField->local_vect_sizes_simu.data(), simu_comm_size,
 					MPI_INT, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
 
@@ -444,14 +451,19 @@ void init_new_timestamp()
 	current_timestamp++;
 	if (comm_rank == 0) {
 		assert(unscheduled_tasks.size() == 0);
-		for (int i = 0; i < ENSEMBLE_SIZE; i++) {
+	}
+	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
+
+		if (comm_rank == 0) {
 			unscheduled_tasks.push_back(i);
-			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
-			{
-				auto &member = field_it->second->ensemble_members[i];
-				assert(member.received_state_background = member.local_state_size);
-				member.received_state_background = 0;
-			}
+		}
+
+		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
+		{
+			auto &member = field_it->second->ensemble_members[i];
+			assert(member.received_state_background = member.local_state_size);
+			member.received_state_background = 0;
+			D("test: %d", field_it->second->ensemble_members[i].received_state_background);
 		}
 	}
 }
@@ -499,6 +511,8 @@ int main(int argc, char * argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 	void * configuration_socket = NULL;
 
+	D("**server rank = %d", comm_rank);
+
 	// Start sockets:
 	if (comm_rank == 0)
 	{
@@ -537,7 +551,9 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			ZMQ_CHECK(zmq_poll (items, 1, -1));
+			//ZMQ_CHECK(zmq_poll (items, 1, -1));
+			// Check for new tasks to schedule so do not block on polling...
+			ZMQ_CHECK(zmq_poll (items, 1, 100));
 		}
 		/* Returned events will be stored in items[].revents */
 
@@ -692,12 +708,15 @@ int main(int argc, char * argv[])
 
 				init_new_timestamp();
 
-				// After update step: loop over all simu_id's sending them a new state vector part they have to propagate.
-				for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+				// After update step: rank 0 loops over all simu_id's sending them a new state vector part they have to propagate.
+				if (comm_rank == 0)
 				{
-					if (schedule_new_task(simu_it->first)) {
-						// normally we arrive always here if there are not more model task runners than ensemble members.
-						simu_it->second.try_to_start_task();
+					for (auto simu_it = simulations.begin(); simu_it != simulations.end(); simu_it++)
+					{
+						if (schedule_new_task(simu_it->first)) {
+							// normally we arrive always here if there are not more model task runners than ensemble members.
+							simu_it->second.try_to_start_task();
+						}
 					}
 				}
 			}
@@ -715,6 +734,7 @@ int main(int argc, char * argv[])
 			MPI_Iprobe(0, TAG_NEW_TASK, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
 			if (received)
 			{
+				D("Got task to send...");
 				NewTask new_task;
 				MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				Simulation &simu  = find_or_insert_simulation(new_task.simu_id);
