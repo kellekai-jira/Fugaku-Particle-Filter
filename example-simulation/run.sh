@@ -70,7 +70,7 @@ sleep 1
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
-  #sleep 0.5
+  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   mpirun -n $n_simulation \
     -x MELISSA_SIMU_ID=$i \
