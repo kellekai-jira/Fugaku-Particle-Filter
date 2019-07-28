@@ -29,7 +29,7 @@ using namespace std;
 
 const int TAG_NEW_TASK = 42;
 
-unsigned int IDENTITY_SIZE = 0;
+size_t IDENTITY_SIZE = 0;
 
 // Server comm_size and Server rank
 int comm_size;
@@ -48,15 +48,15 @@ long long get_due_date() {
 struct Part
 {
 	int rank_simu;
-	int local_vector_offset;
-	int send_count;
+	size_t local_vector_offset;
+	size_t send_count;
 };
 
 struct EnsembleMember
 {
 	vector<double> state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
 	vector<double> state_background;
-	int received_state_background = 0;
+	size_t received_state_background = 0;
 
 	void set_local_vect_size(int local_vect_size)
 	{
@@ -81,11 +81,11 @@ struct Field {
 	// index: state id.
 	vector<EnsembleMember> ensemble_members;
 
-	int local_vect_size;
-	vector<int> local_vect_sizes_simu;
+	size_t local_vect_size;
+	vector<size_t> local_vect_sizes_simu;
 	vector<n_to_m> parts;
 
-	Field(int simu_comm_size_, int ensemble_size_)
+	Field(int simu_comm_size_, size_t ensemble_size_)
 	{
 		local_vect_size = 0;
 		local_vect_sizes_simu.resize(simu_comm_size_);
@@ -370,9 +370,9 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
-		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(int));
+		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(size_t));
 		// TODO: can be done 0copy!
-		memcpy (newField->local_vect_sizes_simu.data(), zmq_msg_data(&msg), simu_comm_size * sizeof(int));
+		memcpy (newField->local_vect_sizes_simu.data(), zmq_msg_data(&msg), simu_comm_size * sizeof(size_t));
 		zmq_msg_close(&msg);
 
 		// ack
@@ -391,37 +391,37 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 }
 
 void broadcast_field_information_and_calculate_parts() {
-	int field_count = fields.size();
-	MPI_Bcast(&field_count, 1, MPI_INT, 0, MPI_COMM_WORLD);                          // 0:field_count
+	size_t field_count = fields.size();
+	MPI_Bcast(&field_count, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                          // 0:field_count
 	auto field_it = fields.begin();
-	for (int i = 0; i < field_count; i++)
+	for (size_t i = 0; i < field_count; i++)
 	{
 		char field_name[MPI_MAX_PROCESSOR_NAME];
 		if (comm_rank == 0) {
 			strcpy(field_name, field_it->first.c_str());
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
 			int simu_comm_size = field_it->second->local_vect_sizes_simu.size();
-			MPI_Bcast(&simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
+			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
 
 			D("local_vect_sizes");
 			print_vector(field_it->second->local_vect_sizes_simu);
 
 			MPI_Bcast(field_it->second->local_vect_sizes_simu.data(), simu_comm_size,
-					MPI_INT, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_simu
+					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_simu
 
 			field_it->second->calculate_parts(comm_size);
 			field_it++;
 		} else {
 			int simu_comm_size;
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1: fieldname
-			MPI_Bcast(&simu_comm_size, 1, MPI_INT, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
+			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
 
 			Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
 			D("local_vect_sizes");
 			print_vector(newField->local_vect_sizes_simu);
 			MPI_Bcast(newField->local_vect_sizes_simu.data(), simu_comm_size,
-					MPI_INT, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
+					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
 
 			newField->calculate_parts(comm_size);
 
@@ -517,7 +517,7 @@ void do_update_step()
 		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
 		{
 			assert(ens_it->state_analysis.size() == ens_it->state_background.size());
-			for (int i = 0; i < ens_it->state_analysis.size(); i++) {
+			for (size_t i = 0; i < ens_it->state_analysis.size(); i++) {
 				// pretend to do some da...
 				ens_it->state_analysis[i] = ens_it->state_background[i] + 3;
 			}

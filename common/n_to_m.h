@@ -2,21 +2,21 @@
 
 struct n_to_m {  // TODO: rename datatype into Part
   int rank_simu;
-  int local_offset_simu;
+  size_t local_offset_simu;
 
   int rank_server;
-  int local_offset_server;
+  size_t local_offset_server;
 
-  int send_count;
+  size_t send_count;
 };
 
-std::vector<n_to_m> calculate_n_to_m(int ranks_server, const std::vector<int> &local_vect_sizes_simu)
+std::vector<n_to_m> calculate_n_to_m(int ranks_server, const std::vector<size_t> &local_vect_sizes_simu)
 {
-	int ranks_simu = local_vect_sizes_simu.size();
+	size_t ranks_simu = local_vect_sizes_simu.size();
   std::vector <n_to_m> parts;
-  int local_vect_sizes_server[ranks_server];
-  int global_vect_size = 0;
-  for (int i = 0; i < ranks_simu; ++i)
+  size_t local_vect_sizes_server[ranks_server];
+  size_t global_vect_size = 0;
+  for (size_t i = 0; i < ranks_simu; ++i)
   {
     global_vect_size += local_vect_sizes_simu[i];
   }
@@ -28,19 +28,19 @@ std::vector<n_to_m> calculate_n_to_m(int ranks_server, const std::vector<int> &l
 
     // let n be the rest of this division
     // the first n server ranks get one more to split the rest fair up...
-    int n_rest = global_vect_size - int(global_vect_size / ranks_server) * ranks_server;
-    if (i < n_rest)
+    size_t n_rest = global_vect_size - size_t(global_vect_size / ranks_server) * ranks_server;
+    if (size_t(i) < n_rest)
     {
       local_vect_sizes_server[i]++;
     }
   }
 
   parts.push_back({0, 0, 0, 0, 0});
-  int index_in_simu = 0;
-  int index_in_server = 0;
+  size_t index_in_simu = 0;
+  size_t index_in_server = 0;
   n_to_m * last = parts.data();
 
-  for (int i = 0; i < global_vect_size; i++)
+  for (size_t i = 0; i < global_vect_size; i++)
   {
     bool added_part = false;
 

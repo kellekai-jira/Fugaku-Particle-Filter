@@ -12,7 +12,7 @@
 #include "../common/utils.h"
 // TODO: localhost behaviour (if hostname == myhostname replace by localhost ...)
 
-// TODO ensure sizeof(int is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
+// TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
 void melissa_finalize();
 
@@ -158,8 +158,8 @@ struct ServerRank
 vector<ServerRank*> server_ranks; // TODO We probably do not even need this. it is enough to create the server rank if needed!
 
 struct ConnectedServerRank {
-  int send_count;
-  int local_vector_offset;
+  size_t send_count;
+  size_t local_vector_offset;
   ServerRank *server_rank;
 };
 
@@ -173,9 +173,9 @@ Server server;
 struct Field {
   int current_state_id;
   int timestamp;
-  int local_vect_size;
+  size_t local_vect_size;
   vector<ConnectedServerRank> connected_server_ranks;
-  void initConnections(const vector<int> &local_vect_sizes) {
+  void initConnections(const vector<size_t> &local_vect_sizes) {
     vector<n_to_m> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
@@ -266,7 +266,7 @@ struct ConfigurationConnection
   }
 
   // TODO: high water mark and so on?
-  void register_field(const char * field_name, int local_vect_sizes[])
+  void register_field(const char * field_name, size_t local_vect_sizes[])
   {
     zmq_msg_t msg_header, msg_local_vect_sizes, msg_reply;
     zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char) );
@@ -277,7 +277,7 @@ struct ConfigurationConnection
     strcpy(reinterpret_cast<char*>(&header[2]), field_name);
     ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
 
-    zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes, getCommSize() * sizeof(int), NULL, NULL);
+    zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes, getCommSize() * sizeof(size_t), NULL, NULL);
     ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, 0));
 
     zmq_msg_init(&msg_reply);
@@ -350,10 +350,10 @@ void melissa_init(const char *field_name,
   newField.current_state_id = -1; // We are beginning like this...
   newField.timestamp = 0;
   newField.local_vect_size = local_vect_size;
-  vector<int> local_vect_sizes(getCommSize());
+  vector<size_t> local_vect_sizes(getCommSize());
     // synchronize local_vect_sizes and
-  MPI_Allgather(&newField.local_vect_size, 1, MPI_INT,
-      local_vect_sizes.data(), 1, MPI_INT,
+  MPI_Allgather(&newField.local_vect_size, 1, my_MPI_SIZE_T,
+      local_vect_sizes.data(), 1, my_MPI_SIZE_T,
       comm);
 
   D("vect sizes: %d %d", local_vect_sizes[0], local_vect_sizes[1]);

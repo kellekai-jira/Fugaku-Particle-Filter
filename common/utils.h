@@ -9,11 +9,31 @@
 
 #include <iostream>
 
+#include <stdint.h>
+#include <limits.h>
+
 //#ifdef __DEBUG
 //#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 //#else
 #define D(...)
 //#endif
+
+
+
+//https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
+#if SIZE_MAX == UCHAR_MAX
+   #define my_MPI_SIZE_T MPI_UNSIGNED_CHAR
+#elif SIZE_MAX == USHRT_MAX
+   #define my_MPI_SIZE_T MPI_UNSIGNED_SHORT
+#elif SIZE_MAX == UINT_MAX
+   #define my_MPI_SIZE_T MPI_UNSIGNED
+#elif SIZE_MAX == ULONG_MAX
+   #define my_MPI_SIZE_T MPI_UNSIGNED_LONG
+#elif SIZE_MAX == ULLONG_MAX
+   #define my_MPI_SIZE_T MPI_UNSIGNED_LONG_LONG
+#else
+   #error "what is happening here?"
+#endif
 
 template <typename T>
 void print_vector (const std::vector<T> &vec)
