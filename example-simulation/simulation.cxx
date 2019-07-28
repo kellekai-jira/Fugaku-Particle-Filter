@@ -63,6 +63,7 @@ int main(int argc, char * args[])
 	printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 
 
+	static bool is_first_timestep = true;
 	while (timestepping)
 	{
 		int i = 0;
@@ -78,6 +79,12 @@ int main(int argc, char * args[])
 		usleep(10000);
 
 		timestepping = melissa_expose("variableX", state1.data());
+
+		if (timestepping && is_first_timestep)
+		{
+			printf("First timestep to propagate: %d\n", melissa_get_current_timestamp());
+			is_first_timestep = false;
+		}
 
 		// file output of allways ensemble member 0
 		// TODO: maybe move this functionality into ap?
