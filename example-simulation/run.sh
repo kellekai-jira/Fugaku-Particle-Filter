@@ -70,6 +70,7 @@ sleep 1
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
+  #sleep 0.5
   #echo start simu id $i
   mpirun -n $n_simulation \
     -x MELISSA_SIMU_ID=$i \

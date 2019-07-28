@@ -12,7 +12,7 @@
 #include "../common/utils.h"
 // TODO: localhost behaviour (if hostname == myhostname replace by localhost ...)
 
-
+// TODO ensure sizeof(int is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
 void melissa_finalize();
 

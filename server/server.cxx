@@ -56,24 +56,15 @@ struct EnsembleMember
 {
 	vector<double> state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
 	vector<double> state_background;
-	int local_state_size;  // TODO: actually I can save this in the field! not here!
 	int received_state_background = 0;
 
-	void set_state_size(int local_state_size_)
+	void set_local_vect_size(int local_vect_size)
 	{
-		// TODO: if this is called 2 we get memory leaks. This is a dirty replacement of a con
-		local_state_size = local_state_size_;
-
 		// TODO: replace all mallocs by new? Actually it is dirty to use new[].... better use a vector. but I'm not sure if that is compatible with c and our double arrays ;) https://stackoverflow.com/questions/4754763/object-array-initialization-without-default-constructor
-		state_analysis.reserve(local_state_size);
-		state_analysis.resize(local_state_size);
-		state_background.reserve(local_state_size);
-		state_background.resize(local_state_size);
-	}
-
-	bool finished()
-	{
-		return local_state_size == received_state_background;
+		state_analysis.reserve(local_vect_size);
+		state_analysis.resize(local_vect_size);
+		state_background.reserve(local_vect_size);
+		state_background.resize(local_vect_size);
 	}
 
 	void store_background_state_part(const n_to_m & part, const double * values)
@@ -90,11 +81,13 @@ struct Field {
 	// index: state id.
 	vector<EnsembleMember> ensemble_members;
 
+	int local_vect_size;
 	vector<int> local_vect_sizes_simu;
 	vector<n_to_m> parts;
 
 	Field(int simu_comm_size_, int ensemble_size_)
 	{
+		local_vect_size = 0;
 		local_vect_sizes_simu.resize(simu_comm_size_);
 		ensemble_members.resize(ensemble_size_);
 	}
@@ -105,19 +98,18 @@ struct Field {
 	void calculate_parts(int server_comm_size)
 	{
 		parts = calculate_n_to_m(server_comm_size, local_vect_sizes_simu);
-		int local_state_size = 0;
 		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
 		{
 			if (part_it->rank_server == comm_rank)
 			{
-				local_state_size += part_it->send_count;
+				local_vect_size += part_it->send_count;
 			}
 		}
 
 		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
 		{
 
-			ens_it->set_state_size(local_state_size);  // low: better naming: local state size is in doubles not in bytes!
+			ens_it->set_local_vect_size(local_vect_size);  // low: better naming: local state size is in doubles not in bytes!
 		}
 	}
 
@@ -131,6 +123,19 @@ struct Field {
 			}
 		}
 		assert(false); // Did not find the part!
+	}
+
+	// checks if all ensemble members received all the data needed.
+	bool finished() {
+		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
+		{
+			assert(local_vect_size != 0);
+			if (ens_it->received_state_background != local_vect_size)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 };
@@ -481,7 +486,8 @@ void init_new_timestamp()
 		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 		{
 			auto &member = field_it->second->ensemble_members[i];
-			assert(member.received_state_background = member.local_state_size);
+			// at the beginning of the time or otherwise jsut finished a timestep...
+			assert(current_timestamp == 1 || member.received_state_background == field_it->second->local_vect_size);
 			member.received_state_background = 0;
 			D("test: %d", field_it->second->ensemble_members[i].received_state_background);
 		}
@@ -711,12 +717,7 @@ int main(int argc, char * argv[])
 			bool finished = true;
 			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 			{
-				for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
-				{
-					finished = ens_it->finished();
-					if (!finished)
-						break;
-				}
+				finished = field_it->second->finished();
 				if (!finished)
 					break;
 			}
