@@ -3,14 +3,24 @@
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=1
-n_simulation=1
-n_runners=3
+n_simulation=2
+n_runners=4
 
 ensemble_size=5
 max_timestamps=5
 
 ######################################################
 
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+
+function ctrl_c() {
+        echo "** Trapped CTRL-C"
+        killall xterm
+        killall melissa_server
+        killall example_simulation
+        exit 0
+}
 
 precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
@@ -31,13 +41,12 @@ then
   precommand=""
 else
   # compile:
+  # abort on error!
+  set -e
+  ../compile.sh
   set +e
-  rundir=$PWD
-  cd ..
-  ./compile.sh
-  cd $rundir
 
-  unset -e
+  echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
 
 lib_paths="/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib"
@@ -46,7 +55,8 @@ server_exe="/home/friese/workspace/melissa-da/build_server/melissa_server"
 
 
 killall xterm
-
+killall melissa_server
+killall example_simulation
 
 
 rm output.txt
@@ -72,31 +82,9 @@ do
   echo .
 done
 
-# trap ctrl-c and call ctrl_c()
-trap ctrl_c INT
-
-function ctrl_c() {
-        echo "** Trapped CTRL-C"
-        killall xterm
-        exit 0
-}
 
 wait
 
-echo
-echo
-echo
-echo '***** Testing: ******'
-diff -s --side-by-side output.txt reference.txt
-res=$?
-echo .
-echo .
-if [[ "$res" == "0" ]];
-then
-  echo PASSED!
-  exit 0
-else
-  echo ERROR!
-  exit 1
-fi
+./compare.sh
+exit $?
 

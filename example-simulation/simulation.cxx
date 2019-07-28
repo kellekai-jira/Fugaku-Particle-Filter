@@ -10,6 +10,8 @@
 
 #include "../api/melissa_api.h"
 
+#include <csignal>
+
 
 const int GLOBAL_VECT_SIZE = 40;
 
@@ -25,8 +27,32 @@ int main(int argc, char * args[])
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
-	assert(GLOBAL_VECT_SIZE % comm_size == 0);  // need to use a good vect size!
 	int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
+	// do I have one more?
+	if (GLOBAL_VECT_SIZE % comm_size != 0 && comm_rank < GLOBAL_VECT_SIZE % comm_size)
+	{
+		local_vect_size += 1;
+	}
+
+	// how many pixels are left of me?
+	vector<int> offsets(comm_size);
+	vector<int> counts(comm_size);
+	fill(offsets.begin(), offsets.end(), 0);
+	fill(counts.begin(), counts.end(), 0);
+	int next_offset = 0;
+	for (int rank = 0; rank < comm_size; rank++)
+	{
+		offsets[rank] = next_offset;
+
+		counts[rank] = GLOBAL_VECT_SIZE / comm_size;
+		// add one for all who have one more.
+		if (GLOBAL_VECT_SIZE % comm_size != 0 && rank < GLOBAL_VECT_SIZE % comm_size)
+		{
+			counts[rank] += 1;
+		}
+
+		next_offset += counts[rank];
+	}
 
 	melissa_init("variableX",
 			local_vect_size,
@@ -34,6 +60,7 @@ int main(int argc, char * args[])
 	bool timestepping = true;
 	vector<double> state1(local_vect_size);
 	fill(state1.begin(), state1.end(), 0);
+	printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 
 
 	while (timestepping)
@@ -41,13 +68,13 @@ int main(int argc, char * args[])
 		int i = 0;
 		for (auto it = state1.begin(); it != state1.end(); it++)
 		{
-			//*it += comm_size;
-			*it += comm_rank * GLOBAL_VECT_SIZE / comm_size + i;
+			*it += offsets[comm_rank] + i;
 
 			i++;
 		}
 
 		// simulate some calculation
+		// If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
 		usleep(10000);
 
 		timestepping = melissa_expose("variableX", state1.data());
@@ -56,6 +83,7 @@ int main(int argc, char * args[])
 		// TODO: maybe move this functionality into ap?
 		if (timestepping && melissa_get_current_state_id() == 0)
 		{
+			//raise(SIGINT);
 			if (comm_rank == 0)
 			{
 				ofstream myfile;
@@ -70,8 +98,9 @@ int main(int argc, char * args[])
 				}
 				vector<double> full_state(GLOBAL_VECT_SIZE);
 
-				MPI_Gather(state1.data(), state1.size(), MPI_DOUBLE,
-						full_state.data(), state1.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+				MPI_Gatherv(state1.data(), state1.size(), MPI_DOUBLE,
+				                full_state.data(), counts.data(), offsets.data(),
+				                MPI_DOUBLE, 0, MPI_COMM_WORLD);
 				for (auto it = full_state.begin(); it != full_state.end(); it++)
 				{
 					myfile << *it << ",";
@@ -79,8 +108,9 @@ int main(int argc, char * args[])
 				myfile << "\n";
 				myfile.close();
 			} else {
-				MPI_Gather(state1.data(), state1.size(), MPI_DOUBLE,
-						NULL, state1.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+				MPI_Gatherv(state1.data(), state1.size(), MPI_DOUBLE,
+				                NULL, NULL, NULL,
+				                MPI_DOUBLE, 0, MPI_COMM_WORLD);
 			}
 
 		}

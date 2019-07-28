@@ -149,19 +149,22 @@ struct NewTask {
 	Task task;
 };
 
-const Task NO_WORK = Task{-1,-1};
+const Task WANT_WORK          = Task{-1, -1};
+const Task TASK_UNINITIALIZED = Task{-2, -2};
 
-void delete_int_array(void * data, void * hint)
+
+void my_free(void * data, void * hint)
 {
 	//delete [] data;
-	delete [] reinterpret_cast<int*>(data);
+	//delete [] reinterpret_cast<int*>(data);
+	free(data);
 }
 
 struct ConnectedSimulationRank {
 	// task id (to keep them in order)
 	map<int, Task> waiting_tasks;
 
-	Task current_task = NO_WORK;
+	Task current_task = TASK_UNINITIALIZED;
 
 	void * connection_identity = NULL;
 
@@ -176,7 +179,7 @@ struct ConnectedSimulationRank {
 	bool try_to_start_task(int simu_rank) {
 
 		// already working?
-		if (current_task != NO_WORK)
+		if (current_task != WANT_WORK)
 			return false;
 
 		// Do we have waiting tasks?
@@ -198,7 +201,7 @@ struct ConnectedSimulationRank {
 		zmq_msg_t header_msg;
 		zmq_msg_t data_msg;
 
-		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
+		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, my_free, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
 		zmq_msg_init(&empty_msg);
@@ -224,6 +227,7 @@ struct ConnectedSimulationRank {
 		waiting_tasks.erase(first_elem);
 
 		// close connection:
+		// but do not free it. send is going to free it.
 		connection_identity = NULL;
 
 		return true;
@@ -243,7 +247,7 @@ struct ConnectedSimulationRank {
 		zmq_msg_t empty_msg;
 		zmq_msg_t header_msg;
 
-		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, delete_int_array, NULL);
+		zmq_msg_init_data(&identity_msg, connection_identity, IDENTITY_SIZE, my_free, NULL);
 		zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
 
 		zmq_msg_init(&empty_msg);
@@ -254,6 +258,7 @@ struct ConnectedSimulationRank {
 
 		D("Send end message");
 
+		// but don't delete it. this is done in the message.
 		connection_identity = NULL;
 	}
 };
@@ -296,6 +301,16 @@ struct Simulation  // Model process runner
 			cs->second.end();
 		}
 	}
+
+//	// return true if it is ready to take work as doing nothing and it has a connection identity...
+//	bool ready() {
+//		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
+//			if (cs->second.current_task != WANT_WORK || cs->second.connection_identity == NULL) {
+//				return false;
+//			}
+//		}
+//		return true;
+//	}
 };
 
 // simu_id, Simulation:
@@ -656,8 +671,9 @@ int main(int argc, char * argv[])
 
 
 			// Save connection - basically copy identity pointer...
+			assert(simu.connected_simulation_ranks[simu_rank].connection_identity == NULL);
 			simu.connected_simulation_ranks[simu_rank].connection_identity = identity;
-			simu.connected_simulation_ranks[simu_rank].current_task = NO_WORK;
+			simu.connected_simulation_ranks[simu_rank].current_task = WANT_WORK;
 
 			// whcih atm can not even happen if more than one fields as they do there communication one after another.
 			// TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.

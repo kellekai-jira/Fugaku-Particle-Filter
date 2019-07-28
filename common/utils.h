@@ -10,9 +10,9 @@
 #include <iostream>
 
 //#ifdef __DEBUG
-#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 //#else
-//#define D(...)
+#define D(...)
 //#endif
 
 template <typename T>

@@ -1,4 +1,7 @@
 #!/bin/bash -e
+
+cd /home/friese/workspace/melissa-da
+
 # server
 cd build_server
 rm -f melissa_server
