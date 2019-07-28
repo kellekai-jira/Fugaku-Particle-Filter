@@ -490,7 +490,11 @@ void do_update_step()
 	{
 		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
 		{
-			fill(ens_it->state_analysis.begin(), ens_it->state_analysis.end(), 0.0);
+			assert(ens_it->state_analysis.size() == ens_it->state_background.size());
+			for (int i = 0; i < ens_it->state_analysis.size(); i++) {
+				// pretend to do some da...
+				ens_it->state_analysis[i] = ens_it->state_background[i] + 3;
+			}
 		}
 	}
 }

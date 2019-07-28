@@ -18,6 +18,10 @@ void melissa_init(const char *field_name,
 bool melissa_expose(const char *field_name, double *values);
 
 
+/// For debug reasons it sometimes is practical to have the melissa current state id outside of melissa.
+/// returns -1 if no state is currently calculated.
+int melissa_get_current_state_id();
 
+int melissa_get_current_timestamp();
 
 #endif /* API_MELISSA_API_H_ */

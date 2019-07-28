@@ -193,6 +193,9 @@ struct Field {
     	D("put state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
       csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp, field_name);
     }
+
+    current_state_id = -1;
+
   }
 
   void getState(double * values) {
@@ -319,6 +322,12 @@ void first_melissa_init(MPI_Comm comm_)
   }
 }
 
+int melissa_get_current_state_id()
+{
+	assert(phase == PHASE_SIMULATION);
+	return fields.begin()->second.current_state_id;
+}
+
 void melissa_init(const char *field_name,
                        const int  local_vect_size,
                        MPI_Comm comm_)
@@ -337,7 +346,8 @@ void melissa_init(const char *field_name,
 
   // create field
   Field newField;
-  newField.current_state_id = getSimuId(); // We are beginning like this...
+  //newField.current_state_id = getSimuId(); // We are beginning like this...
+  newField.current_state_id = -1; // We are beginning like this...
   newField.timestamp = 0;
   newField.local_vect_size = local_vect_size;
   vector<int> local_vect_sizes(getCommSize());
@@ -411,4 +421,10 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
   //sleep(3);
   D("Destroying context");
   zmq_ctx_destroy(context);
+}
+
+int melissa_get_current_timestamp()
+{
+	assert(phase == PHASE_SIMULATION);
+	return fields.begin()->second.timestamp;
 }
