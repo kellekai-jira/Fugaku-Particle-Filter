@@ -66,12 +66,12 @@ int getCommSize()
 }
 
 
-struct ServerRank
+struct ServerRankConnection
 {
   void * data_request_socket;
 
 
-  ServerRank(const char * addr_request)
+  ServerRankConnection(const char * addr_request)
   {
     data_request_socket = zmq_socket (context, ZMQ_REQ);
     assert(data_request_socket);
@@ -84,7 +84,7 @@ struct ServerRank
     D("connect socket %p", data_request_socket);
   }
 
-  ~ServerRank()
+  ~ServerRankConnection()
   {
     D("closing socket %p", data_request_socket);
     zmq_close(data_request_socket);
@@ -174,9 +174,9 @@ struct Server
 Server server;
 
 struct ServerRanks {
-	static map<int, unique_ptr<ServerRank>> ranks;
+	static map<int, unique_ptr<ServerRankConnection>> ranks;
 
-	static ServerRank &get(int server_rank)
+	static ServerRankConnection &get(int server_rank)
 	{
 		auto found = ranks.find(server_rank);
 		if (found == ranks.end())
@@ -185,7 +185,7 @@ struct ServerRanks {
 			// we use unique_ptr's as other wise we would create a ServerRank locally, we than would copy all its values in the ranks map
 			// and then we would destroy it. unfortunately this also closes the zmq connection !
 			auto res = ranks.emplace(server_rank,
-					unique_ptr<ServerRank>(new ServerRank(server.port_names.data() + server_rank * MPI_MAX_PROCESSOR_NAME)));
+					unique_ptr<ServerRankConnection>(new ServerRankConnection(server.port_names.data() + server_rank * MPI_MAX_PROCESSOR_NAME)));
 			return *res.first->second;
 		}
 		else
@@ -194,12 +194,12 @@ struct ServerRanks {
 		}
 	}
 };
-map<int, unique_ptr<ServerRank>> ServerRanks::ranks;
+map<int, unique_ptr<ServerRankConnection>> ServerRanks::ranks;
 
 struct ConnectedServerRank {
   size_t send_count;
   size_t local_vector_offset;
-  ServerRank &server_rank;
+  ServerRankConnection &server_rank;
 };
 
 struct Field {
@@ -422,7 +422,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
 	MPI_Barrier(comm);
   //sleep(3);
 	D("End Simulation.");
-  D("server_ranks: %lu", ServerRanks::ranks.size());
+  D("server ranks: %lu", ServerRanks::ranks.size());
 
   phase = PHASE_FINAL;
   // TODO: free all pointers?

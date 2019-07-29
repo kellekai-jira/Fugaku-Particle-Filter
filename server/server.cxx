@@ -2,6 +2,7 @@
 // TODO 1. refactoring
 //   TODO: use zmq cpp??
 // TODO 2. error prone ness
+		// TODO: check ret values!
 // TODO 3. check with real world sim and DA.
 
 #include <map>
@@ -56,7 +57,7 @@ struct Part
 
 struct EnsembleMember
 {
-	vector<double> state_analysis;  // really tODO use vector! vector.data() will give the same... raw pointer!
+	vector<double> state_analysis;
 	vector<double> state_background;
 	size_t received_state_background = 0;
 
@@ -94,7 +95,6 @@ struct Field {
 		ensemble_members.resize(ensemble_size_);
 	}
 
-	// TODO: naming: server_comm size or ranks_server? same for simu!
 	/// Calculates all the state vector parts that are send between the server and the
 	/// simulations
 	void calculate_parts(int server_comm_size)
@@ -186,7 +186,7 @@ struct ConnectedSimulationRank {
 
 
 	/// returns true if a new was sent.
-	bool try_to_start_task(int simu_rank) {
+	bool try_send_task(int simu_rank) {
 
 		// already working?
 		if (current_task != WANT_WORK)
@@ -299,9 +299,9 @@ struct Simulation  // Model process runner
 		}
 	}
 
-	void try_to_start_task() {// todo: replace fields.begin() by field as there will be only on field soon.
+	void try_send_task() {// low: replace fields.begin() by field as there will be only on field soon.
 		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
-			cs->second.try_to_start_task(cs->first);
+			cs->second.try_send_task(cs->first);
 		}
 	}
 
@@ -671,6 +671,7 @@ int main(int argc, char * argv[])
 					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
 			D("local server offset %lu, sendcount=%lu", part.local_offset_server, part.send_count);
 
+
 			D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
 			if (simu_timestamp == current_timestamp)
 			{
@@ -695,7 +696,7 @@ int main(int argc, char * argv[])
 			zmq_msg_close(&data_msg);
 
 			// Check if we can answer directly with new data... means starting of a new model task
-			bool got_task = simu.connected_simulation_ranks[simu_rank].try_to_start_task(simu_rank);
+			bool got_task = simu.connected_simulation_ranks[simu_rank].try_send_task(simu_rank);
 
 			// If we could not start a new model task try to schedule a new one. This is initiated by server rank 0
 			if (!got_task && comm_rank == 0)
@@ -704,7 +705,7 @@ int main(int argc, char * argv[])
 					schedule_new_task(simu_id);
 
 					// try to run it directly:
-					simu.connected_simulation_ranks[simu_rank].try_to_start_task(simu_rank);
+					simu.connected_simulation_ranks[simu_rank].try_send_task(simu_rank);
 				}
 			}
 
@@ -740,7 +741,7 @@ int main(int argc, char * argv[])
 					{
 						if (schedule_new_task(simu_it->first)) {
 							// normally we arrive always here if there are not more model task runners than ensemble members.
-							simu_it->second.try_to_start_task();
+							simu_it->second.try_send_task();
 						}
 					}
 				}
@@ -748,8 +749,6 @@ int main(int argc, char * argv[])
 		}
 
 
-		// TODO: check ret values!
-		// TODO: remove compile warnings!
 
 		if (phase == PHASE_SIMULATION && comm_rank != 0)
 		{
@@ -766,7 +765,7 @@ int main(int argc, char * argv[])
 				simu.addTask(new_task.task_id, new_task.task);
 
 				// If so try to start them directly.
-				simu.try_to_start_task();
+				simu.try_send_task();
 			}
 
 		}
