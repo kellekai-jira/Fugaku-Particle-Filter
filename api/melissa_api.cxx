@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdlib>
 #include <cassert>
+#include <memory>
 
 #include <mpi.h>
 #include "zmq.h"
@@ -10,6 +11,8 @@
 #include "../common/n_to_m.h"
 
 #include "../common/utils.h"
+
+#include <csignal>
 
 // TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
@@ -67,16 +70,23 @@ struct ServerRank
 {
   void * data_request_socket;
 
+
   ServerRank(const char * addr_request)
   {
     data_request_socket = zmq_socket (context, ZMQ_REQ);
+    assert(data_request_socket);
     string cleaned_addr = fix_port_name(addr_request);
     D("Data Request Connection to %s", cleaned_addr.c_str());
-    zmq_connect (data_request_socket, cleaned_addr.c_str());
+    //ZMQ_CHECK();
+    int ret = zmq_connect (data_request_socket, cleaned_addr.c_str());
+    assert(ret == 0);
+
+    D("connect socket %p", data_request_socket);
   }
 
   ~ServerRank()
   {
+    D("closing socket %p", data_request_socket);
     zmq_close(data_request_socket);
   }
 
@@ -91,6 +101,7 @@ struct ServerRank
     header[2] = current_state_id;
     header[3] = timestamp;  // is incremented on the server side
     strcpy(reinterpret_cast<char*>(&header[4]), field_name);
+    D("sending on socket %p", data_request_socket);
     ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE));
 
     D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %lu bytes",
@@ -154,14 +165,6 @@ struct ServerRank
 };
 
 
-// TODO: there is probably a better data type for this.
-vector<ServerRank*> server_ranks; // TODO We probably do not even need this. it is enough to create the server rank if needed!
-
-struct ConnectedServerRank {
-  size_t send_count;
-  size_t local_vector_offset;
-  ServerRank *server_rank;
-};
 
 struct Server
 {
@@ -169,6 +172,35 @@ struct Server
   vector<char> port_names;
 };
 Server server;
+
+struct ServerRanks {
+	static map<int, unique_ptr<ServerRank>> ranks;
+
+	static ServerRank &get(int server_rank)
+	{
+		auto found = ranks.find(server_rank);
+		if (found == ranks.end())
+		{
+			// connect to this server rank
+			// we use unique_ptr's as other wise we would create a ServerRank locally, we than would copy all its values in the ranks map
+			// and then we would destroy it. unfortunately this also closes the zmq connection !
+			auto res = ranks.emplace(server_rank,
+					unique_ptr<ServerRank>(new ServerRank(server.port_names.data() + server_rank * MPI_MAX_PROCESSOR_NAME)));
+			return *res.first->second;
+		}
+		else
+		{
+			return *(found->second);
+		}
+	}
+};
+map<int, unique_ptr<ServerRank>> ServerRanks::ranks;
+
+struct ConnectedServerRank {
+  size_t send_count;
+  size_t local_vector_offset;
+  ServerRank &server_rank;
+};
 
 struct Field {
   int current_state_id;
@@ -181,7 +213,7 @@ struct Field {
     {
       if (part->rank_simu == getCommRank())
       {
-        connected_server_ranks.push_back({part->send_count, part->local_offset_simu, server_ranks[part->rank_server]});
+        connected_server_ranks.push_back({part->send_count, part->local_offset_simu, ServerRanks::get(part->rank_server)});
       }
     }
   }
@@ -190,8 +222,8 @@ struct Field {
   void putState(double * values, const char * field_name) {
     // send every state part to the right server rank
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
-    	D("put state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
-      csr->server_rank->send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp, field_name);
+    	D("put state, local offset: %lu, send count: %lu", csr->local_vector_offset, csr->send_count);
+      csr->server_rank.send(&values[csr->local_vector_offset], csr->send_count, current_state_id, timestamp, field_name);
     }
 
     current_state_id = -1;
@@ -201,7 +233,7 @@ struct Field {
   void getState(double * values) {
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
-    	D("get state, local offset: %d, send count: %d", csr->local_vector_offset, csr->send_count);
+    	D("get state, local offset: %lu, send count: %lu", csr->local_vector_offset, csr->send_count);
 
     	// do not try to receive if we are finalizeing already. Even check if the last receive might have started finalization.
     	if (phase == PHASE_FINAL)
@@ -209,7 +241,7 @@ struct Field {
     		return;
     	}
 
-      csr->server_rank->receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
+      csr->server_rank.receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
     }
   }
 };
@@ -308,15 +340,7 @@ void first_melissa_init(MPI_Comm comm_)
   D("port_names_size= %lu", server.port_names.size());
   MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
 
-  D("Portnames %s , %s ", server.port_names.data(), server.port_names.data() + MPI_MAX_PROCESSOR_NAME);
-
-
-  // Fill server ranks array...
-  for (int i = 0; i < server.comm_size; ++i)
-  {
-  	// TODO: do not connect to unneeded server ranks!  as we have only one field one can do this now.
-    server_ranks.push_back(new ServerRank(server.port_names.data() + i * MPI_MAX_PROCESSOR_NAME));
-  }
+  //D("Portnames %s , %s ", server.port_names.data(), server.port_names.data() + MPI_MAX_PROCESSOR_NAME);
 }
 
 int melissa_get_current_state_id()
@@ -353,7 +377,7 @@ void melissa_init(const char *field_name,
       local_vect_sizes.data(), 1, my_MPI_SIZE_T,
       comm);
 
-  D("vect sizes: %d %d", local_vect_sizes[0], local_vect_sizes[1]);
+  D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
 
   if (getCommRank() == 0 && getSimuId() == 0)  // TODO: what happens if simu_id 0 crashes? make this not dependend from the simuid. the server can ask the simulation after it's registration to give field infos!
   {
@@ -398,10 +422,9 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
 	MPI_Barrier(comm);
   //sleep(3);
 	D("End Simulation.");
-  D("server_ranks: %lu", server_ranks.size());
+  D("server_ranks: %lu", ServerRanks::ranks.size());
 
   phase = PHASE_FINAL;
-  // TODO: close all connections [should be DONE]
   // TODO: free all pointers?
   // not an api function anymore but activated if a finalization message is received.
   if (ccon != NULL) {
@@ -409,14 +432,11 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
   }
 
 
-  for (auto sr = server_ranks.begin(); sr < server_ranks.end(); sr++)
-  {
-    delete *sr;
-  }
-
+  // free all connections to server ranks:
+  ServerRanks::ranks.clear();
 
   //sleep(3);
-  D("Destroying context");
+  D("Destroying zmq context");
   zmq_ctx_destroy(context);
 }
 

@@ -71,7 +71,7 @@ struct EnsembleMember
 
 	void store_background_state_part(const n_to_m & part, const double * values)
 	{
-		D("before_assert %d %d %lu", part.send_count, part.local_offset_server, state_background.size());
+		D("before_assert %lu %lu %lu", part.send_count, part.local_offset_server, state_background.size());
 		// TODO https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi
 		assert(part.send_count + part.local_offset_server <= state_background.size());
 		copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
@@ -167,8 +167,6 @@ const Task TASK_UNINITIALIZED = Task{-2, -2};
 
 void my_free(void * data, void * hint)
 {
-	//delete [] data;
-	//delete [] reinterpret_cast<int*>(data);
 	free(data);
 }
 
@@ -229,7 +227,7 @@ struct ConnectedSimulationRank {
 		D("-> Server sending %lu bytes for state %d, timestamp=%d",
 				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
 				header[0], header[1]);
-		D("local server offset %d, local simu offset %d, sendcount=%d", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).local_offset_simu, fields.begin()->second->getPart(simu_rank).send_count);
+		D("local server offset %lu, local simu offset %lu, sendcount=%lu", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).local_offset_simu, fields.begin()->second->getPart(simu_rank).send_count);
 		print_vector(fields.begin()->second->ensemble_members.at(first_elem->second.state_id).state_analysis);
 
 		zmq_msg_send(&data_msg, data_response_socket, 0);
@@ -490,7 +488,7 @@ void init_new_timestamp()
 			// at the beginning of the time or otherwise jsut finished a timestep...
 			assert(current_timestamp == 1 || member.received_state_background == field_it->second->local_vect_size);
 			member.received_state_background = 0;
-			D("test: %d", field_it->second->ensemble_members[i].received_state_background);
+			D("test: %lu", field_it->second->ensemble_members[i].received_state_background);
 		}
 	}
 }
@@ -671,7 +669,7 @@ int main(int argc, char * argv[])
 			assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
 			D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
 					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
-			D("local server offset %d, sendcount=%d", part.local_offset_server, part.send_count);
+			D("local server offset %lu, sendcount=%lu", part.local_offset_server, part.send_count);
 
 			D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
 			if (simu_timestamp == current_timestamp)

@@ -13,9 +13,9 @@
 #include <limits.h>
 
 //#ifdef __DEBUG
-//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 //#else
-#define D(...)
+//#define D(...)
 //#endif
 
 
@@ -49,7 +49,7 @@ void print_vector (const std::vector<T> &vec)
 	printf("]\n");
 }
 
-#define ZMQ_CHECK(x) if (x == -1) { D("zmq error: %s" , zmq_strerror(zmq_errno())); }
+#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); }
 
 enum Phase {
   PHASE_INIT,
