@@ -202,11 +202,6 @@ struct ConnectedSimulationRank {
 		// then delete it from thye waiting_tasks list.
 		auto first_elem = waiting_tasks.begin();
 
-		//int header[3] = { first_elem->second.state_id, current_timestamp, CHANGE_STATE };  this does not work as send is non blocking...
-		int * header = new int[3];  // needto do it like this to be sure it stays in memory as send is non blocking!
-		header[0] = first_elem->second.state_id;
-		header[1] = current_timestamp;
-		header[2] = CHANGE_STATE;
 
 		zmq_msg_t identity_msg;
 		zmq_msg_t empty_msg;
@@ -219,7 +214,11 @@ struct ConnectedSimulationRank {
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
-		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
+		ZMQ_CHECK(zmq_msg_init_size(&header_msg, 3 * sizeof(int)));
+		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
+		header[0] = first_elem->second.state_id;
+		header[1] = current_timestamp;
+		header[2] = CHANGE_STATE;
 		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
 		// we do not know when it will really send. send is non blocking!
 
@@ -250,11 +249,6 @@ struct ConnectedSimulationRank {
 		if (connection_identity == NULL)
 			return;
 
-		int * header = new int[3];  // needto do it like this to be sure it stays in memory as send is non blocking!
-		header[0] = -1;
-		header[1] = current_timestamp;
-		header[2] = END_SIMULATION;
-
 		zmq_msg_t identity_msg;
 		zmq_msg_t empty_msg;
 		zmq_msg_t header_msg;
@@ -265,7 +259,13 @@ struct ConnectedSimulationRank {
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
-		ZMQ_CHECK(zmq_msg_init_data(&header_msg, header, 3 * sizeof(int), NULL, NULL));
+		zmq_msg_init_size(&header_msg, 3 * sizeof(int));
+
+		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
+		header[0] = -1;
+		header[1] = current_timestamp;
+		header[2] = END_SIMULATION;
+
 		zmq_msg_send(&header_msg, data_response_socket, 0);
 
 		D("Send end message");

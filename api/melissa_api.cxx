@@ -235,12 +235,9 @@ struct ConfigurationConnection
   {
     zmq_msg_t msg_request, msg_reply;
     zmq_msg_init_size(&msg_request, sizeof(int) + sizeof(int));
-    void * buf = zmq_msg_data(&msg_request);
-    int type = REGISTER_SIMU_ID;
-    memcpy(buf, &type, sizeof(int));
-    buf += sizeof(ConfigurationMessageType);
-    int simu_id = getSimuId();
-    memcpy(buf, &simu_id, sizeof(int));
+    int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_request));
+    header[0] = REGISTER_SIMU_ID;
+    header[1] = getSimuId();
     ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
 
     zmq_msg_init(&msg_reply);
