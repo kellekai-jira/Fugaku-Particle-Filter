@@ -1,5 +1,6 @@
 // TODOS:
 // TODO 1. refactoring
+//   TODO: use zmq cpp??
 // TODO 2. error prone ness
 // TODO 3. check with real world sim and DA.
 
@@ -23,7 +24,8 @@
 const int ENSEMBLE_SIZE = 5;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
-const int MAX_TIMESTAMP = 155;
+const int MAX_TIMESTAMP = 5;
+//const int MAX_TIMESTAMP = 155;
 
 using namespace std;
 
@@ -371,7 +373,6 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
     zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
 		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(size_t));
-		// TODO: can be done 0copy!
 		memcpy (newField->local_vect_sizes_simu.data(), zmq_msg_data(&msg), simu_comm_size * sizeof(size_t));
 		zmq_msg_close(&msg);
 
@@ -602,7 +603,7 @@ int main(int argc, char * argv[])
 				// (rank 0 does some more intitialization than the other server ranks)
 				if (fields.size() == FIELDS_COUNT)
 				{
-					// TODO: check fields!
+					// low: if multi field: check fields! (see if the field names we got are the ones we wanted)
 					// propagate all fields to the other server clients on first message receive!
 					broadcast_field_information_and_calculate_parts();
 					init_new_timestamp();
@@ -771,14 +772,15 @@ int main(int argc, char * argv[])
 			}
 
 		}
+		// TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
+		// TODO: check if we need to kill some simulations...
 	}
 
-   // TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
-	// TODO: check if we need to kill some simulations...
 
 	D("Ending Server.");
 	// TODO: check if we need to delete some more stuff!
-	// wait 3 seconds to finish sending...
+
+	// wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
 	//sleep(3);
   zmq_close(data_response_socket);
   if (comm_rank == 0)

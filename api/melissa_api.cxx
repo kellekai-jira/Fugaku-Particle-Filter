@@ -10,7 +10,6 @@
 #include "../common/n_to_m.h"
 
 #include "../common/utils.h"
-// TODO: localhost behaviour (if hostname == myhostname replace by localhost ...)
 
 // TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
@@ -90,7 +89,7 @@ struct ServerRank
     header[0] = getSimuId();
     header[1] = getCommRank();
     header[2] = current_state_id;
-    header[3] = timestamp; // TODO: is incremented on the server or client side
+    header[3] = timestamp;  // is incremented on the server side
     strcpy(reinterpret_cast<char*>(&header[4]), field_name);
     ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE));
 
@@ -149,6 +148,7 @@ struct ServerRank
     {
       assert(type == KEEP_STATE);
       // TODO: unimplemented
+      assert(false);
     }
   }
 };
