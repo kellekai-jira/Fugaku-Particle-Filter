@@ -88,7 +88,7 @@ int main(int argc, char * args[])
 
 		// file output of allways ensemble member 0
 		// TODO: maybe move this functionality into ap?
-		if (timestepping && melissa_get_current_state_id() == 0)
+		if (timestepping && melissa_get_current_state_id() == 1)
 		{
 			//raise(SIGINT);
 			if (comm_rank == 0)

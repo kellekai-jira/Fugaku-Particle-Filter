@@ -3,7 +3,7 @@
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=1
-n_simulation=2
+n_simulation=1
 n_runners=1
 
 ensemble_size=5
@@ -24,7 +24,7 @@ function ctrl_c() {
 
 precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
-rm nc.vg.*
+rm -f nc.vg.*
 
 #precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
@@ -55,8 +55,8 @@ server_exe="/home/friese/workspace/melissa-da/build_server/melissa_server"
 
 
 killall xterm
-#killall melissa_server
-#killall example_simulation
+killall melissa_server
+killall example_simulation
 
 
 rm output.txt
@@ -70,7 +70,7 @@ sleep 1
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
-  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
+#  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   mpirun -n $n_simulation \
     -x MELISSA_SIMU_ID=$i \

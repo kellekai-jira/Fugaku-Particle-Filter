@@ -520,13 +520,15 @@ void do_update_step()
 	MPI_Barrier(MPI_COMM_WORLD);
 	for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 	{
+		int state_id = 0;
 		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
 		{
 			assert(ens_it->state_analysis.size() == ens_it->state_background.size());
 			for (size_t i = 0; i < ens_it->state_analysis.size(); i++) {
 				// pretend to do some da...
-				ens_it->state_analysis[i] = ens_it->state_background[i] + 3;
+				ens_it->state_analysis[i] = ens_it->state_background[i] + state_id;
 			}
+			state_id ++;
 		}
 	}
 }
