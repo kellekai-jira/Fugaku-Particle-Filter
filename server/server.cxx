@@ -535,6 +535,25 @@ void do_update_step()
 	}
 }
 
+void check_due_dates() {
+	time_t now;
+	now = time (NULL);
+
+	bool delete_last = false;
+	set<int> simu_ids_to_kill;
+	SubTaskList::iterator last;
+	for (auto it = scheduled_tasks.begin(); it != scheduled_tasks.end(); it++) {
+		if (delete_last)
+		if (now > (*it)->due_date) {
+			simu_ids_to_kill.insert((*it)->simu_id);  // TODO: black list this simu id!
+			last = it;
+			delete_last = true;
+		} else {
+			delete_last = false;
+		}
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	assert(MAX_TIMESTAMP > 1);
@@ -778,6 +797,10 @@ int main(int argc, char * argv[])
 		}
 
 
+		if (phase == PHASE_SIMULATION) {
+			// check if we have to kill some jobs as they did not respond:
+			check_due_dates();
+		}
 		// TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
 		// TODO: check if we need to kill some simulations...
 	}
