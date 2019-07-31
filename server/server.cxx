@@ -1,6 +1,6 @@
 // TODOS:
 // TODO 1. refactoring
-//   TODO: use zmq cpp??
+//   TODO: use zmq cpp?? --> no
 // TODO 2. error prone ness
 		// TODO: check ret values!
 // TODO 3. check with real world sim and DA.
@@ -67,7 +67,6 @@ struct EnsembleMember
 
 	void set_local_vect_size(int local_vect_size)
 	{
-		// TODO: replace all mallocs by new? Actually it is dirty to use new[].... better use a vector. but I'm not sure if that is compatible with c and our double arrays ;) https://stackoverflow.com/questions/4754763/object-array-initialization-without-default-constructor
 		state_analysis.reserve(local_vect_size);
 		state_analysis.resize(local_vect_size);
 		state_background.reserve(local_vect_size);
@@ -77,7 +76,6 @@ struct EnsembleMember
 	void store_background_state_part(const n_to_m & part, const double * values)
 	{
 		D("before_assert %lu %lu %lu", part.send_count, part.local_offset_server, state_background.size());
-		// TODO https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi
 		assert(part.send_count + part.local_offset_server <= state_background.size());
 		copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
 		received_state_background += part.send_count;
@@ -159,10 +157,10 @@ void my_free(void * data, void * hint)
 	free(data);
 }
 
-struct ConnectedSimulationRank {
+struct SimulationRankConnection {
 	void * connection_identity;
 
-	ConnectedSimulationRank(void * identity) {
+	SimulationRankConnection(void * identity) {
 		connection_identity = identity;
 	}
 
@@ -241,7 +239,7 @@ struct ConnectedSimulationRank {
 struct Simulation  // Model process runner
 {
 	// simulations rank
-	map<int, ConnectedSimulationRank> connected_simulation_ranks; // TODO: rename in SimulationRankConnection, also on server side?
+	map<int, SimulationRankConnection> connected_simulation_ranks;
 
 	void end() {
 		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
@@ -272,7 +270,7 @@ struct SubTask {
 	int simu_id;
 	int simu_rank;
 	int state_id;
-	int due_date; // TODO: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
+	int due_date;
 		// TODO: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
 	SubTask(NewTask &new_task, int simu_rank_) {
 		simu_id = new_task.simu_id;
@@ -287,7 +285,7 @@ struct SubTask {
 // these are checked for the due dates!
 // if we get results for the whole task we remove it from the scheduled_tasks list.
 typedef list<shared_ptr<SubTask>> SubTaskList;
-SubTaskList scheduled_sub_tasks;
+SubTaskList scheduled_sub_tasks;  // TODO could be ordered sets! this prevents us from adding 2 the same!
 SubTaskList running_sub_tasks;
 
 /// returns true if could send the sub_task on a connection.
@@ -700,7 +698,7 @@ int main(int argc, char * argv[])
 			zmq_msg_close(&header_msg);
 			zmq_msg_close(&data_msg);
 
-			ConnectedSimulationRank csr(identity);
+			SimulationRankConnection csr(identity);
 
 			// Check if we can answer directly with new data... means starting of a new model task
 			auto found = find_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), [simu_id, simu_rank](shared_ptr<SubTask> &st){
