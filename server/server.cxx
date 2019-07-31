@@ -138,7 +138,7 @@ struct Field {
 	bool finished() {
 		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
 		{
-			D("check finished %d / %d", ens_it->received_state_background , local_vect_size);
+			D("check finished %lu / %lu", ens_it->received_state_background , local_vect_size);
 			assert(local_vect_size != 0);
 			if (ens_it->received_state_background != local_vect_size)
 			{
@@ -253,9 +253,7 @@ struct Simulation  // Model process runner
 // simu_id, Simulation:
 map<int, shared_ptr<Simulation>> idle_simulations;
 
-
-
-
+// only important on rank 0:
 set<int> unscheduled_tasks;
 
 struct NewTask {
@@ -287,28 +285,6 @@ struct SubTask {
 typedef list<shared_ptr<SubTask>> SubTaskList;
 SubTaskList scheduled_sub_tasks;  // TODO could be ordered sets! this prevents us from adding 2 the same!
 SubTaskList running_sub_tasks;
-
-/// returns true if could send the sub_task on a connection.
-bool try_send_subtask(shared_ptr<SubTask> &sub_task) {
-	// tries to send this task.
-	auto found_simulation = idle_simulations.find(sub_task->simu_id);
-	if (found_simulation == idle_simulations.end()) {
-		D("could not send: Did not find idle simulation");
-		return false;
-	}
-
-	auto found_rank = found_simulation->second->connected_simulation_ranks.find(sub_task->simu_rank);
-	if (found_rank == found_simulation->second->connected_simulation_ranks.end()) {
-		D("could not send: Did not find rank");
-		return false;
-	}
-
-	D("Send after adding subtask! to simu_id %d", sub_task->simu_id);
-	found_rank->second.send_task(sub_task->simu_rank, sub_task->state_id);
-	found_simulation->second->connected_simulation_ranks.erase(found_rank);
-
-	return true;
-}
 
 
 void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
@@ -413,7 +389,32 @@ void broadcast_field_information_and_calculate_parts() {
 	}
 }
 
-// Add subtask and try to start them directly.
+/// returns true if could send the sub_task on a connection.
+bool try_launch_subtask(shared_ptr<SubTask> &sub_task) {
+	// tries to send this task.
+	auto found_simulation = idle_simulations.find(sub_task->simu_id);
+	if (found_simulation == idle_simulations.end()) {
+		D("could not send: Did not find idle simulation");
+		return false;
+	}
+
+	auto found_rank = found_simulation->second->connected_simulation_ranks.find(sub_task->simu_rank);
+	if (found_rank == found_simulation->second->connected_simulation_ranks.end()) {
+		D("could not send: Did not find rank");
+		return false;
+	}
+
+	D("Send after adding subtask! to simu_id %d", sub_task->simu_id);
+	found_rank->second.send_task(sub_task->simu_rank, sub_task->state_id);
+	found_simulation->second->connected_simulation_ranks.erase(found_rank);
+	if (found_simulation->second->connected_simulation_ranks.empty()) {
+		idle_simulations.erase(found_simulation);
+	}
+
+	return true;
+}
+
+// either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
 void add_sub_tasks(NewTask &new_task) {
 	auto &csr = fields.begin()->second->connected_simulation_ranks;
 	assert(csr.size() > 0);  // connectd simulation ranks must be initialized...
@@ -421,7 +422,7 @@ void add_sub_tasks(NewTask &new_task) {
 		shared_ptr<SubTask> sub_task (new SubTask(new_task, *it));
 		D("Adding subtask for simu rank %d", *it);
 
-		if (try_send_subtask(sub_task)) {
+		if (try_launch_subtask(sub_task)) {
 			running_sub_tasks.push_back(sub_task);
 		} else {
 			scheduled_sub_tasks.push_back(sub_task);
@@ -443,7 +444,7 @@ bool schedule_new_task(int simu_id)
 
 		add_sub_tasks(new_task);
 
-		// Send new scheduled task to all ranks! This makes sure that everybody receives it!
+		// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
 		for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
 		{
 			// low: one could use ISend and then wait for all to complete
@@ -458,7 +459,7 @@ bool schedule_new_task(int simu_id)
 	}
 }
 
-// checks if the server added new tasks... if so tries to run them.
+/// checks if the server added new tasks... if so tries to run them.
 void check_schedule_new_tasks()
 {
 	assert(comm_rank != 0);
@@ -489,12 +490,15 @@ void end_all_simulations()
 
 void init_new_timestamp()
 {
-	current_timestamp++;
 	assert(scheduled_sub_tasks.size() == 0);
 	assert(running_sub_tasks.size() == 0);
+
+	current_timestamp++;
+
 	if (comm_rank == 0) {
 		assert(unscheduled_tasks.size() == 0);
 	}
+
 	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
 
 		if (comm_rank == 0) {
@@ -514,7 +518,7 @@ void init_new_timestamp()
 void do_update_step()
 {
 	// TODO
-	printf("Doing update step...\n");
+	L("Doing update step...\n");
 	MPI_Barrier(MPI_COMM_WORLD);
 	for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 	{
@@ -772,6 +776,8 @@ int main(int argc, char * argv[])
 			// Check if I have to schedule new tasks:
 			check_schedule_new_tasks();
 		}
+
+
 		// TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
 		// TODO: check if we need to kill some simulations...
 	}

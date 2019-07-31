@@ -14,10 +14,13 @@
 
 //#ifdef __DEBUG
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+
 //#else
 //#define D(...)
 //#endif
 
+// normal loging:
+#define L(x ...) printf(x); printf("\n")
 
 
 //https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
