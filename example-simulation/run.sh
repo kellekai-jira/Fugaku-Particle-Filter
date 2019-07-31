@@ -3,7 +3,7 @@
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=1
-n_simulation=1
+n_simulation=2
 n_runners=1
 
 ensemble_size=5
@@ -55,8 +55,8 @@ server_exe="/home/friese/workspace/melissa-da/build_server/melissa_server"
 
 
 killall xterm
-killall melissa_server
-killall example_simulation
+#killall melissa_server
+#killall example_simulation
 
 
 rm output.txt

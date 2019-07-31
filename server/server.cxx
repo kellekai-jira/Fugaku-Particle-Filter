@@ -129,7 +129,6 @@ struct Field {
 		assert(parts.size() > 0);
 		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
 		{
-			D("part_it server rank: %d simu rank: %d", part_it->rank_server, part_it->rank_simu);
 			if (part_it->rank_server == comm_rank && part_it->rank_simu == simu_rank) {
 				return *part_it;
 			}
@@ -141,6 +140,7 @@ struct Field {
 	bool finished() {
 		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
 		{
+			D("check finished %d / %d", ens_it->received_state_background , local_vect_size);
 			assert(local_vect_size != 0);
 			if (ens_it->received_state_background != local_vect_size)
 			{
@@ -253,7 +253,7 @@ struct Simulation  // Model process runner
 };
 
 // simu_id, Simulation:
-map<int, Simulation> idle_simulations;
+map<int, shared_ptr<Simulation>> idle_simulations;
 
 
 
@@ -293,19 +293,21 @@ SubTaskList running_sub_tasks;
 /// returns true if could send the sub_task on a connection.
 bool try_send_subtask(shared_ptr<SubTask> &sub_task) {
 	// tries to send this task.
-	D("subtask: %d %d %d", sub_task->simu_id, sub_task->simu_rank, sub_task->state_id);
 	auto found_simulation = idle_simulations.find(sub_task->simu_id);
 	if (found_simulation == idle_simulations.end()) {
+		D("could not send: Did not find idle simulation");
 		return false;
 	}
 
-	auto found_rank = found_simulation->second.connected_simulation_ranks.find(sub_task->simu_id);
-	if (found_rank == found_simulation->second.connected_simulation_ranks.end()) {
+	auto found_rank = found_simulation->second->connected_simulation_ranks.find(sub_task->simu_rank);
+	if (found_rank == found_simulation->second->connected_simulation_ranks.end()) {
+		D("could not send: Did not find rank");
 		return false;
 	}
 
+	D("Send after adding subtask! to simu_id %d", sub_task->simu_id);
 	found_rank->second.send_task(sub_task->simu_rank, sub_task->state_id);
-	found_simulation->second.connected_simulation_ranks.erase(found_rank);
+	found_simulation->second->connected_simulation_ranks.erase(found_rank);
 
 	return true;
 }
@@ -419,6 +421,7 @@ void add_sub_tasks(NewTask &new_task) {
 	assert(csr.size() > 0);  // connectd simulation ranks must be initialized...
 	for (auto it = csr.begin(); it != csr.end(); it++){
 		shared_ptr<SubTask> sub_task (new SubTask(new_task, *it));
+		D("Adding subtask for simu rank %d", *it);
 
 		if (try_send_subtask(sub_task)) {
 			running_sub_tasks.push_back(sub_task);
@@ -460,6 +463,7 @@ bool schedule_new_task(int simu_id)
 // checks if the server added new tasks... if so tries to run them.
 void check_schedule_new_tasks()
 {
+	assert(comm_rank != 0);
 	int received;
 
 	MPI_Iprobe(0, TAG_NEW_TASK, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
@@ -468,6 +472,7 @@ void check_schedule_new_tasks()
 		D("Got task to send...");
 		NewTask new_task;
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		// TODO: remove from old simu if it put's state on a new simu id
 
 		add_sub_tasks(new_task);
 	}
@@ -480,13 +485,15 @@ void end_all_simulations()
 {
 	for (auto simu_it = idle_simulations.begin(); simu_it != idle_simulations.end(); simu_it++)
 	{
-		simu_it->second.end();
+		simu_it->second->end();
 	}
 }
 
 void init_new_timestamp()
 {
 	current_timestamp++;
+	assert(scheduled_sub_tasks.size() == 0);
+	assert(running_sub_tasks.size() == 0);
 	if (comm_rank == 0) {
 		assert(unscheduled_tasks.size() == 0);
 	}
@@ -502,7 +509,6 @@ void init_new_timestamp()
 			// at the beginning of the time or otherwise jsut finished a timestep...
 			assert(current_timestamp == 1 || member.received_state_background == field_it->second->local_vect_size);
 			member.received_state_background = 0;
-			D("test: %lu", field_it->second->ensemble_members[i].received_state_background);
 		}
 	}
 }
@@ -596,7 +602,6 @@ int main(int argc, char * argv[])
 		// coming from fresh init...
 		if (phase == PHASE_INIT)
 		{
-			D("init...");
 			if (comm_rank == 0)
 			{
 				// check if initialization on rank 0 finished
@@ -655,15 +660,17 @@ int main(int argc, char * argv[])
 			strcpy(field_name, reinterpret_cast<char*>(&header_buf[4]));
 
 			// good simu_rank, good state id?
+			auto running_sub_task = find_if(running_sub_tasks.begin(), running_sub_tasks.end(), [simu_id, simu_rank, simu_state_id](shared_ptr<SubTask> &st){
+				return st->simu_id == simu_id && st->state_id == simu_state_id && st->simu_rank == simu_rank;
+			});
 
-//			assert(simu_timestamp == 0 || simu_state_id == find_if(running_sub_tasks.begin(), running_sub_tasks.end(), [simu_state_id](auto &subtask) {
-//				return subtask.simu_id == simu_id && subtask.simu_id;
-//			})); // TODO: fix this assert!
+			assert(simu_timestamp == 0 || running_sub_task != running_sub_tasks.end());
 
-			// good timestamp? There are 3 cases:
-			// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
+			running_sub_tasks.remove(*running_sub_task);
 
+			// good timestamp? There are 2 cases: timestamp 0 or good timestamp...
 			assert (simu_timestamp == 0 || simu_timestamp == current_timestamp);
+			// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 
 			// Save state part in background_states.
@@ -701,26 +708,22 @@ int main(int argc, char * argv[])
 			if (found != scheduled_sub_tasks.end()) {
 				// found a new task. send back directly!
 
+				D("send after receive! to simu rank %d on simu_id %d", simu_rank, simu_id);
 				csr.send_task(simu_rank, (*found)->state_id);
 				// don't need to delete from connected simulations as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
 				running_sub_tasks.push_back(*found);
+				scheduled_sub_tasks.remove(*found);
 
 			} else {
 				// Save connection - basically copy identity pointer...
-				auto &simu = idle_simulations.emplace(simu_id, Simulation()).first->second;
-				simu.connected_simulation_ranks.emplace(simu_rank, csr);
+				auto &simu = idle_simulations.emplace(simu_id, shared_ptr<Simulation>(new Simulation())).first->second;
+				simu->connected_simulation_ranks.emplace(simu_rank, csr);
+				D("save connection simuid %d, simu rank %d", simu_id, simu_rank);
 
 				if (comm_rank == 0) {
-					// this will reuse the recently saved simulation!
 					// If we could not start a new model task try to schedule a new one. This is initiated by server rank 0
-					// check if there is NO other task waiting on thsi simulation....
-					auto found = find_if(scheduled_sub_tasks.rbegin(), scheduled_sub_tasks.rend(), [simu_id](shared_ptr<SubTask> &st) {
-						return st->simu_id == simu_id;
-					});
-					if (found == scheduled_sub_tasks.rend()) {
-						// no other task scheduled for this simulation schedule new
-						schedule_new_task(simu_id);
-					}
+					//( no new model task means that at least this rank is finished. so the others will finish soon too as we assum synchronism in the simulaitons)
+					schedule_new_task(simu_id);
 				}
 			}
 		}
