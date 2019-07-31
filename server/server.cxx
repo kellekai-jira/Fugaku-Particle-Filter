@@ -35,6 +35,7 @@ const int MAX_TIMESTAMP = 5;
 using namespace std;
 
 const int TAG_NEW_TASK = 42;
+const int TAG_KILL_SIMULATION = 43;
 
 size_t IDENTITY_SIZE = 0;
 
@@ -253,7 +254,6 @@ struct Simulation  // Model process runner
 // simu_id, Simulation:
 map<int, shared_ptr<Simulation>> idle_simulations;
 
-// only important on rank 0:
 set<int> unscheduled_tasks;
 
 struct NewTask {
@@ -414,6 +414,27 @@ bool try_launch_subtask(shared_ptr<SubTask> &sub_task) {
 	return true;
 }
 
+void unschedule(int simu_id) {
+	auto f = [simu_id](shared_ptr<SubTask> &task) {
+		if (task->simu_id == simu_id) {
+			unscheduled_tasks.insert(task->state_id);
+			return true;
+		} else {
+			return false;
+		}
+	};
+	remove_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), f);
+	remove_if(running_sub_tasks.begin(), running_sub_tasks.end(), f);
+}
+
+void remove_by_state_id(int state_id) {
+	auto f = [state_id](shared_ptr<SubTask> &task) {
+		return task->state_id == state_id;
+	};
+	remove_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), f);
+	remove_if(running_sub_tasks.begin(), running_sub_tasks.end(), f);
+}
+
 // either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
 void add_sub_tasks(NewTask &new_task) {
 	auto &csr = fields.begin()->second->connected_simulation_ranks;
@@ -447,8 +468,9 @@ bool schedule_new_task(int simu_id)
 		// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
 		for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
 		{
-			// low: one could use ISend and then wait for all to complete
-			MPI_Send(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
+			// TODO: one should use ISend and then wait for all to complete
+			// REM: MPI_Ssend to be sure that all messages are received!
+			MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
 		}
 
 		return true;
@@ -458,6 +480,7 @@ bool schedule_new_task(int simu_id)
 		return false;
 	}
 }
+
 
 /// checks if the server added new tasks... if so tries to run them.
 void check_schedule_new_tasks()
@@ -472,6 +495,10 @@ void check_schedule_new_tasks()
 		NewTask new_task;
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		// TODO: remove from old simu if it put's state on a new simu id
+		if (unscheduled_tasks.erase(new_task.state_id) == 0) {
+			// task already scheduled. remove old schedulings!
+			remove_by_state_id(new_task.state_id);
+		}
 
 		add_sub_tasks(new_task);
 	}
@@ -495,15 +522,11 @@ void init_new_timestamp()
 
 	current_timestamp++;
 
-	if (comm_rank == 0) {
-		assert(unscheduled_tasks.size() == 0);
-	}
+	assert(unscheduled_tasks.size() == 0);
 
 	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
 
-		if (comm_rank == 0) {
-			unscheduled_tasks.insert(i);
-		}
+		unscheduled_tasks.insert(i);
 
 		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
 		{
@@ -535,21 +558,50 @@ void do_update_step()
 	}
 }
 
+
 void check_due_dates() {
 	time_t now;
 	now = time (NULL);
 
-	bool delete_last = false;
 	set<int> simu_ids_to_kill;
-	SubTaskList::iterator last;
-	for (auto it = scheduled_tasks.begin(); it != scheduled_tasks.end(); it++) {
-		if (delete_last)
+
+	for (auto it = scheduled_sub_tasks.begin(); it != scheduled_sub_tasks.end(); it++) {
 		if (now > (*it)->due_date) {
 			simu_ids_to_kill.insert((*it)->simu_id);  // TODO: black list this simu id!
-			last = it;
-			delete_last = true;
-		} else {
-			delete_last = false;
+		}
+	}
+	for (auto it = running_sub_tasks.begin(); it != running_sub_tasks.end(); it++) {
+		if (now > (*it)->due_date) {
+			simu_ids_to_kill.insert((*it)->simu_id);  // TODO: black list this simu id!
+		}
+	}
+
+	for (auto simu_id_it = simu_ids_to_kill.begin(); simu_id_it != simu_ids_to_kill.end(); simu_id_it++) {
+		unschedule(*simu_id_it);
+		if (comm_rank != 0) {
+			// Send to rank 0 that this simulation is to kill
+			int simu_id = *simu_id_it;
+			// Rem: Bsend this is not blocking as bufferized. (MPI_SSend would be blocking until message is sent
+			MPI_Bsend(&simu_id, 1, MPI_INT, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD);
+		}
+	}
+}
+
+void check_kill_requests() {
+	assert(comm_rank == 0);
+	int received;
+
+	MPI_Iprobe(0, TAG_KILL_SIMULATION, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
+	if (received)
+	{
+		D("Got task to kill...");
+		int simu_id;
+		MPI_Recv(&simu_id, sizeof(int), MPI_BYTE, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		unschedule(simu_id);
+
+		// reschedule direct if possible
+		if (idle_simulations.size() > 0) {
+			schedule_new_task(idle_simulations.begin()->first);
 		}
 	}
 }
@@ -756,14 +808,7 @@ int main(int argc, char * argv[])
 		if (phase == PHASE_SIMULATION)
 		{
 			// check if all data was received. If yes: start Update step to calculate next analysis state
-			bool finished = true;
-			for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
-			{
-				// REM: we also could check the scheduled tasks. but that would mean we need it on the server!= rank0 as well low...
-				finished = field_it->second->finished();
-				if (!finished)
-					break;
-			}
+			bool finished = unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
 
 			if (finished)
 			{
@@ -800,6 +845,10 @@ int main(int argc, char * argv[])
 		if (phase == PHASE_SIMULATION) {
 			// check if we have to kill some jobs as they did not respond:
 			check_due_dates();
+
+			if (comm_rank == 0) {
+				check_kill_requests();
+			}
 		}
 		// TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
 		// TODO: check if we need to kill some simulations...
