@@ -1,10 +1,11 @@
 #!/bin/bash
+cd /home/friese/workspace/melissa-da/example-simulation
 
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=1
 n_simulation=1
-n_runners=1
+n_runners=2
 
 ensemble_size=5
 max_timestamps=5

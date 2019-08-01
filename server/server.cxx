@@ -26,10 +26,11 @@
 #include <time.h>
 
 // TODO: configure this somehow better:
-const int ENSEMBLE_SIZE = 5;
+const int ENSEMBLE_SIZE = 42;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
-const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
-const int MAX_TIMESTAMP = 5;
+//const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
+const long long MAX_SIMULATION_TIMEOUT = 5;  // 10 min max timeout for simulations.
+const int MAX_TIMESTAMP = 5000;
 //const int MAX_TIMESTAMP = 155;
 
 using namespace std;
@@ -415,24 +416,29 @@ bool try_launch_subtask(shared_ptr<SubTask> &sub_task) {
 }
 
 void unschedule(int simu_id) {
+	idle_simulations.erase(simu_id);
 	auto f = [simu_id](shared_ptr<SubTask> &task) {
 		if (task->simu_id == simu_id) {
 			unscheduled_tasks.insert(task->state_id);
+			L("Remove from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
 			return true;
 		} else {
 			return false;
 		}
 	};
-	remove_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), f);
-	remove_if(running_sub_tasks.begin(), running_sub_tasks.end(), f);
+	// REM: do not use algorithms remove_if as it does not work on lists.
+	scheduled_sub_tasks.remove_if(f);
+	running_sub_tasks.remove_if(f);
 }
 
 void remove_by_state_id(int state_id) {
 	auto f = [state_id](shared_ptr<SubTask> &task) {
+		idle_simulations.erase(task->simu_id);  // low: one could do this only the first time we find a subtask... or call unschedule after finding the according simu_id
+		L("Remove from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
 		return task->state_id == state_id;
 	};
-	remove_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), f);
-	remove_if(running_sub_tasks.begin(), running_sub_tasks.end(), f);
+	scheduled_sub_tasks.remove_if(f);
+	running_sub_tasks.remove_if(f);
 }
 
 // either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
@@ -496,6 +502,7 @@ void check_schedule_new_tasks()
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		// TODO: remove from old simu if it put's state on a new simu id
 		if (unscheduled_tasks.erase(new_task.state_id) == 0) {
+			L("Could not find state %d in unscheduled tasks. removing it from scheduled tasks first. Then rescheduling it.");
 			// task already scheduled. remove old schedulings!
 			remove_by_state_id(new_task.state_id);
 		}
@@ -577,8 +584,14 @@ void check_due_dates() {
 	}
 
 	for (auto simu_id_it = simu_ids_to_kill.begin(); simu_id_it != simu_ids_to_kill.end(); simu_id_it++) {
+		L("Due date passed for simu id %d at %d s ", *simu_id_it, now);
 		unschedule(*simu_id_it);
-		if (comm_rank != 0) {
+		if (comm_rank == 0) {
+			// reschedule directly if possible
+			if (idle_simulations.size() > 0) {
+				schedule_new_task(idle_simulations.begin()->first);
+			}
+		} else {
 			// Send to rank 0 that this simulation is to kill
 			int simu_id = *simu_id_it;
 			// Rem: Bsend this is not blocking as bufferized. (MPI_SSend would be blocking until message is sent
@@ -594,12 +607,12 @@ void check_kill_requests() {
 	MPI_Iprobe(0, TAG_KILL_SIMULATION, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
 	if (received)
 	{
-		D("Got task to kill...");
 		int simu_id;
 		MPI_Recv(&simu_id, sizeof(int), MPI_BYTE, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		L("Got task to kill... %d", simu_id);
 		unschedule(simu_id);
 
-		// reschedule direct if possible
+		// reschedule directly if possible
 		if (idle_simulations.size() > 0) {
 			schedule_new_task(idle_simulations.begin()->first);
 		}
@@ -658,12 +671,13 @@ int main(int argc, char * argv[])
 		};
 		if (comm_rank == 0)
 		{
-			ZMQ_CHECK(zmq_poll (items, 2, -1));
+			// Check for killed simulations... (due date violation)
+			ZMQ_CHECK(zmq_poll (items, 2, 100));
 		}
 		else
 		{
 			//ZMQ_CHECK(zmq_poll (items, 1, -1));
-			// Check for new tasks to schedule so do not block on polling...
+			// Check for new tasks to schedule and killed simulations so do not block on polling (due date violation)...
 			ZMQ_CHECK(zmq_poll (items, 1, 100));
 		}
 		/* Returned events will be stored in items[].revents */

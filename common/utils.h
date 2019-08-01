@@ -12,14 +12,15 @@
 #include <stdint.h>
 #include <limits.h>
 
+// debug logs:
 //#ifdef __DEBUG
-#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 
 //#else
-//#define D(...)
+#define D(...)
 //#endif
 
-// normal loging:
+// normal logging:
 #define L(x ...) printf(x); printf("\n")
 
 
