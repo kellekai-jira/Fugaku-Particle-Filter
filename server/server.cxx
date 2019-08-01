@@ -40,8 +40,10 @@ const int TAG_KILL_SIMULATION = 43;
 const int TAG_RANK_FINISHED = 44;
 const int TAG_ALL_FINISHED = 45;
 
-// flag to remember if we have to tell rank 0 when we finished all our tasks.
-bool send_when_finished = true;
+int highest_received_task_id = 0;
+
+// only important on ranks != 0:
+int highest_sent_task_id = 0;
 
 size_t IDENTITY_SIZE = 0;
 
@@ -267,12 +269,13 @@ set<int> unscheduled_tasks;
 
 // only important on rank 0:
 // if == comm_size we start the update step. is reseted when a simulation is rescheduled!
-int finished_ranks = 0;
+int finished_ranks = -1;
 
 struct NewTask {
 	int simu_id;
 	int state_id;
 	int due_date;
+	int task_id;
 };
 
 
@@ -473,20 +476,25 @@ void add_sub_tasks(NewTask &new_task) {
 }
 
 /// schedules a new task on a model task runner and tries to run it.
+static int task_id = 1; //low: aftrer each update step one could reset the task id and also the highest sent task id and so on to never get overflows!
 bool schedule_new_task(int simu_id)
 {
 	assert(comm_rank == 0);
 	if (unscheduled_tasks.size() > 0) {
+		task_id++;
 		int state_id = *(unscheduled_tasks.begin());
 		unscheduled_tasks.erase(state_id);
 
 		int due_date = get_due_date();
 
-		NewTask new_task({simu_id, state_id, due_date});
+		NewTask new_task({simu_id, state_id, due_date, task_id});
+
+		L("Schedule task with task id %d", task_id);
+
+		finished_ranks = 0;
 
 		add_sub_tasks(new_task);
 
-		finished_ranks = 0;
 
 		// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
 		for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
@@ -518,11 +526,13 @@ void check_schedule_new_tasks()
 		D("Got task to send...");
 
 		// we are not finished anymore so resend if we are finished:
-		send_when_finished = true;
 
 		NewTask new_task;
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		// TODO: remove from old simu if it put's state on a new simu id
+
+		highest_received_task_id = max(new_task.task_id, highest_received_task_id);
+
 		if (unscheduled_tasks.erase(new_task.state_id) == 0) {
 			L("Could not find state %d in unscheduled tasks. removing it from scheduled tasks first. Then rescheduling it.");
 			// task already scheduled. remove old schedulings!
@@ -548,6 +558,10 @@ void init_new_timestamp()
 {
 	assert(scheduled_sub_tasks.size() == 0);
 	assert(running_sub_tasks.size() == 0);
+
+	highest_received_task_id = 0;
+	highest_sent_task_id = 0;
+	task_id = 1;
 
 	current_timestamp++;
 
@@ -856,12 +870,16 @@ int main(int argc, char * argv[])
 				for (int rank = 1; rank < comm_size; rank++) {
 					int received;
 
-					MPI_Iprobe(0, TAG_RANK_FINISHED, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
+					MPI_Iprobe(rank, TAG_RANK_FINISHED, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
 					if (received)
 					{
-						D("Somebody finished... ");
-						MPI_Recv(nullptr, 0, MPI_BYTE, rank, TAG_RANK_FINISHED, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-						finished_ranks ++;
+						L("Somebody finished... ");
+						int highest_task_id;
+						MPI_Recv(&highest_task_id, 1, MPI_INT, rank, TAG_RANK_FINISHED, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+						if (highest_task_id == task_id) {
+							// this message was up to date....
+							finished_ranks ++;
+						}
 					}
 
 				}
@@ -869,34 +887,36 @@ int main(int argc, char * argv[])
 
 				finished = finished_ranks == comm_size-1 &&   // comm size without rank 0
 						unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
-				L("rank 0: D %d ", finished_ranks);
+				//L("rank 0: D %d ", finished_ranks);
 
 				if (finished) {
 					// tell everybody that everybody finished!
 					for (int rank = 1; rank < comm_size; rank++) {
 						int received;
 
+						L("Sending tag all finished message");
 						MPI_Send(nullptr, 0, MPI_BYTE, rank, TAG_ALL_FINISHED, MPI_COMM_WORLD);
 					}
 				}
 			} else {
+				finished = false;
 
 				// REM: we need to synchronize when we finish as otherwise processes are waiting in the mpi barrier to do the update step while still some ensemble members need to be repeated due to failing simulations.
 
 				// would this rank finish?
 				bool would_finish = unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
 				if (would_finish) {
-					if (send_when_finished) {
+					if (highest_sent_task_id < highest_received_task_id) {
 						// only send once when we finished.  REM: using Bsend as faster as buffere, buffering not necessary here...
 
-						MPI_Send(nullptr, 0, MPI_BYTE, 0, TAG_RANK_FINISHED, MPI_COMM_WORLD);
-						send_when_finished = false;  // do not send again..
+						MPI_Send(&highest_received_task_id, 1, MPI_INT, 0, TAG_RANK_FINISHED, MPI_COMM_WORLD);
+						highest_sent_task_id = highest_received_task_id;  // do not send again..
 					}
 
-					finished = false;
 					int received;
 					MPI_Iprobe(0, TAG_ALL_FINISHED, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
 					if (received) {
+						L("receiving tag all finished message");
 						MPI_Recv(nullptr, 0, MPI_BYTE, 0, TAG_ALL_FINISHED, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 						finished = true;
 					}
@@ -906,6 +926,7 @@ int main(int argc, char * argv[])
 
 			if (finished)
 			{
+
 				do_update_step();
 
 				if (current_timestamp >= MAX_TIMESTAMP)
