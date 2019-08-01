@@ -73,7 +73,6 @@ struct EnsembleMember
 {
 	vector<double> state_analysis;
 	vector<double> state_background;
-	size_t received_state_background = 0;
 
 	void set_local_vect_size(int local_vect_size)
 	{
@@ -88,7 +87,6 @@ struct EnsembleMember
 		D("before_assert %lu %lu %lu", part.send_count, part.local_offset_server, state_background.size());
 		assert(part.send_count + part.local_offset_server <= state_background.size());
 		copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
-		received_state_background += part.send_count;
 	}
 };
 
@@ -145,21 +143,6 @@ struct Field {
 		}
 		assert(false); // Did not find the part!
 	}
-
-	// checks if all ensemble members received all the data needed.
-	bool finished() {
-		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
-		{
-			D("check finished %lu / %lu", ens_it->received_state_background , local_vect_size);
-			assert(local_vect_size != 0);
-			if (ens_it->received_state_background != local_vect_size)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
 };
 
 map<string, Field*> fields;
@@ -568,16 +551,7 @@ void init_new_timestamp()
 	assert(unscheduled_tasks.size() == 0);
 
 	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
-
 		unscheduled_tasks.insert(i);
-
-		for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
-		{
-			auto &member = field_it->second->ensemble_members[i];
-			// at the beginning of the time or otherwise jsut finished a timestep...
-			assert(current_timestamp == 1 || member.received_state_background == field_it->second->local_vect_size);
-			member.received_state_background = 0;
-		}
 	}
 }
 
