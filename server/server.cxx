@@ -37,6 +37,11 @@ using namespace std;
 
 const int TAG_NEW_TASK = 42;
 const int TAG_KILL_SIMULATION = 43;
+const int TAG_RANK_FINISHED = 44;
+const int TAG_ALL_FINISHED = 45;
+
+// flag to remember if we have to tell rank 0 when we finished all our tasks.
+bool send_when_finished = true;
 
 size_t IDENTITY_SIZE = 0;
 
@@ -54,6 +59,7 @@ long long get_due_date() {
 	seconds = time (NULL);
 	return seconds + MAX_SIMULATION_TIMEOUT;
 }
+
 struct Part
 {
 	int rank_simu;
@@ -258,6 +264,10 @@ struct Simulation  // Model process runner
 map<int, shared_ptr<Simulation>> idle_simulations;
 
 set<int> unscheduled_tasks;
+
+// only important on rank 0:
+// if == comm_size we start the update step. is reseted when a simulation is rescheduled!
+int finished_ranks = 0;
 
 struct NewTask {
 	int simu_id;
@@ -476,13 +486,15 @@ bool schedule_new_task(int simu_id)
 
 		add_sub_tasks(new_task);
 
+		finished_ranks = 0;
+
 		// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
 		for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
 		{
 			// TODO: one should use ISend and then wait for all to complete
 			// REM: MPI_Ssend to be sure that all messages are received!
 			//MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
-			MPI_Send(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
+			MPI_Bsend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
 		}
 
 		return true;
@@ -504,6 +516,10 @@ void check_schedule_new_tasks()
 	if (received)
 	{
 		D("Got task to send...");
+
+		// we are not finished anymore so resend if we are finished:
+		send_when_finished = true;
+
 		NewTask new_task;
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		// TODO: remove from old simu if it put's state on a new simu id
@@ -678,6 +694,7 @@ int main(int argc, char * argv[])
 		if (comm_rank == 0)
 		{
 			// Check for killed simulations... (due date violation)
+			// poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
 			ZMQ_CHECK(zmq_poll (items, 2, 0));
 		}
 		else
@@ -833,7 +850,59 @@ int main(int argc, char * argv[])
 		if (phase == PHASE_SIMULATION)
 		{
 			// check if all data was received. If yes: start Update step to calculate next analysis state
-			bool finished = unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
+			bool finished;
+			if (comm_rank == 0) {
+				// try to know if somebody else finished
+				for (int rank = 1; rank < comm_size; rank++) {
+					int received;
+
+					MPI_Iprobe(0, TAG_RANK_FINISHED, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
+					if (received)
+					{
+						D("Somebody finished... ");
+						MPI_Recv(nullptr, 0, MPI_BYTE, rank, TAG_RANK_FINISHED, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+						finished_ranks ++;
+					}
+
+				}
+
+
+				finished = finished_ranks == comm_size-1 &&   // comm size without rank 0
+						unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
+				L("rank 0: D %d ", finished_ranks);
+
+				if (finished) {
+					// tell everybody that everybody finished!
+					for (int rank = 1; rank < comm_size; rank++) {
+						int received;
+
+						MPI_Send(nullptr, 0, MPI_BYTE, rank, TAG_ALL_FINISHED, MPI_COMM_WORLD);
+					}
+				}
+			} else {
+
+				// REM: we need to synchronize when we finish as otherwise processes are waiting in the mpi barrier to do the update step while still some ensemble members need to be repeated due to failing simulations.
+
+				// would this rank finish?
+				bool would_finish = unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0;
+				if (would_finish) {
+					if (send_when_finished) {
+						// only send once when we finished.  REM: using Bsend as faster as buffere, buffering not necessary here...
+
+						MPI_Send(nullptr, 0, MPI_BYTE, 0, TAG_RANK_FINISHED, MPI_COMM_WORLD);
+						send_when_finished = false;  // do not send again..
+					}
+
+					finished = false;
+					int received;
+					MPI_Iprobe(0, TAG_ALL_FINISHED, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
+					if (received) {
+						MPI_Recv(nullptr, 0, MPI_BYTE, 0, TAG_ALL_FINISHED, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+						finished = true;
+					}
+				}
+
+			}
 
 			if (finished)
 			{
