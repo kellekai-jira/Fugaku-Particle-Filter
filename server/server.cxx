@@ -84,6 +84,8 @@ struct EnsembleMember
 	}
 };
 
+set<int> killed_simulations;
+
 struct Field {
 	// index: state id.
 	vector<EnsembleMember> ensemble_members;
@@ -417,10 +419,11 @@ bool try_launch_subtask(shared_ptr<SubTask> &sub_task) {
 
 void unschedule(int simu_id) {
 	idle_simulations.erase(simu_id);
+	killed_simulations.insert(simu_id);
 	auto f = [simu_id](shared_ptr<SubTask> &task) {
 		if (task->simu_id == simu_id) {
 			unscheduled_tasks.insert(task->state_id);
-			L("Remove from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
+			L("Remove by simu_id: from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
 			return true;
 		} else {
 			return false;
@@ -434,7 +437,9 @@ void unschedule(int simu_id) {
 void remove_by_state_id(int state_id) {
 	auto f = [state_id](shared_ptr<SubTask> &task) {
 		idle_simulations.erase(task->simu_id);  // low: one could do this only the first time we find a subtask... or call unschedule after finding the according simu_id
-		L("Remove from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
+		killed_simulations.insert(task->simu_id);
+
+		L("Remove by state: from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
 		return task->state_id == state_id;
 	};
 	scheduled_sub_tasks.remove_if(f);
@@ -476,7 +481,8 @@ bool schedule_new_task(int simu_id)
 		{
 			// TODO: one should use ISend and then wait for all to complete
 			// REM: MPI_Ssend to be sure that all messages are received!
-			MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
+			//MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
+			MPI_Send(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
 		}
 
 		return true;
@@ -672,13 +678,13 @@ int main(int argc, char * argv[])
 		if (comm_rank == 0)
 		{
 			// Check for killed simulations... (due date violation)
-			ZMQ_CHECK(zmq_poll (items, 2, 100));
+			ZMQ_CHECK(zmq_poll (items, 2, 0));
 		}
 		else
 		{
 			//ZMQ_CHECK(zmq_poll (items, 1, -1));
 			// Check for new tasks to schedule and killed simulations so do not block on polling (due date violation)...
-			ZMQ_CHECK(zmq_poll (items, 1, 100));
+			ZMQ_CHECK(zmq_poll (items, 1, 0));
 		}
 		/* Returned events will be stored in items[].revents */
 
@@ -753,66 +759,71 @@ int main(int argc, char * argv[])
 				return st->simu_id == simu_id && st->state_id == simu_state_id && st->simu_rank == simu_rank;
 			});
 
-			assert(simu_timestamp == 0 || running_sub_task != running_sub_tasks.end());
-
-			running_sub_tasks.remove(*running_sub_task);
-
-			// good timestamp? There are 2 cases: timestamp 0 or good timestamp...
-			assert (simu_timestamp == 0 || simu_timestamp == current_timestamp);
-			// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
-
-
-			// Save state part in background_states.
-			n_to_m & part = fields[field_name]->getPart(simu_rank);
-			assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
-			D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
-					zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
-			D("local server offset %lu, sendcount=%lu", part.local_offset_server, part.send_count);
-
-
-			D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
-			if (simu_timestamp == current_timestamp)
-			{
-				// zero copy is unfortunately for send only. so copy internally...
-				fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part,
-						reinterpret_cast<double*>(zmq_msg_data(&data_msg)));
-			}
-
-			// whcih atm can not even happen if more than one fields as they do there communication one after another.
-			// TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
-
-
-			zmq_msg_close(&identity_msg);
-			zmq_msg_close(&empty_msg);
-			zmq_msg_close(&header_msg);
-			zmq_msg_close(&data_msg);
-
 			SimulationRankConnection csr(identity);
-
-			// Check if we can answer directly with new data... means starting of a new model task
-			auto found = find_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), [simu_id, simu_rank](shared_ptr<SubTask> &st){
-				return st->simu_id == simu_id && st->simu_rank == simu_rank;
-			});
-
-			if (found != scheduled_sub_tasks.end()) {
-				// found a new task. send back directly!
-
-				D("send after receive! to simu rank %d on simu_id %d", simu_rank, simu_id);
-				csr.send_task(simu_rank, (*found)->state_id);
-				// don't need to delete from connected simulations as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
-				running_sub_tasks.push_back(*found);
-				scheduled_sub_tasks.remove(*found);
-
+			if (killed_simulations.find(simu_id) != killed_simulations.end()) {
+				L("Ending simulation killed by timeout violation simu_id=%d", simu_id);
+				csr.end();
 			} else {
-				// Save connection - basically copy identity pointer...
-				auto &simu = idle_simulations.emplace(simu_id, shared_ptr<Simulation>(new Simulation())).first->second;
-				simu->connected_simulation_ranks.emplace(simu_rank, csr);
-				D("save connection simuid %d, simu rank %d", simu_id, simu_rank);
+				assert(simu_timestamp == 0 || running_sub_task != running_sub_tasks.end());
 
-				if (comm_rank == 0) {
-					// If we could not start a new model task try to schedule a new one. This is initiated by server rank 0
-					//( no new model task means that at least this rank is finished. so the others will finish soon too as we assum synchronism in the simulaitons)
-					schedule_new_task(simu_id);
+				running_sub_tasks.remove(*running_sub_task);
+
+				// good timestamp? There are 2 cases: timestamp 0 or good timestamp...
+				assert (simu_timestamp == 0 || simu_timestamp == current_timestamp);
+				// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
+
+
+				// Save state part in background_states.
+				n_to_m & part = fields[field_name]->getPart(simu_rank);
+				assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
+				D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
+						zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
+				D("local server offset %lu, sendcount=%lu", part.local_offset_server, part.send_count);
+
+
+				D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
+				if (simu_timestamp == current_timestamp)
+				{
+					// zero copy is unfortunately for send only. so copy internally...
+					fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part,
+							reinterpret_cast<double*>(zmq_msg_data(&data_msg)));
+				}
+
+				// whcih atm can not even happen if more than one fields as they do there communication one after another.
+				// TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
+
+
+				zmq_msg_close(&identity_msg);
+				zmq_msg_close(&empty_msg);
+				zmq_msg_close(&header_msg);
+				zmq_msg_close(&data_msg);
+
+
+				// Check if we can answer directly with new data... means starting of a new model task
+				auto found = find_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), [simu_id, simu_rank](shared_ptr<SubTask> &st){
+					return st->simu_id == simu_id && st->simu_rank == simu_rank;
+				});
+
+				if (found != scheduled_sub_tasks.end()) {
+					// found a new task. send back directly!
+
+					D("send after receive! to simu rank %d on simu_id %d", simu_rank, simu_id);
+					csr.send_task(simu_rank, (*found)->state_id);
+					// don't need to delete from connected simulations as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
+					running_sub_tasks.push_back(*found);
+					scheduled_sub_tasks.remove(*found);
+
+				} else {
+					// Save connection - basically copy identity pointer...
+					auto &simu = idle_simulations.emplace(simu_id, shared_ptr<Simulation>(new Simulation())).first->second;
+					simu->connected_simulation_ranks.emplace(simu_rank, csr);
+					D("save connection simuid %d, simu rank %d", simu_id, simu_rank);
+
+					if (comm_rank == 0) {
+						// If we could not start a new model task try to schedule a new one. This is initiated by server rank 0
+						//( no new model task means that at least this rank is finished. so the others will finish soon too as we assum synchronism in the simulaitons)
+						schedule_new_task(simu_id);
+					}
 				}
 			}
 		}
