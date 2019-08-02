@@ -12,16 +12,18 @@
 #include <stdint.h>
 #include <limits.h>
 
+int comm_rank = -1;
+
 // debug logs:
 //#ifdef __DEBUG
-//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 
 //#else
-#define D(...)
+//#define D(...)
 //#endif
 
 // normal logging:
-#define L(x ...) printf(x); printf("\n")
+#define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")
 
 
 //https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :

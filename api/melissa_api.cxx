@@ -155,6 +155,11 @@ struct ServerRankConnection
     { // TODO use zmq cpp for less errors!
       melissa_finalize();
     }
+    else if (type == KILL_SIMULATION)
+    {
+    	printf("Error: Server decided that this simulation crashed. So killing it now.\n");
+    	exit(1);
+    }
     else
     {
       assert(type == KEEP_STATE);
