@@ -86,6 +86,9 @@ int main(int argc, char * args[])
 			is_first_timestep = false;
 		}
 
+		// TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
+		MPI_Barrier(MPI_COMM_WORLD);
+
 		// file output of allways ensemble member 0
 		// TODO: maybe move this functionality into ap?
 		if (timestepping && melissa_get_current_state_id() == 1)
