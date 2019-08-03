@@ -11,12 +11,15 @@
 //       if scheduling message from rank 0: run message
 //       if message kill message from rank 0 : move state back into states to do. blacklist simuid, remove state-simu pair from running/finished lists. remove simu id from scheduled list.
 //       check for due dates. if detected: black list simulation. send state AND simulatoin to rank0
+//       if finished and did not send yet the highest task idea send to rank 0 that we finished.
+//       check for messages that we finished and if so start update
 //
 //       rank 0:
 //       if simulatoin request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this simulation. send this to all clients. best would be blocking to be sure that it arrives and we do no reschedule before. maybe ISend
 //       at the same time check if some client reports a crash (verschachteltes Isend)
 //       check for due dates. if detected: black list simulation. and do the same as if I had a kill message from rank 0:
 //       if message kill message from rank 0 : move state back into states to do. blacklist simuid, remove state-simu pair from running/finished lists. remove simu id from scheduled list. and reschedule state.
+//       if finished and all finished messages were received, (finished ranks == comm ranks) send to all simulations that we finished  and start update
 
 #include <map>
 #include <string>
