@@ -15,6 +15,8 @@ void melissa_init(const char *field_name,
                        MPI_Comm comm_);  // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 
 
+// TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
+// IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!
 bool melissa_expose(const char *field_name, double *values);
 
 

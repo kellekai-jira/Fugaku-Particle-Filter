@@ -1,11 +1,11 @@
 // TODOS:
 // TODO 1. refactoring
-//   TODO: use zmq cpp?? --> no
+//   DONE: use zmq cpp?? --> no
 // TODO 2. error prone ness
 		// TODO: check ret values!
+    // TODO: heavely test fault tollerance.
 // TODO 3. check with real world sim and DA.
-//
-// TODO: there are some creepy race condition bugs in there. best would be to always copy states into the good lists. in case of crash: remove from list.
+// TODO: clean up L logs and D debug logs
 
 #include <map>
 #include <string>
@@ -276,7 +276,7 @@ struct SubTask {
 	int simu_rank;
 	int state_id;
 	int due_date;
-		// TODO: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
+		// low: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
 	SubTask(NewTask &new_task, int simu_rank_) {
 		simu_id = new_task.simu_id;
 		simu_rank = simu_rank_;
@@ -424,24 +424,6 @@ bool try_launch_subtask(shared_ptr<SubTask> &sub_task) {
 	return true;
 }
 
-//void unschedule(int simu_id) {
-//	idle_simulations.erase(simu_id);
-//	killed_simulations.insert(simu_id);
-//	auto f = [simu_id](shared_ptr<SubTask> &task) {
-//		if (task->simu_id == simu_id) {
-//			unscheduled_tasks.insert(task->state_id);
-//			L("Remove by simu_id: from simuid %d rank %d task with state %d, duedate=%d", task->simu_id, task->simu_rank, task->state_id, task->due_date);
-//			return true;
-//		} else {
-//			return false;
-//		}
-//	};
-//	// REM: do not use algorithms remove_if as it does not work on lists.
-//	scheduled_sub_tasks.remove_if(f);
-//	running_sub_tasks.remove_if(f);
-//	finished_sub_tasks.remove_if(f);
-//}
-
 void kill_it(int state_id, int simu_id) {
 	L("killing state %d simu %d", state_id, simu_id);
 	unscheduled_tasks.insert(state_id);
@@ -527,10 +509,11 @@ void check_schedule_new_tasks()
 
 		NewTask new_task;
 		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		// TODO: remove from old simu if it put's state on a new simu id
 
 		highest_received_task_id = max(new_task.task_id, highest_received_task_id);
 
+		// Remove all tasks with the same id!
+		// REM: we assume that we receive new_task messages in the right order!
 		auto f = [&killed, &new_task] (shared_ptr<SubTask> st) {
 			if (st->state_id == new_task.state_id) {
 				bool is_new = killed.emplace(make_pair(st->state_id, st->simu_id)).second;
@@ -555,7 +538,7 @@ void check_schedule_new_tasks()
 }
 
 
-// low: use uuid instead of simuid? but this makes possibly more network traffic...
+// low: use uuid instead of simuid? but this makes possibly more network traffic as simu_id's need to be longer. TODO: otherwise tell simu_id at the beginning...
 // low: maybe have a list of killed simulations. if they reconnect send end message directly! (only works with uuid...)
 void end_all_simulations()
 {
@@ -567,7 +550,10 @@ void end_all_simulations()
 
 void init_new_timestamp()
 {
-	// TODO: assert on finished_sub_tasks
+	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
+	// init or finished....
+	assert(current_timestamp == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE * connections);
+
 	assert(scheduled_sub_tasks.size() == 0);
 	assert(running_sub_tasks.size() == 0);
 
@@ -605,22 +591,9 @@ void do_update_step()
 	}
 }
 
-void try_kickoff_subtasks() {
-	// TODO: use this method also in kill_it as it has to be done after each kill!!
-	scheduled_sub_tasks.remove_if([&] (shared_ptr<SubTask> &st) {
-		if (try_launch_subtask(st)) {
-			L("kicking off subtask e.g. after kill");
-			running_sub_tasks.push_back(st);
-			return true;
-		} else {
-			return false;
-		}
-	});
-}
-
 void check_due_dates() {
 	time_t now;
-	now = time (NULL) - comm_rank;  // Trick so not all finish at the same time.. TODO: does not work.
+	now = time (NULL);
 
 	// state id, simu_id
 	// TODO: replace this pair by another typename!
@@ -665,7 +638,6 @@ void check_due_dates() {
 			int buf[2] = { it->first, it->second};
 			//MPI_Ssend(buf, 2, MPI_INT, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD);
 			MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD);
-			// TODO: danger: what if now the other sends stuff...
 			L("Finished kill request to rank 0");
 		}
 	}
@@ -1031,7 +1003,6 @@ int main(int argc, char * argv[])
 // X     if message kill message from rank 0 : move state back into states to do. blacklist simuid+stateid, remove state-simu pair from scheduled/running/finished lists.
 //       if finished and all finished messages were received, (finished ranks == comm ranks) send to all simulations that we finished  and start update
 
-			// TODO: is it really necessary to send a kill message to the ranks!=0 if we send state and simu id?
 			if (comm_rank == 0) {
 				check_kill_requests();
 			}
@@ -1058,22 +1029,19 @@ int main(int argc, char * argv[])
 
 
 		/// REM: Tasks are either unscheduled, scheduled, running or finished.
-//			size_t connections = fields.begin()->second->connected_simulation_ranks.size();
+			size_t connections = fields.begin()->second->connected_simulation_ranks.size();
 //			L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
 //					unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
 //					scheduled_sub_tasks.size(),
 //					running_sub_tasks.size(),
 //					finished_sub_tasks.size());
 
-			//doesnt hold true just after a simulation was deleted as sometimes the reschedule is received before the simulation kill message.
-//			assert(
-//					unscheduled_tasks.size() * connections +  // scale on amount of subtasks.
-//					scheduled_sub_tasks.size() + running_sub_tasks.size() +
-//					finished_sub_tasks.size() == connections * ENSEMBLE_SIZE);
+			assert(
+					unscheduled_tasks.size() * connections +  // scale on amount of subtasks.
+					scheduled_sub_tasks.size() + running_sub_tasks.size() +
+					finished_sub_tasks.size() == connections * ENSEMBLE_SIZE);
 		}
 
-		// TODO: if receiving message to shut down simulation: kill simulation (mpi probe for it...)
-		// TODO: check if we need to kill some simulations...
 	}
 
 
