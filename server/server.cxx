@@ -513,7 +513,7 @@ void check_schedule_new_tasks()
 		highest_received_task_id = max(new_task.task_id, highest_received_task_id);
 
 		// Remove all tasks with the same id!
-		// REM: we assume that we receive new_task messages in the right order!
+		// REM: we assume that we receive new_task messages in the right order! This is done by ISend on rank 0 and the wait all behind ;)
 		auto f = [&killed, &new_task] (shared_ptr<SubTask> st) {
 			if (st->state_id == new_task.state_id) {
 				bool is_new = killed.emplace(make_pair(st->state_id, st->simu_id)).second;
@@ -990,18 +990,17 @@ int main(int argc, char * argv[])
 
 		if (phase == PHASE_SIMULATION) {
 // X     if simulation requests work see if work in list. if so launch it. if not save connection
-// X     if scheduling message from rank 0: run message if the state was before scheduled on an other point move this to the killed....
+// X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
 // X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
-//       check for due dates. if detected: black list simulation + state. send state AND simulatoin to rank0
-//       if finished and did not send yet the highest task idea send to rank 0 that we finished.
-//       check for messages that we finished and if so start update
+// X     check for due dates. if detected: black list (move to killed) simulation + state. send state AND simulatoin to rank0
+// X     if finished and did not send yet the highest task id send to rank 0 that we finished.
+// X     check for messages from rank 0 that we finished and if so start update
 //
 //       rank 0:
-// X     if simulatoin request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this simulation. send this to all clients. best would be blocking to be sure that it arrives and we do no reschedule before. maybe ISend
-//       at the same time check if some client reports a crash. if crash. put state to killed states and reschedule task.
-//       check for due dates. if detected: black list simulation and state id. and do the same as if I had a kill message from rank 0:
-// X     if message kill message from rank 0 : move state back into states to do. blacklist simuid+stateid, remove state-simu pair from scheduled/running/finished lists.
-//       if finished and all finished messages were received, (finished ranks == comm ranks) send to all simulations that we finished  and start update
+// X     if simulatoin request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this simulation. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
+// X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
+// X     check for due dates. if detected: black list simulation and state id. and do the same as if I had a kill message from rank 0: reschedule the state
+// X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all simulations that we finished  and start update
 
 			if (comm_rank == 0) {
 				check_kill_requests();
