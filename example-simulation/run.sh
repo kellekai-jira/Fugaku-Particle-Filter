@@ -4,8 +4,8 @@ cd /home/friese/workspace/melissa-da/example-simulation
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=3
-n_simulation=2
-n_runners=2
+n_simulation=5
+n_runners=10
 
 ensemble_size=5
 max_timestamps=5
