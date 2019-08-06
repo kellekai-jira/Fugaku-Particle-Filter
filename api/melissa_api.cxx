@@ -23,8 +23,11 @@ using namespace std;
 // zmq context:
 void *context;
 
+int simu_id = -1;
+
 const int getSimuId() {
-  return atoi(getenv("MELISSA_SIMU_ID"));
+	assert(simu_id != -1);  // must be inited
+	return simu_id;
 }
 
 /// Communicator used for simulation
@@ -268,19 +271,26 @@ struct ConfigurationConnection
     zmq_connect (socket, port_name.c_str());
   }
 
-  void register_simu_id(Server * out_server)
+  /// returns true if field registering is requested by the server
+  bool register_simu_id(Server * out_server)
   {
     zmq_msg_t msg_request, msg_reply;
-    zmq_msg_init_size(&msg_request, sizeof(int) + sizeof(int));
+    zmq_msg_init_size(&msg_request, sizeof(int));
     int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_request));
     header[0] = REGISTER_SIMU_ID;
-    header[1] = getSimuId();
     ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
 
     zmq_msg_init(&msg_reply);
     zmq_msg_recv(&msg_reply, socket, 0);
-    assert(zmq_msg_size(&msg_reply) == sizeof(int));
-    memcpy(&out_server->comm_size, zmq_msg_data(&msg_reply), sizeof(int));
+    assert(zmq_msg_size(&msg_reply) == 3 * sizeof(int));
+    int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply));
+
+    simu_id = buf[0];
+    bool request_register_field = (buf[1] != 0);
+
+    L("Got simu_id %d. Registering field? %d", simu_id, buf[1]);
+
+    out_server->comm_size = buf[2];
     zmq_msg_close(&msg_reply);
 
     size_t port_names_size = out_server->comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char);
@@ -297,6 +307,8 @@ struct ConfigurationConnection
     		reinterpret_cast<char*>(zmq_msg_data(&msg_reply)) + port_names_size, out_server->port_names.begin());
 
     zmq_msg_close(&msg_reply);
+
+    return request_register_field;
   }
 
   // TODO: high water mark and so on?
@@ -330,14 +342,19 @@ struct ConfigurationConnection
 };
 ConfigurationConnection *ccon = NULL;
 
-void first_melissa_init(MPI_Comm comm_)
+/// returns true if needs field to be registered this can only happen on comm_rank 0
+bool first_melissa_init(MPI_Comm comm_)
 {
   context = zmq_ctx_new ();
   comm = comm_;
+  bool register_field = false;
   if (getCommRank() == 0) {
     ccon = new ConfigurationConnection();
-    ccon->register_simu_id(&server);
+    register_field = ccon->register_simu_id(&server);
   }
+
+  MPI_Bcast(&simu_id, 1, MPI_INT, 0, comm);
+
   MPI_Bcast(&server.comm_size, 1, MPI_INT, 0, comm);
   if (getCommRank() != 0) {
   	server.port_names.resize(server.comm_size * MPI_MAX_PROCESSOR_NAME);
@@ -346,6 +363,7 @@ void first_melissa_init(MPI_Comm comm_)
   MPI_Bcast(server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, comm);
 
   //D("Portnames %s , %s ", server.port_names.data(), server.port_names.data() + MPI_MAX_PROCESSOR_NAME);
+  return register_field;
 }
 
 int melissa_get_current_state_id()
@@ -361,14 +379,7 @@ void melissa_init(const char *field_name,
   // We do not allow multiple fiels:
   assert(fields.size() == 0);
 
-  static bool is_first_melissa_init = true;
-
-  if (is_first_melissa_init) {
-    // register this simulation id
-    first_melissa_init(comm_);
-    is_first_melissa_init = false;
-  }
-
+  bool register_field = first_melissa_init(comm_);
 
   // create field
   Field newField;
@@ -384,16 +395,20 @@ void melissa_init(const char *field_name,
 
   D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
 
-  if (getCommRank() == 0 && getSimuId() == 0)  // TODO: what happens if simu_id 0 crashes? make this not dependend from the simuid. the server can ask the simulation after it's registration to give field infos!
+  // register this simulation id
+  if (register_field)
   {
-    // Tell the server which kind of data he has to expect
-    ccon->register_field(field_name, local_vect_sizes.data());
+  	// Tell the server which kind of data he has to expect
+  	ccon->register_field(field_name, local_vect_sizes.data());
   }
+
+
 
   // Calculate to which server ports the local part of the field will connect
   newField.initConnections(local_vect_sizes);
 
   fields.emplace(string(field_name), newField);
+
 }
 
 

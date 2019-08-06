@@ -19,7 +19,7 @@ int comm_rank = -1;
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 
 //#else
-//#define D(...)
+#define D(...)
 //#endif
 
 // normal logging:

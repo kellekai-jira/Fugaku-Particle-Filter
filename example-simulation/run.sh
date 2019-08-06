@@ -74,7 +74,6 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   mpirun -n $n_simulation \
-    -x MELISSA_SIMU_ID=$i \
     -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" \
     -x LD_LIBRARY_PATH=$lib_paths \
     $precommand $sim_exe &

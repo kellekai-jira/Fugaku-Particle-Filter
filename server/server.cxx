@@ -297,22 +297,28 @@ SubTaskList finished_sub_tasks;  // TODO: why do we need to store this? actually
 
 void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
 {
+	static int highest_simu_id = 0;
 	zmq_msg_t msg;
 	zmq_msg_init(&msg);
 	zmq_msg_recv(&msg, configuration_socket, 0);
 	int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
 	if (buf[0] == REGISTER_SIMU_ID) {
 		// Register Simu ID
-		assert(zmq_msg_size(&msg) == 2 * sizeof(int));
-		assert(buf[1] >= 0);  // don't allow negative simu_ids
-		// we add the simulation if we first receive data from it.
+		assert(zmq_msg_size(&msg) == sizeof(int));
+
 		zmq_msg_close(&msg);
 		D("Server registering Simu ID %d", buf[1]);
 
 		zmq_msg_t msg_reply1, msg_reply2;
-		zmq_msg_init_size(&msg_reply1, sizeof(int));
+		zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
+
+		// At the moment we request field regustration from simu id 0.
+		int request_register_field =  highest_simu_id == 0 ? 1 : 0;
+
 		buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-		*buf = comm_size;
+		buf[0] = highest_simu_id++;  // every simulation gets an other simu id.
+		buf[1] = request_register_field;
+		buf[2] = comm_size;
 		zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
 
 		zmq_msg_init_data(&msg_reply2, data_response_port_names,
