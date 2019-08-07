@@ -18,8 +18,6 @@
 // Forward declarations:
 void melissa_finalize();
 
-using namespace std;
-
 // zmq context:
 void *context;
 
@@ -35,14 +33,14 @@ MPI_Comm comm;
 
 
 /// if node name = my nodename, replace by localhost!
-string fix_port_name(const char * port_name_)
+std::string fix_port_name(const char * port_name_)
 {
-	string port_name(port_name_);
+	std::string port_name(port_name_);
 	char my_port_name[MPI_MAX_PROCESSOR_NAME];
 	melissa_get_node_name(my_port_name, MPI_MAX_PROCESSOR_NAME);
 	size_t found = port_name.find(my_port_name);
 	// check if found and if hostname is between tcp://<nodename>:port
-	if (found != string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_port_name)] == ':') {
+	if (found != std::string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_port_name)] == ':') {
 		port_name = port_name.substr(0, found) + "localhost" + port_name.substr(found + strlen(my_port_name));
 	}
 	return port_name;
@@ -78,7 +76,7 @@ struct ServerRankConnection
   {
     data_request_socket = zmq_socket (context, ZMQ_REQ);
     assert(data_request_socket);
-    string cleaned_addr = fix_port_name(addr_request);
+    std::string cleaned_addr = fix_port_name(addr_request);
     D("Data Request Connection to %s", cleaned_addr.c_str());
     //ZMQ_CHECK();
     int ret = zmq_connect (data_request_socket, cleaned_addr.c_str());
@@ -148,9 +146,9 @@ struct ServerRankConnection
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
 
       double * buf = reinterpret_cast<double*>(zmq_msg_data(&msg));
-      copy(buf, buf + doubles_expected, out_values);
+      std::copy(buf, buf + doubles_expected, out_values);
 
-      print_vector(vector<double>(out_values, out_values + doubles_expected));
+      print_vector(std::vector<double>(out_values, out_values + doubles_expected));
       zmq_msg_close(&msg);
       assert_no_more_zmq_messages(data_request_socket);
     }
@@ -177,12 +175,12 @@ struct ServerRankConnection
 struct Server
 {
   int comm_size = 0;
-  vector<char> port_names;
+  std::vector<char> port_names;
 };
 Server server;
 
 struct ServerRanks {
-	static map<int, unique_ptr<ServerRankConnection>> ranks;
+	static std::map<int, std::unique_ptr<ServerRankConnection>> ranks;
 
 	static ServerRankConnection &get(int server_rank)
 	{
@@ -193,7 +191,7 @@ struct ServerRanks {
 			// we use unique_ptr's as other wise we would create a ServerRank locally, we than would copy all its values in the ranks map
 			// and then we would destroy it. unfortunately this also closes the zmq connection !
 			auto res = ranks.emplace(server_rank,
-					unique_ptr<ServerRankConnection>(new ServerRankConnection(server.port_names.data() + server_rank * MPI_MAX_PROCESSOR_NAME)));
+					std::unique_ptr<ServerRankConnection>(new ServerRankConnection(server.port_names.data() + server_rank * MPI_MAX_PROCESSOR_NAME)));
 			return *res.first->second;
 		}
 		else
@@ -202,7 +200,8 @@ struct ServerRanks {
 		}
 	}
 };
-map<int, unique_ptr<ServerRankConnection>> ServerRanks::ranks;
+
+std::map<int, std::unique_ptr<ServerRankConnection>> ServerRanks::ranks;
 
 struct ConnectedServerRank {
   size_t send_count;
@@ -214,9 +213,9 @@ struct Field {
   int current_state_id;
   int timestamp;
   size_t local_vect_size;
-  vector<ConnectedServerRank> connected_server_ranks;
-  void initConnections(const vector<size_t> &local_vect_sizes) {
-    vector<n_to_m> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
+  std::vector<ConnectedServerRank> connected_server_ranks;
+  void initConnections(const std::vector<size_t> &local_vect_sizes) {
+    std::vector<n_to_m> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
       if (part->rank_simu == getCommRank())
@@ -255,7 +254,7 @@ struct Field {
 };
 
 
-map<string, Field> fields;
+std::map<std::string, Field> fields;
 
 
 // TODO: kill if no server response for a timeout...
@@ -266,7 +265,7 @@ struct ConfigurationConnection
   ConfigurationConnection()
   {
     socket = zmq_socket (context, ZMQ_REQ);
-    string port_name = fix_port_name(getenv("MELISSA_SERVER_MASTER_NODE"));
+    std::string port_name = fix_port_name(getenv("MELISSA_SERVER_MASTER_NODE"));
     D("Configuration Connection to %s", port_name.c_str());
     zmq_connect (socket, port_name.c_str());
   }
@@ -387,7 +386,7 @@ void melissa_init(const char *field_name,
   newField.current_state_id = -1; // We are beginning like this...
   newField.timestamp = 0;
   newField.local_vect_size = local_vect_size;
-  vector<size_t> local_vect_sizes(getCommSize());
+  std::vector<size_t> local_vect_sizes(getCommSize());
     // synchronize local_vect_sizes and
   MPI_Allgather(&newField.local_vect_size, 1, my_MPI_SIZE_T,
       local_vect_sizes.data(), 1, my_MPI_SIZE_T,
@@ -407,7 +406,7 @@ void melissa_init(const char *field_name,
   // Calculate to which server ports the local part of the field will connect
   newField.initConnections(local_vect_sizes);
 
-  fields.emplace(string(field_name), newField);
+  fields.emplace(std::string(field_name), newField);
 
 }
 
