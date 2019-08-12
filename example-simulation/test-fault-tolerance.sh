@@ -1,4 +1,6 @@
 #!/bin/bash
+# REM: only works if simulation timeout is set to 5 seconds on the serverside. otherwise
+#      the timing here won't work!
 
 ../compile.sh
 
@@ -14,8 +16,10 @@ wait
 
 
 ./compare.sh reference-giraffe.txt
+result=$?
 
 end_time=`date +%s`
 
 runtime=$((end_time-start_time))
 echo this took $runtime seconds!
+exit $result

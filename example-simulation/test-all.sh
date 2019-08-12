@@ -29,6 +29,11 @@ function check {
   fi
 }
 
+echo "-----------------------------------------------------------------------------"
+echo Test fault tolerance...
+./test-fault-tolerance.sh
+check $?
+
 MAX_TIMESTAMP=5
 ENSEMBLE_MEMBERS=5
 
