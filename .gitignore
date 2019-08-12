@@ -4,3 +4,5 @@
 /build_api/
 /build_example-simulation/
 /build_server/
+log
+output.txt
