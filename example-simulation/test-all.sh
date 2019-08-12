@@ -28,6 +28,10 @@ function check {
     exit 1
   fi
 }
+
+MAX_TIMESTAMP=5
+ENSEMBLE_MEMBERS=5
+
 for server_procs in `seq 1 $MAX_SERVER_PROCS`;
 do
   for simulation_procs in `seq 1 $MAX_SIMU_PROCS`;
@@ -37,12 +41,15 @@ do
       echo "-----------------------------------------------------------------------------"
       echo step $count of $max_count:
       echo server ranks: $server_procs, simulation ranks: $simulation_procs, model runners: $model_task_runners
+      echo ensemble members: $ENSEMBLE_MEMBERS, max timestamp: $MAX_TIMESTAMP
 
       echo "-----------------------------------------------------------------------------" >> log
       echo step $count of $max_count: >> log
       echo server ranks: $server_procs, simulation ranks: $simulation_procs, model runners: $model_task_runners >> log
-      time ./run.sh test $server_procs $simulation_procs $model_task_runners >> log
+      echo ensemble members: $ENSEMBLE_MEMBERS, max timestamp: $MAX_TIMESTAMP >> log
+      time ./run.sh test $MAX_TIMESTAMP $ENSEMBLE_MEMBERS $server_procs $simulation_procs $model_task_runners >> log
 
+      ./compare.sh reference.txt &>/dev/null
       check $?
       count=$((count+1))
     done

@@ -4,7 +4,7 @@ echo
 echo
 echo
 echo '***** Comparing: ******'
-diff -s --side-by-side output.txt reference.txt
+diff -s --side-by-side output.txt $1
 res=$?
 echo .
 echo .

@@ -31,12 +31,12 @@
 // define hash functions for all the classes we puit in this container.
 #include <set>
 
-// TODO: configure this somehow better:
-const int ENSEMBLE_SIZE = 42;
+int ENSEMBLE_SIZE = 5;
+int MAX_TIMESTAMP = 5;
+
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 //const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
 const long long MAX_SIMULATION_TIMEOUT = 5;  // 10 min max timeout for simulations.
-const int MAX_TIMESTAMP = 5000;
 //const int MAX_TIMESTAMP = 155;
 
 const int TAG_NEW_TASK = 42;
@@ -902,9 +902,20 @@ bool check_finished() {
 	return false;
 }
 
+/// optional parameters [MAX_TIMESTAMP [ENSEMBLESIZE]]
 int main(int argc, char * argv[])
 {
+	if (argc >= 2) {
+		MAX_TIMESTAMP = atoi(argv[1]);
+	}
+	if (argc >= 3) {
+		ENSEMBLE_SIZE = atoi(argv[2]);
+	}
 	assert(MAX_TIMESTAMP > 1);
+	assert(ENSEMBLE_SIZE > 0);
+
+	L("Start server for %d timesteps with %d ensemble members", MAX_TIMESTAMP, ENSEMBLE_SIZE);
+
 
 	int major, minor, patch;
 	zmq_version (&major, &minor, &patch);

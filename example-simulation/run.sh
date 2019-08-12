@@ -8,7 +8,7 @@ n_simulation=5
 n_runners=10
 
 ensemble_size=5
-max_timestamps=5
+max_timestamp=5
 
 ######################################################
 
@@ -33,9 +33,12 @@ rm -f nc.vg.*
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  n_server=$2
-  n_simulation=$3
-  n_runners=$4
+  max_timestamp=$2
+  ensemble_size=$3
+  n_server=$4
+  n_simulation=$5
+  n_runners=$6
+
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 
@@ -64,7 +67,7 @@ rm output.txt
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$lib_paths \
-  $precommand $server_exe &
+  $precommand $server_exe $max_timestamp $ensemble_size &
 
 sleep 1
 
@@ -85,7 +88,4 @@ done
 
 
 wait
-
-./compare.sh
-exit $?
 
