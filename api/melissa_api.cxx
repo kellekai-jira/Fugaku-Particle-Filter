@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <memory>
+#include <csignal>
 
 #include <mpi.h>
 #include "zmq.h"
@@ -12,18 +13,12 @@
 
 #include "../common/utils.h"
 
-#include <csignal>
+#include "melissa_api.h"
+
 
 // TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
 void melissa_finalize();
-
-// For fortran:
-extern "C" {
-	void melissa_expose_f(const char * field_name, double * values);
-	void melissa_init_no_mpi(const char *field_name, const int  *local_vect_size);
-	// TODO: add other api functions!
-}
 
 // zmq context:
 void *context;
@@ -356,6 +351,8 @@ ConfigurationConnection *ccon = NULL;
 /// returns true if needs field to be registered this can only happen on comm_rank 0
 bool first_melissa_init(MPI_Comm comm_)
 {
+	check_data_types();
+
   context = zmq_ctx_new ();
   comm = comm_;
   bool register_field = false;

@@ -904,6 +904,8 @@ bool check_finished() {
 /// optional parameters [MAX_TIMESTAMP [ENSEMBLESIZE]]
 int main(int argc, char * argv[])
 {
+	check_data_types();
+
 	if (argc >= 2) {
 		MAX_TIMESTAMP = atoi(argv[1]);
 	}
