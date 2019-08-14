@@ -1,3 +1,6 @@
+#ifndef UTILS_H_
+#define UTILS_H_
+
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
@@ -11,20 +14,27 @@
 
 #include <stdint.h>
 #include <limits.h>
+#include <vector>
 
-int comm_rank = -1;
+enum Phase {
+  PHASE_INIT,
+  PHASE_SIMULATION,
+  PHASE_FINAL
+};
 
 // debug logs:
 //#ifdef __DEBUG
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 
 //#else
-#define D(...)
+//#define D(...)
 //#endif
 
 // normal logging:
 #define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")
 
+
+#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); }
 
 //https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
 #if SIZE_MAX == UCHAR_MAX
@@ -42,15 +52,13 @@ int comm_rank = -1;
 #endif
 
 
-void check_data_types() {
-	// check that the size_t datatype is the same on the server and on the client side! otherwise the communication might fail.
-	// for sure this could be done more intelligently in future!
-	D("sizeof(size_t)=%lu", sizeof(size_t));
-	assert(sizeof(size_t) == 8);
-}
+
+// Functions:
+void check_data_types();
+void melissa_get_node_name (char *node_name, size_t buf_len);
 
 template <typename T>
-void print_vector (const std::vector<T> &vec)
+inline void print_vector (const std::vector<T> &vec)
 {
 	printf("[");
 	for (auto it = vec.begin(); it != vec.end(); it++)
@@ -63,16 +71,7 @@ void print_vector (const std::vector<T> &vec)
 	printf("]\n");
 }
 
-#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); }
-
-enum Phase {
-  PHASE_INIT,
-  PHASE_SIMULATION,
-  PHASE_FINAL
-};
-
-Phase phase = PHASE_INIT;
-
+// inline Functions:
 inline void assert_more_zmq_messages(void * socket)
 {
   int more;
@@ -89,44 +88,9 @@ inline void assert_no_more_zmq_messages(void * socket)
   assert(more == 0);
 }
 
-/**
- *******************************************************************************
- *
- * @ingroup melissa_utils
- *
- * Gets the name of the processus node
- *
- *******************************************************************************
- *
- * @param[out] *node_name
- * The node name
- *
- *******************************************************************************/
-void melissa_get_node_name (char *node_name, size_t buf_len)
-{
-    struct ifaddrs *ifap, *ifa;
-    struct sockaddr_in *sa;
-    char   *addr;
-    char ok = 0;
+// Globals:
+extern int comm_rank;
+extern int comm_size;
+extern Phase phase;
 
-    getifaddrs (&ifap);
-    for (ifa = ifap; ifa; ifa = ifa->ifa_next)
-    {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family==AF_INET)
-        {
-            sa = (struct sockaddr_in *) ifa->ifa_addr;
-            addr = inet_ntoa(sa->sin_addr);
-            if (strcmp (ifa->ifa_name, "ib0") == 0)
-            {
-            	  assert(strlen(node_name) <= buf_len);
-                strcpy(node_name, addr);
-                ok = 1;
-                break;
-            }
-        }
-    }
-    if (ok == 0)
-    {
-      gethostname(node_name, buf_len);
-    }
-}
+#endif

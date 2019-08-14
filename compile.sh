@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+exit 0
+
 CXX=mpicxx
 
 cd /home/friese/workspace/melissa-da

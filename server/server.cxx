@@ -21,6 +21,8 @@
 #include <mpi.h>
 #include "zmq.h"
 
+#include "Field.h"
+
 #include "../common/messages.h"
 #include "../common/n_to_m.h"
 #include "../common/utils.h"
@@ -30,6 +32,8 @@
 // one could also use an set which might be faster but we would need to
 // define hash functions for all the classes we puit in this container.
 #include <set>
+
+#include "PDAFEnKFAssimilator.h"
 
 int ENSEMBLE_SIZE = 5;
 int MAX_TIMESTAMP = 5;
@@ -50,9 +54,6 @@ int highest_sent_task_id = 0;
 
 size_t IDENTITY_SIZE = 0;
 
-// Server comm_size and Server rank
-int comm_size;
-
 void * context;
 void * data_response_socket;
 
@@ -72,27 +73,6 @@ struct Part
 	size_t send_count;
 };
 
-struct EnsembleMember
-{
-	std::vector<double> state_analysis;
-	std::vector<double> state_background;
-
-	void set_local_vect_size(int local_vect_size)
-	{
-		state_analysis.reserve(local_vect_size);
-		state_analysis.resize(local_vect_size);
-		state_background.reserve(local_vect_size);
-		state_background.resize(local_vect_size);
-	}
-
-	void store_background_state_part(const n_to_m & part, const double * values)
-	{
-		D("before_assert %lu %lu %lu", part.send_count, part.local_offset_server, state_background.size());
-		assert(part.send_count + part.local_offset_server <= state_background.size());
-		std::copy(values, values + part.send_count, state_background.data() + part.local_offset_server);
-	}
-};
-
 
 struct Task {
 	int state_id;
@@ -105,58 +85,6 @@ bool operator<(const Task &lhs, const Task &rhs) {
 
 std::set<Task> killed;  // when a simulation from this list connects we thus respond with a kill message. if one rank receives a kill message it has to call exit so all simulation ranks are quit.
 
-struct Field {
-	// index: state id.
-	std::vector<EnsembleMember> ensemble_members;
-
-	size_t local_vect_size;
-	std::vector<size_t> local_vect_sizes_simu;
-	std::vector<n_to_m> parts;
-
-	std::set<int> connected_simulation_ranks;
-
-	Field(int simu_comm_size_, size_t ensemble_size_)
-	{
-		local_vect_size = 0;
-		local_vect_sizes_simu.resize(simu_comm_size_);
-		ensemble_members.resize(ensemble_size_);
-	}
-
-	/// Calculates all the state vector parts that are send between the server and the
-	/// simulations
-	void calculate_parts(int server_comm_size)
-	{
-		parts = calculate_n_to_m(server_comm_size, local_vect_sizes_simu);
-		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
-		{
-			if (part_it->rank_server == comm_rank)
-			{
-				local_vect_size += part_it->send_count;
-				connected_simulation_ranks.emplace(part_it->rank_simu);
-			}
-		}
-
-		for (auto ens_it = ensemble_members.begin(); ens_it != ensemble_members.end(); ens_it++)
-		{
-
-			ens_it->set_local_vect_size(local_vect_size);  // low: better naming: local state size is in doubles not in bytes!
-		}
-		D("Calculated parts");
-	}
-
-	/// Finds the part of the field with the specified simu_rank.
-	n_to_m & getPart(int simu_rank)
-	{
-		assert(parts.size() > 0);
-		for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)
-		{
-			if (part_it->rank_server == comm_rank && part_it->rank_simu == simu_rank) {
-				return *part_it;
-			}
-		}
-		assert(false); // Did not find the part!
-	}
-};
 
 std::map<std::string, Field*> fields;
 
@@ -375,14 +303,16 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 void broadcast_field_information_and_calculate_parts() {
 	size_t field_count = fields.size();
 	MPI_Bcast(&field_count, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                          // 0:field_count
+	D("Got field count %lu", field_count);
 	auto field_it = fields.begin();
 	for (size_t i = 0; i < field_count; i++)
 	{
 		char field_name[MPI_MAX_PROCESSOR_NAME];
+		int simu_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the simu_comm_size
 		if (comm_rank == 0) {
 			strcpy(field_name, field_it->first.c_str());
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
-			int simu_comm_size = field_it->second->local_vect_sizes_simu.size();
+			simu_comm_size = field_it->second->local_vect_sizes_simu.size();
 			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
 
 			D("local_vect_sizes");
@@ -394,17 +324,18 @@ void broadcast_field_information_and_calculate_parts() {
 			field_it->second->calculate_parts(comm_size);
 
 			field_it++;
+
 		} else {
-			int simu_comm_size;
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1: fieldname
 			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
 
 			Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
 
-			D("local_vect_sizes");
-			print_vector(newField->local_vect_sizes_simu);
 			MPI_Bcast(newField->local_vect_sizes_simu.data(), simu_comm_size,
 					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
+
+			D("local_vect_sizes");
+			print_vector(newField->local_vect_sizes_simu);
 
 			newField->calculate_parts(comm_size);
 
@@ -583,26 +514,6 @@ void init_new_timestamp()
 
 	for (int i = 0; i < ENSEMBLE_SIZE; i++) {
 		unscheduled_tasks.insert(i);
-	}
-}
-
-void do_update_step()
-{
-	// TODO
-	L("Doing update step...\n");
-	MPI_Barrier(MPI_COMM_WORLD);
-	for (auto field_it = fields.begin(); field_it != fields.end(); field_it++)
-	{
-		int state_id = 0;
-		for (auto ens_it = field_it->second->ensemble_members.begin(); ens_it != field_it->second->ensemble_members.end(); ens_it++)
-		{
-			assert(ens_it->state_analysis.size() == ens_it->state_background.size());
-			for (size_t i = 0; i < ens_it->state_analysis.size(); i++) {
-				// pretend to do some da...
-				ens_it->state_analysis[i] = ens_it->state_background[i] + state_id;
-			}
-			state_id ++;
-		}
 	}
 }
 
@@ -806,8 +717,8 @@ void handle_data_response() {
 	zmq_msg_close(&data_msg);
 }
 
-// returns true if thw whole simulation finished
-bool check_finished() {
+// returns true if thw whole assimilation (all time steps) finished
+bool check_finished(Assimilator * assimilator) {
 	// check if all data was received. If yes: start Update step to calculate next analysis state
 
 	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
@@ -877,7 +788,7 @@ bool check_finished() {
 	if (finished)
 	{
 
-		do_update_step();
+		assimilator->do_update_step(*(fields.begin()->second));
 
 		if (current_timestamp >= MAX_TIMESTAMP)
 		{
@@ -918,6 +829,7 @@ int main(int argc, char * argv[])
 
 
 	MPI_Init(NULL, NULL);
+	PDAFEnKFAssimilator assimilator;
 	context = zmq_ctx_new ();
 
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
@@ -998,9 +910,11 @@ int main(int argc, char * argv[])
 				{
 					// low: if multi field: check fields! (see if the field names we got are the ones we wanted)
 					// propagate all fields to the other server clients on first message receive!
+					D("delme %d %d", comm_rank, comm_size);
 					broadcast_field_information_and_calculate_parts();
 					init_new_timestamp();
 
+					D("Change Phase");
 					phase = PHASE_SIMULATION;
 				}
 			}
@@ -1008,8 +922,10 @@ int main(int argc, char * argv[])
 			{
 				// Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
 				// propagate all fields to the other server clients on first message receive!
+					D("delme %d %d", comm_rank, comm_size);
 				broadcast_field_information_and_calculate_parts();
 				init_new_timestamp();
+				D("Change Phase");
 				phase = PHASE_SIMULATION;
 			}
 		}
@@ -1046,7 +962,7 @@ int main(int argc, char * argv[])
 			// REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
 			}
 
-			if (check_finished()) {
+			if (check_finished(&assimilator)) {
 				break;  // all simulations finished.
 			}
 
