@@ -14,6 +14,9 @@ void melissa_init(const char *field_name,
                        const int  local_vect_size,
                        MPI_Comm comm_);  // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 
+// can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
+void melissa_init_no_mpi(const char *field_name,
+                            const int  *local_vect_size);   // comm is casted into an pointer to an mpi communicaotr if not null.
 
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
 // IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!

@@ -37,7 +37,6 @@ int MAX_TIMESTAMP = 5;
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 //const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
 const long long MAX_SIMULATION_TIMEOUT = 5;  // 10 min max timeout for simulations.
-//const int MAX_TIMESTAMP = 155;
 
 const int TAG_NEW_TASK = 42;
 const int TAG_KILL_SIMULATION = 43;
@@ -914,12 +913,8 @@ int main(int argc, char * argv[])
 	assert(MAX_TIMESTAMP > 1);
 	assert(ENSEMBLE_SIZE > 0);
 
-	L("Start server for %d timesteps with %d ensemble members", MAX_TIMESTAMP, ENSEMBLE_SIZE);
 
 
-	int major, minor, patch;
-	zmq_version (&major, &minor, &patch);
-	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
 	MPI_Init(NULL, NULL);
 	context = zmq_ctx_new ();
 
@@ -929,13 +924,19 @@ int main(int argc, char * argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 	void * configuration_socket = NULL;
 
+	int major, minor, patch;
+	zmq_version (&major, &minor, &patch);
+	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
 	D("**server rank = %d", comm_rank);
+	L("Start server for %d timesteps with %d ensemble members", MAX_TIMESTAMP, ENSEMBLE_SIZE);
 
 	// Start sockets:
 	if (comm_rank == 0)
 	{
 		configuration_socket = zmq_socket(context, ZMQ_REP);
-		int rc = zmq_bind(configuration_socket, "tcp://*:4000");  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
+		const char * configuration_socket_addr = "tcp://*:4000";
+		int rc = zmq_bind(configuration_socket, configuration_socket_addr);  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
+		L("Configuration socket listening on port %s", configuration_socket_addr);
 		ZMQ_CHECK(rc);
 		assert(rc == 0);
 

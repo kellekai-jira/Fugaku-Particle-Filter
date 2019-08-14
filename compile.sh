@@ -5,6 +5,7 @@ CXX=mpicxx
 cd /home/friese/workspace/melissa-da
 
 # server
+echo building server...
 cd build_server
 rm -f melissa_server
 $CXX -std=c++0x -I/home/friese/workspace/melissa/install/include -O2 -g -Wall -c -fmessage-length=0 -fbounds-check -o server/server.o ../server/server.cxx
@@ -12,12 +13,14 @@ $CXX -L/home/friese/workspace/melissa/install/lib -o melissa_server server/serve
 cd ..
 
 # api
+echo building api...
 cd build_api
 rm -f libmelissa_api.so
 $CXX -std=c++0x -I/home/friese/workspace/melissa/install/include -O2 -g -Wall -c -fmessage-length=0 -fbounds-check -fPIC -o api/melissa_api.o ../api/melissa_api.cxx
-$CXX -L/home/friese/workspace/melissa/install/lib -shared -o libmelissa_api.so api/melissa_api.o -lzmq
+$CXX -L/home/friese/workspace/melissa/install/lib -fPIC -shared -o libmelissa_api.so api/melissa_api.o -lzmq
 cd ..
 
+echo building example-simulation...
 cd build_example-simulation
 # simulation
 rm -f example_simulation1

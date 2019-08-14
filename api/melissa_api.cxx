@@ -18,6 +18,13 @@
 // Forward declarations:
 void melissa_finalize();
 
+// For fortran:
+extern "C" {
+	void melissa_expose_f(const char * field_name, double * values);
+	void melissa_init_no_mpi(const char *field_name, const int  *local_vect_size);
+	// TODO: add other api functions!
+}
+
 // zmq context:
 void *context;
 
@@ -265,7 +272,12 @@ struct ConfigurationConnection
   ConfigurationConnection()
   {
     socket = zmq_socket (context, ZMQ_REQ);
-    std::string port_name = fix_port_name(getenv("MELISSA_SERVER_MASTER_NODE"));
+    char * melissa_server_master_node = getenv("MELISSA_SERVER_MASTER_NODE");
+    if (melissa_server_master_node == nullptr) {
+    	L("you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
+    	assert(false);
+    }
+    std::string port_name = fix_port_name(melissa_server_master_node);
     D("Configuration Connection to %s", port_name.c_str());
     zmq_connect (socket, port_name.c_str());
   }
@@ -409,6 +421,14 @@ void melissa_init(const char *field_name,
   fields.emplace(std::string(field_name), newField);
 
 }
+bool no_mpi = false;
+// can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
+void melissa_init_no_mpi(const char *field_name,
+                            const int  *local_vect_size) {  // comm is casted into an pointer to an mpi communicaotr if not null.
+	MPI_Init(NULL, NULL);  // TODO: maybe we also do not need to do this? what happens if we clear out this line?
+	no_mpi = true;
+	melissa_init(field_name, *local_vect_size, MPI_COMM_WORLD);
+}
 
 
 /// returns false if simulation should end now.
@@ -435,6 +455,10 @@ bool melissa_expose(const char *field_name, double *values)
   return phase != PHASE_FINAL;
 }
 
+void melissa_expose_f(const char * field_name, double * values) {
+	melissa_expose(field_name, values);
+}
+
 void melissa_finalize()  // TODO: when using more serverranks, wait until an end message was received from every before really ending... or actually not. as we always have only an open connection to one server rank...
 {
   //sleep(3);
@@ -457,6 +481,11 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
   //sleep(3);
   D("Destroying zmq context");
   zmq_ctx_destroy(context);
+
+  if (no_mpi) {
+  	// if without mpi we need to finalize mpi properly as it was only created in this context.
+  	MPI_Finalize();
+  }
 }
 
 int melissa_get_current_timestamp()
