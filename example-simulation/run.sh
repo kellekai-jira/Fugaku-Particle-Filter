@@ -53,14 +53,18 @@ else
   echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
 
-lib_paths="/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib"
-sim_exe="/home/friese/workspace/melissa-da/build_example-simulation/example_simulation"
-server_exe="/home/friese/workspace/melissa-da/build_server/melissa_server"
+lib_paths="/home/friese/workspace/melissa-da/build/install/lib:/home/friese/workspace/melissa/install/lib"
+bin_path="/home/friese/workspace/melissa-da/build/install/bin"
 
+server_exe="melissa_server"
+sim_exe="example_simulation"
 
 killall xterm
-killall melissa_server
-killall example_simulation
+killall $server_exe
+killall $sim_exe
+
+server_exe="$bin_path/$server_exe"
+sim_exe="$bin_path/$sim_exe"
 
 
 rm output.txt
