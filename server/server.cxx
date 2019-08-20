@@ -718,7 +718,7 @@ void handle_data_response() {
 }
 
 // returns true if thw whole assimilation (all time steps) finished
-bool check_finished(Assimilator * assimilator) {
+bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 	// check if all data was received. If yes: start Update step to calculate next analysis state
 
 	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
@@ -829,7 +829,7 @@ int main(int argc, char * argv[])
 
 
 	MPI_Init(NULL, NULL);
-	PDAFEnKFAssimilator assimilator;
+	std::shared_ptr<Assimilator> assimilator;
 	context = zmq_ctx_new ();
 
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
@@ -914,6 +914,9 @@ int main(int argc, char * argv[])
 					broadcast_field_information_and_calculate_parts();
 					init_new_timestamp();
 
+					// init assimilator as we know the field size now.
+					assimilator = std::make_shared<PDAFEnKFAssimilator>(fields.begin()->second->globalVectSize());
+
 					D("Change Phase");
 					phase = PHASE_SIMULATION;
 				}
@@ -925,6 +928,10 @@ int main(int argc, char * argv[])
 					D("delme %d %d", comm_rank, comm_size);
 				broadcast_field_information_and_calculate_parts();
 				init_new_timestamp();
+
+				// init assimilator as we know the field size now.
+				assimilator = std::make_shared<PDAFEnKFAssimilator>(fields.begin()->second->globalVectSize());
+
 				D("Change Phase");
 				phase = PHASE_SIMULATION;
 			}
@@ -962,7 +969,7 @@ int main(int argc, char * argv[])
 			// REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
 			}
 
-			if (check_finished(&assimilator)) {
+			if (check_finished(assimilator)) {
 				break;  // all simulations finished.
 			}
 

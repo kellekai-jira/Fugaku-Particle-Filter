@@ -27,6 +27,8 @@ struct Field {
 	Field(int simu_comm_size_, size_t ensemble_size_);
 	void calculate_parts(int server_comm_size);
 	n_to_m & getPart(int simu_rank);
+
+	size_t globalVectSize();
 };
 
 #endif /* FIELD_H_ */

@@ -49,3 +49,10 @@ n_to_m & Field::getPart(int simu_rank)
 	assert(false); // Did not find the part!
 }
 
+size_t Field::globalVectSize() {
+	size_t res = 0;
+	for (auto it = local_vect_sizes_simu.begin(); it != local_vect_sizes_simu.end(); ++ it) {
+		res += *it;
+	}
+	return res;
+}

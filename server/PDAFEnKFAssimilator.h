@@ -15,7 +15,7 @@
 class PDAFEnKFAssimilator : public Assimilator {
 public:
 	~PDAFEnKFAssimilator();
-	PDAFEnKFAssimilator();
+	PDAFEnKFAssimilator(const int dim_state);
 	virtual void do_update_step(Field &field);
 };
 

@@ -9,29 +9,20 @@
 
 #include <mpi.h>
 #include <algorithm>
+#include <csignal>
 #include "../common/utils.h"
 
 #include "pdaf.h"
 
 PDAFEnKFAssimilator::~PDAFEnKFAssimilator() {
 	// call to fortran:
-	//PDAF_deallocate();
+	cwrapper_PDAF_deallocate();
 }
 
-PDAFEnKFAssimilator::PDAFEnKFAssimilator() {
+PDAFEnKFAssimilator::PDAFEnKFAssimilator(const int dim_state) {
 	// call to fortran:
-	cwrapper_init_pdaf();
-	//init_pdaf_();
+	cwrapper_init_pdaf(&dim_state);
 }
-
-// very dirty but necessary as pdaf is designed like this.
-int distribute_state_ensemble_id;
-std::vector<EnsembleMember> * distribute_state_ensemble_members;
-void my_distribute_state (const int * dim, double * state){
-	EnsembleMember & member = distribute_state_ensemble_members->at(distribute_state_ensemble_id);
-	assert(*dim == member.state_analysis.size());
-	std::copy(state, state + (*dim), member.state_analysis.begin());
-};
 
 // called if every state was saved.
 void PDAFEnKFAssimilator::do_update_step(Field &field)
@@ -46,7 +37,8 @@ void PDAFEnKFAssimilator::do_update_step(Field &field)
 
 
 
-/*
+
+
 
 
 
@@ -54,28 +46,29 @@ void PDAFEnKFAssimilator::do_update_step(Field &field)
 	//        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
 	//        ! *** PDAF: Distinct calls due to different name of analysis routine ***
 	// TODO: at the moment we only support enkf!
-	PDAF_put_state_enkf(collect_state, init_dim_obs, obs_op,
-			init_obs, prepoststep_seik, add_obs_error,
-			init_obscovar, &status);
 
-	// TODO: do this on every ensemble member!:
+	for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
+	cwrapper_PDFA_put_state(eit->state_background.data(), &status);
+		if (status == 0) {
+			// Something went wrong!
+			D("PDAF put state status=%d", status);
+			std::raise(SIGINT);
+			exit(1);
+		}
+	}
+
 	//     ! *** PDAF: Get state and forecast information (nsteps,time)  ***
-	distribute_state_ensemble_members = &field.ensemble_members;
-	for (distribute_state_ensemble_id = 0;
-			distribute_state_ensemble_id < field.ensemble_members.size();
-			distribute_state_ensemble_id++) {
-
-		PDAF_get_state(&nsteps, &timenow, &doexit, next_observation,
-				my_distribute_state, prepoststep_seik, &status);
-
-		// for now:
-		assert(nsteps == 1);
+	// do this on every ensemble member!:
+	for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
+		cwrapper_PDAF_get_state(&doexit, eit->state_analysis.data(), &status);
 
 		//     ! Check whether forecast has to be performed
 		if (doexit == 1 || status == 0) {
 			// Something went wrong!
 			D("PDAF get state wants us to exit? 1==%d", doexit);
 			D("PDAF get state status=%d", status);
+			std::raise(SIGINT);
+			exit(1);
 		}
 
 	}
@@ -88,5 +81,5 @@ void PDAFEnKFAssimilator::do_update_step(Field &field)
 	//           ! *** call time stepper ***
 	//normally: CALL integration(time, nsteps)
 	// but in melissa: done by the model task runners!
-*/
+
 }
