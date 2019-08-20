@@ -36,9 +36,21 @@
 							<tool command="mpicxx" id="cdt.managedbuild.tool.gnu.cpp.linker.base.918468580" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.cpp.link.option.paths.166258154" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/friese/workspace/melissa/install/lib"/>
+									<listOptionValue builtIn="false" value=""/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.cpp.link.option.libs.1190474219" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="zmq"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gfortran"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="netcdf"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="netcdff"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="lapack"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="blas"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="m"/>
+								</option>
+								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="gnu.cpp.link.option.userobjs.155084658" name="Other objects" superClass="gnu.cpp.link.option.userobjs" useByScannerDiscovery="false" valueType="userObjs">
+									<listOptionValue builtIn="false" value="/home/friese/workspace/PDAF-D_V1.13.2_melissa/testsuite/src/lorenz96/lorenz96_pdaf.a"/>
+									<listOptionValue builtIn="false" value="/home/friese/workspace/PDAF-D_V1.13.2_melissa/testsuite/src/main/driver.a"/>
+									<listOptionValue builtIn="false" value="/home/friese/workspace/PDAF-D_V1.13.2_melissa/lib/libpdaf-d.a"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1482026567" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
