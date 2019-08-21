@@ -1,4 +1,4 @@
-project(melissa LANGUAGES CXX)
+project(melissa LANGUAGES CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
 
 

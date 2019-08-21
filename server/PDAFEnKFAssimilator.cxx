@@ -14,6 +14,9 @@
 
 #include "pdaf.h"
 
+extern int ENSEMBLE_SIZE;
+extern int MAX_TIMESTAMP;
+
 PDAFEnKFAssimilator::~PDAFEnKFAssimilator() {
 	// call to fortran:
 	cwrapper_PDAF_deallocate();
@@ -23,7 +26,9 @@ PDAFEnKFAssimilator::PDAFEnKFAssimilator(Field &field_)
 	: field(field_) {
 	// call to fortran:
 	int vectsize = field.globalVectSize();
-	cwrapper_init_pdaf(&vectsize);
+	// TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
+	assert (ENSEMBLE_SIZE == 30);
+	cwrapper_init_pdaf(&vectsize, &ENSEMBLE_SIZE, &MAX_TIMESTAMP);
 }
 
 // called if every state was saved.
@@ -53,7 +58,7 @@ int PDAFEnKFAssimilator::do_update_step()
 			const double * data = eit->state_background.data();
 			cwrapper_PDFA_put_state(&dim, &data, &status);
 
-			if (status == 0) {
+			if (status != 0) {
 				// Something went wrong!
 				D("PDAF put state status=%d", status);
 				std::raise(SIGINT);
@@ -72,7 +77,7 @@ int PDAFEnKFAssimilator::do_update_step()
 		//assert(nsteps == nnsteps || nsteps == -1);  // every get state should give the same nsteps!
 
 		//     ! Check whether forecast has to be performed
-		if (doexit == 1 || status == 0) {
+		if (doexit == 1 || status != 0) {
 			// Something went wrong!
 			D("PDAF get state wants us to exit? 1==%d", doexit);
 			D("PDAF get state status=%d", status);
