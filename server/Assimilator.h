@@ -19,7 +19,8 @@ public:
 	//double * get_part(const Part & part) = 0;
 
 
-	virtual void do_update_step(Field & field) = 0;
+	// returns how many stepps must be performed by the model in the next iteration
+	virtual int do_update_step() = 0;
 
 
 	virtual ~Assimilator() = default;

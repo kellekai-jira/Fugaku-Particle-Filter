@@ -787,8 +787,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
 	if (finished)
 	{
-
-		assimilator->do_update_step(*(fields.begin()->second));
+// TODO: use nsteps!
+		assimilator->do_update_step();
 
 		if (current_timestamp >= MAX_TIMESTAMP)
 		{
@@ -915,7 +915,7 @@ int main(int argc, char * argv[])
 					init_new_timestamp();
 
 					// init assimilator as we know the field size now.
-					assimilator = std::make_shared<PDAFEnKFAssimilator>(fields.begin()->second->globalVectSize());
+					assimilator = std::make_shared<PDAFEnKFAssimilator>(*(fields.begin()->second));
 
 					D("Change Phase");
 					phase = PHASE_SIMULATION;
@@ -930,7 +930,7 @@ int main(int argc, char * argv[])
 				init_new_timestamp();
 
 				// init assimilator as we know the field size now.
-				assimilator = std::make_shared<PDAFEnKFAssimilator>(fields.begin()->second->globalVectSize());
+				assimilator = std::make_shared<PDAFEnKFAssimilator>(*(fields.begin()->second));
 
 				D("Change Phase");
 				phase = PHASE_SIMULATION;

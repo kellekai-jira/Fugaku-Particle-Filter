@@ -13,10 +13,12 @@
 #include "Assimilator.h"
 
 class PDAFEnKFAssimilator : public Assimilator {
+private:
+	Field & field;
 public:
 	~PDAFEnKFAssimilator();
-	PDAFEnKFAssimilator(const int dim_state);
-	virtual void do_update_step(Field &field);
+	PDAFEnKFAssimilator(Field & field);
+	virtual int do_update_step();
 };
 
 #endif /* PDAFENKFASSIMILATOR_H_ */
