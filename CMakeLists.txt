@@ -8,14 +8,18 @@ find_package(ZeroMQ REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
 include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 link_libraries(${MPI_LIBRARIES})
+
+SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check")
 
 add_subdirectory(common)
 add_subdirectory(server)
 add_subdirectory(api)
 add_subdirectory(example-simulation)
+add_subdirectory(pdaf-simulation1)
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin

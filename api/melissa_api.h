@@ -23,6 +23,10 @@ void melissa_init(const char *field_name,
 void melissa_init_no_mpi(const char *field_name,
                             const int  *local_vect_size);   // comm is casted into an pointer to an mpi communicaotr if not null.
 
+void melissa_init_f(const char *field_name,
+                    int        *local_vect_size,
+                    MPI_Fint   *comm_fortran);
+
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
 // IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!
 /// returns false if simulation should end now.

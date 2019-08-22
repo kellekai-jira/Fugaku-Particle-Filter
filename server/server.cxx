@@ -35,8 +35,11 @@
 
 #include "PDAFEnKFAssimilator.h"
 
-extern int ENSEMBLE_SIZE = 5;
-extern int MAX_TIMESTAMP = 5;
+extern int ENSEMBLE_SIZE;
+extern int MAX_TIMESTAMP;
+
+int ENSEMBLE_SIZE = 5;
+int MAX_TIMESTAMP = 5;
 
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 //const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.

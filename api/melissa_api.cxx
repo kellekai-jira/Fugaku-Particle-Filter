@@ -490,3 +490,13 @@ int melissa_get_current_timestamp()
 	assert(phase == PHASE_SIMULATION);
 	return fields.begin()->second.timestamp;
 }
+
+
+void melissa_init_f(const char *field_name,
+                    int        *local_vect_size,
+                    MPI_Fint   *comm_fortran)
+{
+
+  MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
+  melissa_init(field_name, *local_vect_size, comm);
+}
