@@ -74,7 +74,7 @@ SUBROUTINE integrate()
      counter = 1
      DO j = 1, nx_p
        DO i = 1, ny
-         field_double(counter) = field(i,j)
+         field_double(counter) = field_p(i,j)
          counter = counter + 1
        END DO
      END DO
@@ -87,7 +87,7 @@ SUBROUTINE integrate()
      counter = 1
      DO j = 1, nx_p
        DO i = 1, ny
-         field(i,j) = field_double(counter)
+         field_p(i,j) = field_double(counter)
          counter = counter + 1
        END DO
      END DO

@@ -33,13 +33,17 @@
 // define hash functions for all the classes we puit in this container.
 #include <set>
 
-#include "PDAFEnKFAssimilator.h"
+#include "Assimilator.h"
+
+
 
 extern int ENSEMBLE_SIZE;
 extern int MAX_TIMESTAMP;
 
 int ENSEMBLE_SIZE = 5;
 int MAX_TIMESTAMP = 5;
+
+AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 //const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
@@ -918,7 +922,8 @@ int main(int argc, char * argv[])
 					init_new_timestamp();
 
 					// init assimilator as we know the field size now.
-					assimilator = std::make_shared<PDAFEnKFAssimilator>(*(fields.begin()->second));
+					Field &f = *(fields.begin()->second);
+					assimilator = Assimilator::create(ASSIMILATOR_TYPE, f);
 
 					D("Change Phase");
 					phase = PHASE_SIMULATION;
@@ -933,7 +938,8 @@ int main(int argc, char * argv[])
 				init_new_timestamp();
 
 				// init assimilator as we know the field size now.
-				assimilator = std::make_shared<PDAFEnKFAssimilator>(*(fields.begin()->second));
+				Field &f = *(fields.begin()->second);
+				assimilator = Assimilator::create(ASSIMILATOR_TYPE, f);
 
 				D("Change Phase");
 				phase = PHASE_SIMULATION;
