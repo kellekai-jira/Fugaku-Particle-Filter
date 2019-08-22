@@ -16,6 +16,7 @@ link_libraries(${MPI_LIBRARIES})
 SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check")
 
 add_subdirectory(common)
+add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
 add_subdirectory(api)
 add_subdirectory(example-simulation)

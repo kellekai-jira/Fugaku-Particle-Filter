@@ -5,15 +5,12 @@ file(GLOB
      *.cxx
      )
 
-add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common> )
-message("asll server: ${ALL_SERVER}")
+add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
+
+target_link_libraries(melissa_server pdaf_wrapper)
 
 # PDAF:
-SET(PDAF_PATH /home/friese/workspace/PDAF-D_V1.13.2_melissa)
-target_link_libraries(melissa_server ${PDAF_PATH}/testsuite/src/lorenz96/lorenz96_pdaf.a)
-target_link_libraries(melissa_server ${PDAF_PATH}/testsuite/src/main/driver.a)
-target_link_libraries(melissa_server ${PDAF_PATH}/lib/libpdaf-d.a)
-target_link_libraries(melissa_server gfortran netcdf netcdff lapack blas m)
+target_link_libraries(melissa_server gfortran lapack blas m)
 
 # To link against pdaf stuff:
 target_link_libraries(melissa_server ${MPI_Fortran_LIBRARIES})
