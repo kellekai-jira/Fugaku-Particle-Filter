@@ -5,7 +5,7 @@
  *      Author: friese
  */
 
-#include "PDAFEnKFAssimilator.h"
+#include "PDAFAssimilator.h"
 
 #include <mpi.h>
 #include <algorithm>
@@ -17,12 +17,12 @@
 extern int ENSEMBLE_SIZE;
 extern int MAX_TIMESTAMP;
 
-PDAFEnKFAssimilator::~PDAFEnKFAssimilator() {
+PDAFAssimilator::~PDAFAssimilator() {
 	// call to fortran:
 	cwrapper_PDAF_deallocate();
 }
 
-PDAFEnKFAssimilator::PDAFEnKFAssimilator(Field &field_)
+PDAFAssimilator::PDAFAssimilator(Field &field_)
 	: field(field_) {
 	// call to fortran:
 	int vectsize = field.globalVectSize();
@@ -32,7 +32,7 @@ PDAFEnKFAssimilator::PDAFEnKFAssimilator(Field &field_)
 }
 
 // called if every state was saved.
-int PDAFEnKFAssimilator::do_update_step()
+int PDAFAssimilator::do_update_step()
 {
 	static bool is_first_time = true;
 	int nsteps;  //    ! Number of time steps to be performed in current forecast

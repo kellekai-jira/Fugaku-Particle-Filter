@@ -5,20 +5,20 @@
  *      Author: friese
  */
 
-#ifndef PDAFENKFASSIMILATOR_H_
-#define PDAFENKFASSIMILATOR_H_
+#ifndef PDAFASSIMILATOR_H_
+#define PDAFASSIMILATOR_H_
 
 #include "Field.h"
 #include <vector>
 #include "Assimilator.h"
 
-class PDAFEnKFAssimilator : public Assimilator {
+class PDAFAssimilator : public Assimilator {
 private:
 	Field & field;
 public:
-	~PDAFEnKFAssimilator();
-	PDAFEnKFAssimilator(Field & field);
+	~PDAFAssimilator();
+	PDAFAssimilator(Field & field);
 	virtual int do_update_step();
 };
 
-#endif /* PDAFENKFASSIMILATOR_H_ */
+#endif /* PDAFASSIMILATOR_H_ */

@@ -830,6 +830,10 @@ int main(int argc, char * argv[])
 	if (argc >= 3) {
 		ENSEMBLE_SIZE = atoi(argv[2]);
 	}
+	if (argc >= 4) {
+		ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
+	}
+
 	assert(MAX_TIMESTAMP > 1);
 	assert(ENSEMBLE_SIZE > 0);
 

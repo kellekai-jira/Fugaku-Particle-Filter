@@ -10,6 +10,9 @@ n_runners=1
 ensemble_size=30
 max_timestamp=50
 
+assimilator_type=0 # dummy
+assimilator_type=1 # pdaf
+
 ######################################################
 
 # trap ctrl-c and call ctrl_c()
@@ -64,7 +67,7 @@ killall example_simulation
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$lib_paths \
-  $precommand $server_exe $max_timestamp $ensemble_size &
+  $precommand $server_exe $max_timestamp $ensemble_size $assimilator_type &
 
 sleep 1
 
