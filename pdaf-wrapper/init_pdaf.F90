@@ -50,10 +50,6 @@ SUBROUTINE init_pdaf()
 
   ! External subroutines
   EXTERNAL :: init_ens         ! Ensemble initialization
-  EXTERNAL :: next_observation_pdaf, & ! Provide time step, model time,
-                                       ! and dimension of next observation
-       distribute_state_pdaf, &        ! Routine to distribute a state vector to model fields
-       prepoststep_ens_pdaf            ! User supplied pre/poststep routine
 
 
 ! ***************************
@@ -210,13 +206,5 @@ SUBROUTINE init_pdaf()
           ' in initialization of PDAF - stopping! (PE ', mype_world,')'
      CALL abort_parallel()
   END IF
-
-
-! ******************************'***
-! *** Prepare ensemble forecasts ***
-! ******************************'***
-
-  CALL PDAF_get_state(steps, timenow, doexit, next_observation_pdaf, &
-       distribute_state_pdaf, prepoststep_ens_pdaf, status_pdaf)
 
 END SUBROUTINE init_pdaf

@@ -13,6 +13,7 @@ MODULE mod_model
 ! Later revisions - see svn log
 !
 ! !USES:
+use iso_c_binding
   IMPLICIT NONE
   SAVE
 !EOP
@@ -20,6 +21,10 @@ MODULE mod_model
 
 ! *** Variables specific for 2D tutorial model ***
 
-  INTEGER :: total_steps          ! Total number of time steps
+  INTEGER :: total_steps
+  INTEGER :: nx, ny               ! Size of 2D grid
+!  REAL, ALLOCATABLE :: field_p(:,:) ! Decomposed model field
+
+  INTEGER :: nx_p                 ! Process-local size in x-direction
 
 END MODULE mod_model

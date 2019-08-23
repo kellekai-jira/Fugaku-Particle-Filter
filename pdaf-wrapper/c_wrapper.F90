@@ -36,11 +36,31 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   USE iso_c_binding
 
   USE mod_model, &
-    ONLY: total_steps
+    ONLY: total_steps, nx, ny, nx_p
+
+  USE mod_parallel_model, &
+    ONLY: npes_model, abort_parallel
+
   IMPLICIT NONE
 
   INTEGER(kind=C_INT), intent(in) :: param_total_steps     ! total steps
   total_steps = param_total_steps
+
+
+! *** Model specifications ***
+  nx = 36          ! Extent of grid in x-direction
+  ny = 18          ! Extent of grid in y-direction
+
+
+  IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
+       npes_model==6 .OR.npes_model==9) THEN
+       ! TODO: make it working also with other numbers!
+     ! Split x-diection in chunks of equal size
+     nx_p = nx / npes_model
+  ELSE
+     WRITE (*,*) 'ERROR: Invalid number of processes'
+     CALL abort_parallel()
+  END IF
 
 END SUBROUTINE
 
@@ -63,21 +83,21 @@ real(C_DOUBLE), POINTER :: distribute_state_to(:)
 real(C_DOUBLE), POINTER :: collect_state_from(:)
 end module
 
-SUBROUTINE my_distribute_state(dim, state)
+SUBROUTINE my_distribute_state(dim_p, state_p)
   USE my_state_accessors, &
     only: distribute_state_to
 
   IMPLICIT NONE
 
 ! !ARGUMENTS:
-  INTEGER, INTENT(in) :: dim         ! State dimension
-  REAL, INTENT(inout) :: state(dim)  ! State vector
+  INTEGER, INTENT(in) :: dim_p           ! local state dimension
+  REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
-  distribute_state_to(:) = state(:)
+  distribute_state_to(:) = state_p(:)
 
 END SUBROUTINE my_distribute_state
 
-SUBROUTINE my_collect_state(dim, state)
+SUBROUTINE my_collect_state(dim_p, state_p)
 
   USE my_state_accessors, &
        ONLY: collect_state_from
@@ -85,30 +105,18 @@ SUBROUTINE my_collect_state(dim, state)
   IMPLICIT NONE
 
 ! !ARGUMENTS:
-  INTEGER, INTENT(in) :: dim           ! PE-local state dimension
-  REAL, INTENT(inout) :: state(dim)  ! local state vector
+  INTEGER, INTENT(in) :: dim_p           ! local state dimension
+  REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
 
-  state(:) = collect_state_from(:)
+  state_p(:) = collect_state_from(:)
 
 END SUBROUTINE my_collect_state
 
 
-SUBROUTINE cwrapper_assimilate_pdaf()
-  IMPLICIT NONE
-  CALL assimilate_pdaf()
-END SUBROUTINE
+SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, status) &
+    BIND(C, name='cwrapper_PDAF_get_state')
 
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! old:
-
-
-SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, status) BIND(C, name='cwrapper_PDAF_get_state')
   use iso_c_binding
   USE my_state_accessors, &
   only: distribute_state_to
@@ -122,48 +130,29 @@ SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, s
   TYPE(C_PTR) :: state_analysis
   INTEGER(C_INT), intent(out) :: status
 
-! ! External subroutines
-! !  (subroutine names are passed over to PDAF in the calls to
-! !  PDAF_get_state and PDAF_put_state_X. This allows the user
-! !  to specify the actual name of a routine. However, the
-! !  PDAF-internal name of a subroutine might be different from
-! !  the external name!)
-!
-! ! Subroutines used with all filters
-  EXTERNAL :: next_observation, & ! Provide time step, model time, &
-                                  ! and dimension of next observation
-       my_distribute_state, &        ! Routine to distribute a state vector to model fields
-       collect_state, &           ! Routine to collect a state vector from model fields
-       init_dim_obs, &            ! Initialize dimension of observation vector
-       obs_op, &                  ! Implementation of the Observation operator
-       init_obs, &                ! Routine to provide vector of measurements
-       distribute_stateinc        ! Routine to add state increment for IAU
-! ! Subroutine used in SEIK
-  EXTERNAL :: prepoststep_seik, & ! User supplied pre/poststep routine for SEIK
-       init_obsvar                ! Initialize mean observation error variance
-! ! Subroutine used in SEIK and SEEK
-  EXTERNAL :: prodRinvA           ! Provide product R^-1 A for some matrix A
-! ! Subroutines used in EnKF
-  EXTERNAL :: add_obs_error, &    ! Add obs. error covariance R to HPH in EnKF
-       init_obscovar              ! Initialize obs error covar R in EnKF
-! ! Subroutines used in LSEIK
-  EXTERNAL :: init_n_domains, &   ! Provide number of local analysis domains
-       init_dim_local, &      ! Initialize state dimension for local ana. domain
-       init_dim_obs_local,&   ! Initialize dim. of obs. vector for local ana. domain
-       global2local_state, &  ! Get state on local ana. domain from global state
-       local2global_state, &  ! Init global state from state on local analysis domain
-       global2local_obs, &    ! Restrict a global obs. vector to local analysis domain
-       init_obs_local, &      ! Provide vector of measurements for local ana. domain
-       prodRinvA_local, &     ! Provide product R^-1 A for some matrix A (for LSEIK)
-       init_obsvar_local, &   ! Initialize local mean observation error variance
-       init_obs_full, &       ! Provide full vector of measurements for PE-local domain
-       obs_op_full, &         ! Obs. operator for full obs. vector for PE-local domain
-       init_dim_obs_full      ! Get dimension of full obs. vector for PE-local domain
-! ! Subroutines used in NETF
-  EXTERNAL :: likelihood      ! Compute observation likelihood for an ensemble member
-! ! Subroutines used in LNETF
-  EXTERNAL :: likelihood_local  ! Compute local observation likelihood for an ensemble member
-
+  ! External subroutines
+  EXTERNAL :: my_collect_state, &   ! Routine to collect a state vector from model fields
+       init_dim_obs_pdaf, &         ! Initialize Dimension Of Observation Vector
+       obs_op_pdaf, &               ! Implementation of the Observation operator
+       init_obs_pdaf, &             ! Routine to provide vector of measurements
+       prepoststep_ens_pdaf, &      ! User supplied pre/poststep routine
+       prodRinvA_pdaf, &            ! Provide product R^-1 A for some matrix A
+       init_obsvar_pdaf, &          ! Initialize mean observation error variance
+       next_observation_pdaf, &     ! Provide time step, model time, &
+                                    ! and dimension of next observation
+       my_distribute_state          ! Routine to distribute a state vector to model fields
+  EXTERNAL :: init_n_domains_pdaf, &   ! Provide number of local analysis domains
+       init_dim_l_pdaf, &              ! Initialize state dimension for local ana. domain
+       init_dim_obs_l_pdaf,&           ! Initialize dim. of obs. vector for local ana. domain
+       g2l_state_pdaf, &               ! Get state on local ana. domain from global state
+       l2g_state_pdaf, &               ! Init global state from state on local analysis domain
+       g2l_obs_pdaf, &                 ! Restrict a global obs. vector to local analysis domain
+       init_obs_l_pdaf, &              ! Provide vector of measurements for local ana. domain
+       prodRinvA_l_pdaf, &             ! Provide product R^-1 A for some local matrix A
+       init_obsvar_l_pdaf, &           ! Initialize local mean observation error variance
+       init_obs_f_pdaf, &              ! Provide full vector of measurements for PE-local domain
+       obs_op_f_pdaf, &                ! Obs. operator for full obs. vector for PE-local domain
+       init_dim_obs_f_pdaf             ! Get dimension of full obs. vector for PE-local domain
 
 
 ! local variables
@@ -174,21 +163,28 @@ SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, s
 
   Print *, "Hello get state!"
 
-
-
-  ! TODO: set pointer...
-  !distribute_state_to => state_analysis
+  !distribute_state_to => state_analysis  ! TODO: maybe this pointersetting is erronous?
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
-  CALL PDAF_get_state(nsteps, timenow, doexit, next_observation, &
-          my_distribute_state, prepoststep_seik, status)
+  ! TODO: parameters depend on filtertype
+  ! Ensemble-based filters (SEIK, EnKF, ETKF, LSEIK, LETKF, ESTKF, LESTKF)
+  ! This call is for all ensemble-based filters, except for EKTF/LETKF
+  CALL PDAF_get_state(nsteps, timenow, doexit, next_observation_pdaf, &
+       my_distribute_state, prepoststep_ens_pdaf, status)
 
 END SUBROUTINE
 
-SUBROUTINE cwrapper_PDFA_put_state(state_background, status) BIND(C, name='cwrapper_PDFA_put_state')
+SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, status) &
+  BIND(C, name='cwrapper_PDFA_put_state')
+
   USE iso_c_binding
 
   USE my_state_accessors, &
        ONLY: collect_state_from
+
+  USE mod_parallel_model, &     ! Parallelization variables
+       ONLY: mype_world, abort_parallel
+  USE mod_assimilation, &      ! Variables for assimilation
+       ONLY: filtertype
 
   IMPLICIT NONE
 
@@ -197,54 +193,49 @@ SUBROUTINE cwrapper_PDFA_put_state(state_background, status) BIND(C, name='cwrap
   TYPE(C_PTR) :: state_background
   INTEGER(C_INT), intent(out) :: status
 
-! ! External subroutines
-! !  (subroutine names are passed over to PDAF in the calls to
-! !  PDAF_get_state and PDAF_put_state_X. This allows the user
-! !  to specify the actual name of a routine. However, the
-! !  PDAF-internal name of a subroutine might be different from
-! !  the external name!)
-!
-! ! Subroutines used with all filters
-  EXTERNAL :: next_observation, & ! Provide time step, model time, &
-                                  ! and dimension of next observation
-       distribute_state, &        ! Routine to distribute a state vector to model fields
-       collect_state, &           ! Routine to collect a state vector from model fields
-       init_dim_obs, &            ! Initialize dimension of observation vector
-       obs_op, &                  ! Implementation of the Observation operator
-       init_obs, &                ! Routine to provide vector of measurements
-       distribute_stateinc        ! Routine to add state increment for IAU
-! ! Subroutine used in SEIK
-  EXTERNAL :: prepoststep_seik, & ! User supplied pre/poststep routine for SEIK
-       init_obsvar                ! Initialize mean observation error variance
-! ! Subroutine used in SEIK and SEEK
-  EXTERNAL :: prodRinvA           ! Provide product R^-1 A for some matrix A
-! ! Subroutines used in EnKF
-  EXTERNAL :: add_obs_error, &    ! Add obs. error covariance R to HPH in EnKF
-       init_obscovar              ! Initialize obs error covar R in EnKF
-! ! Subroutines used in LSEIK
-  EXTERNAL :: init_n_domains, &   ! Provide number of local analysis domains
-       init_dim_local, &      ! Initialize state dimension for local ana. domain
-       init_dim_obs_local,&   ! Initialize dim. of obs. vector for local ana. domain
-       global2local_state, &  ! Get state on local ana. domain from global state
-       local2global_state, &  ! Init global state from state on local analysis domain
-       global2local_obs, &    ! Restrict a global obs. vector to local analysis domain
-       init_obs_local, &      ! Provide vector of measurements for local ana. domain
-       prodRinvA_local, &     ! Provide product R^-1 A for some matrix A (for LSEIK)
-       init_obsvar_local, &   ! Initialize local mean observation error variance
-       init_obs_full, &       ! Provide full vector of measurements for PE-local domain
-       obs_op_full, &         ! Obs. operator for full obs. vector for PE-local domain
-       init_dim_obs_full      ! Get dimension of full obs. vector for PE-local domain
-! ! Subroutines used in NETF
-  EXTERNAL :: likelihood      ! Compute observation likelihood for an ensemble member
-! ! Subroutines used in LNETF
-  EXTERNAL :: likelihood_local  ! Compute local observation likelihood for an ensemble member
+  ! External subroutines
+  EXTERNAL :: my_collect_state, &   ! Routine to collect a state vector from model fields
+       init_dim_obs_pdaf, &         ! Initialize Dimension Of Observation Vector
+       obs_op_pdaf, &               ! Implementation of the Observation operator
+       init_obs_pdaf, &             ! Routine to provide vector of measurements
+       prepoststep_ens_pdaf, &      ! User supplied pre/poststep routine
+       prodRinvA_pdaf, &            ! Provide product R^-1 A for some matrix A
+       init_obsvar_pdaf, &          ! Initialize mean observation error variance
+       next_observation_pdaf, &     ! Provide time step, model time, &
+                                    ! and dimension of next observation
+       my_distribute_state          ! Routine to distribute a state vector to model fields
+  EXTERNAL :: init_n_domains_pdaf, &   ! Provide number of local analysis domains
+       init_dim_l_pdaf, &              ! Initialize state dimension for local ana. domain
+       init_dim_obs_l_pdaf,&           ! Initialize dim. of obs. vector for local ana. domain
+       g2l_state_pdaf, &               ! Get state on local ana. domain from global state
+       l2g_state_pdaf, &               ! Init global state from state on local analysis domain
+       g2l_obs_pdaf, &                 ! Restrict a global obs. vector to local analysis domain
+       init_obs_l_pdaf, &              ! Provide vector of measurements for local ana. domain
+       prodRinvA_l_pdaf, &             ! Provide product R^-1 A for some local matrix A
+       init_obsvar_l_pdaf, &           ! Initialize local mean observation error variance
+       init_obs_f_pdaf, &              ! Provide full vector of measurements for PE-local domain
+       obs_op_f_pdaf, &                ! Obs. operator for full obs. vector for PE-local domain
+       init_dim_obs_f_pdaf             ! Get dimension of full obs. vector for PE-local domain
 
-  Print *, "Hello put state!"
+
+
   !collect_state_from => state_background
   CALL C_F_POINTER( state_background, collect_state_from,[dim_state_background])
-  CALL PDAF_put_state_enkf(collect_state, init_dim_obs, obs_op, &
-           init_obs, prepoststep_seik, add_obs_error, &
-           init_obscovar, status)
 
+  CALL PDAF_put_state_estkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
+    init_obs_pdaf, prepoststep_ens_pdaf, prodRinvA_pdaf, init_obsvar_pdaf, status)
+
+
+  !IF (filtertype == 6) THEN
+     !CALL PDAF_assimilate_estkf(collect_state_pdaf, distribute_state_pdaf, &
+          !init_dim_obs_pdaf, obs_op_pdaf, init_obs_pdaf, prepoststep_ens_pdaf, &
+          !prodRinvA_pdaf, init_obsvar_pdaf, next_observation_pdaf, status_pdaf)
+  !ELSEIF (filtertype == 7) THEN
+     !CALL PDAF_assimilate_lestkf(collect_state_pdaf, distribute_state_pdaf, &
+          !init_dim_obs_f_pdaf, obs_op_f_pdaf, init_obs_f_pdaf, init_obs_l_pdaf, &
+          !prepoststep_ens_pdaf, prodRinvA_l_pdaf, init_n_domains_pdaf, &
+          !init_dim_l_pdaf, init_dim_obs_l_pdaf, g2l_state_pdaf, l2g_state_pdaf, &
+          !g2l_obs_pdaf, init_obsvar_pdaf, init_obsvar_l_pdaf, next_observation_pdaf, status_pdaf)
+  !END IF
 
 END SUBROUTINE
