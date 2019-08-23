@@ -26,9 +26,14 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 	: field(field_) {
 	// call to fortran:
 	int vectsize = field.globalVectSize();
+
+	// ass size_t might be too big...:
+	int local_vect_size = field.local_vect_size;
+
 	// TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
 	assert (ENSEMBLE_SIZE == 30);
-	cwrapper_init_pdaf(&vectsize, &ENSEMBLE_SIZE, &MAX_TIMESTAMP);
+	cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
+	cwrapper_init_user(&MAX_TIMESTAMP);
 }
 
 // called if every state was saved.
