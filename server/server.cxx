@@ -65,6 +65,7 @@ void * context;
 void * data_response_socket;
 
 int current_timestamp = 0;  // will effectively start at 1.
+int current_nsteps = 1;  // this is important if there are less model task runners than ensemble members. for every model task runner at the beginning an ensemble state will be generated.
 
 int get_due_date() {
 	time_t seconds;
@@ -122,11 +123,12 @@ struct SimulationRankConnection {
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
-		ZMQ_CHECK(zmq_msg_init_size(&header_msg, 3 * sizeof(int)));
+		ZMQ_CHECK(zmq_msg_init_size(&header_msg, 4 * sizeof(int)));
 		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
 		header[0] = state_id;
 		header[1] = current_timestamp;
 		header[2] = CHANGE_STATE;
+		header[3] = current_nsteps;
 		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
 		// we do not know when it will really send. send is non blocking!
 
@@ -162,12 +164,13 @@ struct SimulationRankConnection {
 		zmq_msg_init(&empty_msg);
 		zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
 
-		zmq_msg_init_size(&header_msg, 3 * sizeof(int));
+		zmq_msg_init_size(&header_msg, 4 * sizeof(int));
 
 		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
 		header[0] = -1;
 		header[1] = current_timestamp;
 		header[2] = end_flag;
+		header[3] = 0;  // nsteps
 
 		zmq_msg_send(&header_msg, data_response_socket, 0);
 
@@ -794,8 +797,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
 	if (finished)
 	{
-// TODO: use nsteps!
-		assimilator->do_update_step();
+		current_nsteps = assimilator->do_update_step();
 
 		if (current_timestamp >= MAX_TIMESTAMP)
 		{

@@ -43,7 +43,7 @@ SUBROUTINE integrate()
 
   REAL(kind=C_DOUBLE) :: field_double(nx_p * ny)
 
-  LOGICAL*1 :: timestepping = .TRUE.    ! if not 0 we are timestepping.
+  INTEGER :: nsteps = 1    ! if not 0 we are timestepping.
 
 
 
@@ -54,22 +54,24 @@ SUBROUTINE integrate()
   IF (mype_world==0) WRITE (*, '(1x, a)') 'START INTEGRATION'
 
 
-  stepping: DO WHILE (timestepping)
+  stepping: DO WHILE (nsteps > 0)
+     WRITE (*, *) 'integrating how many timesteps?', nsteps
+     DO step = 1, nsteps
+		 IF (mype_world==0) WRITE (*,*) 'step', step
 
+	! *** Time step: Shift field vertically ***
+		 DO j = 1, nx_p
+			store = field_p(ny, j)
 
-     IF (mype_world==0) WRITE (*,*) 'step', step
+			DO i = ny-1,1,-1
+			   field_p(i+1, j) = field_p(i, j)
+			END DO
 
-! *** Time step: Shift field vertically ***
-     DO j = 1, nx_p
-        store = field_p(ny, j)
+			field_p(1, j) = store
 
-        DO i = ny-1,1,-1
-           field_p(i+1, j) = field_p(i, j)
-        END DO
-
-        field_p(1, j) = store
-
+		 END DO
      END DO
+
 
      counter = 1
      DO j = 1, nx_p
@@ -79,10 +81,7 @@ SUBROUTINE integrate()
        END DO
      END DO
 
-     timestepping = melissa_expose(melissa_field_name, field_double)
-!     timestepping = MELISSA_EXPOSE(ctv, x_double)
-
-    !CALL MELISSA_INIT_F(melissa_field_name, melissa_field_name, 0)
+     nsteps = melissa_expose(melissa_field_name, field_double)
 
      counter = 1
      DO j = 1, nx_p

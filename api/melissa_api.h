@@ -30,7 +30,7 @@ void melissa_init_f(const char *field_name,
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
 // IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!
 /// returns false if simulation should end now.
-bool melissa_expose(const char *field_name, double *values);
+int melissa_expose(const char *field_name, double *values);
 
 
 /// For debug reasons it sometimes is practical to have the melissa current state id outside of melissa.

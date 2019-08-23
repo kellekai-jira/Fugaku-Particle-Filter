@@ -117,7 +117,7 @@ struct ServerRankConnection
     ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
   }
 
-  void receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
+  int receive(double * out_values, size_t doubles_expected, int * out_current_state_id, int *out_timestamp)
   {
 // receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
 // the first message also contains out_current_state_id and out_timestamp
@@ -126,11 +126,12 @@ struct ServerRankConnection
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, data_request_socket, 0);
     D("Received message size = %lu", zmq_msg_size(&msg));
-    assert(zmq_msg_size(&msg) == 3 * sizeof(int));
+    assert(zmq_msg_size(&msg) == 4 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     *out_current_state_id = buf[0];
     *out_timestamp = buf[1];
     int type = buf[2];
+    int nsteps = buf[3];
     zmq_msg_close(&msg);
 
     if (type == CHANGE_STATE)
@@ -142,8 +143,8 @@ struct ServerRankConnection
 
       zmq_msg_recv(&msg, data_request_socket, 0);
 
-      D("<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d",
-      		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp);
+      D("<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d, nsteps=%d",
+      		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp, nsteps);
 
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
 
@@ -157,10 +158,13 @@ struct ServerRankConnection
     else if (type == END_SIMULATION)
     { // TODO use zmq cpp for less errors!
       melissa_finalize();
+      // calculate 0 steps now.
+      nsteps = 0;
     }
     else if (type == KILL_SIMULATION)
     {
     	printf("Error: Server decided that this simulation crashed. So killing it now.\n");
+    	MPI_Abort(MPI_COMM_WORLD, 1);
     	exit(1);
     }
     else
@@ -169,6 +173,7 @@ struct ServerRankConnection
       // TODO: unimplemented
       assert(false);
     }
+		return nsteps;
   }
 };
 
@@ -239,7 +244,7 @@ struct Field {
 
   }
 
-  void getState(double * values) {
+  int getState(double * values) {
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
     	D("get state, local offset: %lu, send count: %lu", csr->local_vector_offset, csr->send_count);
@@ -247,10 +252,10 @@ struct Field {
     	// do not try to receive if we are finalizeing already. Even check if the last receive might have started finalization.
     	if (phase == PHASE_FINAL)
     	{
-    		return;
+    		return 0;
     	}
 
-      csr->server_rank.receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
+      return csr->server_rank.receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
     }
   }
 };
@@ -428,8 +433,9 @@ void melissa_init_no_mpi(const char *field_name,
 }
 
 
-/// returns false if simulation should end now.
-bool melissa_expose(const char *field_name, double *values)
+/// returns 0 if simulation should end now.
+/// otherwise returns nsteps, the number of timesteps that need to be simulated.
+int melissa_expose(const char *field_name, double *values)
 {
   assert(phase != PHASE_FINAL);
   if (phase == PHASE_INIT) {
@@ -445,11 +451,11 @@ bool melissa_expose(const char *field_name, double *values)
   // Now Send data to the melissa server
   fields[field_name].putState(values, field_name);
   // and request new data
-  fields[field_name].getState(values);
+  int nsteps = fields[field_name].getState(values);
 
   // TODO: this will block other fields!
 
-  return phase != PHASE_FINAL;
+  return nsteps;
 }
 
 void melissa_expose_f(const char * field_name, double * values) {

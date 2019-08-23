@@ -31,7 +31,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 	int local_vect_size = field.local_vect_size;
 
 	// TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
-	assert (ENSEMBLE_SIZE == 30);
+	assert (ENSEMBLE_SIZE <= 9);
 	cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
 	cwrapper_init_user(&MAX_TIMESTAMP);
 }
@@ -40,6 +40,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 int PDAFAssimilator::do_update_step()
 {
 	static bool is_first_time = true;
+	int nsteps = -1;
 	int doexit;  //    ! Whether to exit forecasting (1=true)
 	int status;  //    ! Status flag for filter routines
 
@@ -77,8 +78,11 @@ int PDAFAssimilator::do_update_step()
 		const int dim = eit->state_analysis.size();
 		double * data = eit->state_analysis.data();
 		//int nnsteps =
-		cwrapper_PDAF_get_state(&doexit, &dim, &data, &status);
-		//assert(nsteps == nnsteps || nsteps == -1);  // every get state should give the same nsteps!
+		int nnsteps = cwrapper_PDAF_get_state(&doexit, &dim, &data, &status);
+		assert(nsteps == nnsteps || nsteps == -1);  // every get state should give the same nsteps!
+		nsteps = nnsteps;
+
+		D("kkkkkk nsteps=%d", nsteps);
 
 		//     ! Check whether forecast has to be performed
 		if (doexit == 1 || status != 0) {
@@ -101,5 +105,5 @@ int PDAFAssimilator::do_update_step()
 	// but in melissa: done by the model task runners!
 
 
-	return 1;
+	return nsteps;
 }

@@ -114,7 +114,7 @@ SUBROUTINE my_collect_state(dim_p, state_p)
 END SUBROUTINE my_collect_state
 
 
-SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, status) &
+FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, status) &
     BIND(C, name='cwrapper_PDAF_get_state')
 
   use iso_c_binding
@@ -129,6 +129,8 @@ SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, s
   INTEGER(C_INT), intent(in) :: dim_state_analysis
   TYPE(C_PTR) :: state_analysis
   INTEGER(C_INT), intent(out) :: status
+
+  INTEGER(C_INT) :: cwrapper_PDAF_get_state
 
   ! External subroutines
   EXTERNAL :: my_collect_state, &   ! Routine to collect a state vector from model fields
@@ -171,7 +173,9 @@ SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, s
   CALL PDAF_get_state(nsteps, timenow, doexit, next_observation_pdaf, &
        my_distribute_state, prepoststep_ens_pdaf, status)
 
-END SUBROUTINE
+  cwrapper_PDAF_get_state = nsteps
+
+END FUNCTION
 
 SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, status) &
   BIND(C, name='cwrapper_PDFA_put_state')

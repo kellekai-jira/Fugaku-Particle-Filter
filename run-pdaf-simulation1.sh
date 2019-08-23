@@ -7,7 +7,7 @@ n_server=1
 n_simulation=1
 n_runners=1
 
-ensemble_size=30
+ensemble_size=9
 max_timestamp=50
 
 assimilator_type=0 # dummy
