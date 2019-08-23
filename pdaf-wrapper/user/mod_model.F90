@@ -5,7 +5,7 @@
 MODULE mod_model
 
 ! !DESCRIPTION:
-! This module provides variables needed for the 
+! This module provides variables needed for the
 ! 2-dimensional tutorial model without parallelization.
 !
 ! !REVISION HISTORY:
@@ -20,10 +20,6 @@ MODULE mod_model
 
 ! *** Variables specific for 2D tutorial model ***
 
-  INTEGER :: nx, ny               ! Size of 2D grid
   INTEGER :: total_steps          ! Total number of time steps
-  REAL, ALLOCATABLE :: field_p(:,:) ! Decomposed model field
-
-  INTEGER :: nx_p                 ! Process-local size in x-direction
 
 END MODULE mod_model

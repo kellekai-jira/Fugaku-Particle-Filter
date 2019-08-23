@@ -21,8 +21,6 @@ SUBROUTINE init_pdaf()
 ! Later revisions - see svn log
 !
 ! !USES:
-  USE mod_model, &             ! Model variables
-       ONLY: nx, ny, nx_p
   USE mod_parallel_model, &    ! Parallelization variables for model
        ONLY: mype_world, COMM_model, abort_parallel
   USE mod_parallel_pdaf, &     ! Parallelization variables fro assimilation
@@ -52,11 +50,11 @@ SUBROUTINE init_pdaf()
 
   ! External subroutines
   EXTERNAL :: init_ens         ! Ensemble initialization
-  EXTERNAL :: next_observation_pdaf, & ! Provide time step, model time, 
+  EXTERNAL :: next_observation_pdaf, & ! Provide time step, model time,
                                        ! and dimension of next observation
        distribute_state_pdaf, &        ! Routine to distribute a state vector to model fields
        prepoststep_ens_pdaf            ! User supplied pre/poststep routine
-  
+
 
 ! ***************************
 ! ***   Initialize PDAF   ***
@@ -65,10 +63,6 @@ SUBROUTINE init_pdaf()
   IF (mype_world == 0) THEN
      WRITE (*,'(/1x,a)') 'INITIALIZE PDAF - ONLINE MODE'
   END IF
-
-  ! *** Define state dimension ***
-  dim_state_p = nx_p * ny  ! Local state dimension
-  dim_state = nx * ny      ! Global state dimension
 
 
 ! **********************************************************
@@ -79,6 +73,7 @@ SUBROUTINE init_pdaf()
   screen      = 2  ! Write screen output (1) for output, (2) add timings
 
 ! *** Filter specific variables
+! TODO: implement the others! this has to be done on multiple places
   filtertype = 6    ! Type of filter
                     !   (1) SEIK
                     !   (2) EnKF
@@ -87,9 +82,8 @@ SUBROUTINE init_pdaf()
                     !   (5) LETKF
                     !   (6) ESTKF
                     !   (7) LESTKF
-  dim_ens = n_modeltasks  ! Size of ensemble for all ensemble filters
                     !   We use n_modeltasks here, initialized in init_parallel_pdaf
-  subtype = 0       ! subtype of filter: 
+  subtype = 0       ! subtype of filter:
                     !   ESTKF:
                     !     (0) Standard form of ESTKF
                     !   LESTKF:
@@ -129,7 +123,7 @@ SUBROUTINE init_pdaf()
 
 ! *** specifications for observations ***
   rms_obs = 0.5    ! Observation error standard deviation
-                   ! for the Gaussian distribution 
+                   ! for the Gaussian distribution
 ! *** Localization settings
   locweight = 0     ! Type of localizating weighting
                     !   (0) constant weight of 1
@@ -181,7 +175,7 @@ SUBROUTINE init_pdaf()
      filter_param_i(4) = incremental ! Whether to perform incremental analysis
      filter_param_i(5) = 0           ! Smoother lag (not implemented here)
      filter_param_r(1) = forget      ! Forgetting factor
-     
+
      CALL PDAF_init(filtertype, subtype, 0, &
           filter_param_i, 6,&
           filter_param_r, 2, &
@@ -199,7 +193,7 @@ SUBROUTINE init_pdaf()
      filter_param_i(6) = type_trans  ! Type of ensemble transformation
      filter_param_i(7) = type_sqrt   ! Type of transform square-root (SEIK-sub4/ESTKF)
      filter_param_r(1) = forget      ! Forgetting factor
-     
+
      CALL PDAF_init(filtertype, subtype, 0, &
           filter_param_i, 7,&
           filter_param_r, 2, &

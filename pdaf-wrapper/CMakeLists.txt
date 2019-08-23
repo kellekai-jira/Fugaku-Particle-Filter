@@ -5,7 +5,14 @@ file(GLOB
      *.F90
      )
 
-add_library(pdaf_wrapper STATIC ${ALL_PDAF_WRAPPER})
+file(GLOB
+  ALL_USER
+     RELATIVE
+     ${CMAKE_CURRENT_SOURCE_DIR}/user
+     *.F90
+     )
+
+add_library(pdaf_wrapper STATIC ${ALL_PDAF_WRAPPER} ${ALL_USER})
 target_compile_options(pdaf_wrapper BEFORE PUBLIC -fPIC)
 
 

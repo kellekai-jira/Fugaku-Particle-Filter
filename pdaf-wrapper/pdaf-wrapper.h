@@ -6,15 +6,21 @@
  *      Author: friese
  */
 
-#ifndef PDAF_H_
-#define PDAF_H_
+#ifndef PDAF_WRAPPER_H_
+#define PDAF_WRAPPER_H_
 #include <stdio.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void cwrapper_init_pdaf(const int * param_dim_state, const int * param_ensemble_size, const int * param_total_steps);
+// TODO: choose better names!
+// TODO: pass parameters by value better?
+void cwrapper_init_user(const int * param_total_steps);
+void cwrapper_init_pdaf(const int * param_dim_state, const int * param_dim_state_p, const int * param_ensemble_size);
+void cwrapper_assimilate_pdaf();
 void cwrapper_PDAF_deallocate();
+
+// old, TODO: remove, also remove from f90 file.
 void cwrapper_PDAF_get_state(int * doexit, const int * dim_state_analysis, double * state_analysis[], int * status);
 void cwrapper_PDFA_put_state(const int * dim_state_background, const double * state_background[], int * status);
 
@@ -23,4 +29,4 @@ void cwrapper_PDFA_put_state(const int * dim_state_background, const double * st
 #endif
 
 
-#endif /* PDAF_H_ */
+#endif /* PDAF_WRAPPER_H_ */

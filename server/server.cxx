@@ -38,7 +38,7 @@
 
 
 extern int ENSEMBLE_SIZE;
-extern int MAX_TIMESTAMP;
+extern int MAX_TIMESTAMP;  // refactor to total_steps as it is named in pdaf.
 
 int ENSEMBLE_SIZE = 5;
 int MAX_TIMESTAMP = 5;

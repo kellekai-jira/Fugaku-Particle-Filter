@@ -1,12 +1,24 @@
 ! TODO: take the dummy model or maybe even others to init parallel!
-SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_ensemble_size, param_total_steps) BIND(C,name='cwrapper_init_pdaf')
+SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble_size) BIND(C,name='cwrapper_init_pdaf')
   USE iso_c_binding
 
+  USE mod_assimilation, &
+    ONLY: dim_state_p, dim_state, dim_ens
   IMPLICIT NONE
 
-  INTEGER(kind=C_INT), intent(in) :: param_dim_state
-  INTEGER(kind=C_INT), intent(in) :: param_ensemble_size
-  INTEGER(kind=C_INT), intent(in) :: param_total_steps
+  INTEGER(kind=C_INT), intent(in) :: param_dim_state     ! Global state dimension
+  INTEGER(kind=C_INT), intent(in) :: param_dim_state_p   ! Local state dimension
+  INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
+
+
+
+  ! *** Define state dimension ***
+  dim_state   = param_dim_state    ! Global state dimension
+  dim_state_p = param_dim_state_p  ! Local state dimension
+
+  dim_ens = param_ensemble_size
+
+
 
   ! Revise parallelization for ensemble assimilation
   CALL init_parallel_pdaf(0, 1)
@@ -20,6 +32,17 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_ensemble_size, param_total_
   ! TODO: also init parallel
 END SUBROUTINE
 
+SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user')
+  USE iso_c_binding
+
+  USE mod_model, &
+    ONLY: total_steps
+  IMPLICIT NONE
+
+  INTEGER(kind=C_INT), intent(in) :: param_total_steps     ! total steps
+  total_steps = param_total_steps
+
+END SUBROUTINE
 
 SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
   USE iso_c_binding
@@ -69,6 +92,20 @@ SUBROUTINE my_collect_state(dim, state)
   state(:) = collect_state_from(:)
 
 END SUBROUTINE my_collect_state
+
+
+SUBROUTINE cwrapper_assimilate_pdaf()
+  IMPLICIT NONE
+  CALL assimilate_pdaf()
+END SUBROUTINE
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! old:
 
 
 SUBROUTINE cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, status) BIND(C, name='cwrapper_PDAF_get_state')
