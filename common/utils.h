@@ -6,6 +6,7 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 #include <cassert>
+#include <csignal>
 #include <zmq.h>
 
 #include <mpi.h>
@@ -34,7 +35,7 @@ enum Phase {
 #define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")
 
 
-#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); }
+#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); std::raise(SIGINT); }
 
 //https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
 #if SIZE_MAX == UCHAR_MAX

@@ -124,7 +124,7 @@ struct ServerRankConnection
 // the 2nd message just consists of doubles that will be put into out_values
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, data_request_socket, 0);
+    ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
     D("Received message size = %lu", zmq_msg_size(&msg));
     assert(zmq_msg_size(&msg) == 4 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
@@ -141,10 +141,10 @@ struct ServerRankConnection
       // zero copy is for sending only!
       zmq_msg_init(&msg);
 
-      zmq_msg_recv(&msg, data_request_socket, 0);
+      ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
 
-      D("<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d, nsteps=%d",
-      		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp, nsteps);
+      D("<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d, nsteps=%d (socket=%p)",
+      		zmq_msg_size(&msg), doubles_expected * sizeof(double), *out_current_state_id, *out_timestamp, nsteps, data_request_socket);
 
       assert(zmq_msg_size(&msg) == doubles_expected * sizeof(double));
 
@@ -157,6 +157,7 @@ struct ServerRankConnection
     }
     else if (type == END_SIMULATION)
     { // TODO use zmq cpp for less errors!
+    	printf("Error: Server decided to end this simulation now.\n");
       melissa_finalize();
       // calculate 0 steps now.
       nsteps = 0;
@@ -245,6 +246,7 @@ struct Field {
   }
 
   int getState(double * values) {
+  	int nsteps = -1;
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
     	D("get state, local offset: %lu, send count: %lu", csr->local_vector_offset, csr->send_count);
@@ -255,8 +257,11 @@ struct Field {
     		return 0;
     	}
 
-      return csr->server_rank.receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
+      int nnsteps = csr->server_rank.receive(&values[csr->local_vector_offset], csr->send_count, &current_state_id, &timestamp);
+      assert (nsteps == -1 || nsteps == nnsteps);  // be sure that all send back the same nsteps...
+      nsteps = nnsteps;
     }
+    return nsteps;
   }
 };
 
