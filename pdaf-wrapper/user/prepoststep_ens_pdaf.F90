@@ -10,25 +10,25 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
 ! !DESCRIPTION:
 ! User-supplied routine for PDAF.
 ! Used in the filters: SEIK/EnKF/LSEIK/ETKF/LETKF/ESTKF/LESTKF
-! 
+!
 ! The routine is called for global filters (e.g. SEIK)
 ! before the analysis and after the ensemble transformation.
 ! For local filters (e.g. LSEIK) the routine is called
 ! before and after the loop over all local analysis
 ! domains.
-! The routine provides full access to the state 
+! The routine provides full access to the state
 ! estimate and the state ensemble to the user.
-! Thus, user-controlled pre- and poststep 
-! operations can be performed here. For example 
+! Thus, user-controlled pre- and poststep
+! operations can be performed here. For example
 ! the forecast and the analysis states and ensemble
-! covariance matrix can be analyzed, e.g. by 
-! computing the estimated variances. 
+! covariance matrix can be analyzed, e.g. by
+! computing the estimated variances.
 ! For the offline mode, this routine is the place
 ! in which the writing of the analysis ensemble
 ! can be performed.
 !
-! If a user considers to perform adjustments to the 
-! estimates (e.g. for balances), this routine is 
+! If a user considers to perform adjustments to the
+! estimates (e.g. for balances), this routine is
 ! the right place for it.
 !
 ! Implementation for the 2D offline example
@@ -112,7 +112,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
 
   ! Initialize numbers
   rmserror_est  = 0.0
-  invdim_ens    = 1.0 / REAL(dim_ens)  
+  invdim_ens    = 1.0 / REAL(dim_ens)
   invdim_ensm1  = 1.0 / REAL(dim_ens - 1)
 
 
@@ -164,7 +164,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
      ! On PE 0 init variance directly
      variance(1 : dim_p) = variance_p(1 : dim_p)
 
-     ! Receive part of variance field from PEs > 0 into 
+     ! Receive part of variance field from PEs > 0 into
      ! correct part of global variance
 
      off_p = 0
@@ -177,7 +177,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
         CALL MPI_recv(variance(1 + off_p), nx_p*ny, &
              MPI_DOUBLE_PRECISION, i - 1, i - 1, COMM_filter, MPIstatus, MPIerr)
      END DO
-      
+
   END IF PE0_a
 
   DEALLOCATE(variance_p)
@@ -206,7 +206,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
        'RMS error according to sampled variance: ', rmserror_est
   END IF
 
- 
+
 ! *******************
 ! *** File output ***
 ! *******************
@@ -284,7 +284,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
            WRITE (ensstr, '(i2.2)') member
 
            OPEN(11, file = 'ens_'//TRIM(ensstr)//'_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
- 
+
            DO i = 1, ny
               WRITE (11, *) field(i, :)
            END DO
@@ -325,7 +325,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
            off_p = off_p + nx_p*ny
 
         END DO
-     
+
         ! *** Now write analysis state estimate ***
 
         DO j = 1, nx
@@ -333,7 +333,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
         END DO
 
         OPEN(11, file = 'state_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
- 
+
         DO i = 1, ny
            WRITE (11, *) field(i, :)
         END DO

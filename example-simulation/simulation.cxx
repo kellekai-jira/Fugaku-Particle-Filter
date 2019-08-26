@@ -57,30 +57,33 @@ int main(int argc, char * args[])
 	melissa_init("variableX",
 			local_vect_size,
 			MPI_COMM_WORLD);  // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
-	bool timestepping = true;
 	vector<double> state1(local_vect_size);
 	fill(state1.begin(), state1.end(), 0);
 	printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 
 
 	static bool is_first_timestep = true;
-	while (timestepping)
+	int nsteps = 1;
+	do
 	{
-		int i = 0;
-		for (auto it = state1.begin(); it != state1.end(); it++)
+		for (int step = 0; step < nsteps; step++)
 		{
-			*it += offsets[comm_rank] + i;
+			int i = 0;
+			for (auto it = state1.begin(); it != state1.end(); it++)
+			{
+				*it += offsets[comm_rank] + i;
 
-			i++;
+				i++;
+			}
 		}
 
 		// simulate some calculation
 		// If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
 		usleep(10000);
 
-		timestepping = melissa_expose("variableX", state1.data());
+		nsteps = melissa_expose("variableX", state1.data());
 
-		if (timestepping && is_first_timestep)
+		if (nsteps > 0 && is_first_timestep)
 		{
 			printf("First timestep to propagate: %d\n", melissa_get_current_timestamp());
 			is_first_timestep = false;
@@ -91,7 +94,7 @@ int main(int argc, char * args[])
 
 		// file output of allways ensemble member 0
 		// TODO: maybe move this functionality into ap?
-		if (timestepping && melissa_get_current_state_id() == 1)
+		if (nsteps > 0 && melissa_get_current_state_id() == 1)
 		{
 			//raise(SIGINT);
 			if (comm_rank == 0)
@@ -128,7 +131,7 @@ int main(int argc, char * args[])
 
 
 		// TODO: print output to see what happens!
-	}
+	} while (nsteps > 0);
 	int ret = MPI_Finalize();
 	assert(ret == MPI_SUCCESS);
 }

@@ -16,8 +16,12 @@ link_libraries(${MPI_LIBRARIES})
 # for compatibility with pdaf makefile....
 SET(CMAKE_Fortran_FLAGS "-fdefault-real-8")
 
-SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -std=f2008  -pedantic  -fbacktrace -Wextra")
+SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
 
+# ext_pdaf is not in the f2008 standard
+add_subdirectory(ext_pdaf)
+
+SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -std=f2008")
 add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
