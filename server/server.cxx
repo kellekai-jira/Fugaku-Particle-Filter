@@ -799,7 +799,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 	{
 		current_nsteps = assimilator->do_update_step();
 
-		if (current_step >= TOTAL_STEPS)
+		if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
 		{
 			end_all_simulations();
 			return true;

@@ -36,7 +36,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 	cwrapper_init_user(&TOTAL_STEPS);
 }
 
-// called if every state was saved.
+// called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
 int PDAFAssimilator::do_update_step()
 {
 	static bool is_first_time = true;
@@ -88,8 +88,9 @@ int PDAFAssimilator::do_update_step()
 			// Something went wrong!
 			D("PDAF get state wants us to exit? 1==%d", doexit);
 			D("PDAF get state status=%d", status);
-			std::raise(SIGINT);
-			exit(1);
+
+			nsteps = -1;
+			break;
 		}
 
 	}
