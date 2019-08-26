@@ -15,7 +15,7 @@
 #include "../pdaf-wrapper/pdaf-wrapper.h"
 
 extern int ENSEMBLE_SIZE;
-extern int MAX_TIMESTAMP;
+extern int TOTAL_STEPS;
 
 PDAFAssimilator::~PDAFAssimilator() {
 	// call to fortran:
@@ -33,7 +33,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 	// TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
 	assert (ENSEMBLE_SIZE <= 9);
 	cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
-	cwrapper_init_user(&MAX_TIMESTAMP);
+	cwrapper_init_user(&TOTAL_STEPS);
 }
 
 // called if every state was saved.

@@ -8,7 +8,7 @@ n_simulation=3
 n_runners=1
 
 ensemble_size=5
-max_timestamp=5
+total_steps=5
 
 ######################################################
 
@@ -33,7 +33,7 @@ rm -f nc.vg.*
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  max_timestamp=$2
+  total_steps=$2
   ensemble_size=$3
   n_server=$4
   n_simulation=$5
@@ -71,7 +71,7 @@ rm output.txt
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$lib_paths \
-  $precommand $server_exe $max_timestamp $ensemble_size &
+  $precommand $server_exe $total_steps $ensemble_size &
 
 sleep 1
 

@@ -9,8 +9,7 @@ n_runners=1
 
 ensemble_size=9
 ensemble_size=3
-max_timestamp=4
-#max_timestamp=8  # TODO: I think totalsteps is not equal max_timestamp...
+total_steps=8  # TODO: I think totalsteps is not equal max_timestamp...
 
 assimilator_type=0 # dummy
 assimilator_type=1 # pdaf
@@ -32,13 +31,16 @@ precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
 rm -f nc.vg.*
 
+rm -f *_ana.txt
+rm -f *_for.txt
+
 #precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --vgdb=yes --vgdb-error=0 --leak-check=full --track-origins=yes --show-reachable=yes"
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  max_timestamp=$2
+  total_steps=$2
   ensemble_size=$3
   n_server=$4
   n_simulation=$5
@@ -69,7 +71,7 @@ killall example_simulation
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$lib_paths \
-  $precommand $server_exe $max_timestamp $ensemble_size $assimilator_type &
+  $precommand $server_exe $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
 

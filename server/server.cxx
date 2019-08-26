@@ -38,10 +38,10 @@
 
 
 extern int ENSEMBLE_SIZE;
-extern int MAX_TIMESTAMP;  // refactor to total_steps as it is named in pdaf.
+extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
 
 int ENSEMBLE_SIZE = 5;
-int MAX_TIMESTAMP = 5;
+int TOTAL_STEPS = 5;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
@@ -64,7 +64,7 @@ size_t IDENTITY_SIZE = 0;
 void * context;
 void * data_response_socket;
 
-int current_timestamp = 0;  // will effectively start at 1.
+int current_step = 0;  // will effectively start at 1.
 int current_nsteps = 1;  // this is important if there are less model task runners than ensemble members. for every model task runner at the beginning an ensemble state will be generated.
 
 int get_due_date() {
@@ -108,7 +108,7 @@ struct SimulationRankConnection {
 		connection_identity = identity;
 	}
 
-	void launch_sub_task(int simu_rank, int state_id) {
+	void launch_sub_task(const int simu_rank, const int state_id) {
 		// get state and send it to the simu rank...
 		assert(connection_identity != NULL);
 
@@ -126,7 +126,7 @@ struct SimulationRankConnection {
 		ZMQ_CHECK(zmq_msg_init_size(&header_msg, 4 * sizeof(int)));
 		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
 		header[0] = state_id;
-		header[1] = current_timestamp;
+		header[1] = current_step;
 		header[2] = CHANGE_STATE;
 		header[3] = current_nsteps;
 		zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
@@ -149,7 +149,7 @@ struct SimulationRankConnection {
 		connection_identity = NULL;
 	}
 
-	void end(int end_flag=END_SIMULATION) {
+	void end(const int end_flag=END_SIMULATION) {
 		// some connection_identities will be 0 if some simulation ranks are connected to another server rank at the moment.
 		if (connection_identity == NULL)
 			return;
@@ -168,7 +168,7 @@ struct SimulationRankConnection {
 
 		int * header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
 		header[0] = -1;
-		header[1] = current_timestamp;
+		header[1] = current_step;
 		header[2] = end_flag;
 		header[3] = 0;  // nsteps
 
@@ -508,7 +508,7 @@ void init_new_timestamp()
 {
 	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
 	// init or finished....
-	assert(current_timestamp == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE * connections);
+	assert(current_step == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE * connections);
 
 	assert(scheduled_sub_tasks.size() == 0);
 	assert(running_sub_tasks.size() == 0);
@@ -518,7 +518,7 @@ void init_new_timestamp()
 	highest_sent_task_id = 0;
 	task_id = 1;
 
-	current_timestamp++;
+	current_step += current_nsteps;
 
 	assert(unscheduled_tasks.size() == 0);
 
@@ -665,7 +665,7 @@ void handle_data_response() {
 		}
 
 		// good timestamp? There are 2 cases: timestamp 0 or good timestamp...
-		assert (simu_timestamp == 0 || simu_timestamp == current_timestamp);
+		assert (simu_timestamp == 0 || simu_timestamp == current_step);
 		// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 
@@ -678,7 +678,7 @@ void handle_data_response() {
 
 
 		D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
-		if (simu_timestamp == current_timestamp)
+		if (simu_timestamp == current_step)
 		{
 			D("storing this timestamp!...");
 			// zero copy is unfortunately for send only. so copy internally...
@@ -799,7 +799,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 	{
 		current_nsteps = assimilator->do_update_step();
 
-		if (current_timestamp >= MAX_TIMESTAMP)
+		if (current_step >= TOTAL_STEPS)
 		{
 			end_all_simulations();
 			return true;
@@ -827,7 +827,7 @@ int main(int argc, char * argv[])
 	check_data_types();
 
 	if (argc >= 2) {
-		MAX_TIMESTAMP = atoi(argv[1]);
+		TOTAL_STEPS = atoi(argv[1]);
 	}
 	if (argc >= 3) {
 		ENSEMBLE_SIZE = atoi(argv[2]);
@@ -836,7 +836,7 @@ int main(int argc, char * argv[])
 		ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
 	}
 
-	assert(MAX_TIMESTAMP > 1);
+	assert(TOTAL_STEPS > 1);
 	assert(ENSEMBLE_SIZE > 0);
 
 
@@ -855,7 +855,7 @@ int main(int argc, char * argv[])
 	zmq_version (&major, &minor, &patch);
 	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
 	D("**server rank = %d", comm_rank);
-	L("Start server for %d timesteps with %d ensemble members", MAX_TIMESTAMP, ENSEMBLE_SIZE);
+	L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS, ENSEMBLE_SIZE);
 
 	// Start sockets:
 	if (comm_rank == 0)
