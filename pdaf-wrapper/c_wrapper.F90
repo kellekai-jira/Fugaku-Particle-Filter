@@ -3,7 +3,7 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
   USE iso_c_binding
 
   USE mod_assimilation, &
-    ONLY: dim_state_p, dim_state, dim_ens
+    ONLY: dim_state_p, dim_state, dim_ens, screen
   IMPLICIT NONE
 
   INTEGER(kind=C_INT), intent(in) :: param_dim_state     ! Global state dimension
@@ -21,13 +21,12 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
 
 
   ! Revise parallelization for ensemble assimilation
-  CALL init_parallel_pdaf(0, 1)
+  screen = 3  ! lots of logs
+  !                       dim_ens, 0 if initialized later.
+  !                          log level (0 - no logs, 3 - lots of logs)
+  CALL init_parallel_pdaf(0, screen)
 
 
-! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
-
-  ! Initialize PDAF
-  CALL init_pdaf()
 
   ! TODO: also init parallel
 END SUBROUTINE
@@ -62,6 +61,11 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
      CALL abort_parallel()
   END IF
 
+
+! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
+  ! Initialize PDAF  ! TODO: dirty to call this here but init_pdaf depends on init_ens and init ens needs nx, ny and nx_p....
+  CALL init_pdaf()
+
 END SUBROUTINE
 
 SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
@@ -83,6 +87,7 @@ real(C_DOUBLE), POINTER :: distribute_state_to(:)
 real(C_DOUBLE), POINTER :: collect_state_from(:)
 end module
 
+! called by get_state
 SUBROUTINE my_distribute_state(dim_p, state_p)
   USE my_state_accessors, &
     only: distribute_state_to
@@ -93,10 +98,20 @@ SUBROUTINE my_distribute_state(dim_p, state_p)
   INTEGER, INTENT(in) :: dim_p           ! local state dimension
   REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
+  integer :: i
+
+
+  write(*,*) '--------- 5 cells distributing state: -----------'
+  do i=1, 5
+        write (*,*) state_p(i)
+  end do
+  write(*,*) '--------- end distributing state: -----------'
+
   distribute_state_to(:) = state_p(:)
 
 END SUBROUTINE my_distribute_state
 
+! called by put_state
 SUBROUTINE my_collect_state(dim_p, state_p)
 
   USE my_state_accessors, &
@@ -109,7 +124,15 @@ SUBROUTINE my_collect_state(dim_p, state_p)
   REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
 
+  integer :: i
+
+
   state_p(:) = collect_state_from(:)
+  write(*,*) '--------- 5 cells collect_from state: -----------'
+  do i=1, 5
+        write (*,*) state_p(i)
+  end do
+  write(*,*) '--------- end collect state: -----------'
 
 END SUBROUTINE my_collect_state
 
@@ -163,7 +186,7 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
   !REAL :: time         ! Model time  TODO: needed?
 
 
-  Print *, "Hello get state!"
+  Print *, "get state!"
 
   !distribute_state_to => state_analysis  ! TODO: maybe this pointersetting is erronous?
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
@@ -221,6 +244,7 @@ SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, statu
        obs_op_f_pdaf, &                ! Obs. operator for full obs. vector for PE-local domain
        init_dim_obs_f_pdaf             ! Get dimension of full obs. vector for PE-local domain
 
+  Print *, "put state!"
 
 
   !collect_state_from => state_background

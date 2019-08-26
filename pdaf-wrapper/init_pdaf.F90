@@ -66,7 +66,7 @@ SUBROUTINE init_pdaf()
 ! **********************************************************
 
 ! *** IO options ***
-  screen      = 2  ! Write screen output (1) for output, (2) add timings
+  !screen      = 2  ! Write screen output (1) for output, (2) add timings
 
 ! *** Filter specific variables
 ! TODO: implement the others! this has to be done on multiple places

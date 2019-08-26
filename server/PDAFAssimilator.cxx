@@ -66,6 +66,7 @@ int PDAFAssimilator::do_update_step()
 			if (status != 0) {
 				// Something went wrong!
 				D("PDAF put state status=%d", status);
+				// TODO: finish clean!
 				std::raise(SIGINT);
 				exit(1);
 			}
@@ -81,8 +82,6 @@ int PDAFAssimilator::do_update_step()
 		int nnsteps = cwrapper_PDAF_get_state(&doexit, &dim, &data, &status);
 		assert(nsteps == nnsteps || nsteps == -1);  // every get state should give the same nsteps!
 		nsteps = nnsteps;
-
-		D("kkkkkk nsteps=%d", nsteps);
 
 		//     ! Check whether forecast has to be performed
 		if (doexit == 1 || status != 0) {

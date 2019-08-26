@@ -81,6 +81,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
      OPEN(11, &
        file = '/home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/inputs_online/ens_'// &
        TRIM(ensstr)//'.txt', status='old')
+     write(*,*) 'load from ', ensstr
 
      ! Read global field
      DO i = 1, ny
@@ -91,8 +92,17 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
      DO j = 1, nx_p
         ens_p(1 + (j-1)*ny : j*ny, member) = field(1:ny, nx_p*mype_model + j)
      END DO
+        write (*, *) 'initing member nx_p, ny, member', nx_p, ny, member
+         write(*,*) '--------- 5 cells init ens: -----------'
+         do j=1, 5
+         write (*,*) ens_p(j,member)
+         end do
+         write(*,*) '--------- end init ens state: -----------'
+
+
 
      CLOSE(11)
+
   END DO
 
 

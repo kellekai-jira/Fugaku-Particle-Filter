@@ -8,7 +8,9 @@ n_simulation=1
 n_runners=1
 
 ensemble_size=9
-max_timestamp=50
+ensemble_size=3
+max_timestamp=4
+#max_timestamp=8  # TODO: I think totalsteps is not equal max_timestamp...
 
 assimilator_type=0 # dummy
 assimilator_type=1 # pdaf
