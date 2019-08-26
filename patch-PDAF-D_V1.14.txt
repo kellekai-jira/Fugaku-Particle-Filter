@@ -1,0 +1,121 @@
+diff --git a/src/PDAF-D_get_state.F90 b/src/PDAF-D_get_state.F90
+index b412699..39579a3 100644
+--- a/src/PDAF-D_get_state.F90
++++ b/src/PDAF-D_get_state.F90
+@@ -25,12 +25,12 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+      U_prepoststep, outflag)
+ 
+ ! !DESCRIPTION:
+-! Interface routine called from the model before the 
++! Interface routine called from the model before the
+ ! forecast of each ensemble state to transfer data
+-! from PDAF to the model.  For the parallelization 
++! from PDAF to the model.  For the parallelization
+ ! this involves transfer from filter PEs to model PEs.\\
+ ! At the beginning of a forecast phase sub-ensembles
+-! are distributed to the model tasks. During the 
++! are distributed to the model tasks. During the
+ ! forecast phase each state vector of a sub-ensemble
+ ! is transferred to the model fields by U\_dist\_state.
+ !
+@@ -64,14 +64,14 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+        mype_model, MPI_STATUS_SIZE
+ 
+   IMPLICIT NONE
+-  
++
+ ! !ARGUMENTS:
+   INTEGER, INTENT(inout) :: steps   ! Flag and number of time steps
+   REAL, INTENT(out)      :: time    ! current model time
+   INTEGER, INTENT(inout) :: doexit  ! Whether to exit from forecasts
+   INTEGER, INTENT(inout) :: outflag ! Status flag
+ 
+-! ! External subroutines 
++! ! External subroutines
+ ! ! (PDAF-internal names, real names are defined in the call to PDAF)
+   EXTERNAL :: U_next_observation, &  ! Routine to provide time step, time and dimension
+                              !   of next observation
+@@ -128,7 +128,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+ 
+         CALL PDAF_timeit(5, 'old')
+      END IF
+-    
++
+      IF (mype_world == 0 .AND. screen > 0) THEN
+         IF (screen >= 2) THEN
+            WRITE (*, '(a, 5x, a, F10.3, 1x, a)') &
+@@ -245,7 +245,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+            FnM: IF (filter_no_model) THEN
+               taskloopB: DO rank = 1, npes_couple - 1
+                  col_frst = all_dis_ens_l(rank) + 1
+-                 col_last = col_frst + all_dim_ens_l(rank) - 1 
++                 col_last = col_frst + all_dim_ens_l(rank) - 1
+ 
+ #ifdef BLOCKING_MPI_EXCHANGE
+                  CALL MPI_Send(eofV(1, col_frst), &
+@@ -276,7 +276,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+            ELSE
+               taskloopC: DO rank = 1, npes_couple - 1
+                  col_frst = all_dis_ens_l(rank + 1) + 1
+-                 col_last = col_frst + all_dim_ens_l(rank + 1) - 1 
++                 col_last = col_frst + all_dim_ens_l(rank + 1) - 1
+ 
+ #ifdef BLOCKING_MPI_EXCHANGE
+                  CALL MPI_Send(eofV(1, col_frst), &
+@@ -332,7 +332,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+ 
+               ! SEEK: Receive central state on model PE 0 of STATETASK
+               ifSEEK4: IF ((.NOT.ensemblefilter) .AND. mype_couple == statetask) THEN
+-                 
++
+                  CALL MPI_RECV(state, dim_p, MPI_REALTYPE, &
+                       0, mype_couple, COMM_couple, MPIstatus, MPIerr)
+                  IF (screen > 2) WRITE (*,*) &
+@@ -352,7 +352,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+ 
+               ! SEEK: Receive central state on model PE 0 of STATETASK
+               ifSEEK2: IF ((.NOT.ensemblefilter) .AND. mype_couple+1 == statetask) THEN
+-                 
++
+                  CALL MPI_RECV(state, dim_p, MPI_REALTYPE, &
+                       0, mype_couple, COMM_couple, MPIstatus, MPIerr)
+                  IF (screen > 2) WRITE (*,*) &
+@@ -362,7 +362,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+ 
+            END IF FnMA
+         END IF subensRA
+-     
++
+         ! *** call timer
+         CALL PDAF_timeit(19, 'old')
+ 
+@@ -395,7 +395,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+   ELSE IF (initevol == 2) THEN
+      ! Routine is called just after the first ensemble member is evolved
+      initevol=0
+-     
++
+   END IF evolinit
+ 
+ 
+@@ -424,7 +424,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+                    WRITE (*,*) 'PDAF: get_state - task: ', task_id, &
+                    ' evolve sub-member ', member
+            ELSE
+-              ! Ensemble filter with fixed error-space basis 
++              ! Ensemble filter with fixed error-space basis
+               ! (Option ONLY for SEIK/LSEIK)
+ 
+               ! set member to maximum
+@@ -487,4 +487,11 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+   doexit = end_forecast
+   outflag = flag
+ 
++  member = member + 1
++  IF (member == local_dim_ens + 1) THEN
++    member = 1
++    ! TODO: epically dirty. now the put state must start!
++  END IF
++
++
+ END SUBROUTINE PDAF_get_state
