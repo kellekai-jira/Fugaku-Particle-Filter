@@ -19,13 +19,14 @@ do
     do
       fn1="ens_0${ens}_step0${step}_$typ.txt"
       echo $fn1:
-      for ens2 in `seq 1 3`;
-      do
+      #for ens2 in `seq 1 3`;
+      #do
+        ens2=$ens
         fn2="ens_0${ens2}_step0${step}_$typ.txt"
         echo $fn2:
 
         diff -sq $fn1 $verification_path/$fn2
-      done
+      #done
     done
   done
 done

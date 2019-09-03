@@ -7,8 +7,7 @@ n_server=1
 n_simulation=1
 n_runners=1
 
-ensemble_size=9
-ensemble_size=3
+ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=8  # TODO: I think totalsteps is not equal max_timestamp...
 
 assimilator_type=0 # dummy
