@@ -4,8 +4,8 @@
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
 n_server=3
-n_simulation=1
-n_runners=1
+n_simulation=4
+n_runners=2
 
 ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...

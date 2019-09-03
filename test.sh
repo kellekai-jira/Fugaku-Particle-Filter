@@ -1,4 +1,4 @@
- #!/bin/bash -x
+#!/bin/bash
 
 echo test with verification from standard model
 
@@ -10,6 +10,21 @@ check="python2 $verification_path/../../testsuite/tests_dummy1D/check.py"
 cd $verification_path
 #mpirun -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
 cd -
+
+rm failed.log
+
+function my_diff {
+  ./diff.py $fn1 $verification_path/$fn2
+  res=$?
+  if [ "$res" != "0" ];
+  then
+    echo ERROR! not identical: $fn1 $verification_path/$fn2 >> failed.log
+    #echo diff:
+    #./diff.py $fn1 $verification_path/$fn2
+    #$check $fn1 $verification_path/
+    exit 1
+  fi
+}
 
 for stepi in `seq 1 9`;
 do
@@ -30,23 +45,28 @@ do
 
         #diff -sq $fn1 $verification_path/$fn2
         #diff -q $fn1 $verification_path/$fn2
-        ./diff.py $fn1 $verification_path/$fn2
-        res=$?
-        if [ "$res" != "0" ];
-        then
-          echo ERROR! not identical: $fn1 $verification_path/$fn2
-          #echo diff:
-          #./diff.py $fn1 $verification_path/$fn2
-          #$check $fn1 $verification_path/
-          exit 1
-        fi
+        my_diff $fn1 $verification_path/$fn2 &
       #done
     done
   done
 done
-# meld ens_03_step06_ana.txt /home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/verification/online_2D_parallelmodel/ens_03_step06_ana.txt
 
+wait
+# meld ens_03_step06_ana.txt /home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/verification/online_2D_parallelmodel/ens_03_step06_ana.txt
+if [[ -f "failed.log" ]];
+then
+  failed=`cat failed.log | wc -l`
+else
+  failed=0
+fi
 echo .
 echo .
 echo ===================================
-echo passed!
+if [ "$failed" == "0" ];
+then
+  echo passed!
+else
+  echo FAILED! ERROR!
+  echo $failed tests failed!
+  echo see failed.log!
+fi
