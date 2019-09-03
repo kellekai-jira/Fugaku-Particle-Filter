@@ -5,6 +5,8 @@ echo test with verification from standard model
 verification_path=/home/friese/workspace/PDAF-D_V1.14/tutorial/verification/online_2D_parallelmodel
 verification_path=/home/friese/workspace/PDAF-D_V1.14/tutorial/online_2D_parallelmodel
 
+check="python2 $verification_path/../../testsuite/tests_dummy1D/check.py"
+
 cd $verification_path
 #mpirun -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
 cd -
@@ -14,7 +16,7 @@ do
   step=`printf '%02d' $((stepi*2))`
   echo .
   echo .
-  for ens in `seq 1 3`;
+  for ens in `seq 1 9`;
   do
     for typ in ana for;
     do
@@ -27,11 +29,15 @@ do
    #     echo $fn2:
 
         #diff -sq $fn1 $verification_path/$fn2
-        diff -q $fn1 $verification_path/$fn2
+        #diff -q $fn1 $verification_path/$fn2
+        ./diff.py $fn1 $verification_path/$fn2
         res=$?
         if [ "$res" != "0" ];
         then
-          echo ERROR! not identical: $fn1 and $verification_path/$fn2
+          echo ERROR! not identical: $fn1 $verification_path/$fn2
+          #echo diff:
+          #./diff.py $fn1 $verification_path/$fn2
+          #$check $fn1 $verification_path/
           exit 1
         fi
       #done
