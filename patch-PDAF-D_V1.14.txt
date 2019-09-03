@@ -1,5 +1,5 @@
 diff --git a/src/PDAF-D_get_state.F90 b/src/PDAF-D_get_state.F90
-index b412699..39579a3 100644
+index b412699..3a0cb5e 100644
 --- a/src/PDAF-D_get_state.F90
 +++ b/src/PDAF-D_get_state.F90
 @@ -25,12 +25,12 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
@@ -18,6 +18,15 @@ index b412699..39579a3 100644
  ! forecast phase each state vector of a sub-ensemble
  ! is transferred to the model fields by U\_dist\_state.
  !
+@@ -52,7 +52,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+        ONLY: PDAF_timeit, PDAF_time_temp
+   USE PDAF_mod_filter, &
+        ONLY: dim_p, dim_eof, dim_ens, local_dim_ens, dim_obs, nsteps, &
+-       step_obs, step, member, subtype_filter, &
++       step_obs, step, member_get, subtype_filter, &
+        ensemblefilter, initevol, epsilon, state, eofV, eofU, &
+        firsttime, end_forecast, screen, flag, dim_lag, sens, &
+        cnt_maxlag, cnt_steps
 @@ -64,14 +64,14 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
         mype_model, MPI_STATUS_SIZE
  
@@ -98,24 +107,156 @@ index b412699..39579a3 100644
    END IF evolinit
  
  
-@@ -424,7 +424,7 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+@@ -404,13 +404,13 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+ ! ********************************************************
+   doevol1: IF (nsteps > 0) THEN
+      IF ((screen > 2) .AND. modelpe .AND. mype_model==0) &
+-          WRITE (*,*) 'PDAF: get_state - Evolve member ', member, &
++          WRITE (*,*) 'PDAF: get_state - Evolve member ', member_get, &
+           'in task ', task_id
+ 
+      ! *** Distribute state fields within model communicators ***
+      IF ((screen > 2) .AND. modelpe .AND. mype_model==0) &
+           WRITE (*,*) 'PDAF: get_state - Distribute state fields ', &
+-          ' in ', task_id, ', member ', member
++          ' in ', task_id, ', member ', member_get
+ 
+      filtertype: IF (ensemblefilter) THEN
+ 
+@@ -419,16 +419,16 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+               ! Dynamic ensemble filter with ensemble forecast
+ 
+               ! distribute ensemble state
+-              CALL U_distribute_state(dim_p, eofV(1:dim_p, member))
++              CALL U_distribute_state(dim_p, eofV(1:dim_p, member_get))
+               IF ((screen > 2) .AND. modelpe .AND. mype_model==0) &
                     WRITE (*,*) 'PDAF: get_state - task: ', task_id, &
-                    ' evolve sub-member ', member
+-                   ' evolve sub-member ', member
++                   ' evolve sub-member ', member_get
             ELSE
 -              ! Ensemble filter with fixed error-space basis 
 +              ! Ensemble filter with fixed error-space basis
                ! (Option ONLY for SEIK/LSEIK)
  
                ! set member to maximum
-@@ -487,4 +487,11 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+-              member=dim_ens_l
++              member_get=dim_ens_l
+ 
+               ! distribute and evolve ensemble mean state
+               CALL U_distribute_state(dim_p, state)
+@@ -446,15 +446,15 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+         central_state = .FALSE.
+         IF (central_state) THEN
+            WRITE (*,*) 'PDAF-NOTICE: EVOLVE ONLY CENTRAL STATE FOR FREE EVOLUTION !!!'
+-           member = dim_eof_l + 1
++           member_get = dim_eof_l + 1
+         END IF
+-        ! For fixed basis SFEK set member to maximum
++        ! For fixed basis SFEK set member_get to maximum
+         IF (subtype_filter == 2 .OR. subtype_filter == 3) THEN
+-           member = dim_eof_l + 1
++           member_get = dim_eof_l + 1
+         END IF
+ 
+         modelpesB: IF (modelpe) THEN
+-           IF ((task_id == statetask) .AND. (member == dim_eof_l + 1)) THEN
++           IF ((task_id == statetask) .AND. (member_get == dim_eof_l + 1)) THEN
+               ! distribute central state
+               CALL U_distribute_state(dim_p, state)
+               IF ((screen > 2) .AND. filterpe) &
+@@ -462,10 +462,10 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
+                    ' evolve central state'
+            ELSE
+               ! distribute ensemble state
+-              CALL U_distribute_state(dim_p, eofV(1:dim_p, member))
++              CALL U_distribute_state(dim_p, eofV(1:dim_p, member_get))
+               IF ((screen > 2) .AND. filterpe) &
+                    WRITE (*,*) 'PDAF: get_state - task: ',task_id, &
+-                   ' evolve sub-member ',member
++                   ' evolve sub-member ',member_get
+            END IF
+         END IF modelpesB
+ 
+@@ -487,4 +487,9 @@ SUBROUTINE PDAF_get_state(steps, time, doexit, U_next_observation, U_distribute_
    doexit = end_forecast
    outflag = flag
  
-+  member = member + 1
-+  IF (member == local_dim_ens + 1) THEN
-+    member = 1
++  member_get = member_get + 1
++  IF (member_get == local_dim_ens + 1) THEN
++    member_get = 1
 +    ! TODO: epically dirty. now the put state must start!
 +  END IF
-+
-+
  END SUBROUTINE PDAF_get_state
+diff --git a/src/PDAF-D_mod_filter.F90 b/src/PDAF-D_mod_filter.F90
+index 184de8d..1bdcf48 100644
+--- a/src/PDAF-D_mod_filter.F90
++++ b/src/PDAF-D_mod_filter.F90
+@@ -20,7 +20,7 @@
+ !
+ ! !MODULE:
+ MODULE PDAF_mod_filter
+-  
++
+ ! !DESCRIPTION:
+ ! This module provides variables shared between the
+ ! subroutines of PDAF.
+@@ -38,7 +38,7 @@ MODULE PDAF_mod_filter
+ 
+ ! !PUBLIC DATA MEMBERS:
+   INTEGER :: dim_eof       ! Rank (number of columns of eofV in SEEK)
+-  INTEGER :: dim_ens       ! Ensemble size 
++  INTEGER :: dim_ens       ! Ensemble size
+   INTEGER :: rank          ! Rank of initial covariance matrix
+   INTEGER :: dim_p         ! State dimension for PE-local domain
+   INTEGER :: dim_bias_p=0  ! Dimension of bias vector
+@@ -50,28 +50,28 @@ MODULE PDAF_mod_filter
+                            ! (1) SEIK  (Pham et al., 1998b)
+                            ! (2) EnKF  (Evensen, 1994)
+                            ! (3) LSEIK (Nerger et al., 2007)
+-                           ! (4) ETKF  (Bishop et al., 2001) 
++                           ! (4) ETKF  (Bishop et al., 2001)
+                            !     (ETKF uses symmetric square roots like LETKF)
+                            ! (5) LETKF (Hunt et al., 2007)
+   INTEGER :: subtype_filter  ! Sub-type of Filter
+-                   ! Subtype of SEEK: 
++                   ! Subtype of SEEK:
+                    !     (0) Evolve with finite difference approx to TLM
+                    !     (1) Scaled modes, unit U
+                    !     (2) Fixed basis (V); variable U matrix
+                    !     (3) Fixed covar matrix (V,U kept static)
+                    !     (5) PDAF offline mode
+-                   ! Subtype of SEIK: 
++                   ! Subtype of SEIK:
+                    !     (0) Usual SEIK with mean forecast, new formulation;
+                    !     (1) Usual SEIK with mean forecast, old formulation;
+                    !     (2) Fixed error space basis
+                    !     (3) Fixed state covariance matrix
+                    !     (4) SEIK with ensemble transformation (like ETKF)
+                    !     (5) PDAF offline mode
+-                   ! Subtype of EnKF forecast and update step: 
++                   ! Subtype of EnKF forecast and update step:
+                    !     (0) Mean forecast & representer analysis for large dim_obs;
+                    !     (1) Mean forecast & representer analysis for small dim_obs;
+                    !     (5) PDAF offline mode
+-                   ! Subtype of LSEIK: 
++                   ! Subtype of LSEIK:
+                    !     (0) Mean forecast;
+                    !     (2) Fixed error space basis
+                    !     (3) Fixed state covariance matrix
+@@ -122,6 +122,7 @@ MODULE PDAF_mod_filter
+   INTEGER :: firsttime = 1  ! Are the filter routines called for the first time?
+   INTEGER :: initevol = 1   ! Initialize a new forecast phase?
+   INTEGER :: member = 1     ! Which member of sub-ensemble to evolve
++  INTEGER :: member_get = 1     ! Which member of sub-ensemble to evolve ... used in get to have other scheme than get put get put
+   INTEGER :: nsteps         ! Number of time steps to perform
+   INTEGER :: cnt_steps      ! Number of time steps in current forecast phase
+   INTEGER :: end_forecast   ! Whether to exit the forecasting
+@@ -133,7 +134,7 @@ MODULE PDAF_mod_filter
+   LOGICAL :: observe_ens=.false.  ! Whether (F) to apply H to ensemble mean to compute residual
+                             ! or (T) apply H to X, compute mean of HX and then residual
+   INTEGER :: assim_flag=0   ! (1) if assimilation done at this time step, (0) if not
+-  ! (0): Factor N^-1; (1): Factor (N-1)^-1 - Recommended is 1 for 
++  ! (0): Factor N^-1; (1): Factor (N-1)^-1 - Recommended is 1 for
+   ! a real ensemble filter, 0 is for compatibility with older PDAF versions
+   LOGICAL :: ensemblefilter ! Whether the chosen filter is ensemble-based
+   CHARACTER(len=10) :: filterstr ! String defining the filter type

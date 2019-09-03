@@ -51,6 +51,8 @@ then
 
   precommand=""
 else
+  echo TODO: please add manually the patch if existent!
+  echo '(patch-PDAF....)'
   echo compiling....
   set -e
   cd /home/friese/workspace/melissa-da/build
