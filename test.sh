@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd output
+
 echo test with verification from standard model
 
 verification_path=/home/friese/workspace/PDAF-D_V1.14/tutorial/verification/online_2D_parallelmodel
@@ -14,7 +16,7 @@ cd -
 rm failed.log
 
 function my_diff {
-  ./diff.py $fn1 $verification_path/$fn2
+  ../diff.py $fn1 $verification_path/$fn2
   res=$?
   if [ "$res" != "0" ];
   then
@@ -52,7 +54,9 @@ do
 done
 
 wait
+
 # meld ens_03_step06_ana.txt /home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/verification/online_2D_parallelmodel/ens_03_step06_ana.txt
+
 if [[ -f "failed.log" ]];
 then
   failed=`cat failed.log | wc -l`

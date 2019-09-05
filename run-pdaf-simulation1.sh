@@ -28,6 +28,8 @@ function ctrl_c() {
 
 precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
+mkdir -p output
+cd output
 rm -f nc.vg.*
 
 rm -f *_ana.txt
