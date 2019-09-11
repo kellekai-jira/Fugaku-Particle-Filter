@@ -37,7 +37,7 @@ void Field::calculate_parts(int server_comm_size)
 }
 
 /// Finds the part of the field with the specified simu_rank.
-n_to_m & Field::getPart(int simu_rank)
+Part & Field::getPart(int simu_rank)
 {
 	assert(parts.size() > 0);
 	for (auto part_it = parts.begin(); part_it != parts.end(); part_it++)

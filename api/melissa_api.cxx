@@ -9,7 +9,7 @@
 #include "zmq.h"
 
 #include "../common/messages.h"
-#include "../common/n_to_m.h"
+#include "../common/Part.h"
 
 #include "../common/utils.h"
 
@@ -223,7 +223,7 @@ struct Field {
   size_t local_vect_size;
   std::vector<ConnectedServerRank> connected_server_ranks;
   void initConnections(const std::vector<size_t> &local_vect_sizes) {
-    std::vector<n_to_m> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
+    std::vector<Part> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
       if (part->rank_simu == getCommRank())
@@ -247,6 +247,7 @@ struct Field {
 
   int getState(double * values) {
   	int nsteps = -1;
+  	// TODO: an optimization would be to poll instead of receiving directly. this way we receive first whoever comes first. but as we need to synchronize after it probably does not matter a lot?
     for (auto csr = connected_server_ranks.begin(); csr != connected_server_ranks.end(); ++csr) {
       // receive state parts from every serverrank.
     	D("get state, local offset: %lu, send count: %lu", csr->local_vector_offset, csr->send_count);

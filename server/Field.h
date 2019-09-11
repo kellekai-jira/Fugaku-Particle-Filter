@@ -20,13 +20,13 @@ struct Field {
 
 	size_t local_vect_size;
 	std::vector<size_t> local_vect_sizes_simu;
-	std::vector<n_to_m> parts;
+	std::vector<Part> parts;
 
 	std::set<int> connected_simulation_ranks;
 
 	Field(int simu_comm_size_, size_t ensemble_size_);
 	void calculate_parts(int server_comm_size);
-	n_to_m & getPart(int simu_rank);
+	Part & getPart(int simu_rank);
 
 	size_t globalVectSize();
 };

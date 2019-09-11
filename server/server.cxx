@@ -24,7 +24,7 @@
 #include "Field.h"
 
 #include "../common/messages.h"
-#include "../common/n_to_m.h"
+#include "../common/Part.h"
 #include "../common/utils.h"
 
 #include <time.h>
@@ -73,14 +73,6 @@ int get_due_date() {
 	// low: we might use a bigger data type here...
 	return static_cast<int>(seconds + MAX_SIMULATION_TIMEOUT);
 }
-
-struct Part
-{
-	int rank_simu;
-	size_t local_vector_offset;
-	size_t send_count;
-};
-
 
 struct Task {
 	int state_id;
@@ -176,13 +168,13 @@ struct SimulationRankConnection {
 
 		D("Send end message");
 
-		// but don't delete it. this is done in the message.
+		// but don't delete it. this is done in the zmq_msg_send.
 		connection_identity = NULL;
 	}
 };
 
 
-struct Simulation  // Model process runner
+struct Simulation  // Server perspective of a Model task runner
 {
 	// simulations rank
 	std::map<int, SimulationRankConnection> connected_simulation_ranks;
@@ -241,6 +233,7 @@ typedef std::list<std::shared_ptr<SubTask>> SubTaskList;
 SubTaskList scheduled_sub_tasks;  // could be ordered sets! this prevents us from adding 2 the same!? No would not work as (ordered) sets order by key and not by time of insertion.
 SubTaskList running_sub_tasks;
 SubTaskList finished_sub_tasks;  // TODO: why do we need to store this? actually not needed.
+// TODO: extract fault tolerant n to m code to use it elsewhere?
 
 
 void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
@@ -531,8 +524,6 @@ void check_due_dates() {
 	time_t now;
 	now = time (NULL);
 
-	// state id, simu_id
-	// TODO: replace this pair by another typename!
 	std::set<Task> to_kill;
 
 	for (auto it = scheduled_sub_tasks.begin(); it != scheduled_sub_tasks.end(); it++) {
@@ -595,7 +586,7 @@ void check_kill_requests() {
 				continue;
 			}
 
-			// REM: do not do intelligent killing of other simulations. no worries, their due dates will fail too soon ;)
+			// REM: do not do intelligent killing of other simulations. no worries, their due dates will fail soon too ;)
 			kill_it(t);
 
 			// reschedule directly if possible
@@ -609,7 +600,7 @@ void check_kill_requests() {
 }
 
 void handle_data_response() {
-	// TODO: move to send and receive function as on api side...
+	// TODO: move to send and receive function as on api side... maybe use zproto library?
 	zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
 	zmq_msg_init(&identity_msg);
 	zmq_msg_init(&empty_msg);
@@ -670,7 +661,7 @@ void handle_data_response() {
 
 
 		// Save state part in background_states.
-		n_to_m & part = fields[field_name]->getPart(simu_rank);
+		Part & part = fields[field_name]->getPart(simu_rank);
 		assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
 		D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
 				zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
@@ -939,7 +930,6 @@ int main(int argc, char * argv[])
 			{
 				// Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
 				// propagate all fields to the other server clients on first message receive!
-					D("delme %d %d", comm_rank, comm_size);
 				broadcast_field_information_and_calculate_parts();
 				init_new_timestamp();
 

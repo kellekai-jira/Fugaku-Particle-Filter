@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "../common/n_to_m.h"
+#include "../common/Part.h"
 
 class EnsembleMember
 {
@@ -19,7 +19,7 @@ public:
 	std::vector<double> state_background;
 
 	void set_local_vect_size(int local_vect_size);
-	void store_background_state_part(const n_to_m & part, const double * values);
+	void store_background_state_part(const Part & part, const double * values);
 };
 
 

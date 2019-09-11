@@ -1,10 +1,10 @@
-#include "n_to_m.h"
+#include "Part.h"
 
 
-std::vector<n_to_m> calculate_n_to_m(const int comm_size_server, const std::vector<size_t> &local_vect_sizes_simu)
+std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector<size_t> &local_vect_sizes_simu)
 {
 	size_t comm_size_simu = local_vect_sizes_simu.size();
-  std::vector <n_to_m> parts;
+  std::vector <Part> parts;
   size_t local_vect_sizes_server[comm_size_server];
   size_t global_vect_size = 0;
   for (size_t i = 0; i < comm_size_simu; ++i)
@@ -29,7 +29,7 @@ std::vector<n_to_m> calculate_n_to_m(const int comm_size_server, const std::vect
   parts.push_back({0, 0, 0, 0, 0});
   size_t index_in_simu = 0;
   size_t index_in_server = 0;
-  n_to_m * last = parts.data();
+  Part * last = parts.data();
 
   for (size_t i = 0; i < global_vect_size; i++)
   {
