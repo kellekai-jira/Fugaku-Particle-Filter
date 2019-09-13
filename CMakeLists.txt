@@ -20,8 +20,8 @@ SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -
 
 SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.14 CACHE PATH "Path to PDAF")
 
-# ext_pdaf is not in the f2008 standard
-add_subdirectory(ext_pdaf)
+# pdaf-core is not in the f2008 standard
+add_subdirectory(pdaf-core)
 
 SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -std=f2008")
 add_subdirectory(common)

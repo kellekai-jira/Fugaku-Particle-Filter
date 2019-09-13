@@ -60,7 +60,7 @@ else
   set +e
 fi
 
-source build/install/bin/melissa-da_set_env.sh
+source ../build/install/bin/melissa-da_set_env.sh
 
 sim_exe="$MELISSA_DA_PATH/bin/pdaf-simulation1"
 server_exe="$MELISSA_DA_PATH/bin/melissa_server"
