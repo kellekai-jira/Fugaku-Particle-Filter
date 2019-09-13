@@ -1,7 +1,11 @@
 #!/bin/bash
 
+# TODO: parallelize these testcases? run server on different ports
+
 set -e
-../compile.sh
+cd ..
+./compile.sh
+cd -
 set +e
 
 rm -f log

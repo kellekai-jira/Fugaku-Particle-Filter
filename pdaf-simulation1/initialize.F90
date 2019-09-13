@@ -37,6 +37,7 @@ SUBROUTINE initialize()
 ! *** local variables ***
   INTEGER :: i, j                 ! Counters
   REAL, ALLOCATABLE :: field(:,:) ! GLobal model field
+  CHARACTER(len=256) :: pdaf_path     ! pdaf path, load from environment variable
 
 
 
@@ -82,7 +83,8 @@ SUBROUTINE initialize()
   ALLOCATE(field(ny, nx))
 
   ! Read global model field
-  OPEN(11, file = '/home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/inputs_online/true_initial.txt', status='old')
+  call get_environment_variable( 'PDAF_PATH', pdaf_path )
+  OPEN(11, file = TRIM(pdaf_path)//'/tutorial/inputs_online/true_initial.txt', status='old')
 
   DO i = 1, ny
      READ (11, *) field(i, :)

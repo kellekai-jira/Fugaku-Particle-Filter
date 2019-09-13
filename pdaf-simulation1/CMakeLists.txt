@@ -9,7 +9,6 @@ file(GLOB
 
 
 # PDAF:
-SET(PDAF_PATH /home/friese/workspace/PDAF-D_V1.13.2_melissa)
 target_link_libraries(pdaf-simulation1 gfortran lapack blas m)
 
 # To link against pdaf stuff:

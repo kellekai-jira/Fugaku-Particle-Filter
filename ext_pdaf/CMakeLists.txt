@@ -12,7 +12,6 @@ add_definitions(${MPI_Fortran_COMPILE_FLAGS})
 link_libraries(${MPI_Fortran_LIBRARIES})
 
 
-SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.14 CACHE PATH "Path to PDAF")
 
 file(GLOB
   ALL_PDAF

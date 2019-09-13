@@ -55,6 +55,7 @@ SUBROUTINE init_dim_obs_f_pdaf(step, dim_obs_f)
   REAL, ALLOCATABLE :: obs_p(:)       ! Process-local observation vector
   REAL, ALLOCATABLE :: coords_obs_p(:,:) ! Coordinates of process-local observations
   CHARACTER(len=2) :: stepstr         ! String for time step
+  CHARACTER(len=256) :: pdaf_path     ! pdaf path, load from environment variable
 
 
 ! *********************************************
@@ -76,8 +77,9 @@ SUBROUTINE init_dim_obs_f_pdaf(step, dim_obs_f)
      WRITE (stepstr, '(i2)') step
   END IF
 
+  call get_environment_variable( 'PDAF_PATH', pdaf_path )
   OPEN (12, &
-    file='/home/friese/workspace/PDAF-D_V1.13.2_melissa/tutorial/inputs_online/obs_step'// &
+    file=TRIM(pdaf_path)//'/tutorial/inputs_online/obs_step'// &
     TRIM(stepstr)//'.txt', status='old')
   DO i = 1, ny
      READ (12, *) obs_field(i, :)

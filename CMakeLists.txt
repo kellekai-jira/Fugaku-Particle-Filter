@@ -18,6 +18,8 @@ SET(CMAKE_Fortran_FLAGS "-fdefault-real-8")
 
 SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
 
+SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.14 CACHE PATH "Path to PDAF")
+
 # ext_pdaf is not in the f2008 standard
 add_subdirectory(ext_pdaf)
 

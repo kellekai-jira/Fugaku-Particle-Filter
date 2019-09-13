@@ -1,5 +1,4 @@
 #!/bin/bash
-cd /home/friese/workspace/melissa-da/example-simulation
 
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
@@ -47,14 +46,17 @@ else
   # compile:
   # abort on error!
   set -e
-  ../compile.sh
+  cd ..
+  ./compile.sh
+  cd -
   set +e
 
   echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
 
-lib_paths="/home/friese/workspace/melissa-da/build/install/lib:/home/friese/workspace/melissa/install/lib"
-bin_path="/home/friese/workspace/melissa-da/build/install/bin"
+source ../build/install/bin/melissa-da_set_env.sh
+
+bin_path="$MELISSA_DA_PATH/bin"
 
 server_exe="melissa_server"
 sim_exe="example_simulation"
@@ -70,7 +72,7 @@ sim_exe="$bin_path/$sim_exe"
 rm output.txt
 
 mpirun -n $n_server \
-  -x LD_LIBRARY_PATH=$lib_paths \
+  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
   $precommand $server_exe $total_steps $ensemble_size &
 
 sleep 1
@@ -81,8 +83,8 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   mpirun -n $n_simulation \
-    -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" \
-    -x LD_LIBRARY_PATH=$lib_paths \
+    -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
+    -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
     $precommand $sim_exe &
 
 #LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so mpirun -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/example_simulation &

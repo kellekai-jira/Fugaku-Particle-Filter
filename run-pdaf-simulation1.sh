@@ -1,11 +1,9 @@
 #!/bin/bash
 
 
-  # usage ./run.sh test <n_server> <n_simulation> <n_runners>
-
-n_server=3
-n_simulation=4
-n_runners=2
+n_server=1
+n_simulation=1
+n_runners=1
 
 ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
@@ -56,15 +54,16 @@ else
   echo '(patch-PDAF....)'
   echo compiling....
   set -e
-  cd /home/friese/workspace/melissa-da/build
-  make install
+  cd ..
+  ./compile.sh
   cd -
   set +e
 fi
 
-lib_paths="/home/friese/workspace/melissa-da/build/install/lib:/home/friese/workspace/melissa/install/lib"
-sim_exe="/home/friese/workspace/melissa-da/build/install/bin/pdaf-simulation1"
-server_exe="/home/friese/workspace/melissa-da/build/install/bin/melissa_server"
+source build/install/bin/melissa-da_set_env.sh
+
+sim_exe="$MELISSA_DA_PATH/bin/pdaf-simulation1"
+server_exe="$MELISSA_DA_PATH/bin/melissa_server"
 
 
 killall xterm
@@ -73,7 +72,7 @@ killall example_simulation
 
 
 mpirun -n $n_server \
-  -x LD_LIBRARY_PATH=$lib_paths \
+  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
   $precommand $server_exe $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
@@ -85,8 +84,8 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   mpirun -n $n_simulation \
-    -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" \
-    -x LD_LIBRARY_PATH=$lib_paths \
+    -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
+    -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
     $precommand $sim_exe &
 
 
