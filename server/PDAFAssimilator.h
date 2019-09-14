@@ -15,6 +15,8 @@
 class PDAFAssimilator : public Assimilator {
 private:
 	Field & field;
+
+	void getAllEnsembleMembers();
 public:
 	~PDAFAssimilator();
 	PDAFAssimilator(Field & field);

@@ -18,7 +18,10 @@ enum AssimilatorType {
 };
 
 class Assimilator {
+protected:
+	int nsteps = -1;
 public:
+	// REM: the constructor must init the ensemble! (analysis states!)
 	// called if every state was saved.
 	// TODO: at the moment we do not need those things, but later it might be good to use them to diminish coupling....
 	//void put_part(const Part & part, const double * data);
@@ -29,6 +32,10 @@ public:
 	// returns -1 if it wants to quit.
 	virtual int do_update_step() = 0;
 
+
+	int getNSteps() const {
+		return nsteps;
+	};
 
 	virtual ~Assimilator() = default;
 

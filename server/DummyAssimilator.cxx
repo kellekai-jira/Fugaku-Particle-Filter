@@ -6,10 +6,18 @@
  */
 
 #include "DummyAssimilator.h"
+#include <algorithm>
 
 DummyAssimilator::DummyAssimilator(Field & field_) :
 field(field_)
 {
+	nsteps = 1;
+
+	// otherwise release mode will make problems!
+	for (auto ens_it = field.ensemble_members.begin(); ens_it != field.ensemble_members.end(); ens_it++) {
+		// analysis state is enough:
+		std::fill(ens_it->state_analysis.begin(), ens_it->state_analysis.end(), 0.0);
+	}
 
 }
 
@@ -26,5 +34,6 @@ int DummyAssimilator::do_update_step() {
 		}
 		state_id ++;
 	}
-	return 1;
+
+	return getNSteps();
 }

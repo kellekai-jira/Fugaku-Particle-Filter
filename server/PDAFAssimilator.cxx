@@ -34,46 +34,17 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 	assert (ENSEMBLE_SIZE <= 9);
 	cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
 	cwrapper_init_user(&TOTAL_STEPS);
+	nsteps = -1;
+
+	// init ensemble!
+	getAllEnsembleMembers();
 }
 
-// called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
-int PDAFAssimilator::do_update_step()
+void PDAFAssimilator::getAllEnsembleMembers()
 {
-	static bool is_first_time = true;
-	int nsteps = -1;
 	int doexit;  //    ! Whether to exit forecasting (1=true)
 	int status;  //    ! Status flag for filter routines
-
-	MPI_Barrier(MPI_COMM_WORLD);  // TODO: remove this line!
-	L("Doing update step...\n");
-
-
-	if (is_first_time) {
-		is_first_time = false;
-	}
-	else
-	{
-		//        ! *** PDAF: Send state forecast to filter;                           ***
-		//        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
-		//        ! *** PDAF: Distinct calls due to different name of analysis routine ***
-		// TODO: at the moment we only support estkf!
-		for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
-
-			const int dim = eit->state_background.size();
-			const double * data = eit->state_background.data();
-			cwrapper_PDFA_put_state(&dim, &data, &status);
-
-			if (status != 0) {
-				// Something went wrong!
-				D("PDAF put state status=%d", status);
-				// TODO: finish clean!
-				std::raise(SIGINT);
-				exit(1);
-			}
-		}
-	}
-
-	//     ! *** PDAF: Get state and forecast information (nsteps,time)  ***
+	nsteps = -1;
 	// do this on every ensemble member!:
 	for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
 		const int dim = eit->state_analysis.size();
@@ -94,6 +65,38 @@ int PDAFAssimilator::do_update_step()
 		}
 
 	}
+}
+
+// called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
+int PDAFAssimilator::do_update_step()
+{
+	int status;  //    ! Status flag for filter routines
+
+	MPI_Barrier(MPI_COMM_WORLD);  // TODO: remove this line!
+	L("Doing update step...\n");
+
+
+		//        ! *** PDAF: Send state forecast to filter;                           ***
+		//        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
+		//        ! *** PDAF: Distinct calls due to different name of analysis routine ***
+		// TODO: at the moment we only support estkf!
+		for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
+
+			const int dim = eit->state_background.size();
+			const double * data = eit->state_background.data();
+			cwrapper_PDFA_put_state(&dim, &data, &status);
+
+			if (status != 0) {
+				// Something went wrong!
+				D("PDAF put state status=%d", status);
+				// TODO: finish clean!
+				std::raise(SIGINT);
+				exit(1);
+			}
+		}
+
+	//     ! *** PDAF: Get state and forecast information (nsteps,time)  ***
+	getAllEnsembleMembers();
 	//        ! *** Forecast ensemble states ***
 
 
@@ -103,7 +106,5 @@ int PDAFAssimilator::do_update_step()
 	//           ! *** call time stepper ***
 	//normally: CALL integration(time, nsteps)
 	// but in melissa: done by the model task runners!
-
-
-	return nsteps;
+	return getNSteps();
 }

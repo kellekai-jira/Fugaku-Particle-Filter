@@ -386,6 +386,7 @@ void kill_it(Task t) {
 	scheduled_sub_tasks.remove_if(f);
 
 	// there might be more states scheduled to this runner! these will initiate their own violation and will be rescheduled later ;)
+	// if we would kill just by state id we would need to synchronize the killing (what if we rescheduled already the state on the next and then the kill message is coming..... so we would kill it from the next.....)
 }
 
 /// adds a subtask for each runner rank.
@@ -717,7 +718,7 @@ void handle_data_response() {
 	zmq_msg_close(&data_msg);
 }
 
-// returns true if thw whole assimilation (all time steps) finished
+// returns true if the whole assimilation (all time steps) finished
 bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 	// check if all data was received. If yes: start Update step to calculate next analysis state
 
@@ -795,6 +796,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 //		} else {
 			// get new analysis states from update step
 			current_nsteps = assimilator->do_update_step();
+
 //		}
 
 		if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
@@ -923,11 +925,13 @@ int main(int argc, char * argv[])
 					// propagate all fields to the other server clients on first message receive!
 					D("delme %d %d", comm_rank, comm_size);
 					broadcast_field_information_and_calculate_parts();
+
 					init_new_timestamp();
 
 					// init assimilator as we know the field size now.
 					Field &f = *(fields.begin()->second);
 					assimilator = Assimilator::create(ASSIMILATOR_TYPE, f);
+					current_nsteps = assimilator->getNSteps();
 
 					D("Change Phase");
 					phase = PHASE_SIMULATION;

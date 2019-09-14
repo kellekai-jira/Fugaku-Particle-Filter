@@ -26,6 +26,7 @@ function ctrl_c() {
 
 precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
+rm -rf output
 mkdir -p output
 cd output
 rm -f nc.vg.*
