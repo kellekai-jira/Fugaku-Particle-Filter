@@ -46,11 +46,10 @@ int TOTAL_STEPS = 5;
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
 const int FIELDS_COUNT = 1;  // multiple fields is stupid!
-//const long long MAX_SIMULATION_TIMEOUT = 600;  // 10 min max timeout for simulations.
-const long long MAX_SIMULATION_TIMEOUT = 5;  // 10 min max timeout for simulations.
+const long long MAX_RUNNER_TIMEOUT = 5;  // 10 min max timeout for runner.
 
 const int TAG_NEW_TASK = 42;
-const int TAG_KILL_SIMULATION = 43;
+const int TAG_KILL_RUNNER = 43;
 const int TAG_RANK_FINISHED = 44;
 const int TAG_ALL_FINISHED = 45;
 
@@ -71,19 +70,19 @@ int get_due_date() {
 	time_t seconds;
 	seconds = time (NULL);
 	// low: we might use a bigger data type here...
-	return static_cast<int>(seconds + MAX_SIMULATION_TIMEOUT);
+	return static_cast<int>(seconds + MAX_RUNNER_TIMEOUT);
 }
 
 struct Task {
 	int state_id;
-	int simu_id;
+	int runner_id;
 };
 
 bool operator<(const Task &lhs, const Task &rhs) {
-	return lhs.state_id < rhs.state_id || (lhs.state_id == rhs.state_id && lhs.simu_id < rhs.simu_id);
+	return lhs.state_id < rhs.state_id || (lhs.state_id == rhs.state_id && lhs.runner_id < rhs.runner_id);
 }
 
-std::set<Task> killed;  // when a simulation from this list connects we thus respond with a kill message. if one rank receives a kill message it has to call exit so all simulation ranks are quit.
+std::set<Task> killed;  // when a runner from this list connects we thus respond with a kill message. if one rank receives a kill message it has to call exit so all runner ranks are quit.
 
 
 std::map<std::string, Field*> fields;
@@ -93,15 +92,15 @@ void my_free(void * data, void * hint)
 	free(data);
 }
 
-struct SimulationRankConnection {
+struct RunnerRankConnection {
 	void * connection_identity;
 
-	SimulationRankConnection(void * identity) {
+	RunnerRankConnection(void * identity) {
 		connection_identity = identity;
 	}
 
-	void launch_sub_task(const int simu_rank, const int state_id) {
-		// get state and send it to the simu rank...
+	void launch_sub_task(const int runner_rank, const int state_id) {
+		// get state and send it to the runner rank...
 		assert(connection_identity != NULL);
 
 		zmq_msg_t identity_msg;
@@ -125,13 +124,13 @@ struct SimulationRankConnection {
 		// we do not know when it will really send. send is non blocking!
 
 		zmq_msg_init_data(&data_msg,
-				(fields.begin()->second->ensemble_members.at(state_id).state_analysis.data() + fields.begin()->second->getPart(simu_rank).local_offset_server),
-				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double), NULL, NULL);
+				(fields.begin()->second->ensemble_members.at(state_id).state_analysis.data() + fields.begin()->second->getPart(runner_rank).local_offset_server),
+				fields.begin()->second->getPart(runner_rank).send_count * sizeof(double), NULL, NULL);
 
 		D("-> Server sending %lu bytes for state %d, timestamp=%d",
-				fields.begin()->second->getPart(simu_rank).send_count * sizeof(double),
+				fields.begin()->second->getPart(runner_rank).send_count * sizeof(double),
 				header[0], header[1]);
-		D("local server offset %lu, local simu offset %lu, sendcount=%lu", fields.begin()->second->getPart(simu_rank).local_offset_server, fields.begin()->second->getPart(simu_rank).local_offset_simu, fields.begin()->second->getPart(simu_rank).send_count);
+		D("local server offset %lu, local runner offset %lu, sendcount=%lu", fields.begin()->second->getPart(runner_rank).local_offset_server, fields.begin()->second->getPart(runner_rank).local_offset_runner, fields.begin()->second->getPart(runner_rank).send_count);
 		print_vector(fields.begin()->second->ensemble_members.at(state_id).state_analysis);
 
 		zmq_msg_send(&data_msg, data_response_socket, 0);
@@ -141,8 +140,8 @@ struct SimulationRankConnection {
 		connection_identity = NULL;
 	}
 
-	void end(const int end_flag=END_SIMULATION) {
-		// some connection_identities will be 0 if some simulation ranks are connected to another server rank at the moment.
+	void end(const int end_flag=END_RUNNER) {
+		// some connection_identities will be 0 if some runner ranks are connected to another server rank at the moment.
 		if (connection_identity == NULL)
 			return;
 
@@ -174,59 +173,59 @@ struct SimulationRankConnection {
 };
 
 
-struct Simulation  // Server perspective of a Model task runner
+struct Runner  // Server perspective of a Model task runner
 {
-	// simulations rank
-	std::map<int, SimulationRankConnection> connected_simulation_ranks;
+	// model task runner ranks
+	std::map<int, RunnerRankConnection> connected_runner_ranks;
 
 	void end(int end_flag) {
-		for (auto cs = connected_simulation_ranks.begin(); cs != connected_simulation_ranks.end(); cs++) {
-			D("xxx end connected simulation rank...");
+		for (auto cs = connected_runner_ranks.begin(); cs != connected_runner_ranks.end(); cs++) {
+			D("xxx end connected runer rank...");
 			cs->second.end(end_flag);
 		}
 	}
 
-	~Simulation() {
-		// try to kill remaining simulations if there are still some.
-		end(KILL_SIMULATION);
+	~Runner() {
+		// try to kill remaining runners if there are still some.
+		end(KILL_RUNNER);
 	}
 
 };
 
-// simu_id, Simulation:
-std::map<int, std::shared_ptr<Simulation>> idle_simulations;
+std::map<int, std::shared_ptr<Runner>> idle_runners;
 
 std::set<int> unscheduled_tasks;
 
 // only important on rank 0:
-// if == comm_size we start the update step. is reseted when a simulation is rescheduled!
+// if == comm_size we start the update step. is reseted when a state is rescheduled!
 int finished_ranks = -1;
 
+/// Used to link states to runner id's
 struct NewTask {
-	int simu_id;
+	int runner_id;
 	int state_id;
 	int due_date;
 	int task_id;
 };
 
 
-/// used to transmit new tasks to clients.
+/// used to transmit new tasks to clients. A subtask is the state part whih is sent / expected to be received by this server rank from a single simulation rank
 struct SubTask {
-	int simu_id;
-	int simu_rank;
+	int runner_id;
+	int runner_rank;
 	int state_id;
 	int due_date;
 		// low: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
-	SubTask(NewTask &new_task, int simu_rank_) {
-		simu_id = new_task.simu_id;
-		simu_rank = simu_rank_;
+	SubTask(NewTask &new_task, int runner_rank_) {
+		runner_id = new_task.runner_id;
+		runner_rank = runner_rank_;
 		state_id = new_task.state_id;
 		due_date = new_task.due_date;
 	}
 };
 
 // REM: works as fifo! (that is why we are not using sets here: they do not keep the order.)
-// fifo with tasks that are running, running already on some simulation ranks or not
+// fifo with tasks that are running, running already on some model task runner ranks or not
 // these are checked for the due dates!
 // if we get results for the whole task we remove it from the scheduled_tasks list.
 typedef std::list<std::shared_ptr<SubTask>> SubTaskList;
@@ -238,26 +237,26 @@ SubTaskList finished_sub_tasks;  // TODO: why do we need to store this? actually
 
 void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
 {
-	static int highest_simu_id = 0;
+	static int highest_runner_id = 0;
 	zmq_msg_t msg;
 	zmq_msg_init(&msg);
 	zmq_msg_recv(&msg, configuration_socket, 0);
 	int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-	if (buf[0] == REGISTER_SIMU_ID) {
-		// Register Simu ID
+	if (buf[0] == REGISTER_RUNNER_ID) {
+		// Register runner ID
 		assert(zmq_msg_size(&msg) == sizeof(int));
 
 		zmq_msg_close(&msg);
-		D("Server registering Simu ID %d", buf[1]);
+		D("Server registering Runner ID %d", buf[1]);
 
 		zmq_msg_t msg_reply1, msg_reply2;
 		zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
 
-		// At the moment we request field regustration from simu id 0.
-		int request_register_field =  highest_simu_id == 0 ? 1 : 0;
+		// At the moment we request field regustration from runner id 0. TODO! be fault tollerant during server init too? - acutally we do not want to. faults during init may make it crashing...
+		int request_register_field =  highest_runner_id == 0 ? 1 : 0;
 
 		buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-		buf[0] = highest_simu_id++;  // every simulation gets an other simu id.
+		buf[0] = highest_runner_id++;  // every model task runner gets an other runner id.
 		buf[1] = request_register_field;
 		buf[2] = comm_size;
 		zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
@@ -272,20 +271,20 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
 		assert(fields.size() == 0);  // we accept only one field for now.
 
-		int simu_comm_size = buf[1];
+		int runner_comm_size = buf[1];
 
-		Field *newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
+		Field *newField = new Field(runner_comm_size, ENSEMBLE_SIZE);
 
 		char field_name[MPI_MAX_PROCESSOR_NAME];
 		strcpy(field_name, reinterpret_cast<char*>(&buf[2]));
 		zmq_msg_close(&msg);
-		D("Server registering Field %s, simu_comm_size = %d", field_name, simu_comm_size);
+		D("Server registering Field %s, runner_comm_size = %d", field_name, runner_comm_size);
 
 		assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
-		assert(zmq_msg_size(&msg) == simu_comm_size * sizeof(size_t));
-		memcpy (newField->local_vect_sizes_simu.data(), zmq_msg_data(&msg), simu_comm_size * sizeof(size_t));
+		assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
+		memcpy (newField->local_vect_sizes_runner.data(), zmq_msg_data(&msg), runner_comm_size * sizeof(size_t));
 		zmq_msg_close(&msg);
 
 		// ack
@@ -311,18 +310,18 @@ void broadcast_field_information_and_calculate_parts() {
 	for (size_t i = 0; i < field_count; i++)
 	{
 		char field_name[MPI_MAX_PROCESSOR_NAME];
-		int simu_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the simu_comm_size
+		int runner_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
 		if (comm_rank == 0) {
 			strcpy(field_name, field_it->first.c_str());
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
-			simu_comm_size = field_it->second->local_vect_sizes_simu.size();
-			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
+			runner_comm_size = field_it->second->local_vect_sizes_runner.size();
+			MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:runner_comm_size
 
 			D("local_vect_sizes");
-			print_vector(field_it->second->local_vect_sizes_simu);
+			print_vector(field_it->second->local_vect_sizes_runner);
 
-			MPI_Bcast(field_it->second->local_vect_sizes_simu.data(), simu_comm_size,
-					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_simu
+			MPI_Bcast(field_it->second->local_vect_sizes_runner.data(), runner_comm_size,
+					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_runner
 
 			field_it->second->calculate_parts(comm_size);
 
@@ -330,15 +329,15 @@ void broadcast_field_information_and_calculate_parts() {
 
 		} else {
 			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1: fieldname
-			MPI_Bcast(&simu_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:simu_comm_size
+			MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:runner_comm_size
 
-			Field * newField = new Field(simu_comm_size, ENSEMBLE_SIZE);
+			Field * newField = new Field(runner_comm_size, ENSEMBLE_SIZE);
 
-			MPI_Bcast(newField->local_vect_sizes_simu.data(), simu_comm_size,
-					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_simu
+			MPI_Bcast(newField->local_vect_sizes_runner.data(), runner_comm_size,
+					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_runner
 
 			D("local_vect_sizes");
-			print_vector(newField->local_vect_sizes_simu);
+			print_vector(newField->local_vect_sizes_runner);
 
 			newField->calculate_parts(comm_size);
 
@@ -350,54 +349,54 @@ void broadcast_field_information_and_calculate_parts() {
 /// returns true if could send the sub_task on a connection.
 bool try_launch_subtask(std::shared_ptr<SubTask> &sub_task) {
 	// tries to send this task.
-	auto found_simulation = idle_simulations.find(sub_task->simu_id);
-	if (found_simulation == idle_simulations.end()) {
-		D("could not send: Did not find idle simulation");
+	auto found_runner = idle_runners.find(sub_task->runner_id);
+	if (found_runner == idle_runners.end()) {
+		D("could not send: Did not find idle runner");
 		return false;
 	}
 
-	auto found_rank = found_simulation->second->connected_simulation_ranks.find(sub_task->simu_rank);
-	if (found_rank == found_simulation->second->connected_simulation_ranks.end()) {
+	auto found_rank = found_runner->second->connected_runner_ranks.find(sub_task->runner_rank);
+	if (found_rank == found_runner->second->connected_runner_ranks.end()) {
 		D("could not send: Did not find rank");
 		return false;
 	}
 
-	D("Send after adding subtask! to simu_id %d", sub_task->simu_id);
+	D("Send after adding subtask! to runner_id %d", sub_task->runner_id);
 
-	found_rank->second.launch_sub_task(sub_task->simu_rank, sub_task->state_id);
+	found_rank->second.launch_sub_task(sub_task->runner_rank, sub_task->state_id);
 
-	found_simulation->second->connected_simulation_ranks.erase(found_rank);
-	if (found_simulation->second->connected_simulation_ranks.empty()) {
-		idle_simulations.erase(found_simulation);
+	found_runner->second->connected_runner_ranks.erase(found_rank);
+	if (found_runner->second->connected_runner_ranks.empty()) {
+		idle_runners.erase(found_runner);
 	}
 
 	return true;
 }
 
 void kill_it(Task t) {
-	L("killing state %d simu %d", t.state_id, t.simu_id);
+	L("killing state %d runner %d", t.state_id, t.runner_id);
 	unscheduled_tasks.insert(t.state_id);
-	idle_simulations.erase(t.simu_id);
+	idle_runners.erase(t.runner_id);
 	killed.emplace(t);
 	auto f = [&t](std::shared_ptr<SubTask> &task) {
-		return task->state_id == t.state_id && task->simu_id == t.simu_id;
+		return task->state_id == t.state_id && task->runner_id == t.runner_id;
 	};
 	running_sub_tasks.remove_if(f);
 	finished_sub_tasks.remove_if(f);
 	scheduled_sub_tasks.remove_if(f);
 
-	// there might be more states scheduled to this simulation! these will initiate their own violation and will be rescheduled later ;)
+	// there might be more states scheduled to this runner! these will initiate their own violation and will be rescheduled later ;)
 }
 
-/// adds a subtask for each simulation rank.
+/// adds a subtask for each runner rank.
 // either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
 void add_sub_tasks(NewTask &new_task) {
 	assert(unscheduled_tasks.erase(new_task.state_id) == 1);
-	auto &csr = fields.begin()->second->connected_simulation_ranks;
-	assert(csr.size() > 0);  // connectd simulation ranks must be initialized...
+	auto &csr = fields.begin()->second->connected_runner_ranks;
+	assert(csr.size() > 0);  // connectd runner ranks must be initialized...
 	for (auto it = csr.begin(); it != csr.end(); it++){
 		std::shared_ptr<SubTask> sub_task (new SubTask(new_task, *it));
-		L("Adding subtask for simu rank %d", *it);
+		L("Adding subtask for runner rank %d", *it);
 
 		if (try_launch_subtask(sub_task)) {
 			running_sub_tasks.push_back(sub_task);
@@ -409,14 +408,14 @@ void add_sub_tasks(NewTask &new_task) {
 
 /// schedules a new task on a model task runner and tries to run it.
 static int task_id = 1; //low: aftrer each update step one could reset the task id and also the highest sent task id and so on to never get overflows!
-bool schedule_new_task(int simu_id)
+bool schedule_new_task(int runner_id)
 {
 	assert(comm_rank == 0);
 	if (unscheduled_tasks.size() > 0) {
 		task_id++;
 		int state_id = *(unscheduled_tasks.begin());
 
-		NewTask new_task({simu_id, state_id, get_due_date(), task_id});
+		NewTask new_task({runner_id, state_id, get_due_date(), task_id});
 
 		L("Schedule task with task id %d", task_id);
 
@@ -466,13 +465,13 @@ void check_schedule_new_tasks()
 		// REM: we assume that we receive new_task messages in the right order! This is done by ISend on rank 0 and the wait all behind ;)
 		auto f = [&new_task] (std::shared_ptr<SubTask> st) {
 			if (st->state_id == new_task.state_id) {
-				bool is_new = killed.emplace(Task({st->state_id, st->simu_id})).second;
+				bool is_new = killed.emplace(Task({st->state_id, st->runner_id})).second;
 				if (is_new) {
-					L("The state %d was before scheduled on simu id %d as we reschedule now we know that this simuid was killed.", st->state_id, st->simu_id);
+					L("The state %d was before scheduled on runner id %d as we reschedule now we know that this runnerid was killed.", st->state_id, st->runner_id);
 					// REM: not necessary to resend. rank0 should already know it from its own!
 					unscheduled_tasks.insert(st->state_id);
-					idle_simulations.erase(st->simu_id);
-					killed.insert(Task({st->state_id, st->simu_id}));
+					idle_runners.erase(st->runner_id);
+					killed.insert(Task({st->state_id, st->runner_id}));
 				}
 				return true;
 			} else {
@@ -489,17 +488,17 @@ void check_schedule_new_tasks()
 }
 
 
-void end_all_simulations()
+void end_all_runners()
 {
-	for (auto simu_it = idle_simulations.begin(); simu_it != idle_simulations.end(); simu_it++)
+	for (auto runner_it = idle_runners.begin(); runner_it != idle_runners.end(); runner_it++)
 	{
-		simu_it->second->end(END_SIMULATION);
+		runner_it->second->end(END_RUNNER);
 	}
 }
 
 void init_new_timestamp()
 {
-	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
+	size_t connections = fields.begin()->second->connected_runner_ranks.size();
 	// init or finished....
 	assert(current_step == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE * connections);
 
@@ -528,12 +527,12 @@ void check_due_dates() {
 
 	for (auto it = scheduled_sub_tasks.begin(); it != scheduled_sub_tasks.end(); it++) {
 		if (now > (*it)->due_date) {
-			to_kill.emplace(Task({(*it)->state_id, (*it)->simu_id}));
+			to_kill.emplace(Task({(*it)->state_id, (*it)->runner_id}));
 		}
 	}
 	for (auto it = running_sub_tasks.begin(); it != running_sub_tasks.end(); it++) {
 		if (now > (*it)->due_date) {
-			to_kill.emplace(Task({(*it)->state_id, (*it)->simu_id}));
+			to_kill.emplace(Task({(*it)->state_id, (*it)->runner_id}));
 		}
 	}
 
@@ -543,25 +542,25 @@ void check_due_dates() {
 
 
 	for (auto it = to_kill.begin(); it != to_kill.end(); it++) {
-		L("Due date passed for state id %d , simu_id %d at %llu s ", it->state_id, it->simu_id, now);
+		L("Due date passed for state id %d , runner_id %d at %llu s ", it->state_id, it->runner_id, now);
 
 		kill_it(*it);
 
 		if (comm_rank == 0) {
 			// reschedule directly if possible
-			if (idle_simulations.size() > 0) {
+			if (idle_runners.size() > 0) {
 				L("Rescheduling after due date violation detected by rank 0");
-				// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear simulations that are still scheduled or running on the broken simu id...
-				schedule_new_task(idle_simulations.begin()->first);
+				// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear runners that are still scheduled or running on the broken runner id...
+				schedule_new_task(idle_runners.begin()->first);
 			}
 
 		} else {
-			// Send to rank 0 that the simulation that calcultated this state is to kill
+			// Send to rank 0 that the runner that calcultated this state is to kill
 
 			L("Sending kill request to rank 0");
 
-			int buf[2] = { it->state_id, it->simu_id};
-			MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_SIMULATION, MPI_COMM_WORLD);
+			int buf[2] = { it->state_id, it->runner_id};
+			MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER, MPI_COMM_WORLD);
 			L("Finished kill request to rank 0");
 		}
 	}
@@ -572,13 +571,13 @@ void check_kill_requests() {
 	for (int detector_rank = 1; detector_rank < comm_size; detector_rank++)
 	{
 		int received;
-		MPI_Iprobe(detector_rank, TAG_KILL_SIMULATION, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
+		MPI_Iprobe(detector_rank, TAG_KILL_RUNNER, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
 		if (received)
 		{
 			int buf[2];
-			MPI_Recv(buf, 2, MPI_INT, detector_rank, TAG_KILL_SIMULATION, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(buf, 2, MPI_INT, detector_rank, TAG_KILL_RUNNER, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			Task t({buf[0], buf[1]});
-			L("Got state_id to kill... %d, killing simu_id %d", t.state_id, t.simu_id);
+			L("Got state_id to kill... %d, killing runner_id %d", t.state_id, t.runner_id);
 			bool is_new = killed.emplace(t).second;
 			if (!is_new) {
 				// don't kill it a second time!
@@ -586,14 +585,14 @@ void check_kill_requests() {
 				continue;
 			}
 
-			// REM: do not do intelligent killing of other simulations. no worries, their due dates will fail soon too ;)
+			// REM: do not do intelligent killing of other runners. no worries, their due dates will fail soon too ;)
 			kill_it(t);
 
 			// reschedule directly if possible
-			if (idle_simulations.size() > 0) {
+			if (idle_runners.size() > 0) {
 				L("Rescheduling after due date violation detected by detector_rank %d", detector_rank);
-				// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear simulations that are still scheduled or running on the broken simu id...
-				schedule_new_task(idle_simulations.begin()->first);
+				// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear runners that are still scheduled or running on the broken runner id...
+				schedule_new_task(idle_runners.begin()->first);
 			}
 		}
 	}
@@ -625,27 +624,27 @@ void handle_data_response() {
 
 	assert(zmq_msg_size(&header_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
 	int * header_buf = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
-	int simu_id = header_buf[0];
-	int simu_rank = header_buf[1];
-	int simu_state_id = header_buf[2];  // = ensemble_member_id;
-	int simu_timestamp = header_buf[3];
+	int runner_id = header_buf[0];
+	int runner_rank = header_buf[1];
+	int runner_state_id = header_buf[2];  // = ensemble_member_id;
+	int runner_timestamp = header_buf[3];
 	char field_name[MPI_MAX_PROCESSOR_NAME];
 	strcpy(field_name, reinterpret_cast<char*>(&header_buf[4]));
 
-	// good simu_rank, good state id?
-	auto running_sub_task = std::find_if(running_sub_tasks.begin(), running_sub_tasks.end(), [simu_id, simu_rank, simu_state_id](std::shared_ptr<SubTask> &st){
-		return st->simu_id == simu_id && st->state_id == simu_state_id && st->simu_rank == simu_rank;
+	// good runner_rank, good state id?
+	auto running_sub_task = std::find_if(running_sub_tasks.begin(), running_sub_tasks.end(), [runner_id, runner_rank, runner_state_id](std::shared_ptr<SubTask> &st){
+		return st->runner_id == runner_id && st->state_id == runner_state_id && st->runner_rank == runner_rank;
 	});
 
-	SimulationRankConnection csr(identity);
-	auto found = std::find_if(killed.begin(), killed.end(), [simu_id] (Task p) {
-		return p.simu_id == simu_id;
+	RunnerRankConnection csr(identity);
+	auto found = std::find_if(killed.begin(), killed.end(), [runner_id] (Task p) {
+		return p.runner_id == runner_id;
 	});
 	if (found != killed.end()) {
-		L("Ending simulation killed by timeout violation simu_id=%d", simu_id);
-		csr.end(KILL_SIMULATION);
+		L("Ending Model Task Runner killed by timeout violation runner=%d", runner_id);
+		csr.end(KILL_RUNNER);
 	} else {
-		assert(simu_timestamp == 0 || running_sub_task != running_sub_tasks.end());
+		assert(runner_timestamp == 0 || running_sub_task != running_sub_tasks.end());
 
 		// This is necessary if a task was finished on rank 0. then it crashes on another rank. so rank 0 needs to undo this!
 		if (running_sub_task != running_sub_tasks.end()) {
@@ -656,24 +655,24 @@ void handle_data_response() {
 		}
 
 		// good timestamp? There are 2 cases: timestamp 0 or good timestamp...
-		assert (simu_timestamp == 0 || simu_timestamp == current_step);
+		assert (runner_timestamp == 0 || runner_timestamp == current_step);
 		// we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 
 		// Save state part in background_states.
-		Part & part = fields[field_name]->getPart(simu_rank);
+		Part & part = fields[field_name]->getPart(runner_rank);
 		assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(double));
-		D("<- Server received %lu/%lu bytes of %s from Simulation id %d, simulation rank %d, state id %d, timestamp=%d",
-				zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, simu_id, simu_rank, simu_state_id, simu_timestamp);
+		D("<- Server received %lu/%lu bytes of %s from runner id %d, runner rank %d, state id %d, timestamp=%d",
+				zmq_msg_size(&data_msg), part.send_count * sizeof(double), field_name, runner_id, runner_rank, runner_state_id, runner_timestamp);
 		D("local server offset %lu, sendcount=%lu", part.local_offset_server, part.send_count);
 
 
 		D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(&data_msg))[0]);
-		if (simu_timestamp == current_step)
+		if (runner_timestamp == current_step)
 		{
 			D("storing this timestamp!...");
 			// zero copy is unfortunately for send only. so copy internally...
-			fields[field_name]->ensemble_members[simu_state_id].store_background_state_part(part,
+			fields[field_name]->ensemble_members[runner_state_id].store_background_state_part(part,
 					reinterpret_cast<double*>(zmq_msg_data(&data_msg)));
 		}
 
@@ -682,31 +681,31 @@ void handle_data_response() {
 
 
 		// Check if we can answer directly with new data... means starting of a new model task
-		auto found = std::find_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), [simu_id, simu_rank](std::shared_ptr<SubTask> &st){
-			return st->simu_id == simu_id && st->simu_rank == simu_rank;
+		auto found = std::find_if(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), [runner_id, runner_rank](std::shared_ptr<SubTask> &st){
+			return st->runner_id == runner_id && st->runner_rank == runner_rank;
 		});
 
 		if (found != scheduled_sub_tasks.end()) {
 			// found a new task. send back directly!
 
-			D("send after receive! to simu rank %d on simu_id %d", simu_rank, simu_id);
-			csr.launch_sub_task(simu_rank, (*found)->state_id);
-			// don't need to delete from connected simulations as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
+			D("send after receive! to runner rank %d on runner_id %d", runner_rank, runner_id);
+			csr.launch_sub_task(runner_rank, (*found)->state_id);
+			// don't need to delete from connected runner as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
 			running_sub_tasks.push_back(*found);
 			scheduled_sub_tasks.remove(*found);
 
 		} else {
 			// Save connection - basically copy identity pointer...
-			auto &simu = idle_simulations.emplace(simu_id, std::shared_ptr<Simulation>(new Simulation())).first->second;
-			simu->connected_simulation_ranks.emplace(simu_rank, csr);
-			D("save connection simuid %d, simu rank %d", simu_id, simu_rank);
+			auto &runner = idle_runners.emplace(runner_id, std::shared_ptr<Runner>(new Runner())).first->second;
+			runner->connected_runner_ranks.emplace(runner_rank, csr);
+			D("save connection runner_id %d, runner rank %d", runner_id, runner_rank);
 
 			if (comm_rank == 0) {
 				// If we could not start a new model task try to schedule a new one. This is initiated by server rank 0
 				//( no new model task means that at least this rank is finished. so the others will finish soon too as we assum synchronism in the simulaitons)
-				// check if there is no other task running on this simulation
-				if (idle_simulations[simu_id]->connected_simulation_ranks.size() == fields.begin()->second->connected_simulation_ranks.size()) {
-					schedule_new_task(simu_id);
+				// check if there is no other task running on this runner
+				if (idle_runners[runner_id]->connected_runner_ranks.size() == fields.begin()->second->connected_runner_ranks.size()) {
+					schedule_new_task(runner_id);
 				}
 			}
 		}
@@ -722,7 +721,7 @@ void handle_data_response() {
 bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 	// check if all data was received. If yes: start Update step to calculate next analysis state
 
-	size_t connections = fields.begin()->second->connected_simulation_ranks.size();
+	size_t connections = fields.begin()->second->connected_runner_ranks.size();
 
 	bool finished;
 	if (comm_rank == 0) {
@@ -760,7 +759,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 		// rank != 0:
 		finished = false;
 
-		// REM: we need to synchronize when we finish as otherwise processes are waiting in the mpi barrier to do the update step while still some ensemble members need to be repeated due to failing simulations.
+		// REM: we need to synchronize when we finish as otherwise processes are waiting in the mpi barrier to do the update step while still some ensemble members need to be repeated due to failing runner.
 
 		// would this rank finish?
 		bool would_finish = unscheduled_tasks.size() == 0 && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0 &&
@@ -788,23 +787,31 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
 	if (finished)
 	{
-		current_nsteps = assimilator->do_update_step();
+		// @Kai: you probably want to uncomment this if....
+//		if (isRecovering) {
+		// get new analysis states from checkpoint....
+//			FTI_Recover;
+//			isRecovering = false;
+//		} else {
+			// get new analysis states from update step
+			current_nsteps = assimilator->do_update_step();
+//		}
 
 		if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
 		{
-			end_all_simulations();
+			end_all_runners();
 			return true;
 		}
 
 		init_new_timestamp();
 
-		// After update step: rank 0 loops over all simu_id's sending them a new state vector part they have to propagate.
+		// After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
 		if (comm_rank == 0)
 		{
-			for (auto simu_it = idle_simulations.begin(); simu_it != idle_simulations.end(); simu_it++)
+			for (auto runner_it = idle_runners.begin(); runner_it != idle_runners.end(); runner_it++)
 			{
 				L("Rescheduling after update step");
-				schedule_new_task(simu_it->first);
+				schedule_new_task(runner_it->first);
 			}
 		}
 	}
@@ -817,6 +824,7 @@ int main(int argc, char * argv[])
 {
 	check_data_types();
 
+	// Read in configuration from command line
 	if (argc >= 2) {
 		TOTAL_STEPS = atoi(argv[1]);
 	}
@@ -827,21 +835,18 @@ int main(int argc, char * argv[])
 		ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
 	}
 
+
 	assert(TOTAL_STEPS > 1);
 	assert(ENSEMBLE_SIZE > 0);
 
-
-
 	MPI_Init(NULL, NULL);
-	std::shared_ptr<Assimilator> assimilator;
-	context = zmq_ctx_new ();
-
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-
 	// Get the rank of the process
 	MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
-	void * configuration_socket = NULL;
 
+	std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
+
+	context = zmq_ctx_new ();
 	int major, minor, patch;
 	zmq_version (&major, &minor, &patch);
 	D("Current 0MQ version is %d.%d.%d", major, minor, patch);
@@ -849,11 +854,12 @@ int main(int argc, char * argv[])
 	L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS, ENSEMBLE_SIZE);
 
 	// Start sockets:
+	void * configuration_socket = NULL;
 	if (comm_rank == 0)
 	{
 		configuration_socket = zmq_socket(context, ZMQ_REP);
 		const char * configuration_socket_addr = "tcp://*:4000";
-		int rc = zmq_bind(configuration_socket, configuration_socket_addr);  // to be put into MELISSA_SERVER_MASTER_NODE on simulation start
+		int rc = zmq_bind(configuration_socket, configuration_socket_addr);  // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
 		L("Configuration socket listening on port %s", configuration_socket_addr);
 		ZMQ_CHECK(rc);
 		assert(rc == 0);
@@ -873,6 +879,7 @@ int main(int argc, char * argv[])
 	MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
 			data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);
 
+	// Server main loop:
 	while (true)
 	{
 		usleep(10); // to chill down the processor! TODO remove when measuring!
@@ -885,14 +892,14 @@ int main(int argc, char * argv[])
 		};
 		if (comm_rank == 0)
 		{
-			// Check for killed simulations... (due date violation)
+			// Check for killed runners... (due date violation)
 			// poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
 			ZMQ_CHECK(zmq_poll (items, 2, 0));
 		}
 		else
 		{
 			//ZMQ_CHECK(zmq_poll (items, 1, -1));
-			// Check for new tasks to schedule and killed simulations so do not block on polling (due date violation)...
+			// Check for new tasks to schedule and killed runners so do not block on polling (due date violation)...
 			ZMQ_CHECK(zmq_poll (items, 1, 0));
 		}
 		/* Returned events will be stored in items[].revents */
@@ -940,28 +947,31 @@ int main(int argc, char * argv[])
 				D("Change Phase");
 				phase = PHASE_SIMULATION;
 			}
+			// @Kai: now we got all the field information (which dimensions it will have. So now we cann initialize the fti stuff on the server side if isRecovering....
+			// FTI_Protect....
 		}
 
 		if (phase == PHASE_SIMULATION) {
 // X     if simulation requests work see if work in list. if so launch it. if not save connection
 // X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
 // X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
-// X     check for due dates. if detected: black list (move to killed) simulation + state. send state AND simulatoin to rank0
+// X     check for due dates. if detected: black list (move to killed) runner + state. send state AND runner to rank0
 // X     if finished and did not send yet the highest task id send to rank 0 that we finished.
 // X     check for messages from rank 0 that we finished and if so start update
 //
 //       rank 0:
-// X     if simulatoin request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this simulation. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
+// X     if runner request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this runner. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
 // X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
-// X     check for due dates. if detected: black list simulation and state id. and do the same as if I had a kill message from rank 0: reschedule the state
-// X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all simulations that we finished  and start update
+// X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
+// X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
+
+
+			// check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
+			check_due_dates();
 
 			if (comm_rank == 0) {
 				check_kill_requests();
 			}
-
-			// check if we have to kill some jobs as they did not respond:
-			check_due_dates();
 
 			if (comm_rank != 0) {
 				// check if rank 0 wants us to schedule some new tasks.
@@ -975,20 +985,19 @@ int main(int argc, char * argv[])
 			}
 
 			if (check_finished(assimilator)) {
-				break;  // all simulations finished.
+				break;  // all runners finished.
 			}
 
 
-
-
 		/// REM: Tasks are either unscheduled, scheduled, running or finished.
-			size_t connections = fields.begin()->second->connected_simulation_ranks.size();
+			size_t connections = fields.begin()->second->connected_runner_ranks.size();
 //			L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
 //					unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
 //					scheduled_sub_tasks.size(),
 //					running_sub_tasks.size(),
 //					finished_sub_tasks.size());
 
+			// all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
 			assert(
 					unscheduled_tasks.size() * connections +  // scale on amount of subtasks.
 					scheduled_sub_tasks.size() + running_sub_tasks.size() +

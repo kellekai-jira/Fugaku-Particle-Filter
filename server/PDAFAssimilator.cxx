@@ -56,7 +56,7 @@ int PDAFAssimilator::do_update_step()
 		//        ! *** PDAF: Send state forecast to filter;                           ***
 		//        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
 		//        ! *** PDAF: Distinct calls due to different name of analysis routine ***
-		// TODO: at the moment we only support enkf!
+		// TODO: at the moment we only support estkf!
 		for (auto eit = field.ensemble_members.begin(); eit != field.ensemble_members.end(); eit++) {
 
 			const int dim = eit->state_background.size();

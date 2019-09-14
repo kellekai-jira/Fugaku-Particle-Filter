@@ -23,14 +23,14 @@ void melissa_finalize();
 // zmq context:
 void *context;
 
-int simu_id = -1;
+int runner_id = -1;
 
-const int getSimuId() {
-	assert(simu_id != -1);  // must be inited
-	return simu_id;
+const int getRunnerId() {
+	assert(runner_id != -1);  // must be inited
+	return runner_id;
 }
 
-/// Communicator used for simulation
+/// Communicator used for simulation/Runner
 MPI_Comm comm;
 
 
@@ -38,18 +38,19 @@ MPI_Comm comm;
 std::string fix_port_name(const char * port_name_)
 {
 	std::string port_name(port_name_);
-	char my_port_name[MPI_MAX_PROCESSOR_NAME];
-	melissa_get_node_name(my_port_name, MPI_MAX_PROCESSOR_NAME);
-	size_t found = port_name.find(my_port_name);
+	char my_host_name[MPI_MAX_PROCESSOR_NAME];
+	melissa_get_node_name(my_host_name, MPI_MAX_PROCESSOR_NAME);
+	size_t found = port_name.find(my_host_name);
 	// check if found and if hostname is between tcp://<nodename>:port
-	if (found != std::string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_port_name)] == ':') {
-		port_name = port_name.substr(0, found) + "localhost" + port_name.substr(found + strlen(my_port_name));
+	if (found != std::string::npos && port_name[found-1] == '/' && port_name[found + strlen(my_host_name)] == ':') {
+		port_name = port_name.substr(0, found) + "localhost" + port_name.substr(found + strlen(my_host_name));
 	}
 	return port_name;
 }
 
 /**
  * Returns simulation's rank
+ * is the same as the runner rank.
  */
 int getCommRank()
 {
@@ -60,6 +61,7 @@ int getCommRank()
 
 /**
  * Returns Simulations comm size
+ * is the same as the runner comm size.
  */
 int getCommSize()
 {
@@ -69,10 +71,10 @@ int getCommSize()
 }
 
 
+// One of these exists to abstract the connection to every server rank that needs to be connected with this model task runner rank
 struct ServerRankConnection
 {
   void * data_request_socket;
-
 
   ServerRankConnection(const char * addr_request)
   {
@@ -99,7 +101,7 @@ struct ServerRankConnection
     zmq_msg_t msg_header, msg_data;
     zmq_msg_init_size(&msg_header, 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
     int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_header));
-    header[0] = getSimuId();
+    header[0] = getRunnerId();
     header[1] = getCommRank();
     header[2] = current_state_id;
     header[3] = timestamp;  // is incremented on the server side
@@ -107,8 +109,8 @@ struct ServerRankConnection
     D("sending on socket %p", data_request_socket);
     ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket, ZMQ_SNDMORE));
 
-    D("-> Simulation simuid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %lu bytes",
-    		getSimuId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
+    D("-> Simulation runnerid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %lu bytes",
+    		getRunnerId(), getCommRank(), current_state_id, timestamp, field_name, doubles_to_send * sizeof(double));
     D("values[0]  = %.3f", values[0]);
     D("values[1]  = %.3f", values[1]);
     D("values[5]  = %.3f", values[5]);
@@ -155,16 +157,16 @@ struct ServerRankConnection
       zmq_msg_close(&msg);
       assert_no_more_zmq_messages(data_request_socket);
     }
-    else if (type == END_SIMULATION)
+    else if (type == END_RUNNER)
     { // TODO use zmq cpp for less errors!
-    	printf("Error: Server decided to end this simulation now.\n");
+    	printf("Error: Server decided to end this runner now.\n");
       melissa_finalize();
       // calculate 0 steps now.
       nsteps = 0;
     }
-    else if (type == KILL_SIMULATION)
+    else if (type == KILL_RUNNER)
     {
-    	printf("Error: Server decided that this simulation crashed. So killing it now.\n");
+    	printf("Error: Server decided that this Runner crashed. So killing it now.\n");
     	MPI_Abort(MPI_COMM_WORLD, 1);
     	exit(1);
     }
@@ -226,9 +228,9 @@ struct Field {
     std::vector<Part> parts = calculate_n_to_m(server.comm_size, local_vect_sizes);
     for (auto part=parts.begin(); part != parts.end(); ++part)
     {
-      if (part->rank_simu == getCommRank())
+      if (part->rank_runner == getCommRank())
       {
-        connected_server_ranks.push_back({part->send_count, part->local_offset_simu, ServerRanks::get(part->rank_server)});
+        connected_server_ranks.push_back({part->send_count, part->local_offset_runner, ServerRanks::get(part->rank_server)});
       }
     }
   }
@@ -289,12 +291,12 @@ struct ConfigurationConnection
   }
 
   /// returns true if field registering is requested by the server
-  bool register_simu_id(Server * out_server)
+  bool register_runner_id(Server * out_server)
   {
     zmq_msg_t msg_request, msg_reply;
     zmq_msg_init_size(&msg_request, sizeof(int));
     int * header = reinterpret_cast<int*>(zmq_msg_data(&msg_request));
-    header[0] = REGISTER_SIMU_ID;
+    header[0] = REGISTER_RUNNER_ID;
     ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
 
     zmq_msg_init(&msg_reply);
@@ -302,10 +304,10 @@ struct ConfigurationConnection
     assert(zmq_msg_size(&msg_reply) == 3 * sizeof(int));
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply));
 
-    simu_id = buf[0];
+    runner_id = buf[0];
     bool request_register_field = (buf[1] != 0);
 
-    L("Got simu_id %d. Registering field? %d", simu_id, buf[1]);
+    L("Got runner_id %d. Registering field? %d", runner_id, buf[1]);
 
     out_server->comm_size = buf[2];
     zmq_msg_close(&msg_reply);
@@ -369,10 +371,10 @@ bool first_melissa_init(MPI_Comm comm_)
   bool register_field = false;
   if (getCommRank() == 0) {
     ccon = new ConfigurationConnection();
-    register_field = ccon->register_simu_id(&server);
+    register_field = ccon->register_runner_id(&server);
   }
 
-  MPI_Bcast(&simu_id, 1, MPI_INT, 0, comm);
+  MPI_Bcast(&runner_id, 1, MPI_INT, 0, comm);
 
   MPI_Bcast(&server.comm_size, 1, MPI_INT, 0, comm);
   if (getCommRank() != 0) {
@@ -414,7 +416,6 @@ void melissa_init(const char *field_name,
 
   D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
 
-  // register this simulation id
   if (register_field)
   {
   	// Tell the server which kind of data he has to expect
@@ -456,6 +457,9 @@ int melissa_expose(const char *field_name, double *values)
 
   // Now Send data to the melissa server
   fields[field_name].putState(values, field_name);
+
+  // @Kai: here we could checkpoint the values variable ! using fti. The server than could recover from such a checkpoint.
+
   // and request new data
   int nsteps = fields[field_name].getState(values);
 
@@ -473,7 +477,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
   //sleep(3);
 	MPI_Barrier(comm);
   //sleep(3);
-	D("End Simulation.");
+	D("End Runner.");
   D("server ranks: %lu", ServerRanks::ranks.size());
 
   phase = PHASE_FINAL;

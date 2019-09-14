@@ -19,10 +19,10 @@ struct Field {
 	std::vector<EnsembleMember> ensemble_members;
 
 	size_t local_vect_size;
-	std::vector<size_t> local_vect_sizes_simu;
+	std::vector<size_t> local_vect_sizes_runner;
 	std::vector<Part> parts;
 
-	std::set<int> connected_simulation_ranks;
+	std::set<int> connected_runner_ranks;
 
 	Field(int simu_comm_size_, size_t ensemble_size_);
 	void calculate_parts(int server_comm_size);

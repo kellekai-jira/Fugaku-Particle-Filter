@@ -1,15 +1,15 @@
 #include "Part.h"
 
 
-std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector<size_t> &local_vect_sizes_simu)
+std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector<size_t> &local_vect_sizes_runner)
 {
-	size_t comm_size_simu = local_vect_sizes_simu.size();
+	size_t comm_size_runner = local_vect_sizes_runner.size();
   std::vector <Part> parts;
   size_t local_vect_sizes_server[comm_size_server];
   size_t global_vect_size = 0;
-  for (size_t i = 0; i < comm_size_simu; ++i)
+  for (size_t i = 0; i < comm_size_runner; ++i)
   {
-    global_vect_size += local_vect_sizes_simu[i];
+    global_vect_size += local_vect_sizes_runner[i];
   }
 
   for (int i = 0; i < comm_size_server; ++i)
@@ -27,7 +27,7 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector
   }
 
   parts.push_back({0, 0, 0, 0, 0});
-  size_t index_in_simu = 0;
+  size_t index_in_runner = 0;
   size_t index_in_server = 0;
   Part * last = parts.data();
 
@@ -35,15 +35,15 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector
   {
     bool added_part = false;
 
-    if (index_in_simu > local_vect_sizes_simu[last->rank_simu]-1)
+    if (index_in_runner > local_vect_sizes_runner[last->rank_runner]-1)
     {
       // new part as we cross simulation domain border:
       parts.push_back(*last);
       last = &parts[parts.size()-1];
 
-      last->rank_simu++;
-      last->local_offset_simu = 0;
-      index_in_simu = 0;
+      last->rank_runner++;
+      last->local_offset_runner = 0;
+      index_in_runner = 0;
 
       last->local_offset_server = index_in_server;
       last->send_count = 0;
@@ -63,13 +63,13 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const std::vector
       last->local_offset_server = 0;
       index_in_server = 0;
 
-      last->local_offset_simu = index_in_simu;
+      last->local_offset_runner = index_in_runner;
       last->send_count = 0;
     }
 
     last->send_count++;
 
-    index_in_simu++;
+    index_in_runner++;
     index_in_server++;
   }
 

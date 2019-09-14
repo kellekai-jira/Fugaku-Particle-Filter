@@ -1,5 +1,5 @@
 enum ConfigurationMessageType {
-  REGISTER_SIMU_ID = 0,
+  REGISTER_RUNNER_ID = 0,
   REGISTER_FIELD   = 1
 };
 
@@ -7,8 +7,8 @@ enum ConfigurationMessageType {
 enum DataMessageType {
   CHANGE_STATE   = 0,
   KEEP_STATE     = 1,
-  END_SIMULATION = 2,
-	KILL_SIMULATION = 4
+  END_RUNNER = 2,
+	KILL_RUNNER = 4
 };
 
 
