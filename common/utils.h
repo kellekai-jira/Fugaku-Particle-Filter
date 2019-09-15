@@ -25,12 +25,12 @@ enum Phase
 };
 
 // debug logs:
-#ifndef NDEBUG
+// #ifndef NDEBUG
 #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
 
-#else
+// #else
 #define D(...)
-#endif
+// #endif
 
 // normal logging:
 #define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")

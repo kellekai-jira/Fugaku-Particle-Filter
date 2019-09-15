@@ -1,4 +1,5 @@
 #!/bin/bash -e
+./uncrustify.sh
 ./compile.sh
 ./run-pdaf-simulation1.sh test
 ./test.sh

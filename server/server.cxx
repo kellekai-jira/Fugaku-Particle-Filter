@@ -441,7 +441,8 @@ void kill_task(Task t) {
 /// adds a subtask for each runner rank.
 // either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
 void add_sub_tasks(NewTask &new_task) {
-        assert(unscheduled_tasks.erase(new_task.state_id) == 1);
+        int ret = unscheduled_tasks.erase(new_task.state_id);
+        assert(ret == 1);
         auto &csr = fields.begin()->second->connected_runner_ranks;
         assert(csr.size() > 0);  // connectd runner ranks must be initialized...
         for (auto it = csr.begin(); it != csr.end(); it++)
@@ -493,8 +494,9 @@ bool schedule_new_task(int runner_id)
                           &requests[receiving_rank-1]);
         }
 
-        assert(MPI_SUCCESS == MPI_Waitall(comm_size - 1, requests,
-                                          MPI_STATUSES_IGNORE));
+        int ret = MPI_Waitall(comm_size - 1, requests, MPI_STATUSES_IGNORE);
+        assert(ret == MPI_SUCCESS);
+
 
         return true;
 }
@@ -621,7 +623,7 @@ void check_due_dates() {
 
         for (auto it = to_kill.begin(); it != to_kill.end(); it++)
         {
-                L("Due date passed for state id %d , runner_id %d at %llu s ",
+                L("Due date passed for state id %d , runner_id %d at %lu s ",
                   it->state_id, it->runner_id, now);
 
                 kill_task(*it);
