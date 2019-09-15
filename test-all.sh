@@ -1,4 +1,5 @@
 #!/bin/bash -e
+./compile.sh
 ./run-pdaf-simulation1.sh test
 ./test.sh
 res1=$?

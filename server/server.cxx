@@ -1,6 +1,8 @@
 // TODOS:
 // TODO 1. refactoring
 //   DONE: use zmq cpp?? --> no
+// lower depth of if trees!
+// no long comments
 // TODO 2. error prone ness
 // TODO: check ret values!
 // TODO: heavely test fault tollerance with a good testcase.
@@ -414,36 +416,33 @@ static int task_id = 1; //low: aftrer each update step one could reset the task 
 bool schedule_new_task(int runner_id)
 {
 	assert(comm_rank == 0);
-	if (unscheduled_tasks.size() > 0) {
-		task_id++;
-		int state_id = *(unscheduled_tasks.begin());
-
-		NewTask new_task({runner_id, state_id, get_due_date(), task_id});
-
-		L("Schedule task with task id %d", task_id);
-
-		finished_ranks = 0;
-
-		add_sub_tasks(new_task);
-
-
-		// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
-		MPI_Request requests[comm_size - 1];
-		for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
-		{
-			// REM: MPI_Ssend to be sure that all messages are received!
-			//MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
-			MPI_Isend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD, &requests[receiving_rank-1]);
-		}
-
-		assert(MPI_SUCCESS == MPI_Waitall(comm_size - 1, requests, MPI_STATUSES_IGNORE));
-
-		return true;
-	}
-	else
-	{
+	if (unscheduled_tasks.size() <= 0) {
 		return false;
 	}
+	task_id++;
+	int state_id = *(unscheduled_tasks.begin());
+
+	NewTask new_task({runner_id, state_id, get_due_date(), task_id});
+
+	L("Schedule task with task id %d", task_id);
+
+	finished_ranks = 0;
+
+	add_sub_tasks(new_task);
+
+
+	// Send new scheduled task to all server ranks! This makes sure that everybody receives it!
+	MPI_Request requests[comm_size - 1];
+	for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
+	{
+		// REM: MPI_Ssend to be sure that all messages are received!
+		//MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD);
+		MPI_Isend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, MPI_COMM_WORLD, &requests[receiving_rank-1]);
+	}
+
+	assert(MPI_SUCCESS == MPI_Waitall(comm_size - 1, requests, MPI_STATUSES_IGNORE));
+
+	return true;
 }
 
 /// checks if the server added new tasks... if so tries to run them.
@@ -453,41 +452,41 @@ void check_schedule_new_tasks()
 	int received;
 
 	MPI_Iprobe(0, TAG_NEW_TASK, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
-	if (received)
-	{
-		D("Got task to send...");
+	if (!received)
+		return;
 
-		// we are not finished anymore so resend if we are finished:
+	D("Got task to send...");
 
-		NewTask new_task;
-		MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	// we are not finished anymore so resend if we are finished:
 
-		highest_received_task_id = std::max(new_task.task_id, highest_received_task_id);
+	NewTask new_task;
+	MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		// Remove all tasks with the same id!
-		// REM: we assume that we receive new_task messages in the right order! This is done by ISend on rank 0 and the wait all behind ;)
-		auto f = [&new_task] (std::shared_ptr<SubTask> st) {
-			if (st->state_id == new_task.state_id) {
-				bool is_new = killed.emplace(Task({st->state_id, st->runner_id})).second;
-				if (is_new) {
-					L("The state %d was before scheduled on runner id %d as we reschedule now we know that this runnerid was killed.", st->state_id, st->runner_id);
-					// REM: not necessary to resend. rank0 should already know it from its own!
-					unscheduled_tasks.insert(st->state_id);
-					idle_runners.erase(st->runner_id);
-					killed.insert(Task({st->state_id, st->runner_id}));
-				}
-				return true;
-			} else {
-				return false;
+	highest_received_task_id = std::max(new_task.task_id, highest_received_task_id);
+
+	// Remove all tasks with the same id!
+	// REM: we assume that we receive new_task messages in the right order! This is done by ISend on rank 0 and the wait all behind ;)
+	auto f = [&new_task] (std::shared_ptr<SubTask> st) {
+		if (st->state_id == new_task.state_id) {
+			bool is_new = killed.emplace(Task({st->state_id, st->runner_id})).second;
+			if (is_new) {
+				L("The state %d was before scheduled on runner id %d as we reschedule now we know that this runnerid was killed.", st->state_id, st->runner_id);
+				// REM: not necessary to resend. rank0 should already know it from its own!
+				unscheduled_tasks.insert(st->state_id);
+				idle_runners.erase(st->runner_id);
+				killed.insert(Task({st->state_id, st->runner_id}));
 			}
-		};
+			return true;
+		} else {
+			return false;
+		}
+	};
 
-		scheduled_sub_tasks.remove_if(f);
-		running_sub_tasks.remove_if(f);
-		finished_sub_tasks.remove_if(f);
+	scheduled_sub_tasks.remove_if(f);
+	running_sub_tasks.remove_if(f);
+	finished_sub_tasks.remove_if(f);
 
-		add_sub_tasks(new_task);
-	}
+	add_sub_tasks(new_task);
 }
 
 
@@ -528,16 +527,14 @@ void check_due_dates() {
 
 	std::set<Task> to_kill;
 
-	for (auto it = scheduled_sub_tasks.begin(); it != scheduled_sub_tasks.end(); it++) {
-		if (now > (*it)->due_date) {
-			to_kill.emplace(Task({(*it)->state_id, (*it)->runner_id}));
+	auto check_date = [&now,&to_kill] (std::shared_ptr<SubTask>& it) {
+		if (now > it->due_date) {
+			to_kill.emplace(Task({it->state_id, it->runner_id}));
 		}
-	}
-	for (auto it = running_sub_tasks.begin(); it != running_sub_tasks.end(); it++) {
-		if (now > (*it)->due_date) {
-			to_kill.emplace(Task({(*it)->state_id, (*it)->runner_id}));
-		}
-	}
+	};
+
+	std::for_each(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), check_date);
+	std::for_each(running_sub_tasks.begin(), running_sub_tasks.end(), check_date);
 
 	if (to_kill.size() > 0) {
 		L("Need to redo %lu states", to_kill.size());
@@ -575,28 +572,28 @@ void check_kill_requests() {
 	{
 		int received;
 		MPI_Iprobe(detector_rank, TAG_KILL_RUNNER, MPI_COMM_WORLD, &received, MPI_STATUS_IGNORE);
-		if (received)
-		{
-			int buf[2];
-			MPI_Recv(buf, 2, MPI_INT, detector_rank, TAG_KILL_RUNNER, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			Task t({buf[0], buf[1]});
-			L("Got state_id to kill... %d, killing runner_id %d", t.state_id, t.runner_id);
-			bool is_new = killed.emplace(t).second;
-			if (!is_new) {
-				// don't kill it a second time!
-				L("I already knew this");
-				continue;
-			}
+		if (!received)
+			continue;
 
-			// REM: do not do intelligent killing of other runners. no worries, their due dates will fail soon too ;)
-			kill_task(t);
+		int buf[2];
+		MPI_Recv(buf, 2, MPI_INT, detector_rank, TAG_KILL_RUNNER, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		Task t({buf[0], buf[1]});
+		L("Got state_id to kill... %d, killing runner_id %d", t.state_id, t.runner_id);
+		bool is_new = killed.emplace(t).second;
+		if (!is_new) {
+			// don't kill it a second time!
+			L("I already knew this");
+			continue;
+		}
 
-			// reschedule directly if possible
-			if (idle_runners.size() > 0) {
-				L("Rescheduling after due date violation detected by detector_rank %d", detector_rank);
-				// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear runners that are still scheduled or running on the broken runner id...
-				schedule_new_task(idle_runners.begin()->first);
-			}
+		// REM: do not do intelligent killing of other runners. no worries, their due dates will fail soon too ;)
+		kill_task(t);
+
+		// reschedule directly if possible
+		if (idle_runners.size() > 0) {
+			L("Rescheduling after due date violation detected by detector_rank %d", detector_rank);
+			// REM: schedule only once as there is only on more task after the kill it. later we might want to schedule multiple times if we clear runners that are still scheduled or running on the broken runner id...
+			schedule_new_task(idle_runners.begin()->first);
 		}
 	}
 }
