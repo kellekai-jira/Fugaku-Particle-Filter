@@ -15,11 +15,11 @@
 class EnsembleMember
 {
 public:
-	std::vector<double> state_analysis;
-	std::vector<double> state_background;
+std::vector<double> state_analysis;
+std::vector<double> state_background;
 
-	void set_local_vect_size(int local_vect_size);
-	void store_background_state_part(const Part & part, const double * values);
+void set_local_vect_size(int local_vect_size);
+void store_background_state_part(const Part & part, const double * values);
 };
 
 

@@ -11,12 +11,13 @@
 #include "Assimilator.h"
 
 
-class DummyAssimilator: public Assimilator {
+class DummyAssimilator : public Assimilator
+{
 private:
-	Field & field;
+Field & field;
 public:
-	DummyAssimilator(Field & field_);
-	virtual int do_update_step();
+DummyAssimilator(Field & field_);
+virtual int do_update_step();
 };
 
 #endif /* DUMMYASSIMILATOR_H_ */

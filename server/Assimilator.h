@@ -12,34 +12,37 @@
 #include <memory>
 #include "Field.h"
 
-enum AssimilatorType {
-	ASSIMILATOR_DUMMY = 0,
-	ASSIMILATOR_PDAF = 1
+enum AssimilatorType
+{
+        ASSIMILATOR_DUMMY = 0,
+        ASSIMILATOR_PDAF = 1
 };
 
-class Assimilator {
+class Assimilator
+{
 protected:
-	int nsteps = -1;
+int nsteps = -1;
 public:
-	// REM: the constructor must init the ensemble! (analysis states!)
-	// called if every state was saved.
-	// TODO: at the moment we do not need those things, but later it might be good to use them to diminish coupling....
-	//void put_part(const Part & part, const double * data);
-	//double * get_part(const Part & part) = 0;
+// REM: the constructor must init the ensemble! (analysis states!)
+// called if every state was saved.
+// TODO: at the moment we do not need those things, but later it might be good to use them to diminish coupling....
+// void put_part(const Part & part, const double * data);
+// double * get_part(const Part & part) = 0;
 
 
-	// returns how many steps must be performed by the model in the next iteration
-	// returns -1 if it wants to quit.
-	virtual int do_update_step() = 0;
+// returns how many steps must be performed by the model in the next iteration
+// returns -1 if it wants to quit.
+virtual int do_update_step() = 0;
 
 
-	int getNSteps() const {
-		return nsteps;
-	};
+int getNSteps() const {
+        return nsteps;
+};
 
-	virtual ~Assimilator() = default;
+virtual ~Assimilator() = default;
 
-  static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type, Field & field);
+static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
+                                           Field & field);
 };
 
 

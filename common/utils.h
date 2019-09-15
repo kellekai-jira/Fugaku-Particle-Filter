@@ -17,10 +17,11 @@
 #include <limits.h>
 #include <vector>
 
-enum Phase {
-  PHASE_INIT,
-  PHASE_SIMULATION,
-  PHASE_FINAL
+enum Phase
+{
+        PHASE_INIT,
+        PHASE_SIMULATION,
+        PHASE_FINAL
 };
 
 // debug logs:
@@ -35,9 +36,12 @@ enum Phase {
 #define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")
 
 
-#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); std::raise(SIGINT); }
+#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D( \
+                                            "zmq error(%d, errno=%d): %s", err, \
+                                            err2, zmq_strerror(err)); \
+                                    std::raise(SIGINT); }
 
-//https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
+// https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
 #if SIZE_MAX == UCHAR_MAX
    #define my_MPI_SIZE_T MPI_UNSIGNED_CHAR
 #elif SIZE_MAX == USHRT_MAX
@@ -61,32 +65,32 @@ void melissa_get_node_name (char *node_name, size_t buf_len);
 template <typename T>
 inline void print_vector (const std::vector<T> &vec)
 {
-	printf("[");
-	for (auto it = vec.begin(); it != vec.end(); it++)
-	{
-		//printf("%.3f,", *it);
-		std::cout << *it << ", ";
-	}
-	std::cout.flush();
+        printf("[");
+        for (auto it = vec.begin(); it != vec.end(); it++)
+        {
+                // printf("%.3f,", *it);
+                std::cout << *it << ", ";
+        }
+        std::cout.flush();
 
-	printf("]\n");
+        printf("]\n");
 }
 
 // inline Functions:
 inline void assert_more_zmq_messages(void * socket)
 {
-  int more;
-  size_t more_size = sizeof (more);
-  zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
-  assert(more);
+        int more;
+        size_t more_size = sizeof (more);
+        zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+        assert(more);
 }
 
 inline void assert_no_more_zmq_messages(void * socket)
 {
-  int more;
-  size_t more_size = sizeof (more);
-  zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
-  assert(more == 0);
+        int more;
+        size_t more_size = sizeof (more);
+        zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+        assert(more == 0);
 }
 
 // Globals:

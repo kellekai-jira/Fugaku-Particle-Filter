@@ -16,12 +16,12 @@ extern "C" {
 
 
 void melissa_init(const char *field_name,
-                       const int  local_vect_size,
-                       MPI_Comm comm_);  // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+                  const int local_vect_size,
+                  MPI_Comm comm_);       // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                            const int  *local_vect_size);   // comm is casted into an pointer to an mpi communicaotr if not null.
+                         const int  *local_vect_size);      // comm is casted into an pointer to an mpi communicaotr if not null.
 
 void melissa_init_f(const char *field_name,
                     int        *local_vect_size,
