@@ -10,9 +10,9 @@
 #include <mpi.h>
 #include <algorithm>
 #include <csignal>
-#include "../common/utils.h"
+#include "utils.h"
 
-#include "../pdaf-wrapper/pdaf-wrapper.h"
+#include "pdaf-wrapper.h"
 
 extern int ENSEMBLE_SIZE;
 extern int TOTAL_STEPS;

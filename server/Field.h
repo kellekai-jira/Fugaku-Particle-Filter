@@ -12,7 +12,7 @@
 
 #include "EnsembleMember.h"
 
-#include "../common/utils.h"
+#include "utils.h"
 
 struct Field {
 	// index: state id.

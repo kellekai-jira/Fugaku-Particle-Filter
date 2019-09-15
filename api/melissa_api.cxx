@@ -8,10 +8,10 @@
 #include <mpi.h>
 #include "zmq.h"
 
-#include "../common/messages.h"
-#include "../common/Part.h"
+#include "messages.h"
+#include "Part.h"
 
-#include "../common/utils.h"
+#include "utils.h"
 
 #include "melissa_api.h"
 

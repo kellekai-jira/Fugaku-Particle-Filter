@@ -8,7 +8,9 @@ find_package(ZeroMQ REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/common)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
+
 include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 link_libraries(${MPI_LIBRARIES})

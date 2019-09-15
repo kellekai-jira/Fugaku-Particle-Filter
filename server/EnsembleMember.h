@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "../common/Part.h"
+#include "Part.h"
 
 class EnsembleMember
 {

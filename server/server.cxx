@@ -25,9 +25,9 @@
 
 #include "Field.h"
 
-#include "../common/messages.h"
-#include "../common/Part.h"
-#include "../common/utils.h"
+#include "messages.h"
+#include "Part.h"
+#include "utils.h"
 
 #include <time.h>
 
