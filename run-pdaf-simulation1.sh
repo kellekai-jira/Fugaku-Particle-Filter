@@ -1,9 +1,9 @@
 #!/bin/bash
 
 
-n_server=1
-n_simulation=1
-n_runners=1
+n_server=2
+n_simulation=3
+n_runners=2
 
 ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
@@ -40,11 +40,15 @@ rm -f *_for.txt
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  total_steps=$2
-  ensemble_size=$3
-  n_server=$4
-  n_simulation=$5
-  n_runners=$6
+  #total_steps=$2
+  #ensemble_size=$3
+  #n_server=$4
+  #n_simulation=$5
+  #n_runners=$6
+
+  n_server=3
+  n_simulation=2
+  n_runners=3
 
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.

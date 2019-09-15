@@ -1,7 +1,6 @@
 #project(pdaf LANGUAGES Fortran)
 #cmake_minimum_required(VERSION 3.2.2)
 find_package(MPI REQUIRED)
-#SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -std=f2008  -pedantic  -fbacktrace -Wextra")
 
 
 

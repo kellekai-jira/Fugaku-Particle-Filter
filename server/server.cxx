@@ -2,8 +2,8 @@
 // TODO 1. refactoring
 //   DONE: use zmq cpp?? --> no
 // TODO 2. error prone ness
-		// TODO: check ret values!
-    // TODO: heavely test fault tollerance with a good testcase.
+// TODO: check ret values!
+// TODO: heavely test fault tollerance with a good testcase.
 // TODO 3. check with real world sim and DA.
 // TODO: clean up L logs and D debug logs
 
@@ -215,7 +215,7 @@ struct SubTask {
 	int runner_rank;
 	int state_id;
 	int due_date;
-		// low: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
+	// low: set different due dates so not all ranks communicate at the same time to the server when it gets bypassed ;)
 	SubTask(NewTask &new_task, int runner_rank_) {
 		runner_id = new_task.runner_id;
 		runner_rank = runner_rank_;
@@ -234,19 +234,10 @@ SubTaskList running_sub_tasks;
 SubTaskList finished_sub_tasks;  // TODO: why do we need to store this? actually not needed.
 // TODO: extract fault tolerant n to m code to use it elsewhere?
 
-
-void answer_configuration_message(void * configuration_socket, char* data_response_port_names)
-{
+void register_runner_id(zmq_msg_t &msg, const int * buf, void * configuration_socket, char * data_response_port_names) {
 	static int highest_runner_id = 0;
-	zmq_msg_t msg;
-	zmq_msg_init(&msg);
-	zmq_msg_recv(&msg, configuration_socket, 0);
-	int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-	if (buf[0] == REGISTER_RUNNER_ID) {
-		// Register runner ID
 		assert(zmq_msg_size(&msg) == sizeof(int));
 
-		zmq_msg_close(&msg);
 		D("Server registering Runner ID %d", buf[1]);
 
 		zmq_msg_t msg_reply1, msg_reply2;
@@ -255,18 +246,20 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		// At the moment we request field regustration from runner id 0. TODO! be fault tollerant during server init too? - acutally we do not want to. faults during init may make it crashing...
 		int request_register_field =  highest_runner_id == 0 ? 1 : 0;
 
-		buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-		buf[0] = highest_runner_id++;  // every model task runner gets an other runner id.
-		buf[1] = request_register_field;
-		buf[2] = comm_size;
+		int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
+		out_buf[0] = highest_runner_id++;  // every model task runner gets an other runner id.
+		out_buf[1] = request_register_field;
+		out_buf[2] = comm_size;
 		zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
 
 		zmq_msg_init_data(&msg_reply2, data_response_port_names,
 				comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char), NULL, NULL);
 		zmq_msg_send(&msg_reply2, configuration_socket, 0);
-	}
-	else if (buf[0] == REGISTER_FIELD)
-	{
+
+}
+
+void register_field(zmq_msg_t &msg, const int * buf, void * configuration_socket)
+{
 		assert(phase == PHASE_INIT);  // we accept new fields only if in initialization phase.
 		assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
 		assert(fields.size() == 0);  // we accept only one field for now.
@@ -276,16 +269,15 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		Field *newField = new Field(runner_comm_size, ENSEMBLE_SIZE);
 
 		char field_name[MPI_MAX_PROCESSOR_NAME];
-		strcpy(field_name, reinterpret_cast<char*>(&buf[2]));
+		strcpy(field_name, reinterpret_cast<const char*>(&buf[2]));
 		zmq_msg_close(&msg);
 		D("Server registering Field %s, runner_comm_size = %d", field_name, runner_comm_size);
 
 		assert_more_zmq_messages(configuration_socket);
-    zmq_msg_init(&msg);
+		zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, configuration_socket, 0);
 		assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
 		memcpy (newField->local_vect_sizes_runner.data(), zmq_msg_data(&msg), runner_comm_size * sizeof(size_t));
-		zmq_msg_close(&msg);
 
 		// ack
 		zmq_msg_t msg_reply;
@@ -293,6 +285,21 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		zmq_msg_send(&msg_reply, configuration_socket, 0);
 
 		fields.emplace(field_name, newField);
+}
+
+void answer_configuration_message(void * configuration_socket, char * data_response_port_names)
+{
+	zmq_msg_t msg;
+	zmq_msg_init(&msg);
+	zmq_msg_recv(&msg, configuration_socket, 0);
+	int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
+	if (buf[0] == REGISTER_RUNNER_ID)
+	{
+		register_runner_id(msg, buf, configuration_socket, data_response_port_names);
+	}
+	else if (buf[0] == REGISTER_FIELD)
+	{
+		register_field(msg, buf, configuration_socket);
 	}
 	else
 	{
@@ -300,6 +307,7 @@ void answer_configuration_message(void * configuration_socket, char* data_respon
 		assert(false);
 		exit(1);
 	}
+	zmq_msg_close(&msg);
 }
 
 void broadcast_field_information_and_calculate_parts() {
@@ -311,38 +319,32 @@ void broadcast_field_information_and_calculate_parts() {
 	{
 		char field_name[MPI_MAX_PROCESSOR_NAME];
 		int runner_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
+
+		Field * field = NULL;
 		if (comm_rank == 0) {
 			strcpy(field_name, field_it->first.c_str());
-			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
 			runner_comm_size = field_it->second->local_vect_sizes_runner.size();
-			MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:runner_comm_size
-
-			D("local_vect_sizes");
-			print_vector(field_it->second->local_vect_sizes_runner);
-
-			MPI_Bcast(field_it->second->local_vect_sizes_runner.data(), runner_comm_size,
-					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_runner
-
-			field_it->second->calculate_parts(comm_size);
-
+			field = field_it->second;
 			field_it++;
-
-		} else {
-			MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1: fieldname
-			MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:runner_comm_size
-
-			Field * newField = new Field(runner_comm_size, ENSEMBLE_SIZE);
-
-			MPI_Bcast(newField->local_vect_sizes_runner.data(), runner_comm_size,
-					my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                              // 3:local_vect_sizes_runner
-
-			D("local_vect_sizes");
-			print_vector(newField->local_vect_sizes_runner);
-
-			newField->calculate_parts(comm_size);
-
-			fields.emplace(field_name, newField);
 		}
+
+		MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD);  // 1:fieldname
+		MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                   // 2:runner_comm_size
+
+		if (comm_rank != 0)
+		{
+			field = new Field(runner_comm_size, ENSEMBLE_SIZE);
+		}
+
+		D("local_vect_sizes");
+		print_vector(field->local_vect_sizes_runner);
+
+		MPI_Bcast(field->local_vect_sizes_runner.data(), runner_comm_size,
+				my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                             // 3:local_vect_sizes_runner
+
+		field->calculate_parts(comm_size);
+
+		fields.emplace(field_name, field);
 	}
 }
 
@@ -373,7 +375,7 @@ bool try_launch_subtask(std::shared_ptr<SubTask> &sub_task) {
 	return true;
 }
 
-void kill_it(Task t) {
+void kill_task(Task t) {
 	L("killing state %d runner %d", t.state_id, t.runner_id);
 	unscheduled_tasks.insert(t.state_id);
 	idle_runners.erase(t.runner_id);
@@ -545,7 +547,7 @@ void check_due_dates() {
 	for (auto it = to_kill.begin(); it != to_kill.end(); it++) {
 		L("Due date passed for state id %d , runner_id %d at %llu s ", it->state_id, it->runner_id, now);
 
-		kill_it(*it);
+		kill_task(*it);
 
 		if (comm_rank == 0) {
 			// reschedule directly if possible
@@ -587,7 +589,7 @@ void check_kill_requests() {
 			}
 
 			// REM: do not do intelligent killing of other runners. no worries, their due dates will fail soon too ;)
-			kill_it(t);
+			kill_task(t);
 
 			// reschedule directly if possible
 			if (idle_runners.size() > 0) {
@@ -915,31 +917,14 @@ int main(int argc, char * argv[])
 		// coming from fresh init...
 		if (phase == PHASE_INIT)
 		{
-			if (comm_rank == 0)
+			if ((comm_rank == 0 && fields.size() == FIELDS_COUNT) ||
+					comm_rank != 0)
 			{
 				// check if initialization on rank 0 finished
 				// (rank 0 does some more intitialization than the other server ranks)
-				if (fields.size() == FIELDS_COUNT)
-				{
-					// low: if multi field: check fields! (see if the field names we got are the ones we wanted)
-					// propagate all fields to the other server clients on first message receive!
-					D("delme %d %d", comm_rank, comm_size);
-					broadcast_field_information_and_calculate_parts();
-
-					init_new_timestamp();
-
-					// init assimilator as we know the field size now.
-					Field &f = *(fields.begin()->second);
-					assimilator = Assimilator::create(ASSIMILATOR_TYPE, f);
-					current_nsteps = assimilator->getNSteps();
-
-					D("Change Phase");
-					phase = PHASE_SIMULATION;
-				}
-			}
-			else
-			{
-				// Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
+				// other ranks will just Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
+				// propagate all fields to the other server clients on first message receive!
+				// low: if multi field: check fields! (see if the field names we got are the ones we wanted)
 				// propagate all fields to the other server clients on first message receive!
 				broadcast_field_information_and_calculate_parts();
 				init_new_timestamp();
@@ -947,12 +932,13 @@ int main(int argc, char * argv[])
 				// init assimilator as we know the field size now.
 				Field &f = *(fields.begin()->second);
 				assimilator = Assimilator::create(ASSIMILATOR_TYPE, f);
+				current_nsteps = assimilator->getNSteps();
 
 				D("Change Phase");
 				phase = PHASE_SIMULATION;
+				// @Kai: now we got all the field information (which dimensions it will have. So now we cann initialize the fti stuff on the server side if isRecovering....
+				// FTI_Protect....
 			}
-			// @Kai: now we got all the field information (which dimensions it will have. So now we cann initialize the fti stuff on the server side if isRecovering....
-			// FTI_Protect....
 		}
 
 		if (phase == PHASE_SIMULATION) {
