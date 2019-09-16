@@ -9,6 +9,9 @@
 // TODO 3. check with real world sim and DA.
 // TODO: clean up L logs and D debug logs
 
+
+// REM: the only reason why we stick to fields as a map and not field is to be compatible to mainstream melissa in future. I'm not sure if this is a good design decision.
+
 #include <map>
 #include <string>
 #include <cstdlib>
@@ -130,13 +133,12 @@ struct RunnerRankConnection
                 zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
                 // we do not know when it will really send. send is non blocking!
 
+                Field * f = fields.begin()->second;
                 zmq_msg_init_data(&data_msg,
-                                  (fields.begin()->second->ensemble_members.at(
-                                           state_id).state_analysis.data() +
-                                   fields.begin()->second->getPart(
-                                           runner_rank).local_offset_server),
-                                  fields.begin()->second->getPart(
-                                          runner_rank).send_count *
+                                  f->ensemble_members.at(
+                                          state_id).state_analysis.data() +
+                                  f->getPart(runner_rank).local_offset_server,
+                                  f->getPart(runner_rank).send_count *
                                   sizeof(double), NULL, NULL);
 
                 D("-> Server sending %lu bytes for state %d, timestamp=%d",
@@ -145,14 +147,10 @@ struct RunnerRankConnection
                   header[0], header[1]);
                 D(
                         "local server offset %lu, local runner offset %lu, sendcount=%lu",
-                        fields.begin()->second->getPart(
-                                runner_rank).local_offset_server,
-                        fields.begin()->second->getPart(
-                                runner_rank).local_offset_runner,
-                        fields.begin()->second->getPart(
-                                runner_rank).send_count);
-                print_vector(fields.begin()->second->ensemble_members.at(
-                                     state_id).state_analysis);
+                        f->getPart(runner_rank).local_offset_server,
+                        f->getPart(runner_rank).local_offset_runner,
+                        f->getPart(runner_rank).send_count);
+                print_vector(f->ensemble_members.at(state_id).state_analysis);
 
                 zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -1066,7 +1064,11 @@ int main(int argc, char * argv[])
         // Server main loop:
         while (true)
         {
+#ifdef NDEBUG
+                // usleep(1);
+#else
                 usleep(10); // to chill down the processor! TODO remove when measuring!
+#endif
                 // Wait for requests
                 /* Poll for events indefinitely */
                 // REM: the poll item needs to be recreated all the time!
