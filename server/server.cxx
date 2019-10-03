@@ -50,7 +50,6 @@ int TOTAL_STEPS = 5;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
-const int FIELDS_COUNT = 1;  // multiple fields is stupid!
 const long long MAX_RUNNER_TIMEOUT = 5;  // 10 min max timeout for runner.
 
 const int TAG_NEW_TASK = 42;
@@ -92,7 +91,7 @@ bool operator<(const Task &lhs, const Task &rhs) {
 std::set<Task> killed;  // when a runner from this list connects we thus respond with a kill message. if one rank receives a kill message it has to call exit so all runner ranks are quit.
 
 
-std::map<std::string, Field*> fields;
+std::unique_ptr<Field> field(nullptr);
 
 void my_free(void * data, void * hint)
 {
@@ -133,24 +132,25 @@ struct RunnerRankConnection
                 zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
                 // we do not know when it will really send. send is non blocking!
 
-                Field * f = fields.begin()->second;
                 zmq_msg_init_data(&data_msg,
-                                  f->ensemble_members.at(
+                                  field->ensemble_members.at(
                                           state_id).state_analysis.data() +
-                                  f->getPart(runner_rank).local_offset_server,
-                                  f->getPart(runner_rank).send_count *
+                                  field->getPart(
+                                          runner_rank).local_offset_server,
+                                  field->getPart(runner_rank).send_count *
                                   sizeof(double), NULL, NULL);
 
                 D("-> Server sending %lu bytes for state %d, timestamp=%d",
-                  fields.begin()->second->getPart(runner_rank).send_count *
+                  field->getPart(runner_rank).send_count *
                   sizeof(double),
                   header[0], header[1]);
                 D(
                         "local server offset %lu, local runner offset %lu, sendcount=%lu",
-                        f->getPart(runner_rank).local_offset_server,
-                        f->getPart(runner_rank).local_offset_runner,
-                        f->getPart(runner_rank).send_count);
-                print_vector(f->ensemble_members.at(state_id).state_analysis);
+                        field->getPart(runner_rank).local_offset_server,
+                        field->getPart(runner_rank).local_offset_runner,
+                        field->getPart(runner_rank).send_count);
+                print_vector(field->ensemble_members.at(
+                                     state_id).state_analysis);
 
                 zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -292,15 +292,18 @@ void register_field(zmq_msg_t &msg, const int * buf,
         assert(phase == PHASE_INIT);          // we accept new fields only if in initialization phase.
         assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) +
                MPI_MAX_PROCESSOR_NAME * sizeof(char));
-        assert(fields.size() == 0);          // we accept only one field for now.
+        // TODO: does the following line really work?
+        assert(field == nullptr);          // we accept only one field for now.
 
         int runner_comm_size = buf[1];
-
-        Field *newField = new Field(runner_comm_size, ENSEMBLE_SIZE);
 
         char field_name[MPI_MAX_PROCESSOR_NAME];
         strcpy(field_name, reinterpret_cast<const char*>(&buf[2]));
         zmq_msg_close(&msg);
+
+        field = std::make_unique<Field>(field_name, runner_comm_size,
+                                        ENSEMBLE_SIZE);
+
         D("Server registering Field %s, runner_comm_size = %d", field_name,
           runner_comm_size);
 
@@ -308,15 +311,15 @@ void register_field(zmq_msg_t &msg, const int * buf,
         zmq_msg_init(&msg);
         zmq_msg_recv(&msg, configuration_socket, 0);
         assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
-        memcpy (newField->local_vect_sizes_runner.data(), zmq_msg_data(&msg),
+        memcpy (field->local_vect_sizes_runner.data(), zmq_msg_data(&msg),
                 runner_comm_size * sizeof(size_t));
+        field->name = field_name;
 
         // ack
         zmq_msg_t msg_reply;
         zmq_msg_init(&msg_reply);
         zmq_msg_send(&msg_reply, configuration_socket, 0);
 
-        fields.emplace(field_name, newField);
 }
 
 void answer_configuration_message(void * configuration_socket,
@@ -345,46 +348,36 @@ void answer_configuration_message(void * configuration_socket,
 }
 
 void broadcast_field_information_and_calculate_parts() {
-        size_t field_count = fields.size();
-        MPI_Bcast(&field_count, 1, my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                          // 0:field_count
-        D("Got field count %lu", field_count);
-        auto field_it = fields.begin();
-        for (size_t i = 0; i < field_count; i++)
+        char field_name[MPI_MAX_PROCESSOR_NAME];
+        int runner_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
+
+        if (comm_rank == 0)
         {
-                char field_name[MPI_MAX_PROCESSOR_NAME];
-                int runner_comm_size;  // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
-
-                Field * field = NULL;
-                if (comm_rank == 0)
-                {
-                        strcpy(field_name, field_it->first.c_str());
-                        runner_comm_size =
-                                field_it->second->local_vect_sizes_runner.size();
-                        field = field_it->second;
-                        field_it++;
-                }
-
-                MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0,
-                          MPI_COMM_WORLD);                                                   // 1:fieldname
-                MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0,
-                          MPI_COMM_WORLD);                                                           // 2:runner_comm_size
-
-                if (comm_rank != 0)
-                {
-                        field = new Field(runner_comm_size, ENSEMBLE_SIZE);
-                }
-
-                D("local_vect_sizes");
-                print_vector(field->local_vect_sizes_runner);
-
-                MPI_Bcast(field->local_vect_sizes_runner.data(),
-                          runner_comm_size,
-                          my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                                   // 3:local_vect_sizes_runner
-
-                field->calculate_parts(comm_size);
-
-                fields.emplace(field_name, field);
+                strcpy(field_name, field->name.c_str());
+                runner_comm_size =
+                        field->local_vect_sizes_runner.size();
         }
+
+        MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0,
+                  MPI_COMM_WORLD);                                                         // 1:fieldname
+        MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0,
+                  MPI_COMM_WORLD);                                                                 // 2:runner_comm_size
+
+        if (comm_rank != 0)
+        {
+                field = std::make_unique<Field>(field_name, runner_comm_size,
+                                                ENSEMBLE_SIZE);
+        }
+
+        D("local_vect_sizes");
+        print_vector(field->local_vect_sizes_runner);
+
+        MPI_Bcast(field->local_vect_sizes_runner.data(),
+                  runner_comm_size,
+                  my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                                         // 3:local_vect_sizes_runner
+
+        field->calculate_parts(comm_size);
+
 }
 
 /// returns true if could send the sub_task on a connection.
@@ -441,7 +434,7 @@ void kill_task(Task t) {
 void add_sub_tasks(NewTask &new_task) {
         int ret = unscheduled_tasks.erase(new_task.state_id);
         assert(ret == 1);
-        auto &csr = fields.begin()->second->connected_runner_ranks;
+        auto &csr = field->connected_runner_ranks;
         assert(csr.size() > 0);  // connectd runner ranks must be initialized...
         for (auto it = csr.begin(); it != csr.end(); it++)
         {
@@ -571,7 +564,7 @@ void end_all_runners()
 void init_new_timestamp()
 {
         size_t connections =
-                fields.begin()->second->connected_runner_ranks.size();
+                field->connected_runner_ranks.size();
         // init or finished....
         assert(current_step == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE *
                connections);
@@ -771,7 +764,8 @@ void handle_data_response() {
 
 
                 // Save state part in background_states.
-                Part & part = fields[field_name]->getPart(runner_rank);
+                assert(field->name == field_name);
+                Part & part = field->getPart(runner_rank);
                 assert(zmq_msg_size(&data_msg) == part.send_count *
                        sizeof(double));
                 D(
@@ -792,7 +786,7 @@ void handle_data_response() {
                 {
                         D("storing this timestamp!...");
                         // zero copy is unfortunately for send only. so copy internally...
-                        fields[field_name]->ensemble_members[runner_state_id].
+                        field->ensemble_members[runner_state_id].
                         store_background_state_part(part,
                                                     reinterpret_cast
                                                     <double*>(zmq_msg_data(
@@ -846,9 +840,7 @@ void handle_data_response() {
                                 // check if there is no other task running on this runner
                                 if (idle_runners[runner_id]->
                                     connected_runner_ranks.size() ==
-                                    fields.begin()->second->
-                                    connected_runner_ranks.
-                                    size())
+                                    field->connected_runner_ranks.size())
                                 {
                                         schedule_new_task(runner_id);
                                 }
@@ -867,7 +859,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         // check if all data was received. If yes: start Update step to calculate next analysis state
 
         size_t connections =
-                fields.begin()->second->connected_runner_ranks.size();
+                field->connected_runner_ranks.size();
 
         bool finished;
         if (comm_rank == 0)
@@ -1100,7 +1092,7 @@ int main(int argc, char * argv[])
                 // coming from fresh init...
                 if (phase == PHASE_INIT)
                 {
-                        if ((comm_rank == 0 && fields.size() == FIELDS_COUNT) ||
+                        if ((comm_rank == 0 && field != nullptr) ||
                             comm_rank != 0)
                         {
                                 // check if initialization on rank 0 finished
@@ -1113,9 +1105,8 @@ int main(int argc, char * argv[])
                                 init_new_timestamp();
 
                                 // init assimilator as we know the field size now.
-                                Field &f = *(fields.begin()->second);
                                 assimilator = Assimilator::create(
-                                        ASSIMILATOR_TYPE, f);
+                                        ASSIMILATOR_TYPE, *field);
                                 current_nsteps = assimilator->getNSteps();
 
                                 D("Change Phase");
@@ -1169,8 +1160,7 @@ int main(int argc, char * argv[])
 
                         /// REM: Tasks are either unscheduled, scheduled, running or finished.
                         size_t connections =
-                                fields.begin()->second->connected_runner_ranks.
-                                size();
+                                field->connected_runner_ranks.size();
 //			L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
 //					unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
 //					scheduled_sub_tasks.size(),

@@ -16,6 +16,7 @@
 
 struct Field
 {
+        std::string name;
         // index: state id.
         std::vector<EnsembleMember> ensemble_members;
 
@@ -25,7 +26,8 @@ struct Field
 
         std::set<int> connected_runner_ranks;
 
-        Field(int simu_comm_size_, size_t ensemble_size_);
+        Field(const std::string &name, const int simu_comm_size_, const size_t
+              ensemble_size_);
         void calculate_parts(int server_comm_size);
         Part & getPart(int simu_rank);
 

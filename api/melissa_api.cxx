@@ -255,6 +255,7 @@ struct ConnectedServerRank
 
 struct Field
 {
+        std::string name;
         int current_state_id;
         int timestamp;
         size_t local_vect_size;
@@ -320,8 +321,7 @@ struct Field
 };
 
 
-std::map<std::string, Field> fields;
-
+Field field;
 
 // TODO: kill if no server response for a timeout...
 
@@ -455,27 +455,27 @@ bool first_melissa_init(MPI_Comm comm_)
 int melissa_get_current_state_id()
 {
         assert(phase == PHASE_SIMULATION);
-        return fields.begin()->second.current_state_id;
+        return field.current_state_id;
 }
+
 
 void melissa_init(const char *field_name,
                   const int local_vect_size,
                   MPI_Comm comm_)
 {
-        // We do not allow multiple fiels:
-        assert(fields.size() == 0);
+        // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
 
         bool register_field = first_melissa_init(comm_);
 
         // create field
-        Field newField;
         // newField.current_state_id = getSimuId(); // We are beginning like this...
-        newField.current_state_id = -1; // We are beginning like this...
-        newField.timestamp = 0;
-        newField.local_vect_size = local_vect_size;
+        field.name = field_name;
+        field.current_state_id = -1; // We are beginning like this...
+        field.timestamp = 0;
+        field.local_vect_size = local_vect_size;
         std::vector<size_t> local_vect_sizes(getCommSize());
         // synchronize local_vect_sizes and
-        MPI_Allgather(&newField.local_vect_size, 1, my_MPI_SIZE_T,
+        MPI_Allgather(&field.local_vect_size, 1, my_MPI_SIZE_T,
                       local_vect_sizes.data(), 1, my_MPI_SIZE_T,
                       comm);
 
@@ -490,9 +490,8 @@ void melissa_init(const char *field_name,
 
 
         // Calculate to which server ports the local part of the field will connect
-        newField.initConnections(local_vect_sizes);
+        field.initConnections(local_vect_sizes);
 
-        fields.emplace(std::string(field_name), newField);
 
 }
 bool no_mpi = false;
@@ -522,12 +521,13 @@ int melissa_expose(const char *field_name, double *values)
         }
 
         // Now Send data to the melissa server
-        fields[field_name].putState(values, field_name);
+        assert(field.name == field_name);
+        field.putState(values, field_name);
 
         // @Kai: here we could checkpoint the values variable ! using fti. The server than could recover from such a checkpoint.
 
         // and request new data
-        int nsteps = fields[field_name].getState(values);
+        int nsteps = field.getState(values);
 
         // TODO: this will block other fields!
 
@@ -572,7 +572,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
 int melissa_get_current_timestamp()
 {
         assert(phase == PHASE_SIMULATION);
-        return fields.begin()->second.timestamp;
+        return field.timestamp;
 }
 
 

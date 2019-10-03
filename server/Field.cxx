@@ -7,9 +7,10 @@
 
 #include "Field.h"
 
-Field::Field(int simu_comm_size_, size_t ensemble_size_)
+Field::Field(const std::string &name_, const int simu_comm_size_, const size_t
+             ensemble_size_)
+        : name(name_), local_vect_size(0)
 {
-        local_vect_size = 0;
         local_vect_sizes_runner.resize(simu_comm_size_);
         ensemble_members.resize(ensemble_size_);
 }
