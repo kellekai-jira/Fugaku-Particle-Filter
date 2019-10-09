@@ -9,38 +9,38 @@
 #include <algorithm>
 
 DummyAssimilator::DummyAssimilator(Field & field_) :
-        field(field_)
+    field(field_)
 {
-        nsteps = 1;
+    nsteps = 1;
 
-        // otherwise release mode will make problems!
-        for (auto ens_it = field.ensemble_members.begin(); ens_it !=
-             field.ensemble_members.end(); ens_it++)
-        {
-                // analysis state is enough:
-                std::fill(ens_it->state_analysis.begin(),
-                          ens_it->state_analysis.end(), 0.0);
-        }
+    // otherwise release mode will make problems!
+    for (auto ens_it = field.ensemble_members.begin(); ens_it !=
+         field.ensemble_members.end(); ens_it++)
+    {
+        // analysis state is enough:
+        std::fill(ens_it->state_analysis.begin(),
+                  ens_it->state_analysis.end(), 0.0);
+    }
 
 }
 
 int DummyAssimilator::do_update_step() {
-        L("Doing dummy update step...\n");
-        MPI_Barrier(MPI_COMM_WORLD);
-        int state_id = 0;
-        for (auto ens_it = field.ensemble_members.begin(); ens_it !=
-             field.ensemble_members.end(); ens_it++)
+    L("Doing dummy update step...\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+    int state_id = 0;
+    for (auto ens_it = field.ensemble_members.begin(); ens_it !=
+         field.ensemble_members.end(); ens_it++)
+    {
+        assert(ens_it->state_analysis.size() ==
+               ens_it->state_background.size());
+        for (size_t i = 0; i < ens_it->state_analysis.size(); i++)
         {
-                assert(ens_it->state_analysis.size() ==
-                       ens_it->state_background.size());
-                for (size_t i = 0; i < ens_it->state_analysis.size(); i++)
-                {
-                        // pretend to do some da...
-                        ens_it->state_analysis[i] =
-                                ens_it->state_background[i] + state_id;
-                }
-                state_id++;
+            // pretend to do some da...
+            ens_it->state_analysis[i] =
+                ens_it->state_background[i] + state_id;
         }
+        state_id++;
+    }
 
-        return getNSteps();
+    return getNSteps();
 }

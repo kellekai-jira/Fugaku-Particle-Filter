@@ -14,8 +14,8 @@
 
 enum AssimilatorType
 {
-        ASSIMILATOR_DUMMY = 0,
-        ASSIMILATOR_PDAF = 1
+    ASSIMILATOR_DUMMY = 0,
+    ASSIMILATOR_PDAF = 1
 };
 
 class Assimilator
@@ -36,7 +36,7 @@ virtual int do_update_step() = 0;
 
 
 int getNSteps() const {
-        return nsteps;
+    return nsteps;
 };
 
 virtual ~Assimilator() = default;

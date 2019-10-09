@@ -20,130 +20,130 @@ using namespace std;
 int main(int argc, char * args[])
 {
 
-        int comm_size;
-        int comm_rank;
+    int comm_size;
+    int comm_rank;
 
-        MPI_Init(NULL, NULL);
-        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
-        int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
-        // do I have one more?
-        if (GLOBAL_VECT_SIZE % comm_size != 0 && comm_rank < GLOBAL_VECT_SIZE %
-            comm_size)
+    int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
+    // do I have one more?
+    if (GLOBAL_VECT_SIZE % comm_size != 0 && comm_rank < GLOBAL_VECT_SIZE %
+        comm_size)
+    {
+        local_vect_size += 1;
+    }
+
+    // how many pixels are left of me?
+    vector<int> offsets(comm_size);
+    vector<int> counts(comm_size);
+    fill(offsets.begin(), offsets.end(), 0);
+    fill(counts.begin(), counts.end(), 0);
+    int next_offset = 0;
+    for (int rank = 0; rank < comm_size; rank++)
+    {
+        offsets[rank] = next_offset;
+
+        counts[rank] = GLOBAL_VECT_SIZE / comm_size;
+        // add one for all who have one more.
+        if (GLOBAL_VECT_SIZE % comm_size != 0 && rank <
+            GLOBAL_VECT_SIZE % comm_size)
         {
-                local_vect_size += 1;
+            counts[rank] += 1;
         }
 
-        // how many pixels are left of me?
-        vector<int> offsets(comm_size);
-        vector<int> counts(comm_size);
-        fill(offsets.begin(), offsets.end(), 0);
-        fill(counts.begin(), counts.end(), 0);
-        int next_offset = 0;
-        for (int rank = 0; rank < comm_size; rank++)
+        next_offset += counts[rank];
+    }
+
+    melissa_init("variableX",
+                 local_vect_size,
+                 MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+    vector<double> state1(local_vect_size);
+    fill(state1.begin(), state1.end(), 0);
+    printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
+
+
+    static bool is_first_timestep = true;
+    int nsteps = 1;
+    do
+    {
+        for (int step = 0; step < nsteps; step++)
         {
-                offsets[rank] = next_offset;
+            int i = 0;
+            for (auto it = state1.begin(); it != state1.end(); it++)
+            {
+                *it += offsets[comm_rank] + i;
 
-                counts[rank] = GLOBAL_VECT_SIZE / comm_size;
-                // add one for all who have one more.
-                if (GLOBAL_VECT_SIZE % comm_size != 0 && rank <
-                    GLOBAL_VECT_SIZE % comm_size)
-                {
-                        counts[rank] += 1;
-                }
-
-                next_offset += counts[rank];
+                i++;
+            }
         }
 
-        melissa_init("variableX",
-                     local_vect_size,
-                     MPI_COMM_WORLD);     // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
-        vector<double> state1(local_vect_size);
-        fill(state1.begin(), state1.end(), 0);
-        printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
+        // simulate some calculation
+        // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
+        usleep(10000);
 
+        nsteps = melissa_expose("variableX", state1.data());
 
-        static bool is_first_timestep = true;
-        int nsteps = 1;
-        do
+        if (nsteps > 0 && is_first_timestep)
         {
-                for (int step = 0; step < nsteps; step++)
+            printf("First timestep to propagate: %d\n",
+                   melissa_get_current_timestamp());
+            is_first_timestep = false;
+        }
+
+        // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        // file output of allways ensemble member 0
+        // TODO: maybe move this functionality into ap?
+        if (nsteps > 0 && melissa_get_current_state_id() == 1)
+        {
+            // raise(SIGINT);
+            if (comm_rank == 0)
+            {
+                ofstream myfile;
+                // 1 is the smallest timestamp.
+                if (melissa_get_current_timestamp() == 1)
                 {
-                        int i = 0;
-                        for (auto it = state1.begin(); it != state1.end(); it++)
-                        {
-                                *it += offsets[comm_rank] + i;
-
-                                i++;
-                        }
+                    // remove old file...
+                    myfile.open ("output.txt", ios::trunc);
                 }
-
-                // simulate some calculation
-                // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-                usleep(10000);
-
-                nsteps = melissa_expose("variableX", state1.data());
-
-                if (nsteps > 0 && is_first_timestep)
+                else
                 {
-                        printf("First timestep to propagate: %d\n",
-                               melissa_get_current_timestamp());
-                        is_first_timestep = false;
+                    myfile.open ("output.txt", ios::app);
                 }
+                vector<double> full_state(GLOBAL_VECT_SIZE);
 
-                // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
-                MPI_Barrier(MPI_COMM_WORLD);
-
-                // file output of allways ensemble member 0
-                // TODO: maybe move this functionality into ap?
-                if (nsteps > 0 && melissa_get_current_state_id() == 1)
+                MPI_Gatherv(state1.data(), state1.size(),
+                            MPI_DOUBLE,
+                            full_state.data(), counts.data(),
+                            offsets.data(),
+                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                for (auto it = full_state.begin(); it !=
+                     full_state.end(); it++)
                 {
-                        // raise(SIGINT);
-                        if (comm_rank == 0)
-                        {
-                                ofstream myfile;
-                                // 1 is the smallest timestamp.
-                                if (melissa_get_current_timestamp() == 1)
-                                {
-                                        // remove old file...
-                                        myfile.open ("output.txt", ios::trunc);
-                                }
-                                else
-                                {
-                                        myfile.open ("output.txt", ios::app);
-                                }
-                                vector<double> full_state(GLOBAL_VECT_SIZE);
-
-                                MPI_Gatherv(state1.data(), state1.size(),
-                                            MPI_DOUBLE,
-                                            full_state.data(), counts.data(),
-                                            offsets.data(),
-                                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                                for (auto it = full_state.begin(); it !=
-                                     full_state.end(); it++)
-                                {
-                                        myfile << *it << ",";
-                                }
-                                myfile << "\n";
-                                myfile.close();
-                        }
-                        else
-                        {
-                                MPI_Gatherv(state1.data(), state1.size(),
-                                            MPI_DOUBLE,
-                                            NULL, NULL, NULL,
-                                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                        }
-
+                    myfile << *it << ",";
                 }
+                myfile << "\n";
+                myfile.close();
+            }
+            else
+            {
+                MPI_Gatherv(state1.data(), state1.size(),
+                            MPI_DOUBLE,
+                            NULL, NULL, NULL,
+                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            }
+
+        }
 
 
 
-                // TODO: print output to see what happens!
-        } while (nsteps > 0);
-        int ret = MPI_Finalize();
-        assert(ret == MPI_SUCCESS);
+        // TODO: print output to see what happens!
+    } while (nsteps > 0);
+    int ret = MPI_Finalize();
+    assert(ret == MPI_SUCCESS);
 }
 
 
