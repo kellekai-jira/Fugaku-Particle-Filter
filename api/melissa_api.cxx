@@ -13,6 +13,8 @@
 
 #include "utils.h"
 
+#include <cstring>
+
 #include "melissa_api.h"
 
 

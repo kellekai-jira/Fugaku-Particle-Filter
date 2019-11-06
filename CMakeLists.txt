@@ -1,9 +1,17 @@
-project(melissa LANGUAGES CXX Fortran)
+project(melissa LANGUAGES C CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(MPI REQUIRED)
 find_package(ZeroMQ REQUIRED)
+find_package(FTI REQUIRED)
+
+if( FTI_FOUND ) 
+    message("FTI_LIBRARY: ${FTI_LIBRARY}")
+else()
+    message("FTI NOT FOUND")
+endif()
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})

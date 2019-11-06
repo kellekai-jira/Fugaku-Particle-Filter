@@ -7,6 +7,9 @@ file(GLOB
 
 add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
 
+target_link_libraries(melissa_server ${FTI_DYNAMIC_LIB})
+target_include_directories(melissa_server PUBLIC ${FTI_INCLUDE_DIR})
+
 target_link_libraries(melissa_server pdaf_wrapper)
 
 target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrapper)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source build/install/bin/melissa-da_set_env.sh
+source /home/kellekai/WORK/FTI/EoCoE/opt/pdaf/bin/melissa-da_set_env.sh
 
 cd output
 
@@ -12,7 +12,7 @@ verification_path=$PDAF_PATH/tutorial/online_2D_parallelmodel
 check="python2 $verification_path/../../testsuite/tests_dummy1D/check.py"
 
 cd $verification_path
-#mpirun -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
+mpirun --oversubscribe -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
 cd -
 
 rm failed.log

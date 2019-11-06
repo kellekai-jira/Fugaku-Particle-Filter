@@ -5,7 +5,8 @@ file(GLOB
      *.cxx
      )
 
-   add_library(melissa_api SHARED ${ALL_API} $<TARGET_OBJECTS:melissa_common>)
+add_library(melissa_api SHARED ${ALL_API} $<TARGET_OBJECTS:melissa_common>)
+ 
 target_compile_options(melissa_api BEFORE PUBLIC -fPIC)
 install(TARGETS melissa_api LIBRARY DESTINATION lib)
 

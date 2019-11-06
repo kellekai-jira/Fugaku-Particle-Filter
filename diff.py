@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 ##!/home/friese/.local/bin/ipython -i
 
 # inspired by testsuite/tests_dummy1D/check.py

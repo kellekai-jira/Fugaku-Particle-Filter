@@ -39,7 +39,9 @@
 
 #include "Assimilator.h"
 
+#include <cstring>
 
+#include <fti.h>
 
 extern int ENSEMBLE_SIZE;
 extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
@@ -967,6 +969,15 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             return true;
         }
 
+        // TODO create fault tolerance class and outsource all FTI related stuff there.
+
+        int i=0;
+        for(auto it = field->ensemble_members.begin(); it != field->ensemble_members.end(); it++) {
+            FTI_Protect( i++, it->state_analysis.data(), sizeof(it->state_analysis[0])*it->state_analysis.size(), FTI_CHAR);
+        }
+        FTI_Checkpoint( current_step, FTI_L4_DCP );
+
+
         init_new_timestamp();
 
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
@@ -1011,6 +1022,8 @@ int main(int argc, char * argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     // Get the rank of the process
     MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+
+    FTI_Init("config.fti", MPI_COMM_WORLD);
 
     std::shared_ptr<Assimilator> assimilator;      // will be inited later when we know the field dimensions.
 
@@ -1189,6 +1202,7 @@ int main(int argc, char * argv[])
         zmq_close(configuration_socket);
     }
     zmq_ctx_destroy(context);
+    FTI_Finalize();
     MPI_Finalize();
 
 }
