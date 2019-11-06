@@ -3,7 +3,7 @@
 # TODO: parallelize these testcases? run server on different ports
 
 set -e
-cd ..
+cd ../..
 ./compile.sh
 cd -
 set +e

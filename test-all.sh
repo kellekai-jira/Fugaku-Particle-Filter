@@ -1,7 +1,7 @@
 #!/bin/bash -e
 ./uncrustify.sh
 ./compile.sh
-./run-pdaf-simulation1.sh test
+./run-simulation2-pdaf.sh test
 ./test.sh
 res1=$?
 
