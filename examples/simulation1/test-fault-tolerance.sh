@@ -2,7 +2,7 @@
 # REM: only works if simulation timeout is set to 5 seconds on the serverside. otherwise
 #      the timing here won't work!
 
-cd ..
+cd ../..
 ./compile.sh
 cd -
 
