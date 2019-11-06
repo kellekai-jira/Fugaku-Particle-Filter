@@ -5,7 +5,7 @@
 ./test.sh
 res1=$?
 
-cd example-simulation
+cd examples/simulation1
 ./test-fault-tolerance.sh
 res2=$?
 
