@@ -175,9 +175,10 @@ struct ServerRankConnection
                                                          &msg));
             std::copy(buf, buf + doubles_expected, out_values);
 
-            print_vector(std::vector<double>(out_values,
+            /*print_vector(std::vector<double>(out_values,
                                              out_values +
                                              doubles_expected));
+            */
             zmq_msg_close(&msg);
             assert_no_more_zmq_messages(data_request_socket);
         }

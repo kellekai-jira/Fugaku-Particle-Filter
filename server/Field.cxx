@@ -28,12 +28,11 @@ void Field::calculate_parts(int server_comm_size)
             connected_runner_ranks.emplace(part_it->rank_runner);
         }
     }
-
-    for (auto ens_it = ensemble_members.begin(); ens_it !=
-         ensemble_members.end(); ens_it++)
+    auto ens_it = ensemble_members.begin();
+    for (; ens_it != ensemble_members.end(); ens_it++)
     {
-
-        ens_it->set_local_vect_size(local_vect_size);          // low: better naming: local state size is in doubles not in bytes!
+        // low: better naming: local state size is in doubles not in bytes!
+        ens_it->set_local_vect_size(local_vect_size);          
     }
     D("Calculated parts");
 }

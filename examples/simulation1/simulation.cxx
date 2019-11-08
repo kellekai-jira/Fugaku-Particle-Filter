@@ -13,7 +13,7 @@
 #include <csignal>
 
 
-const int GLOBAL_VECT_SIZE = 40;
+const int GLOBAL_VECT_SIZE = 1024*1024;
 
 using namespace std;
 
