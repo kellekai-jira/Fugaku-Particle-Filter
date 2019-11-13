@@ -21,6 +21,8 @@
 #include <list>
 #include <memory>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 #include <mpi.h>
 #include "zmq.h"
@@ -939,7 +941,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // TODO create fault tolerance class and outsource all FTI related stuff there.
 
         int i=0;
-        if (comm_rank == 0) std::cout << "current_step: " << current_step << std::endl;
         FTI_Protect( i++, &current_step, sizeof(current_step), FTI_CHAR);
         FTI_Protect( i++, &current_nsteps, sizeof(current_nsteps), FTI_CHAR);
         for(auto it = field->ensemble_members.begin(); it != field->ensemble_members.end(); it++) {
@@ -947,15 +948,14 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
             auto size = sizeof(it->state_analysis[0])*it->state_analysis.size();
             FTI_Protect( i++, ptr, size, FTI_CHAR);
         }
-        if (comm_rank == 0) std::cout << "current_step: " << current_step << std::endl;
         if( isRecovery ) {
             FTI_Recover();
             isRecovery = 0;
         } else {
             FTI_Checkpoint( current_step, 4 );
+            //if( current_step == 5 ) *(int*)NULL = 0;
         }
 
-        if (comm_rank == 0) std::cout << "current_step: " << current_step << std::endl;
         init_new_timestamp();
         
 
@@ -979,6 +979,7 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
+    std::cout << "SERVER AHOI" << std::endl;
     // Read in configuration from command line
     if (argc >= 2)
     {
@@ -1017,17 +1018,28 @@ int main(int argc, char * argv[])
     L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS,
       ENSEMBLE_SIZE);
 
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
+    
     // Start sockets:
     void * configuration_socket = NULL;
     if (comm_rank == 0)
     {
         configuration_socket = zmq_socket(context, ZMQ_REP);
-        const char * configuration_socket_addr = "tcp://*:4000";
+        char configuration_socket_addr[MPI_MAX_PROCESSOR_NAME+256];
+        snprintf( configuration_socket_addr, MPI_MAX_PROCESSOR_NAME+256, "tcp://%s:4000", hostname );
+        
+        std::fstream file;
+        file.open("configserver.txt",std::ios::out);
 
         // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
         int rc = zmq_bind(configuration_socket, configuration_socket_addr);
         L("Configuration socket listening on port %s", configuration_socket_addr);
         ZMQ_CHECK(rc);
+
+        file << configuration_socket_addr;
+
+        file.close();
         assert(rc == 0);
 
     }
@@ -1037,8 +1049,6 @@ int main(int argc, char * argv[])
     sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
     zmq_bind(data_response_socket, data_response_port_name);
 
-    char hostname[MPI_MAX_PROCESSOR_NAME];
-    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
     sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+
             comm_rank);
 

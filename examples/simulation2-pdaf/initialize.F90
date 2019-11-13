@@ -46,8 +46,8 @@ SUBROUTINE initialize()
 ! **********************
 
 ! *** Model specifications ***
-  nx = 2048 ! 36          ! Extent of grid in x-direction
-  ny = 2048 ! 18          ! Extent of grid in y-direction
+  nx = 36          ! Extent of grid in x-direction
+  ny = 18          ! Extent of grid in y-direction
 
 ! *** Screen output ***
   IF (mype_world == 0) THEN
