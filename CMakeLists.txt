@@ -34,7 +34,7 @@ link_libraries(${MPI_LIBRARIES})
 
 find_package(LAPACK REQUIRED)
 find_package(BLAS REQUIRED)
-SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}")
+SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
 
 # need all these options (especially default integer for mkl)
 SET(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
