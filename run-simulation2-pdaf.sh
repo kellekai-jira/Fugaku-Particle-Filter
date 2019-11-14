@@ -76,7 +76,7 @@ killall lorenz_96
 killall example_simulation
 
 
-mpirun -n $n_server \
+$MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
   $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
 
@@ -88,7 +88,7 @@ for i in `seq 0 $max_runner`;
 do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
-  mpirun -n $n_simulation \
+  $MPIEXEC -n $n_simulation \
     -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
     -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
     $precommand $sim_exe_path &

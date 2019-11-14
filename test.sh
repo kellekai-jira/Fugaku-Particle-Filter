@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/bash 
+
+#set -e
+#set -x
 
 source build/install/bin/melissa-da_set_env.sh
 
@@ -15,10 +18,10 @@ cd $verification_path
 #mpirun -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
 cd -
 
-rm failed.log
+rm -f failed.log
 
 function my_diff {
-  ../diff.py $fn1 $verification_path/$fn2
+  python ../diff.py $fn1 $verification_path/$fn2
   res=$?
   if [ "$res" != "0" ];
   then
@@ -49,7 +52,7 @@ do
 
         #diff -sq $fn1 $verification_path/$fn2
         #diff -q $fn1 $verification_path/$fn2
-        my_diff $fn1 $verification_path/$fn2 &
+        my_diff $fn1 $verification_path/$fn2  &
       #done
     done
   done

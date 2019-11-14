@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <cassert>
 #include "zmq.h"
+#include <cstring>
 
 
 void check_data_types() {

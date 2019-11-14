@@ -4,6 +4,7 @@
 #include <cassert>
 #include <memory>
 #include <csignal>
+#include <cstring>
 
 #include <mpi.h>
 #include "zmq.h"

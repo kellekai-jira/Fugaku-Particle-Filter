@@ -13,6 +13,7 @@
 
 #include <map>
 #include <string>
+#include <cstring>
 #include <cstdlib>
 #include <cassert>
 
@@ -369,7 +370,7 @@ void broadcast_field_information_and_calculate_parts() {
     }
 
     D("local_vect_sizes");
-    print_vector(field->local_vect_sizes_runner);
+    //print_vector(field->local_vect_sizes_runner);
 
     MPI_Bcast(field->local_vect_sizes_runner.data(),
               runner_comm_size,

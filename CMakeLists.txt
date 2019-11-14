@@ -1,7 +1,6 @@
 project(melissa LANGUAGES CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
 
-
 find_package(MPI REQUIRED)
 # ZeroMQ #
 
@@ -31,16 +30,29 @@ link_libraries(${ZeroMQ_LIBRARY})
 link_libraries(${MPI_LIBRARIES})
 
 # for compatibility with pdaf makefile....
-SET(CMAKE_Fortran_FLAGS "-fdefault-real-8")
+
+
+find_package(LAPACK REQUIRED)
+find_package(BLAS REQUIRED)
+SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}")
+
+# need all these options (especially default integer for mkl)
+SET(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
 
 SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
 
 SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.14 CACHE PATH "Path to PDAF")
 
+#SET(Fortran_MATH_LIBRARIES "-lmkl_gf_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
+
+#SET(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
+
+
 # pdaf-core is not in the f2008 standard
+#SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f95")
 add_subdirectory(pdaf-core)
 
-SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f2008")
+#SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f2008")
 add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
