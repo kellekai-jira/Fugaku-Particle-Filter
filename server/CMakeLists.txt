@@ -7,6 +7,10 @@ file(GLOB
 
 add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
 
+if(INSTALL_ZMQ)
+  add_dependencies(melissa_server ZeroMQ)
+endif(INSTALL_ZMQ)
+
 target_link_libraries(melissa_server pdaf_wrapper)
 
 target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrapper)

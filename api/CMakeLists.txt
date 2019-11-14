@@ -5,7 +5,12 @@ file(GLOB
      *.cxx
      )
 
-   add_library(melissa_api SHARED ${ALL_API} $<TARGET_OBJECTS:melissa_common>)
+add_library(melissa_api SHARED ${ALL_API} $<TARGET_OBJECTS:melissa_common>)
+
+if(INSTALL_ZMQ)
+   add_dependencies(melissa_api ZeroMQ)
+endif(INSTALL_ZMQ)
+
 target_compile_options(melissa_api BEFORE PUBLIC -fPIC)
 install(TARGETS melissa_api LIBRARY DESTINATION lib)
 
