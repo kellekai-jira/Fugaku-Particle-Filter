@@ -17,8 +17,8 @@ trap ctrl_c INT
 function ctrl_c() {
         echo "** Trapped CTRL-C"
         killall xterm
-        killall melissa_server
-        killall example_simulation
+        killall $server_exe
+        killall $sim_exe
         exit 0
 }
 
@@ -59,21 +59,21 @@ source ../../build/install/bin/melissa-da_set_env.sh
 bin_path="$MELISSA_DA_PATH/bin"
 
 server_exe="melissa_server"
-sim_exe="example_simulation"
+sim_exe="simulation1"
 
 killall xterm
 killall $server_exe
 killall $sim_exe
 
-server_exe="$bin_path/$server_exe"
-sim_exe="$bin_path/$sim_exe"
+server_exe_path="$bin_path/$server_exe"
+sim_exe_path="$bin_path/$sim_exe"
 
 
 rm output.txt
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe $total_steps $ensemble_size &
+  $precommand $server_exe_path $total_steps $ensemble_size &
 
 sleep 1
 
@@ -85,9 +85,9 @@ do
   mpirun -n $n_simulation \
     -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
     -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    $precommand $sim_exe &
+    $precommand $sim_exe_path &
 
-#LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so mpirun -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/example_simulation &
+#LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so mpirun -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/simulation1 &
 
   echo .
 done

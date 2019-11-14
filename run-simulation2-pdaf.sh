@@ -19,8 +19,8 @@ trap ctrl_c INT
 function ctrl_c() {
         echo "** Trapped CTRL-C"
         killall xterm
-        killall melissa_server
-        killall example_simulation
+        killall $sim_exe
+        killall $server_exe
         exit 0
 }
 
@@ -67,8 +67,8 @@ fi
 
 source ../build/install/bin/melissa-da_set_env.sh
 
-sim_exe="$MELISSA_DA_PATH/bin/simulation2-pdaf"
-server_exe="$MELISSA_DA_PATH/bin/melissa_server"
+sim_exe_path="$MELISSA_DA_PATH/bin/simulation2-pdaf"
+server_exe_path="$MELISSA_DA_PATH/bin/melissa_server"
 
 
 killall xterm
@@ -78,7 +78,7 @@ killall example_simulation
 
 mpirun -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe $total_steps $ensemble_size $assimilator_type &
+  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
 
@@ -91,7 +91,7 @@ do
   mpirun -n $n_simulation \
     -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
     -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    $precommand $sim_exe &
+    $precommand $sim_exe_path &
 
 
   echo .
