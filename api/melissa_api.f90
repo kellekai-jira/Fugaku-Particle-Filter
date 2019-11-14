@@ -15,8 +15,8 @@ subroutine melissa_init_f(field_name,&
                         comm) bind(c, name = 'melissa_init_f')
     use ISO_C_BINDING, only: C_INT, C_CHAR
     character(kind=C_CHAR),dimension(*) :: field_name
-    integer(kind=C_INT*2) :: local_vect_size
-    integer(kind=C_INT*2) :: comm
+    integer(kind=C_INT) :: local_vect_size
+    integer(kind=C_INT) :: comm
 end subroutine melissa_init_f
 
 
