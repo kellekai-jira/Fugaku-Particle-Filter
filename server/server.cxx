@@ -150,7 +150,7 @@ struct RunnerRankConnection
             field->getPart(runner_rank).local_offset_server,
             field->getPart(runner_rank).local_offset_runner,
             field->getPart(runner_rank).send_count);
-        //print_vector(field->ensemble_members.at(state_id).state_analysis);
+        // print_vector(field->ensemble_members.at(state_id).state_analysis);
 
         zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -265,6 +265,12 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     static int highest_runner_id = 0;
     assert(zmq_msg_size(&msg) == sizeof(int));
 
+    if (comm_rank == 0)
+    {
+        timing->add_runner();
+    }
+
+
     D("Server registering Runner ID %d", buf[1]);
 
     zmq_msg_t msg_reply1, msg_reply2;
@@ -370,7 +376,7 @@ void broadcast_field_information_and_calculate_parts() {
     }
 
     D("local_vect_sizes");
-    //print_vector(field->local_vect_sizes_runner);
+    // print_vector(field->local_vect_sizes_runner);
 
     MPI_Bcast(field->local_vect_sizes_runner.data(),
               runner_comm_size,
@@ -563,6 +569,10 @@ void end_all_runners()
 
 void init_new_timestamp()
 {
+    if (comm_rank == 0)
+    {
+        timing->start_iteration();
+    }
     size_t connections =
         field->connected_runner_ranks.size();
     // init or finished....
@@ -621,6 +631,8 @@ void check_due_dates() {
 
         if (comm_rank == 0)
         {
+            timing->remove_runner();
+
             // reschedule directly if possible
             if (idle_runners.size() > 0)
             {
@@ -662,7 +674,11 @@ void check_kill_requests() {
         L("Got state_id to kill... %d, killing runner_id %d",
           t.state_id, t.runner_id);
         bool is_new = killed.emplace(t).second;
-        if (!is_new)
+        if (is_new)
+        {
+            timing->remove_runner();
+        }
+        else
         {
             // don't kill it a second time!
             L("I already knew this");
@@ -961,9 +977,10 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         current_nsteps = assimilator->do_update_step();
 
 //      }
-        if (comm_rank == comm_size-1) {
+        if (comm_rank == 0)
+        {
             timing->stop_iteration();
-        }   
+        }
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {
@@ -972,9 +989,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
 
         init_new_timestamp();
-        if (comm_rank == comm_size-1) {
-            timing->start_iteration();
-        }
 
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
@@ -985,7 +999,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                 L("Rescheduling after update step");
                 schedule_new_task(runner_it->first);
             }
-    
+
         }
     }
 
@@ -1062,8 +1076,9 @@ int main(int argc, char * argv[])
 
 
     // Start Timing:
-    if (comm_rank == comm_size -1) {
-       std::make_unique<Timing>(TOTAL_STEPS);
+    if (comm_rank == 0)
+    {
+        timing = std::make_unique<Timing>(TOTAL_STEPS);
     }
 
     // Server main loop:
@@ -1116,9 +1131,6 @@ int main(int argc, char * argv[])
                 // propagate all fields to the other server clients on first message receive!
                 broadcast_field_information_and_calculate_parts();
                 init_new_timestamp();
-        if (comm_rank == comm_size-1) {
-            timing->start_iteration();
-        }
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
@@ -1194,9 +1206,10 @@ int main(int argc, char * argv[])
 
     }
 
-    D("****Test TEst TEst");
-    if (comm_rank == comm_size-1) {
-        D("****Test TEst TEst");
+    if (comm_rank == 0)
+    {
+        L("Executed %d timesteps with %d ensemble members each", TOTAL_STEPS,
+          ENSEMBLE_SIZE);
         timing->report();
     }
 
