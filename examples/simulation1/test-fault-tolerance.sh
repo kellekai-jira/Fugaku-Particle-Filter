@@ -8,7 +8,8 @@ cd -
 
 start_time=`date +%s`
 
-./run.sh test 200 42 3 2 10 &
+#./run.sh test 200 42 3 2 10 &
+./run-srun.sh test 200 42 3 2 10 &
 sleep 2
 ./killing-giraffe.sh simulation1
 sleep 7

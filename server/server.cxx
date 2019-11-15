@@ -40,7 +40,7 @@
 
 #include "Assimilator.h"
 
-
+#include "Timing.h"
 
 extern int ENSEMBLE_SIZE;
 extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
@@ -92,6 +92,7 @@ std::set<Task> killed;  // when a runner from this list connects we thus respond
 
 
 std::unique_ptr<Field> field(nullptr);
+std::unique_ptr<Timing> timing(nullptr);
 
 void my_free(void * data, void * hint)
 {
@@ -149,8 +150,7 @@ struct RunnerRankConnection
             field->getPart(runner_rank).local_offset_server,
             field->getPart(runner_rank).local_offset_runner,
             field->getPart(runner_rank).send_count);
-        print_vector(field->ensemble_members.at(
-                         state_id).state_analysis);
+        //print_vector(field->ensemble_members.at(state_id).state_analysis);
 
         zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -952,15 +952,18 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
     if (finished)
     {
         // @Kai: you probably want to uncomment this if....
-//		if (isRecovering) {
+//      if (isRecovering) {
         // get new analysis states from checkpoint....
-//			FTI_Recover;
-//			isRecovering = false;
-//		} else {
+//          FTI_Recover;
+//          isRecovering = false;
+//      } else {
         // get new analysis states from update step
         current_nsteps = assimilator->do_update_step();
 
-//		}
+//      }
+        if (comm_rank == comm_size-1) {
+            timing->stop_iteration();
+        }   
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {
@@ -969,6 +972,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
 
         init_new_timestamp();
+        if (comm_rank == comm_size-1) {
+            timing->start_iteration();
+        }
 
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
@@ -979,6 +985,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                 L("Rescheduling after update step");
                 schedule_new_task(runner_it->first);
             }
+    
         }
     }
 
@@ -1053,6 +1060,12 @@ int main(int argc, char * argv[])
                data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
                0, MPI_COMM_WORLD);
 
+
+    // Start Timing:
+    if (comm_rank == comm_size -1) {
+       std::make_unique<Timing>(TOTAL_STEPS);
+    }
+
     // Server main loop:
     while (true)
     {
@@ -1103,6 +1116,9 @@ int main(int argc, char * argv[])
                 // propagate all fields to the other server clients on first message receive!
                 broadcast_field_information_and_calculate_parts();
                 init_new_timestamp();
+        if (comm_rank == comm_size-1) {
+            timing->start_iteration();
+        }
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
@@ -1161,11 +1177,11 @@ int main(int argc, char * argv[])
             /// REM: Tasks are either unscheduled, scheduled, running or finished.
             size_t connections =
                 field->connected_runner_ranks.size();
-//			L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
-//					unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
-//					scheduled_sub_tasks.size(),
-//					running_sub_tasks.size(),
-//					finished_sub_tasks.size());
+//          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
+//                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
+//                  scheduled_sub_tasks.size(),
+//                  running_sub_tasks.size(),
+//                  finished_sub_tasks.size());
 
             // all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
             assert(
@@ -1178,6 +1194,11 @@ int main(int argc, char * argv[])
 
     }
 
+    D("****Test TEst TEst");
+    if (comm_rank == comm_size-1) {
+        D("****Test TEst TEst");
+        timing->report();
+    }
 
     D("Ending Server.");
     // TODO: check if we need to delete some more stuff!

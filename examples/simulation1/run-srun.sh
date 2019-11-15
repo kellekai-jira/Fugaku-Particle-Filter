@@ -2,9 +2,9 @@
 
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
-n_server=2
-n_simulation=3
-n_runners=5
+n_server=1
+n_simulation=1
+n_runners=1
 
 ensemble_size=5
 total_steps=5
@@ -82,7 +82,7 @@ for i in `seq 0 $max_runner`;
 do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   echo start  $i
-  $MPIEXEC -n $n_simulation $precommand $sim_exe_path &
+  $MPIEXEC -n $n_simulation $precommand $sim_exe_path > sim.log.$i&
 
 #LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so $MPIEXEC -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/simulation1 &
 

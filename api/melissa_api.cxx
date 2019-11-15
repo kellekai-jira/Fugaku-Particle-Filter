@@ -124,10 +124,10 @@ struct ServerRankConnection
             getRunnerId(), getCommRank(), current_state_id,
             timestamp,
             field_name, doubles_to_send * sizeof(double));
-        D("values[0]  = %.3f", values[0]);
-        D("values[1]  = %.3f", values[1]);
-        D("values[5]  = %.3f", values[5]);
-        D("values[35] = %.3f", values[35]);
+        //D("values[0]  = %.3f", values[0]);
+        //D("values[1]  = %.3f", values[1]);
+        //D("values[5]  = %.3f", values[5]);
+        //D("values[35] = %.3f", values[35]);
         zmq_msg_init_data(&msg_data, values, doubles_to_send *
                           sizeof(double), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
@@ -174,9 +174,9 @@ struct ServerRankConnection
                                                          &msg));
             std::copy(buf, buf + doubles_expected, out_values);
 
-            print_vector(std::vector<double>(out_values,
-                                             out_values +
-                                             doubles_expected));
+            //print_vector(std::vector<double>(out_values,
+            //                                 out_values +
+            //                                 doubles_expected));
             zmq_msg_close(&msg);
             assert_no_more_zmq_messages(data_request_socket);
         }

@@ -14,6 +14,7 @@
 
 
 const int GLOBAL_VECT_SIZE = 40;
+//const int GLOBAL_VECT_SIZE = 1000*1000*10;
 
 using namespace std;
 
