@@ -89,6 +89,7 @@ void report() {
         std::cout << std::endl;
         index++;
     }
-
+    std::cout << "------------------- End Timing information -------------------" << std::endl;
 }
+
 };

@@ -50,7 +50,9 @@ int TOTAL_STEPS = 5;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
-const long long MAX_RUNNER_TIMEOUT = 5;  // 10 min max timeout for runner.
+// in seconds:
+//const long long MAX_RUNNER_TIMEOUT = 5;  // 10 min max timeout for runner.
+const long long MAX_RUNNER_TIMEOUT = 5*60;  // 10 min max timeout for runner.
 
 const int TAG_NEW_TASK = 42;
 const int TAG_KILL_RUNNER = 43;
