@@ -891,7 +891,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                        &received, MPI_STATUS_IGNORE);
             if (received)
             {
-                L("Somebody finished... ");
                 int highest_task_id;
                 MPI_Recv(&highest_task_id, 1, MPI_INT, rank,
                          TAG_RANK_FINISHED, MPI_COMM_WORLD,
@@ -916,10 +915,10 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
         if (finished)
         {
+            L("Sending tag all finished message for timestep %d to %d other server ranks", current_step, comm_size-1);
             // tell everybody that everybody finished!
             for (int rank = 1; rank < comm_size; rank++)
             {
-                L("Sending tag all finished message");
                 MPI_Send(nullptr, 0, MPI_BYTE, rank,
                          TAG_ALL_FINISHED, MPI_COMM_WORLD);
             }
@@ -998,7 +997,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             for (auto runner_it = idle_runners.begin(); runner_it !=
                  idle_runners.end(); runner_it++)
             {
-                L("Rescheduling after update step");
+                L("Rescheduling after update step for timestep %d", current_step);
                 schedule_new_task(runner_it->first);
             }
 
