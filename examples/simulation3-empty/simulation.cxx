@@ -75,20 +75,10 @@ int main(int argc, char * args[])
     int nsteps = 1;
     do
     {
-        for (int step = 0; step < nsteps; step++)
-        {
-            int i = 0;
-            for (auto it = state1.begin(); it != state1.end(); it++)
-            {
-                *it += offsets[comm_rank] + i;
-
-                i++;
-            }
-        }
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        usleep(10000);
+        //usleep(10000);
         //usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
@@ -102,50 +92,6 @@ int main(int argc, char * args[])
 
         // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
         MPI_Barrier(MPI_COMM_WORLD);
-
-        // file output of allways ensemble member 0
-        // TODO: maybe move this functionality into api?
-        if (nsteps > 0 && melissa_get_current_state_id() == 1)
-        {
-            // raise(SIGINT);
-            if (comm_rank == 0)
-            {
-                ofstream myfile;
-                // 1 is the smallest timestamp.
-                if (melissa_get_current_timestamp() == 1)
-                {
-                    // remove old file...
-                    myfile.open ("output.txt", ios::trunc);
-                }
-                else
-                {
-                    myfile.open ("output.txt", ios::app);
-                }
-                vector<double> full_state(GLOBAL_VECT_SIZE);
-
-                MPI_Gatherv(state1.data(), state1.size(),
-                            MPI_DOUBLE,
-                            full_state.data(), counts.data(),
-                            offsets.data(),
-                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                for (auto it = full_state.begin(); it !=
-                     full_state.end(); it++)
-                {
-                    myfile << *it << ",";
-                }
-                myfile << "\n";
-                myfile.close();
-            }
-            else
-            {
-                MPI_Gatherv(state1.data(), state1.size(),
-                            MPI_DOUBLE,
-                            NULL, NULL, NULL,
-                            MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            }
-
-        }
-
     } while (nsteps > 0);
     int ret = MPI_Finalize();
     assert(ret == MPI_SUCCESS);

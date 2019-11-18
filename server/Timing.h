@@ -99,7 +99,7 @@ public:
         std::cout << "cores simulation,number simulations(max),cores server,runtime per iteration mean,ensemble members,state size,timesteps" << std::endl;
         int number_simulations_max = -1;
         double runtime = 0.0;
-        if (info.size() > 50) {
+        if (info.size() >= 30) {  // have at least 10 iterations for stats
             // 10 warmup and 10 cooldown
             for (auto it = info.begin()+10; it != info.end()-10; it++)
             {
