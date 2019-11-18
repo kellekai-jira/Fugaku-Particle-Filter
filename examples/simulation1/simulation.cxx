@@ -13,15 +13,19 @@
 #include <csignal>
 
 
-//const int GLOBAL_VECT_SIZE = 40;
+int GLOBAL_VECT_SIZE = 40;
 //const int GLOBAL_VECT_SIZE = 1000;
-const int GLOBAL_VECT_SIZE = 1000*100*10;
+//const int GLOBAL_VECT_SIZE = 1000*100*10;
 //const int GLOBAL_VECT_SIZE = 1000*1000*10;
 
 using namespace std;
 
 int main(int argc, char * args[])
 {
+    if (argc > 1) {
+      GLOBAL_VECT_SIZE = atoi(args[1]);
+      printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
+    }
 
     int comm_size;
     int comm_rank;
@@ -85,7 +89,7 @@ int main(int argc, char * args[])
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
         usleep(10000);
-        usleep(1000000);
+        //usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
 
