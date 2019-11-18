@@ -1211,7 +1211,7 @@ int main(int argc, char * argv[])
     {
         L("Executed %d timesteps with %d ensemble members each", TOTAL_STEPS,
           ENSEMBLE_SIZE);
-        timing->report();
+        timing->report(field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,field->globalVectSize());
     }
 
     D("Ending Server.");
