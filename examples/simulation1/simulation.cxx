@@ -85,6 +85,7 @@ int main(int argc, char * args[])
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
         usleep(10000);
+        usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
 

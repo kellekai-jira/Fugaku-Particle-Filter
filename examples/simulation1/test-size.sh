@@ -7,10 +7,14 @@ n_server=96
 n_simulation=96
 n_runners=1
 
+nodes_server=2
+nodes_simulation=2
+
 ensemble_size=700
 ensemble_size=1
 total_steps=5
 total_steps=50
+
 
 
 ######################################################
@@ -64,14 +68,14 @@ source ../../build/install/bin/melissa-da_set_env.sh
 
 # for srun:
 # do not put more than one rank per core...
-export MPIEXEC="$MPIEXEC --exclusive"
+#export MPIEXEC="$MPIEXEC --exclusive --ntasks-per-node=48 "
+export MPIEXEC="$MPIEXEC"
+#--hint=nomultithread
 
 
 #get hostnames with this simple trick (assuming wir are in a job allocation ;)
-tmpfile=`mktemp`
-srun -N 1 -n 1 hostname > $tmpfile
-host=`cat $tmpfile`
-export MELISSA_SERVER_MASTER_NODE="tcp://$host:4000" 
+server_host_0=`srun -N 1 -n 1 hostname`
+export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000" 
 rm $tmpfile
 
 bin_path="$MELISSA_DA_PATH/bin"
@@ -92,8 +96,16 @@ sim_exe_path="$bin_path/$sim_exe"
 rm output.txt
 
 rm server.log.*
-#$MPIEXEC -n $n_server $precommand $server_exe_path $total_steps $ensemble_size > server.log.$$ &
-$MPIEXEC -n $n_server -N 2 $precommand $server_exe_path $total_steps $ensemble_size > server.log.$$ &
+# get all hosts:
+nodelist=`srun hostname | cut -d '.' -f 1`
+nodelist=`echo $nodelist | sed -e 's/ /,/g'`
+nodelist_pointer=1
+
+nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
+nodelist_pointer=$((nodelist_pointer+nodes_server))
+
+$MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand $server_exe_path $total_steps $ensemble_size > server.log.$$ &
+
 
 sleep 1
 
@@ -102,11 +114,9 @@ for i in `seq 0 $max_runner`;
 do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   echo start  $i
-  #$MPIEXEC -n $n_simulation $precommand $sim_exe_path > sim.log.$i&
-  $MPIEXEC -n $n_simulation -N 2 $precommand $sim_exe_path > sim.log.$i&
-
-#LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so $MPIEXEC -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/simulation1 &
-
+    nodelist_simulation=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_simulation-1))`
+    nodelist_pointer=$((nodelist_pointer+nodes_server))
+    $MPIEXEC -N $nodes_simulation -n $n_simulation --nodelist=$nodelist_simulation $precommand $sim_exe_path > sim.log.$i&
   echo .
 done
 
