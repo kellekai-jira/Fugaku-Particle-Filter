@@ -51,8 +51,7 @@ int TOTAL_STEPS = 5;
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
 // in seconds:
-//const long long MAX_RUNNER_TIMEOUT = 5;  // 10 min max timeout for runner.
-const long long MAX_RUNNER_TIMEOUT = 5*60;  // 10 min max timeout for runner.
+long long MAX_RUNNER_TIMEOUT = 5;
 
 const int TAG_NEW_TASK = 42;
 const int TAG_KILL_RUNNER = 43;
@@ -1025,6 +1024,10 @@ int main(int argc, char * argv[])
     {
         ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
     }
+    if (argc >= 5)
+    {
+        MAX_RUNNER_TIMEOUT = atoi(argv[4]);
+    }
 
 
     assert(TOTAL_STEPS > 1);
@@ -1209,8 +1212,8 @@ int main(int argc, char * argv[])
 
     if (comm_rank == 0)
     {
-        L("Executed %d timesteps with %d ensemble members each", TOTAL_STEPS,
-          ENSEMBLE_SIZE);
+        L("Executed %d timesteps with %d ensemble members each, with a runner timeout of %ll seconds", TOTAL_STEPS,
+          ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
         timing->report(field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,field->globalVectSize());
     }
 

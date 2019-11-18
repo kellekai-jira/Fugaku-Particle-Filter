@@ -72,11 +72,12 @@ sim_exe_path="$bin_path/$sim_exe"
 
 rm output.txt
 
-$MPIEXEC -n $n_server $precommand $server_exe_path $total_steps $ensemble_size &
+#                                                                           Assimilator, max timeout in s
+$MPIEXEC -n $n_server $precommand $server_exe_path $total_steps $ensemble_size 0, 5*60 &
 
 sleep 1
 
-export MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" 
+export MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000"
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
