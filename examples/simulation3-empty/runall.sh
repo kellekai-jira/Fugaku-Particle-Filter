@@ -15,6 +15,7 @@ count=1
 
 MAX_TIMESTAMP=300
 MAX_TIMESTAMP=1400
+MAX_TIMESTAMP=35
 
 
 MAX_ENSEMBLE_MEMBERS=5
@@ -48,12 +49,12 @@ fi
 #for ensemble_members in 100 200 400 800 1600;
 for ensemble_members in 100;
 do
-  for server_procs in 192;
+  for server_procs in 144;
   do
     for simulation_procs in 48;
     do
       #for model_task_runners in 1 2 4;   # works on 8 nodes on juwels...
-      for model_task_runners in 2;   # works on 8 nodes on juwels...
+      for model_task_runners in 1;   # works on 8 nodes on juwels...
       do
         echo "-----------------------------------------------------------------------------"
         echo step $count of $max_count:

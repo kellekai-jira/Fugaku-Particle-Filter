@@ -121,8 +121,11 @@ nodelist_pointer=1
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
 nodelist_pointer=$((nodelist_pointer+nodes_server))
 
+#$MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand \
+#  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
+
 $MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand \
-  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
+  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
 
 
 sleep 1

@@ -27,11 +27,11 @@
 #include "zmq.h"
 
 #include "Field.h"
-#include "Memory.h"
 
 #include "messages.h"
 #include "Part.h"
 #include "utils.h"
+#include "memory.h"
 
 #include <time.h>
 
@@ -48,6 +48,9 @@ extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
 
 int ENSEMBLE_SIZE = 5;
 int TOTAL_STEPS = 5;
+
+
+
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
@@ -652,7 +655,9 @@ void check_due_dates() {
             L("Sending kill request to rank 0");
 
             int buf[2] = { it->state_id, it->runner_id};
-            MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+            //MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+                      //MPI_COMM_WORLD);
+            MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
                       MPI_COMM_WORLD);
             L("Finished kill request to rank 0");
         }
@@ -1086,6 +1091,9 @@ int main(int argc, char * argv[])
         timing = std::make_unique<Timing>(TOTAL_STEPS);
     }
 
+    // for memory benchmarking:
+    int last_seconds_memory = 0;
+
     // Server main loop:
     while (true)
     {
@@ -1212,10 +1220,11 @@ int main(int argc, char * argv[])
 #ifndef NDEBUG
 
         int seconds = static_cast<int>(time (NULL));
-        if (comm_rank == 0 && (seconds % 5 == 0))
+        
+        if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
         {
-            D("getting mem");
-            D("Memory : %d KB", MemoryGetValue());
+            MemoryReportValue();
+            last_seconds_memory = seconds;
         }
 #endif
 

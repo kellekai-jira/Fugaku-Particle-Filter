@@ -20,6 +20,9 @@ int GLOBAL_VECT_SIZE = 40;
 
 using namespace std;
 
+int comm_rank = -1;
+#define printf(x ...) if (comm_rank == 0) { printf(x); }
+
 int main(int argc, char * args[])
 {
     if (argc > 1) {
@@ -28,7 +31,6 @@ int main(int argc, char * args[])
     }
 
     int comm_size;
-    int comm_rank;
 
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
@@ -68,7 +70,7 @@ int main(int argc, char * args[])
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0);
-    printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
+    //printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 
 
     static bool is_first_timestep = true;
@@ -82,6 +84,7 @@ int main(int argc, char * args[])
         //usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
+        printf("calculating from timestep %d\n", melissa_get_current_timestamp()); 
 
         if (nsteps > 0 && is_first_timestep)
         {
