@@ -75,7 +75,7 @@ export MPIEXEC="$MPIEXEC"
 
 #get hostnames with this simple trick (assuming wir are in a job allocation ;)
 server_host_0=`srun -N 1 -n 1 hostname`
-export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000" 
+export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
 rm $tmpfile
 
 bin_path="$MELISSA_DA_PATH/bin"
@@ -115,7 +115,7 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   echo start  $i
     nodelist_simulation=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_simulation-1))`
-    nodelist_pointer=$((nodelist_pointer+nodes_server))
+    nodelist_pointer=$((nodelist_pointer+nodes_simulation))
     $MPIEXEC -N $nodes_simulation -n $n_simulation --nodelist=$nodelist_simulation $precommand $sim_exe_path > sim.log.$i&
   echo .
 done
