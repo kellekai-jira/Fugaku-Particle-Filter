@@ -15,8 +15,6 @@ problem_size=40
 max_runner_timeout=5
 
 
-source options.sh
-
 ######################################################
 
 # trap ctrl-c and call ctrl_c()
@@ -30,13 +28,8 @@ function ctrl_c() {
         exit 0
 }
 
-precommand="xterm_gdb"
-#precommand="xterm_gdb valgrind --leak-check=yes"
-rm -f nc.vg.*
+precommand=""
 
-#precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
-#precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
-#precommand="xterm -e valgrind --vgdb=yes --vgdb-error=0 --leak-check=full --track-origins=yes --show-reachable=yes"
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
@@ -45,22 +38,15 @@ then
   n_server=$4
   n_simulation=$5
   n_runners=$6
-
-
-  echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
-
-  precommand=""
 else
-  # compile:
-  # abort on error!
   set -e
   cd ../..
   ./compile.sh
   cd -
   set +e
-
-  echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
+
+echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 
 source ../../build/install/bin/melissa-da_set_env.sh
 
@@ -77,11 +63,11 @@ server_exe_path="$bin_path/$server_exe"
 sim_exe_path="$bin_path/$sim_exe"
 
 
-rm output.txt
+rm server.log.*
 
 $MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout &
+  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
 
 sleep 1
 
@@ -103,3 +89,8 @@ done
 
 wait
 
+
+server_rank_0_log=`ls server.log.* | head -n 1`
+echo Server rank 0  log file: $server_rank_0_log
+
+sed -n '/Run information/,/End Run information/p' $server_rank_0_log | sed -e '1,2 d; $ d' >> output.csv
