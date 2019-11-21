@@ -27,6 +27,7 @@
 #include "zmq.h"
 
 #include "Field.h"
+#include "Memory.h"
 
 #include "messages.h"
 #include "Part.h"
@@ -1207,6 +1208,16 @@ int main(int argc, char * argv[])
                 finished_sub_tasks.size() == connections *
                 ENSEMBLE_SIZE);
         }
+
+#ifndef NDEBUG
+
+        int seconds = static_cast<int>(time (NULL));
+        if (comm_rank == 0 && (seconds % 5 == 0))
+        {
+            D("getting mem");
+            D("Memory : %d KB", MemoryGetValue());
+        }
+#endif
 
     }
 

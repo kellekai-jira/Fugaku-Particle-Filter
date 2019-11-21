@@ -14,9 +14,21 @@ ensemble_size=1
 total_steps=5
 total_steps=50
 
-problem_size=40
+problem_size=10000000
+#--> MPI_Bsend(184).......: MPI_Bsend(buf=0x7ffd958c7f60, count=2, MPI_INT, dest=0, tag=43, MPI_COMM_WORLD) failed
+#MPIR_Bsend_isend(311): Insufficient space in Bsend buffer; requested 8; total buffer size is 0Fatal error in MPI_Bsend: Invalid buffer pointer, error stack
+
+problem_size=1000000
+problem_size=100000
+# still....
+
+
+# works:
+problem_size=1000
+# worked once... error seems not related to this...
+
 # in s
-max_runner_timeout=60
+max_runner_timeout=120
 
 
 ######################################################
@@ -25,12 +37,13 @@ max_runner_timeout=60
 trap ctrl_c INT
 
 
-
-kill_cmd="srun bash -c \'killall $sim_exe; killall $server_exe; killall xterm\'"
+function kill_cmd() {
+    srun bash -c "killall $sim_exe; killall $server_exe; killall xterm"
+}
 
 function ctrl_c() {
         echo "** Trapped CTRL-C"
-        $kill_cmd
+        kill_cmd
         exit 0
 }
 
@@ -85,7 +98,7 @@ bin_path="$MELISSA_DA_PATH/bin"
 server_exe="melissa_server"
 sim_exe="simulation3-empty"
 
-$kill_cmd
+kill_cmd
 
 server_exe_path="$bin_path/$server_exe"
 sim_exe_path="$bin_path/$sim_exe"
@@ -121,8 +134,14 @@ do
   echo start  $i
     nodelist_simulation=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_simulation-1))`
     nodelist_pointer=$((nodelist_pointer+nodes_simulation))
-    $MPIEXEC -N $nodes_simulation -n $n_simulation --nodelist=$nodelist_simulation $precommand $sim_exe_path > sim.log.$i&
+    $MPIEXEC -N $nodes_simulation -n $n_simulation --nodelist=$nodelist_simulation $precommand $sim_exe_path $problem_size > sim.log.$i&
   echo .
 done
 
 wait
+
+
+server_rank_0_log=`ls server.log.* | head -n 1`
+echo Server rank 0  log file: $server_rank_0_log
+
+sed -n '/Run information/,/End Run information/p' $server_rank_0_log | sed -e '1,2 d; $ d' >> output.csv

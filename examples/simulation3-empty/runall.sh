@@ -26,7 +26,7 @@ max_count=$(($MAX_ENSEMBLE_MEMBERS*$MAX_SERVER_PROCS*$MAX_SIMU_PROCS*$MAX_SIMU_R
 
 # figure out host:
 
-if [[ `hostname | grep juwels.fzj.de1 | wc -l` != "0" ]];
+if [[ `hostname | grep juwels.fzj.de | wc -l` != "0" ]];
 then
   run_script="./run-juwels.sh"
 else
@@ -45,13 +45,15 @@ fi
       #for model_task_runners in `seq 1 $MAX_SIMU_RUNNER`;
       #do
 # for juwels:
-for ensemble_members in 100 200 400 800 1600;
+#for ensemble_members in 100 200 400 800 1600;
+for ensemble_members in 100;
 do
   for server_procs in 192;
   do
     for simulation_procs in 48;
     do
-      for model_task_runners in 1 2 4 8;
+      #for model_task_runners in 1 2 4;   # works on 8 nodes on juwels...
+      for model_task_runners in 2;   # works on 8 nodes on juwels...
       do
         echo "-----------------------------------------------------------------------------"
         echo step $count of $max_count:
