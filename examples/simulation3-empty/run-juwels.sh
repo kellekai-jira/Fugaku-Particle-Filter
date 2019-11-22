@@ -1,5 +1,6 @@
 #!/bin/bash -x
 
+
 # this is the testcase to see if we scale very high???
 
 
@@ -25,6 +26,7 @@ problem_size=100000
 
 # works:
 problem_size=1000
+#problem_size=10000000
 # worked once... error seems not related to this...
 
 # in s
@@ -34,7 +36,7 @@ max_runner_timeout=120
 ######################################################
 
 # trap ctrl-c and call ctrl_c()
-trap ctrl_c INT
+#trap ctrl_c INT
 
 
 function kill_cmd() {
@@ -118,17 +120,35 @@ nodelist=`srun hostname | cut -d '.' -f 1`
 nodelist=`echo $nodelist | sed -e 's/ /,/g'`
 nodelist_pointer=1
 
+nodes_server=3 # TODO: change this. was for 1 server rank per server node...
+
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
 nodelist_pointer=$((nodelist_pointer+nodes_server))
 
 #$MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand \
 #  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
 
-$MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand \
+#export TRACENAME=melissa_server_${n_server}p.prv
+#precommand=$HOME/workspace/melissa-da/extrae/trace.sh
+precommand=""
+export SCOREP_ENABLE_TRACING=false
+export SCOREP_ENABLE_PROFILING=true
+#export SCOREP_ENABLE_UNWINDING=true
+export SCOREP_TOTAL_MEMORY=300M
+#export SCOREP_SAMPLING_EVENTS=perf_cycles@2000000
+#export SCAN_ANALYZE_OPTS="--time-correct"
+#export SCOREP_ENABLE_TRACING=true
+#scalasca -analyze
+#scan
+scalasca -analyze $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=1 --nodelist=$nodelist_server $precommand \
   $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
 
 
 sleep 1
+
+export SCOREP_ENABLE_TRACING=false
+export SCOREP_ENABLE_PROFILING=false
+export SCOREP_ENABLE_UNWINDING=false
 
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
@@ -137,7 +157,7 @@ do
   echo start  $i
     nodelist_simulation=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_simulation-1))`
     nodelist_pointer=$((nodelist_pointer+nodes_simulation))
-    $MPIEXEC -N $nodes_simulation -n $n_simulation --nodelist=$nodelist_simulation $precommand $sim_exe_path $problem_size > sim.log.$i&
+    $MPIEXEC -N $nodes_simulation -n $n_simulation --ntasks-per-node=48 --nodelist=$nodelist_simulation $precommand $sim_exe_path $problem_size > sim.log.$i&
   echo .
 done
 

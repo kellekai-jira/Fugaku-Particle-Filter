@@ -16,6 +16,7 @@ count=1
 MAX_TIMESTAMP=300
 MAX_TIMESTAMP=1400
 MAX_TIMESTAMP=35
+MAX_TIMESTAMP=3
 
 
 MAX_ENSEMBLE_MEMBERS=5
@@ -47,9 +48,10 @@ fi
       #do
 # for juwels:
 #for ensemble_members in 100 200 400 800 1600;
-for ensemble_members in 100;
+#for ensemble_members in 100;
+for ensemble_members in 5;
 do
-  for server_procs in 144;
+  for server_procs in 3;
   do
     for simulation_procs in 48;
     do
