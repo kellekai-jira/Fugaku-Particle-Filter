@@ -2,12 +2,12 @@
 
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
-n_server=2
+n_server=3
 n_simulation=3
 n_runners=4
 
 ensemble_size=5
-total_steps=5
+total_steps=1440
 
 ######################################################
 

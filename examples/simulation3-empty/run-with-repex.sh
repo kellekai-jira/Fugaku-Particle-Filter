@@ -12,7 +12,7 @@ export FOLDER_POSTFIX=""
 
 # space seperated list. if one path is a folder all it's content is copied.
 # absolute and relative paths are allowed.
-export INPUT_FILES="runall.sh run.sh run-juwels.sh"
+export INPUT_FILES="runall.sh run.sh run-juwels.sh $MELISSA_DA_PATH/../CMakeCache.txt"
 
 # git repositories to save:
 # absolute and relative paths to the git repositories root dir are allowed.
