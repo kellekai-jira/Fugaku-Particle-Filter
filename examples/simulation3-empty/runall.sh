@@ -49,9 +49,9 @@ fi
 # for juwels:
 #for ensemble_members in 100 200 400 800 1600;
 #for ensemble_members in 100;
-for ensemble_members in 5;
+for ensemble_members in 1000;
 do
-  for server_procs in 3;
+  for server_procs in 12;
   do
     for simulation_procs in 48;
     do

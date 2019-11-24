@@ -15,6 +15,8 @@ ensemble_size=1
 total_steps=5
 total_steps=50
 
+####################
+# not overwritten in test:
 problem_size=10000000
 #--> MPI_Bsend(184).......: MPI_Bsend(buf=0x7ffd958c7f60, count=2, MPI_INT, dest=0, tag=43, MPI_COMM_WORLD) failed
 #MPIR_Bsend_isend(311): Insufficient space in Bsend buffer; requested 8; total buffer size is 0Fatal error in MPI_Bsend: Invalid buffer pointer, error stack
@@ -27,11 +29,15 @@ problem_size=100000
 # works:
 problem_size=1000
 #problem_size=10000000
+
+problem_size=10000000
 # worked once... error seems not related to this...
 
 # in s
 max_runner_timeout=120
 
+CORES_PER_SIMULATION_NODE=48
+CORES_PER_SERVER_NODE=4
 
 ######################################################
 
@@ -76,10 +82,9 @@ else
   echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
 
-cores_per_node=48
 
-nodes_server=$((n_server / cores_per_node))
-nodes_simulation=$((n_simulation / cores_per_node))
+nodes_server=$((n_server / CORES_PER_SERVER_NODE))
+nodes_simulation=$((n_simulation / CORES_PER_SIMULATION_NODE))
 
 source ../../build/install/bin/melissa-da_set_env.sh
 
@@ -120,7 +125,6 @@ nodelist=`srun hostname | cut -d '.' -f 1`
 nodelist=`echo $nodelist | sed -e 's/ /,/g'`
 nodelist_pointer=1
 
-nodes_server=3 # TODO: change this. was for 1 server rank per server node...
 
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
 nodelist_pointer=$((nodelist_pointer+nodes_server))
@@ -135,12 +139,12 @@ export SCOREP_ENABLE_TRACING=false
 export SCOREP_ENABLE_PROFILING=true
 #export SCOREP_ENABLE_UNWINDING=true
 export SCOREP_TOTAL_MEMORY=300M
-#export SCOREP_SAMPLING_EVENTS=perf_cycles@2000000
-#export SCAN_ANALYZE_OPTS="--time-correct"
+export SCOREP_SAMPLING_EVENTS=perf_cycles@2000000
+export SCAN_ANALYZE_OPTS="--time-correct"
 #export SCOREP_ENABLE_TRACING=true
 #scalasca -analyze
 #scan
-scalasca -analyze $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=1 --nodelist=$nodelist_server $precommand \
+scan $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
   $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
 
 
@@ -157,7 +161,7 @@ do
   echo start  $i
     nodelist_simulation=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_simulation-1))`
     nodelist_pointer=$((nodelist_pointer+nodes_simulation))
-    $MPIEXEC -N $nodes_simulation -n $n_simulation --ntasks-per-node=48 --nodelist=$nodelist_simulation $precommand $sim_exe_path $problem_size > sim.log.$i&
+    $MPIEXEC -N $nodes_simulation -n $n_simulation --ntasks-per-node=$CORES_PER_SIMULATION_NODE --nodelist=$nodelist_simulation $precommand $sim_exe_path $problem_size > sim.log.$i&
   echo .
 done
 
