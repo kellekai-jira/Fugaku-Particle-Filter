@@ -26,6 +26,8 @@
 #include <mpi.h>
 #include "zmq.h"
 
+#include "melissa-da_config.h"
+
 #include "Field.h"
 
 #include "messages.h"
@@ -97,7 +99,10 @@ std::set<Task> killed;  // when a runner from this list connects we thus respond
 
 
 std::unique_ptr<Field> field(nullptr);
+
+#ifdef REPORT_TIMING
 std::unique_ptr<Timing> timing(nullptr);
+#endif
 
 void my_free(void * data, void * hint)
 {
@@ -164,6 +169,7 @@ struct RunnerRankConnection
         connection_identity = NULL;
     }
 
+    // TODO: clean up error messages in the case of ending runners on the api side...
     void end(const int end_flag=END_RUNNER) {
         // some connection_identities will be 0 if some runner ranks are connected to another server rank at the moment.
         if (connection_identity == NULL)
@@ -270,10 +276,12 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     static int highest_runner_id = 0;
     assert(zmq_msg_size(&msg) == sizeof(int));
 
+#ifdef REPORT_TIMING
     if (comm_rank == 0)
     {
         timing->add_runner();
     }
+#endif
 
 
     D("Server registering Runner ID %d", buf[1]);
@@ -574,10 +582,12 @@ void end_all_runners()
 
 void init_new_timestamp()
 {
+#ifdef REPORT_TIMING
     if (comm_rank == 0)
     {
         timing->start_iteration();
     }
+#endif
     size_t connections =
         field->connected_runner_ranks.size();
     // init or finished....
@@ -636,7 +646,9 @@ void check_due_dates() {
 
         if (comm_rank == 0)
         {
+#ifdef REPORT_TIMING
             timing->remove_runner();
+#endif
 
             // reschedule directly if possible
             if (idle_runners.size() > 0)
@@ -683,7 +695,9 @@ void check_kill_requests() {
         bool is_new = killed.emplace(t).second;
         if (is_new)
         {
+#ifdef REPORT_TIMING
             timing->remove_runner();
+#endif
         }
         else
         {
@@ -983,10 +997,12 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         current_nsteps = assimilator->do_update_step();
 
 //      }
+#ifdef REPORT_TIMING
         if (comm_rank == 0)
         {
             timing->stop_iteration();
         }
+#endif
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {
@@ -1084,15 +1100,18 @@ int main(int argc, char * argv[])
                data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
                0, MPI_COMM_WORLD);
 
-
+#ifdef REPORT_TIMING
     // Start Timing:
     if (comm_rank == 0)
     {
         timing = std::make_unique<Timing>(TOTAL_STEPS);
     }
+#endif
 
+#ifdef REPORT_MEMORY
     // for memory benchmarking:
     int last_seconds_memory = 0;
+#endif
 
     // Server main loop:
     while (true)
@@ -1217,10 +1236,10 @@ int main(int argc, char * argv[])
                 ENSEMBLE_SIZE);
         }
 
-#ifndef NDEBUG
+#ifdef REPORT_MEMORY
 
         int seconds = static_cast<int>(time (NULL));
-        
+
         if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
         {
             MemoryReportValue();
@@ -1232,9 +1251,11 @@ int main(int argc, char * argv[])
 
     if (comm_rank == 0)
     {
-        L("Executed %d timesteps with %d ensemble members each, with a runner timeout of %ll seconds", TOTAL_STEPS,
+        L("Executed %d timesteps with %d ensemble members each, with a runner timeout of %lli seconds", TOTAL_STEPS,
           ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
+#ifdef REPORT_TIMING
         timing->report(field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,field->globalVectSize());
+#endif
     }
 
     D("Ending Server.");

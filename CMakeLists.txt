@@ -48,6 +48,16 @@ SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.14 CACHE PATH "Path to PDAF")
 
 #SET(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
 
+# Fault tolerance
+option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a bit of MPI communication" ON)
+
+# Profiling options:
+option(REPORT_TIMING "Will collect and report timing and bandwidth information on the server side at the end" ON)
+option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) every 5s and log them to stdout" OFF)
+
+configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)
+include_directories ("${PROJECT_BINARY_DIR}/include")
+
 
 # pdaf-core is not in the f2008 standard
 #SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f95")

@@ -1,0 +1,3 @@
+#cmakedefine REPORT_TIMING
+#cmakedefine REPORT_MEMORY
+#cmakedefine RUNNERS_MAY_CRASH

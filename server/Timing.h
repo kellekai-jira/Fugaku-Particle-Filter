@@ -96,7 +96,7 @@ public:
         std::cout <<
             "------------------- Run information(csv): -------------------" <<
             std::endl;
-        std::cout << "cores simulation,number simulations(max),cores server,runtime per iteration mean,ensemble members,state size,timesteps" << std::endl;
+        std::cout << "cores simulation,number simulations(max),cores server,runtime per iteration mean,ensemble members,state size,timesteps,mean bandwidth (MB/s)" << std::endl;
         int number_simulations_max = -1;
         double runtime = 0.0;
         if (info.size() >= 30) {  // have at least 10 iterations for stats
@@ -116,8 +116,10 @@ public:
         std::cout << runtime << ',';
         std::cout << ensemble_members << ',';
         std::cout << state_size << ',';
-        std::cout << info.size() << std::endl;
+        std::cout << info.size() << ',';
+        std::cout << 8*state_size*ensemble_members*2.0/runtime;
 
+        std::cout << std::endl;
         std::cout << "------------------- End Run information -------------------" << std::endl;
     }
 
