@@ -899,7 +899,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         field->connected_runner_ranks.size();
 
     bool finished;
-    if (comm_rank == 0)
+#ifdef RUNNERS_MAY_CRASH
+    if (comm_rank == 0)  // this if only exists if RUNNERS_MAY_CRASH
     {
         // try to know if somebody else finished
         for (int rank = 1; rank < comm_size; rank++)
@@ -922,6 +923,10 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
 
         }
+#else
+        // May the compiler optimie out the following line:
+        finished_ranks = comm_size - 1;
+#endif
 
         finished = finished_ranks == comm_size-1 &&           // comm size without rank 0
                    unscheduled_tasks.size() == 0 &&
@@ -931,7 +936,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                    finished_sub_tasks.size() == ENSEMBLE_SIZE *
                    connections;
         // L("rank 0: D %d ", finished_ranks);
-
+#ifdef RUNNERS_MAY_CRASH
         if (finished)
         {
             L("Sending tag all finished message for timestep %d to %d other server ranks", current_step, comm_size-1);
@@ -943,7 +948,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
         }
     }
-    else
+    else // this else only exists if RUNNERS_MAY_CRASH
     {
         // rank != 0:
         finished = false;
@@ -984,6 +989,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
 
     }
+#endif
 
     if (finished)
     {
@@ -1191,7 +1197,7 @@ int main(int argc, char * argv[])
 // X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
 // X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
 
-
+#ifdef RUNNERS_MAY_CRASH
             // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
             check_due_dates();
 
@@ -1199,6 +1205,7 @@ int main(int argc, char * argv[])
             {
                 check_kill_requests();
             }
+#endif
 
             if (comm_rank != 0)
             {
@@ -1237,7 +1244,6 @@ int main(int argc, char * argv[])
         }
 
 #ifdef REPORT_MEMORY
-
         int seconds = static_cast<int>(time (NULL));
 
         if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
