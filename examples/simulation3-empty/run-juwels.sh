@@ -144,7 +144,7 @@ export SCAN_ANALYZE_OPTS="--time-correct"
 #export SCOREP_ENABLE_TRACING=true
 #scalasca -analyze
 #scan
-scan $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
+$MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
   $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
 
 

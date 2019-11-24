@@ -1000,6 +1000,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 //          isRecovering = false;
 //      } else {
         // get new analysis states from update step
+        L("====> Update step %d/%d", current_step, TOTAL_STEPS);
         current_nsteps = assimilator->do_update_step();
 
 //      }

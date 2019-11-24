@@ -16,13 +16,13 @@ count=1
 MAX_TIMESTAMP=300
 MAX_TIMESTAMP=1400
 MAX_TIMESTAMP=35
-MAX_TIMESTAMP=3
+MAX_TIMESTAMP=31
 
 
 MAX_ENSEMBLE_MEMBERS=5
 MAX_SERVER_PROCS=4
 MAX_SIMU_PROCS=4
-MAX_SIMU_RUNNER=4
+MAX_SIMU_RUNNER=5
 
 max_count=$(($MAX_ENSEMBLE_MEMBERS*$MAX_SERVER_PROCS*$MAX_SIMU_PROCS*$MAX_SIMU_RUNNER))
 
@@ -56,7 +56,7 @@ do
     for simulation_procs in 48;
     do
       #for model_task_runners in 1 2 4;   # works on 8 nodes on juwels...
-      for model_task_runners in 1;   # works on 8 nodes on juwels...
+      for model_task_runners in 5;   # works on 8 nodes on juwels...
       do
         echo "-----------------------------------------------------------------------------"
         echo step $count of $max_count:
