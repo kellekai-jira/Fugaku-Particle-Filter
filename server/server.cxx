@@ -667,10 +667,11 @@ void check_due_dates() {
             L("Sending kill request to rank 0");
 
             int buf[2] = { it->state_id, it->runner_id};
-            //MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-                      //MPI_COMM_WORLD);
-            MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+            MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
                       MPI_COMM_WORLD);
+            // if BSend does not find memory use the send version
+            //MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+                      //MPI_COMM_WORLD);
             L("Finished kill request to rank 0");
         }
     }
