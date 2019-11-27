@@ -49,8 +49,8 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   INTEGER :: cnt0, cnt_p, cnt0_p      ! Counters
   INTEGER :: off_p                    ! process-local offset in state vector
   REAL, ALLOCATABLE :: obs_field(:,:) ! Array for observation field read from file
-  CHARACTER(len=2) :: stepstr         ! String for time step
-  CHARACTER(len=256) :: pdaf_path     ! pdaf path, load from environment variable
+  CHARACTER(len=3) :: stepstr         ! String for time step
+  CHARACTER(len=256) :: dataset_path     ! pdaf path, load from environment variable
 
 
 ! ****************************************
@@ -68,13 +68,15 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
 
   IF (step<10) THEN
      WRITE (stepstr, '(i1)') step
-  ELSE
+  ELSE IF (step<100) THEN
      WRITE (stepstr, '(i2)') step
+  ELSE IF (step<1000) THEN
+     WRITE (stepstr, '(i3)') step
   END IF
 
-  call get_environment_variable( 'PDAF_PATH', pdaf_path )
+  call get_environment_variable( 'DATASET_PATH', dataset_path )
   OPEN (12, &
-    file=TRIM(pdaf_path)//'/tutorial/inputs_online/obs_step'// &
+    file=TRIM(dataset_path)//'/obs_step'// &
     TRIM(stepstr)//'.txt', status='old')
   DO i = 1, ny
      READ (12, *) obs_field(i, :)

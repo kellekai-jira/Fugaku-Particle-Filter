@@ -15,7 +15,9 @@
 #include <string>
 #include <cstdlib>
 #include <cassert>
+#include <extrae.h>
 
+#include <pthread.h>
 #include <utility>
 #include <vector>
 #include <list>
@@ -28,7 +30,7 @@
 #include "zmq.h"
 
 #include "Field.h"
-
+#include "FTmodule.h"
 #include "messages.h"
 #include "Part.h"
 #include "utils.h"
@@ -45,6 +47,10 @@
 
 #include <fti.h>
 
+std::vector<pthread_t> fti_threads;
+
+FTmodule FT;
+
 std::unique_ptr<Field> field(nullptr);
 extern int ENSEMBLE_SIZE;
 extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
@@ -54,7 +60,7 @@ int TOTAL_STEPS = 5;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
-const long long MAX_RUNNER_TIMEOUT = 600;  // 10 min max timeout for runner.
+const long long MAX_RUNNER_TIMEOUT = 10000000;  // 10 min max timeout for runner.
 
 const int TAG_NEW_TASK = 42;
 const int TAG_KILL_RUNNER = 43;
@@ -275,6 +281,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     assert(zmq_msg_size(&msg) == sizeof(int));
 
     D("Server registering Runner ID %d", buf[1]);
+    //DF("SERVER", "Server registering Runner ID %d", buf[1]);
 
     zmq_msg_t msg_reply1, msg_reply2;
     zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
@@ -331,17 +338,22 @@ void register_field(zmq_msg_t &msg, const int * buf,
 void answer_configuration_message(void * configuration_socket,
                                   char * data_response_port_names)
 {
-    zmq_msg_t msg;
+	static int req_runner = 0;
+	static int req_field = 0;
+    
+	zmq_msg_t msg;
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
     int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
     if (buf[0] == REGISTER_RUNNER_ID)
     {
+		//DF("SERVER", "[%d] register runner", req_runner++ );
         register_runner_id(msg, buf, configuration_socket,
                            data_response_port_names);
     }
     else if (buf[0] == REGISTER_FIELD)
     {
+		//DF("SERVER", "[%d] register field", req_field++ );
         register_field(msg, buf, configuration_socket);
     }
     else
@@ -383,7 +395,7 @@ void broadcast_field_information_and_calculate_parts()
     MPI_Bcast(field->local_vect_sizes_runner.data(),runner_comm_size,my_MPI_SIZE_T, 0, FTI_COMM_WORLD);  
 
     field->calculate_parts(comm_size);
-
+    
 }
 
 /// returns true if could send the sub_task on a connection.
@@ -668,6 +680,7 @@ void check_kill_requests()
 
 void handle_data_response() 
 {
+    Extrae_user_function(1);
     // TODO: move to send and receive function as on api side... maybe use zproto library?
     zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
     zmq_msg_init(&identity_msg);
@@ -770,10 +783,10 @@ void handle_data_response()
             D("storing this timestamp!...");
             // zero copy is unfortunately for send only. so copy internally...
             field->ensemble_members[runner_state_id].
-            store_background_state_part(part,
-                                        reinterpret_cast
-                                        <double*>(zmq_msg_data(
-                                                      &data_msg)));
+            store_background_state_part(part,reinterpret_cast<double*>(zmq_msg_data(&data_msg)), runner_state_id);
+            // checkpoint to disk 
+            pthread_t *new_task;
+            FT.store_subset( field, runner_state_id, runner_rank, new_task );
         }
 
         // Check if we can answer directly with new data... means starting of a new model task
@@ -826,6 +839,7 @@ void handle_data_response()
         }
     }
 
+    Extrae_user_function(0);
     zmq_msg_close(&identity_msg);
     zmq_msg_close(&empty_msg);
     zmq_msg_close(&header_msg);
@@ -930,7 +944,12 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
     if (finished)
     {
+        FT.finalizeCP();
+        FT.recover();
+
+        std::cout << " -- 0 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
         current_nsteps = assimilator->do_update_step();
+        std::cout << " -- 1 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {
@@ -940,24 +959,23 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
         // TODO create fault tolerance class and outsource all FTI related stuff there.
 
-        int i=0;
-        FTI_Protect( i++, &current_step, sizeof(current_step), FTI_CHAR);
-        FTI_Protect( i++, &current_nsteps, sizeof(current_nsteps), FTI_CHAR);
-        for(auto it = field->ensemble_members.begin(); it != field->ensemble_members.end(); it++) {
-            auto ptr = it->state_analysis.data();
-            auto size = sizeof(it->state_analysis[0])*it->state_analysis.size();
-            FTI_Protect( i++, ptr, size, FTI_CHAR);
-        }
-        if( isRecovery ) {
-            FTI_Recover();
-            isRecovery = 0;
-        } else {
-            FTI_Checkpoint( current_step, 4 );
-            //if( current_step == 5 ) *(int*)NULL = 0;
-        }
+        //int i=0;
+        //FTI_Protect( i++, &current_step, sizeof(current_step), FTI_CHAR);
+        //FTI_Protect( i++, &current_nsteps, sizeof(current_nsteps), FTI_CHAR);
+        //for(auto it = field->ensemble_members.begin(); it != field->ensemble_members.end(); it++) {
+        //    auto ptr = it->state_analysis.data();
+        //    auto size = sizeof(it->state_analysis[0])*it->state_analysis.size();
+        //    FTI_Protect( i++, ptr, size, FTI_CHAR);
+        //}
+        //if( isRecovery ) {
+        //    FTI_Recover();
+        //    isRecovery = 0;
+        //} else {
+        //    FTI_Checkpoint( current_step, 4 );
+        //    //if( current_step == 5 ) *(int*)NULL = 0;
+        //}
 
-        init_new_timestamp();
-        
+        init_new_timestamp(); 
 
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
@@ -969,6 +987,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
                 schedule_new_task(runner_it->first);
             }
         }
+        
+        FT.initCP( current_step );
+    
     }
 
     return false;
@@ -977,9 +998,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 /// optional parameters [MAX_TIMESTAMP [ENSEMBLESIZE]]
 int main(int argc, char * argv[])
 {
+
     check_data_types();
 
-    std::cout << "SERVER AHOI" << std::endl;
     // Read in configuration from command line
     if (argc >= 2)
     {
@@ -997,10 +1018,11 @@ int main(int argc, char * argv[])
 
     assert(TOTAL_STEPS > 1);
     assert(ENSEMBLE_SIZE > 0);
-
-    MPI_Init(NULL, NULL);
-    FTI_Init("config.fti", MPI_COMM_WORLD);
     
+    int provided;
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+    FT.init( MPI_COMM_WORLD, &current_step ); 
+        
     isRecovery = FTI_Status();
 
     MPI_Comm_size(FTI_COMM_WORLD, &comm_size);
@@ -1026,6 +1048,9 @@ int main(int argc, char * argv[])
     if (comm_rank == 0)
     {
         configuration_socket = zmq_socket(context, ZMQ_REP);
+        int val = 20000;
+        zmq_setsockopt( configuration_socket, ZMQ_RCVTIMEO, &val, sizeof(int) );
+        zmq_setsockopt( configuration_socket, ZMQ_SNDTIMEO, &val, sizeof(int) );
         char configuration_socket_addr[MPI_MAX_PROCESSOR_NAME+256];
         snprintf( configuration_socket_addr, MPI_MAX_PROCESSOR_NAME+256, "tcp://%s:4000", hostname );
         
@@ -1045,6 +1070,9 @@ int main(int argc, char * argv[])
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
+    int val = 20000;
+    zmq_setsockopt( data_response_socket, ZMQ_RCVTIMEO, &val, sizeof(int) );
+    zmq_setsockopt( data_response_socket, ZMQ_SNDTIMEO, &val, sizeof(int) );
     char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
     sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
     zmq_bind(data_response_socket, data_response_port_name);
@@ -1118,6 +1146,8 @@ int main(int argc, char * argv[])
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(ASSIMILATOR_TYPE, *field);
                 current_nsteps = assimilator->getNSteps();
+                
+                FT.protect_background( field );
                 
                 D("Change Phase");
                 phase = PHASE_SIMULATION;

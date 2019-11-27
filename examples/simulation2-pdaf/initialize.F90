@@ -37,7 +37,7 @@ SUBROUTINE initialize()
 ! *** local variables ***
   INTEGER :: i, j                 ! Counters
   REAL, ALLOCATABLE :: field(:,:) ! GLobal model field
-  CHARACTER(len=256) :: pdaf_path     ! pdaf path, load from environment variable
+  CHARACTER(len=256) :: dataset_path     ! pdaf path, load from environment variable
 
 
 
@@ -46,8 +46,8 @@ SUBROUTINE initialize()
 ! **********************
 
 ! *** Model specifications ***
-  nx = 36          ! Extent of grid in x-direction
-  ny = 18          ! Extent of grid in y-direction
+  nx = 4096 !36          ! Extent of grid in x-direction
+  ny = 4096 !18          ! Extent of grid in y-direction
 
 ! *** Screen output ***
   IF (mype_world == 0) THEN
@@ -56,14 +56,15 @@ SUBROUTINE initialize()
   END IF
 
 ! *** Initialize size of local nx for parallelization ***
-  IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
-       npes_model==6 .OR.npes_model==9) THEN
-     ! Split x-diection in chunks of equal size
-     nx_p = nx / npes_model
-  ELSE
-     WRITE (*,*) 'ERROR: Invalid number of processes'
-     CALL abort_parallel()
-  END IF
+  !IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
+  !     npes_model==6 .OR.npes_model==9) THEN
+  !   ! Split x-diection in chunks of equal size
+  !   nx_p = nx / npes_model
+  !ELSE
+  !   WRITE (*,*) 'ERROR: Invalid number of processes'
+  !   CALL abort_parallel()
+  !END IF
+  nx_p = nx / npes_model
 
   IF (mype_world == 0) THEN
      WRITE (*, '(/2x, a, i3, a)') &
@@ -83,8 +84,8 @@ SUBROUTINE initialize()
   ALLOCATE(field(ny, nx))
 
   ! Read global model field
-  call get_environment_variable( 'PDAF_PATH', pdaf_path )
-  OPEN(11, file = TRIM(pdaf_path)//'/tutorial/inputs_online/true_initial.txt', status='old')
+  call get_environment_variable( 'DATASET_PATH', dataset_path )
+  OPEN(11, file = TRIM(dataset_path)//'/true_initial.txt', status='old')
 
   DO i = 1, ny
      READ (11, *) field(i, :)
@@ -102,6 +103,5 @@ SUBROUTINE initialize()
   DEALLOCATE(field)
 
   CALL MELISSA_INIT_F(melissa_field_name, nx_p*ny, MPI_COMM_WORLD)
-
 
 END SUBROUTINE initialize

@@ -1,5 +1,5 @@
 #include "Part.h"
-
+#include <iostream>
 
 std::vector<Part> calculate_n_to_m(const int comm_size_server, const
                                    std::vector<size_t> &local_vect_sizes_runner)

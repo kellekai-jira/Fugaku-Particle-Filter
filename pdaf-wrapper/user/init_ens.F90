@@ -55,7 +55,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
   INTEGER :: i, j, member             ! Counters
   REAL, ALLOCATABLE :: field(:,:)     ! global model field
   CHARACTER(len=2) :: ensstr          ! String for ensemble member
-  CHARACTER(len=256) :: pdaf_path     ! pdaf path, load from environment variable
+  CHARACTER(len=256) :: dataset_path     ! pdaf path, load from environment variable
 
 
 ! **********************
@@ -77,11 +77,15 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 ! *** Read ensemble from files ***
 ! ********************************
 
-  call get_environment_variable( 'PDAF_PATH', pdaf_path )
+  call get_environment_variable( 'DATASET_PATH', dataset_path )
   DO member = 1, dim_ens
-     WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
+     IF ( member < 10 ) THEN
+        WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
+     ELSE
+        WRITE (ensstr, '(i2)') member ! todo what if dim_ens > 9?
+     ENDIF
      OPEN(11, &
-       file = TRIM(pdaf_path)//'/tutorial/inputs_online/ens_'// &
+       file = TRIM(dataset_path)//'/ens_'// &
        TRIM(ensstr)//'.txt', status='old')
      write(*,*) 'load from ', ensstr
 
