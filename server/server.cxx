@@ -785,8 +785,7 @@ void handle_data_response()
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,reinterpret_cast<double*>(zmq_msg_data(&data_msg)), runner_state_id);
             // checkpoint to disk 
-            pthread_t *new_task;
-            FT.store_subset( field, runner_state_id, runner_rank, new_task );
+            FT.store_subset( field, runner_state_id, runner_rank );
         }
 
         // Check if we can answer directly with new data... means starting of a new model task
@@ -944,12 +943,14 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
     if (finished)
     {
-        FT.finalizeCP();
+        FT.flushCP();
         FT.recover();
 
         std::cout << " -- 0 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
         current_nsteps = assimilator->do_update_step();
         std::cout << " -- 1 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
+
+        FT.finalizeCP();
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {

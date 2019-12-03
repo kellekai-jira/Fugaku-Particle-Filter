@@ -7,6 +7,7 @@
 #include "Field.h"
 #include <map>
 #include <memory>
+#include "FTthreadManager.h"
 
 class FTmodule {
 
@@ -14,13 +15,15 @@ class FTmodule {
 
         void init( const MPI_Comm & comm, void * epoch_counter );
         void protect_background( std::unique_ptr<Field> & field );
-        void store_subset( std::unique_ptr<Field> & field, int dataset_id, int runner_rank, pthread_t * new_task );
+        void store_subset( std::unique_ptr<Field> & field, int dataset_id, int runner_rank );
         void initCP( int epoch ); 
         void finalizeCP( void ); 
+        void flushCP( void ); 
         void recover( void ); 
 
     private:
        
+        FTthreadManager FTsched;
         bool m_checkpointing;
         std::map<std::string,int> id_map;
         bool m_restart;
