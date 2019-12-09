@@ -29,6 +29,10 @@ include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 link_libraries(${MPI_LIBRARIES})
 
+# For intel compilers necessary:
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
+
+
 # for compatibility with pdaf makefile....
 
 

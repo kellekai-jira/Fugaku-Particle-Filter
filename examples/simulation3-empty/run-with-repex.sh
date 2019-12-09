@@ -5,7 +5,7 @@ source ../../build/install/bin/melissa-da_set_env.sh
 
 # to be changed by the user:
 
-export EXPERIMENT_NAME=Simulation3-Empty-localnode
+export EXPERIMENT_NAME=Simulation3-Empty
 
 # can be used for hyperparameters...
 export FOLDER_POSTFIX=""

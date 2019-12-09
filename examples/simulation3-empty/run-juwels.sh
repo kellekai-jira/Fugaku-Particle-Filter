@@ -46,7 +46,7 @@ CORES_PER_SERVER_NODE=4
 
 
 function kill_cmd() {
-    srun bash -c "killall $sim_exe; killall $server_exe; killall xterm"
+    srun bash -c "killall $sim_exe; killall $server_exe; killall xterm; killall melissa_server; killall trace.sh"
 }
 
 function ctrl_c() {
@@ -91,7 +91,8 @@ source ../../build/install/bin/melissa-da_set_env.sh
 # for srun:
 # do not put more than one rank per core...
 #export MPIEXEC="$MPIEXEC --exclusive --ntasks-per-node=48 "
-export MPIEXEC="$MPIEXEC"
+#export MPIEXEC="$MPIEXEC"
+export MPIEXEC="srun"
 #--hint=nomultithread
 
 
@@ -132,8 +133,8 @@ nodelist_pointer=$((nodelist_pointer+nodes_server))
 #$MPIEXEC -N $nodes_server -n $n_server --nodelist=$nodelist_server $precommand \
 #  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
 
-#export TRACENAME=melissa_server_${n_server}p.prv
-#precommand=$HOME/workspace/melissa-da/extrae/trace.sh
+export TRACENAME=melissa_server_${n_server}p.prv
+precommand=$HOME/workspace/melissa-da/extrae/trace.sh
 precommand=""
 export SCOREP_ENABLE_TRACING=false
 export SCOREP_ENABLE_PROFILING=true
@@ -147,6 +148,7 @@ export SCAN_ANALYZE_OPTS="--time-correct"
 $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
   $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
 
+precommand=""
 
 sleep 1
 
