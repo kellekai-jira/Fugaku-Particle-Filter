@@ -900,7 +900,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         field->connected_runner_ranks.size();
 
     bool finished;
-#ifdef RUNNERS_MAY_CRASH
+#ifdef RUNNERS_MAY_CRASH   // This needs refactoring I guess
     if (comm_rank == 0)  // this if only exists if RUNNERS_MAY_CRASH
     {
         // try to know if somebody else finished

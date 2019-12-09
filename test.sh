@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 #set -e
 #set -x
@@ -10,7 +10,20 @@ cd output
 echo test with verification from standard model
 
 verification_path=$PDAF_PATH/tutorial/verification/online_2D_parallelmodel
+
 verification_path=$PDAF_PATH/tutorial/online_2D_parallelmodel
+
+# To create the testset
+if [ ! -f "$verification_path/ens_06_step08_ana.txt" ]; then
+  cd $verification_path
+  make model_pdaf
+  mpirun -np 18 ./model_pdaf -dim_ens 9
+  cd -
+fi
+
+
+
+#verification_path=/home/friese/workspace/PDAF-D_V1.14/tutorial/online_2D_parallelmodel
 
 check="python2 $verification_path/../../testsuite/tests_dummy1D/check.py"
 
