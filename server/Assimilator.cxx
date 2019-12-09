@@ -31,6 +31,7 @@ std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
         break;
     default:
         assert(false);         // should never be reached.
+        return nullptr;
     }
 }
 

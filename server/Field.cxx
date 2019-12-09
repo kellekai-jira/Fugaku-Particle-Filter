@@ -53,6 +53,7 @@ Part & Field::getPart(int simu_rank)
         }
     }
     assert(false);     // Did not find the part!
+    return *parts.end();
 }
 
 size_t Field::globalVectSize() {
