@@ -7,6 +7,7 @@
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <atomic>
 
 class FTthreadManager
 {
@@ -24,9 +25,12 @@ class FTthreadManager
     private:
        
         struct task_t {
-            bool active;
+            std::atomic<bool> active;
+            std::thread th;
             std::promise<bool> promise;
             std::future<bool> future;
+            task_t() : active(false) {}
+            task_t( const task_t & task ) { active.store( task.active.load(std::memory_order_acquire), std::memory_order_release ); }
         };
         std::thread m_scheduler_thread;
         std::mutex m_mutex;
@@ -36,17 +40,16 @@ class FTthreadManager
         std::queue< std::function<void()> > m_task_queue_pending;
         std::vector< task_t > m_task_queue_running;
         int m_max_threads;
-        bool m_online;
+        std::atomic<bool> m_online;
 
 };
 
 template<class F, class... Args>
 void FTthreadManager::submit(F&& f, Args&&... args)
 {
-    m_mutex.lock();
+    std::lock_guard<std::mutex> lck(m_mutex);
     m_task_queue_pending.push( std::function<void()>() );
     m_task_queue_pending.back() = std::bind( f, args... );
-    m_mutex.unlock();
 }        
 
 #endif // __FTTHREADMANAGER__
