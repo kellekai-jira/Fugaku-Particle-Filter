@@ -945,12 +945,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
     {
         FT.flushCP();
         FT.recover();
+        FT.finalizeCP();
 
         std::cout << " -- 0 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
         current_nsteps = assimilator->do_update_step();
         std::cout << " -- 1 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
 
-        FT.finalizeCP();
+//        FT.finalizeCP();
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {
@@ -1021,7 +1022,11 @@ int main(int argc, char * argv[])
     assert(ENSEMBLE_SIZE > 0);
     
     int provided;
-    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &provided);
+    if( provided < MPI_THREAD_SERIALIZED ) {
+        D( "thread level is not provided!" );
+        MPI_Abort( MPI_COMM_WORLD, -1 );
+    }
     FT.init( MPI_COMM_WORLD, &current_step ); 
         
     isRecovery = FTI_Status();

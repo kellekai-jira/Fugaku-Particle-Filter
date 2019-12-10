@@ -9,7 +9,8 @@ add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
 
 target_link_libraries(melissa_server ${FTI_DYNAMIC_LIB})
 target_include_directories(melissa_server PUBLIC ${FTI_INCLUDE_DIR})
-target_link_libraries(melissa_server "$ENV{EXTRAE_HOME}/lib/libptmpitrace.so")
+target_link_libraries(melissa_server "$ENV{EXTRAE_HOME}/lib/libmpitrace.so")
+target_link_libraries(melissa_server ${CMAKE_THREAD_LIBS_INIT})
 include_directories(melissa_server PUBLIC "$ENV{EXTRAE_HOME}/include")
 
 target_link_libraries(melissa_server pdaf_wrapper)

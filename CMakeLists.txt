@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.2.2)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+find_package (Threads)
 find_package(MPI REQUIRED)
 find_package(ZeroMQ REQUIRED)
 find_package(FTI REQUIRED)
