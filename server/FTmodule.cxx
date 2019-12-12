@@ -29,7 +29,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
 {
     int comm_size_server; 
     int comm_size_runner = field->local_vect_sizes_runner.size();
-    MPI_Comm_size( FTI_COMM_WORLD, &comm_size_server );
+    MPI_Comm_size( FTI_COMM_DUP, &comm_size_server );
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = 0;
     for (size_t i = 0; i < comm_size_runner; ++i)
@@ -52,7 +52,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
             local_vect_sizes_server[i]++;
         }
     }
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     int dataset_rank = 1;
     hsize_t state_dim = field->globalVectSize();    
     int dataset_id = 0 + m_id_offset; // equals state_id
@@ -92,7 +92,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
 
 void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank )
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     if( m_checkpointing ) {
         std::string key(field->name);
         key += "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank );
@@ -107,7 +107,7 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
   
 void FTmodule::initCP( int epoch ) 
 {   
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     if( !m_checkpointing ) {
         std::cout << "[" << myRank << "] fti_dbg -> init_icp" << std::endl;
         id_check.clear();
@@ -122,22 +122,22 @@ void FTmodule::initCP( int epoch )
 
 void FTmodule::flushCP( void ) 
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     if( m_checkpointing ) {
         std::cout << "[" << myRank << ":" << NOW << "] fti_dbg -> flush_icp" << std::endl;
         FTsched.synchronize();
-        FTI_CheckSanityICP();
-        FTsched.submit( FTI_FlushICP );
+        //FTI_CheckSanityICP();
+        FTsched.submit( FTI_FinalizeICP );
     }
 }
 
 void FTmodule::finalizeCP( void ) 
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     if( m_checkpointing ) {
         std::cout << "[" << myRank << "] fti_dbg -> finalize_icp" << std::endl;
         FTsched.synchronize();
-        FTI_FinalizeICP();
+        //FTI_FinalizeICP();
         m_checkpointing = false;
     }
 }

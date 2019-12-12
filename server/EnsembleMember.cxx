@@ -21,7 +21,7 @@ void EnsembleMember::set_local_vect_size(int local_vect_size)
 void EnsembleMember::store_background_state_part(const Part & part, const
                                                  double * values, int state_id)
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
+    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
     D("before_assert %lu %lu %lu", part.send_count,
       part.local_offset_server, state_background.size());
     assert(part.send_count + part.local_offset_server <=
