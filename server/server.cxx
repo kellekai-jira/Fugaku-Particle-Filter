@@ -15,7 +15,7 @@
 #include <string>
 #include <cstdlib>
 #include <cassert>
-#include <extrae.h>
+//#include <extrae.h>
 
 #include <pthread.h>
 #include <utility>
@@ -680,7 +680,7 @@ void check_kill_requests()
 
 void handle_data_response() 
 {
-    Extrae_user_function(1);
+    //Extrae_user_function(1);
     // TODO: move to send and receive function as on api side... maybe use zproto library?
     zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
     zmq_msg_init(&identity_msg);
@@ -838,7 +838,7 @@ void handle_data_response()
         }
     }
 
-    Extrae_user_function(0);
+    //Extrae_user_function(0);
     zmq_msg_close(&identity_msg);
     zmq_msg_close(&empty_msg);
     zmq_msg_close(&header_msg);
@@ -951,7 +951,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         current_nsteps = assimilator->do_update_step();
         std::cout << " -- 1 -- fti_dbg cur_step: " << current_step << "current_nsteps: " << current_nsteps << std::endl;
 
-//        FT.finalizeCP();
+        //FT.finalizeCP();
 
         if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
         {

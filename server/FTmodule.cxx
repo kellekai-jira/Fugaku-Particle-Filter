@@ -16,9 +16,9 @@ void FTmodule::init( const MPI_Comm & comm, void * epoch_counter )
     hsize_t dim = 1;
     hsize_t offset = 0;
     hsize_t count = 1;
-    FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
+    //FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
     FTI_Protect( m_id_offset, epoch_counter, 1, FTI_INTG );
-    FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset ); 
+    //FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset ); 
     m_id_offset++;
     m_restart = static_cast<bool>(FTI_Status());
     m_protected = false;
@@ -65,7 +65,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
         hsize_t offset = offset_base;
         std::string dataset_name(field->name);
         dataset_name += "_" + std::to_string( dataset_id-m_id_offset );
-        FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        //FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
         std::vector<Part>::iterator it_part = field->parts.begin();
         while( (it_part = std::find_if( it_part, field->parts.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts.end() ){
             offset += static_cast<hsize_t>(it_part->local_offset_server);
@@ -73,7 +73,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
             FTI_Protect( subset_id, ptr, it_part->send_count, FTI_DBLE );
             count_tot += count;
-            FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id ); 
+            //FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id ); 
             std::string subset_name(dataset_name);
             subset_name += "_" + std::to_string( it_part->rank_runner );
             //std::cout << "[" << myRank << "] fti_dbg -> protect_var ";
@@ -99,12 +99,12 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
         if( id_check.find(key) == id_check.end() ) {
             //FTI_AddVarICP( id_map[key] );
             FTsched.submit( FTI_AddVarICP, id_map[key] );
-            std::cout << "[" << myRank << "] fti_dbg -> add_var " << key << std::endl;
+            std::cout << "[" << myRank << "] fti_dbg -> add_var. key: " << key << " id: " << id_map[key] << std::endl;
             id_check.insert(key);
         }
     }
 }
-
+  
 void FTmodule::initCP( int epoch ) 
 {   
     int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
@@ -112,7 +112,7 @@ void FTmodule::initCP( int epoch )
         std::cout << "[" << myRank << "] fti_dbg -> init_icp" << std::endl;
         id_check.clear();
         m_checkpointing = true;
-        FTI_InitICP( epoch, FTI_L4_DCP, 1 );
+        FTI_InitICP( epoch, 1, 1 );
         //FTI_InitICP( epoch, 1, 1 );
         for(int id=0; id<m_id_offset; id++) {
             FTI_AddVarICP( id );
@@ -124,9 +124,10 @@ void FTmodule::flushCP( void )
 {
     int myRank; MPI_Comm_rank(FTI_COMM_WORLD, &myRank);
     if( m_checkpointing ) {
-        std::cout << "[" << myRank << "] fti_dbg -> flush_icp" << std::endl;
+        std::cout << "[" << myRank << ":" << NOW << "] fti_dbg -> flush_icp" << std::endl;
         FTsched.synchronize();
-        FTsched.submit( FTI_FinalizeICP );
+        FTI_CheckSanityICP();
+        FTsched.submit( FTI_FlushICP );
     }
 }
 
@@ -136,6 +137,7 @@ void FTmodule::finalizeCP( void )
     if( m_checkpointing ) {
         std::cout << "[" << myRank << "] fti_dbg -> finalize_icp" << std::endl;
         FTsched.synchronize();
+        FTI_FinalizeICP();
         m_checkpointing = false;
     }
 }
