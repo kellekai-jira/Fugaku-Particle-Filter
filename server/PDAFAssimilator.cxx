@@ -79,7 +79,7 @@ int PDAFAssimilator::do_update_step()
     Extrae_user_function(1);
     int status;      //    ! Status flag for filter routines
 
-    MPI_Barrier(FTI_COMM_DUP);      // TODO: remove this line!
+    MPI_Barrier(FTI_COMM_WORLD);      // TODO: remove this line!
     L("Doing update step...\n");
 
 
