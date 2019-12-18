@@ -1,35 +1,37 @@
 #include "FTmodule.h"
 #include <algorithm>
+#include "MpiManager.h"
 
-void* pt_fti_add_var( void* arg )
+void FTmodule::init( void * epoch_counter ) 
 {
-    FTI_AddVarICP( *(int*) arg );
-}
-
-
-void FTmodule::init( const MPI_Comm & comm, void * epoch_counter ) 
-{
+#ifdef WITH_FTI
     m_checkpointing = false;
     id_check.clear();
-    FTI_Init( FTI_CONFIG, comm );
+    FTI_Init( FTI_CONFIG, mpi().comm() );
+#ifdef WITH_FTI_THREADS
+    mpi().update_comm( FTI_COMM_DUP )
+    FTsched.init(1);
+#else
+    mpi().update_comm( FTI_COMM_WORLD );
+#endif
     // protect global variables and set id_offset for subset ids
     hsize_t dim = 1;
     hsize_t offset = 0;
     hsize_t count = 1;
-    //FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
+    FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
     FTI_Protect( m_id_offset, epoch_counter, 1, FTI_INTG );
-    //FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset ); 
+    FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset ); 
     m_id_offset++;
     m_restart = static_cast<bool>(FTI_Status());
     m_protected = false;
-    FTsched.init(1);
+#endif
 }
 
 void FTmodule::protect_background( std::unique_ptr<Field> & field )
 {
-    int comm_size_server; 
+#ifdef WITH_FTI
+    int comm_size_server = mpi().size(); 
     int comm_size_runner = field->local_vect_sizes_runner.size();
-    MPI_Comm_size( FTI_COMM_DUP, &comm_size_server );
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = 0;
     for (size_t i = 0; i < comm_size_runner; ++i)
@@ -52,7 +54,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
             local_vect_sizes_server[i]++;
         }
     }
-    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
+    int myRank = mpi().rank();
     int dataset_rank = 1;
     hsize_t state_dim = field->globalVectSize();    
     int dataset_id = 0 + m_id_offset; // equals state_id
@@ -65,7 +67,7 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
         hsize_t offset = offset_base;
         std::string dataset_name(field->name);
         dataset_name += "_" + std::to_string( dataset_id-m_id_offset );
-        //FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
         std::vector<Part>::iterator it_part = field->parts.begin();
         while( (it_part = std::find_if( it_part, field->parts.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts.end() ){
             offset += static_cast<hsize_t>(it_part->local_offset_server);
@@ -73,79 +75,88 @@ void FTmodule::protect_background( std::unique_ptr<Field> & field )
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
             FTI_Protect( subset_id, ptr, it_part->send_count, FTI_DBLE );
             count_tot += count;
-            //FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id ); 
+            FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id ); 
             std::string subset_name(dataset_name);
             subset_name += "_" + std::to_string( it_part->rank_runner );
-            //std::cout << "[" << myRank << "] fti_dbg -> protect_var ";
-            //std::cout << subset_name << " ptr: " << ptr;
-            //std::cout << " offset: " << offset << " count: " << count;
-            //std::cout << " state_dim: " << state_dim << " did: " << dataset_id << std::endl;
             id_map[subset_name] = subset_id;
             subset_id++;
             it_part++;
         }
-        //std::cout << "[" << myRank << "] fti_dbg -> dataset_count: id " << dataset_id << " count " << count_tot << "dataset size "  << state_dim << " offset base " << offset_base << std::endl;
         dataset_id++;
     }
     m_protected = true;
+#endif
 }
 
 void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank )
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
+#ifdef WITH_FTI
     if( m_checkpointing ) {
         std::string key(field->name);
         key += "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank );
         if( id_check.find(key) == id_check.end() ) {
-            //FTI_AddVarICP( id_map[key] );
+#ifdef WITH_FTI_THREADS
             FTsched.submit( FTI_AddVarICP, id_map[key] );
-            std::cout << "[" << myRank << "] fti_dbg -> add_var. key: " << key << " id: " << id_map[key] << std::endl;
+#else
+            FTI_AddVarICP( id_map[key] );
+#endif
             id_check.insert(key);
         }
     }
+#endif
 }
   
 void FTmodule::initCP( int epoch ) 
 {   
-    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
+#ifdef WITH_FTI
     if( !m_checkpointing ) {
-        std::cout << "[" << myRank << "] fti_dbg -> init_icp" << std::endl;
         id_check.clear();
         m_checkpointing = true;
-        FTI_InitICP( epoch, 1, 1 );
-        //FTI_InitICP( epoch, 1, 1 );
+        FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
         for(int id=0; id<m_id_offset; id++) {
             FTI_AddVarICP( id );
         }
     }
+#endif
 }
 
 void FTmodule::flushCP( void ) 
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
+#if defined WITH_FTI && WITH_FTI_THREADS
     if( m_checkpointing ) {
-        std::cout << "[" << myRank << ":" << NOW << "] fti_dbg -> flush_icp" << std::endl;
         FTsched.synchronize();
-        //FTI_CheckSanityICP();
         FTsched.submit( FTI_FinalizeICP );
     }
+#endif
 }
 
 void FTmodule::finalizeCP( void ) 
 {
-    int myRank; MPI_Comm_rank(FTI_COMM_DUP, &myRank);
+#ifdef WITH_FTI
     if( m_checkpointing ) {
-        std::cout << "[" << myRank << "] fti_dbg -> finalize_icp" << std::endl;
+#ifdef WITH_FTI_THREADS
         FTsched.synchronize();
-        //FTI_FinalizeICP();
+#else
+        FTI_FinalizeICP();
+#endif
         m_checkpointing = false;
     }
+#endif
 }
 
 void FTmodule::recover( void )
 {
+#ifdef WITH_FTI
     if( m_restart && m_protected ) {
         FTI_Recover();
         m_restart = false;
     }
+#endif
+}
+
+void FTmodule::finalize( void )
+{
+#ifdef WITH_FTI
+    FTI_Finalize();
+#endif
 }

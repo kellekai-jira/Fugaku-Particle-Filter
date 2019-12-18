@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.2.2)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-find_package(FTI REQUIRED)
 find_package(MPI REQUIRED)
 
 # ZeroMQ #
@@ -22,6 +21,15 @@ if(INSTALL_ZMQ)
 else(INSTALL_ZMQ)
   find_package(ZeroMQ NO_MODULE REQUIRED)
 endif(INSTALL_ZMQ)
+
+# FTI #
+
+option(WITH_FTI OFF)
+option(WITH_FTI_THREADS OFF)
+
+if(WITH_FTI OR WITH_FTI_THREADS)
+  find_package(FTI REQUIRED)
+endif(WITH_FTI)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})

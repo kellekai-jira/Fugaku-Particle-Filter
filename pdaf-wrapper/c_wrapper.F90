@@ -47,8 +47,8 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 
 
 ! *** Model specifications ***
-  nx = 4096 !36          ! Extent of grid in x-direction
-  ny = 4096 !18          ! Extent of grid in y-direction
+  nx = 36          ! Extent of grid in x-direction
+  ny = 18          ! Extent of grid in y-direction
 
 
   !IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &

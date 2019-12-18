@@ -7,7 +7,6 @@
 
 #include "DummyAssimilator.h"
 #include <algorithm>
-#include <fti.h>
 
 DummyAssimilator::DummyAssimilator(Field & field_) :
     field(field_)

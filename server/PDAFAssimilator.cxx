@@ -11,8 +11,6 @@
 #include <algorithm>
 #include <csignal>
 #include "utils.h"
-#include <fti.h>
-#include <extrae.h>
 
 #include "pdaf-wrapper.h"
 
@@ -33,7 +31,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
     int local_vect_size = field.local_vect_size;
 
     // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
-    //assert (ENSEMBLE_SIZE <= 9);
+    assert (ENSEMBLE_SIZE <= 9);
     cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
     cwrapper_init_user(&TOTAL_STEPS);
     nsteps = -1;
@@ -76,7 +74,6 @@ void PDAFAssimilator::getAllEnsembleMembers()
 // called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
 int PDAFAssimilator::do_update_step()
 {
-    Extrae_user_function(1);
     int status;      //    ! Status flag for filter routines
 
     MPI_Barrier(FTI_COMM_WORLD);      // TODO: remove this line!
@@ -116,6 +113,5 @@ int PDAFAssimilator::do_update_step()
     //           ! *** call time stepper ***
     // normally: CALL integration(time, nsteps)
     // but in melissa: done by the model task runners!
-    Extrae_user_function(0);
     return getNSteps();
 }

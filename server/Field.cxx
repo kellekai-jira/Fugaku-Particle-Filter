@@ -28,11 +28,12 @@ void Field::calculate_parts(int server_comm_size)
             connected_runner_ranks.emplace(part_it->rank_runner);
         }
     }
-    auto ens_it = ensemble_members.begin();
-    for (; ens_it != ensemble_members.end(); ens_it++)
+
+    for (auto ens_it = ensemble_members.begin(); ens_it !=
+         ensemble_members.end(); ens_it++)
     {
-        // low: better naming: local state size is in doubles not in bytes!
-        ens_it->set_local_vect_size(local_vect_size);          
+
+        ens_it->set_local_vect_size(local_vect_size);          // low: better naming: local state size is in doubles not in bytes!
     }
 
     assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too big. (there are more server ranks than field elements. this makes not much sense!

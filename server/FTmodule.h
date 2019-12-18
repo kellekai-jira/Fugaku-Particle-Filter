@@ -13,13 +13,14 @@ class FTmodule {
 
     public:
 
-        void init( const MPI_Comm & comm, void * epoch_counter );
+        void init( void * epoch_counter );
         void protect_background( std::unique_ptr<Field> & field );
         void store_subset( std::unique_ptr<Field> & field, int dataset_id, int runner_rank );
         void initCP( int epoch ); 
         void finalizeCP( void ); 
         void flushCP( void ); 
         void recover( void ); 
+        void finalize( void ); 
 
     private:
        
