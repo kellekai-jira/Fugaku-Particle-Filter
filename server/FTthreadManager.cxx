@@ -1,8 +1,6 @@
 #include "FTthreadManager.h"
 #include <iostream>
 #include <algorithm>
-#include <sched.h>
-#include <mpi.h>
 #include <chrono>
 
 
@@ -74,10 +72,7 @@ void FTthreadManager::start_scheduler()
 
 void FTthreadManager::task_wrapper( std::function<int()> f, std::promise<bool> & p )
 {
-    int rank; MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    DBG( "[" << rank << ":" << NOW << "] fti_dbg -> function call start in thread" ); 
     f();
-    DBG( "[" << rank << ":" << NOW << "] fti_dbg -> function call ends in thread" ); 
     p.set_value(true);
 }
         

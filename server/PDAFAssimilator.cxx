@@ -7,10 +7,10 @@
 
 #include "PDAFAssimilator.h"
 
-#include <mpi.h>
 #include <algorithm>
 #include <csignal>
 #include "utils.h"
+#include "MpiManager.h"
 
 #include "pdaf-wrapper.h"
 
@@ -76,7 +76,7 @@ int PDAFAssimilator::do_update_step()
 {
     int status;      //    ! Status flag for filter routines
 
-    MPI_Barrier(FTI_COMM_WORLD);      // TODO: remove this line!
+    MPI_Barrier(mpi().comm());      // TODO: remove this line!
     L("Doing update step...\n");
 
 
