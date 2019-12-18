@@ -4,6 +4,7 @@
 #include <cassert>
 #include <memory>
 #include <csignal>
+#include <cstring>
 
 #include <mpi.h>
 #include "zmq.h"
@@ -12,8 +13,6 @@
 #include "Part.h"
 
 #include "utils.h"
-
-#include <cstring>
 
 #include "melissa_api.h"
 
@@ -84,9 +83,6 @@ struct ServerRankConnection
     ServerRankConnection(const char * addr_request)
     {
         data_request_socket = zmq_socket (context, ZMQ_REQ);
-        int val = 2000000;
-        zmq_setsockopt( data_request_socket, ZMQ_RCVTIMEO, &val, sizeof(int) );
-        zmq_setsockopt( data_request_socket, ZMQ_SNDTIMEO, &val, sizeof(int) );
         assert(data_request_socket);
         std::string cleaned_addr = fix_port_name(addr_request);
         D("Data Request Connection to %s", cleaned_addr.c_str());
@@ -128,10 +124,10 @@ struct ServerRankConnection
             getRunnerId(), getCommRank(), current_state_id,
             timestamp,
             field_name, doubles_to_send * sizeof(double));
-        D("values[0]  = %.3f", values[0]);
-        D("values[1]  = %.3f", values[1]);
-        D("values[5]  = %.3f", values[5]);
-        D("values[35] = %.3f", values[35]);
+        // D("values[0]  = %.3f", values[0]);
+        // D("values[1]  = %.3f", values[1]);
+        // D("values[5]  = %.3f", values[5]);
+        // D("values[35] = %.3f", values[35]);
         zmq_msg_init_data(&msg_data, values, doubles_to_send *
                           sizeof(double), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
@@ -178,10 +174,9 @@ struct ServerRankConnection
                                                          &msg));
             std::copy(buf, buf + doubles_expected, out_values);
 
-            /*print_vector(std::vector<double>(out_values,
-                                             out_values +
-                                             doubles_expected));
-            */
+            // print_vector(std::vector<double>(out_values,
+            //                                 out_values +
+            //                                 doubles_expected));
             zmq_msg_close(&msg);
             assert_no_more_zmq_messages(data_request_socket);
         }
@@ -337,9 +332,6 @@ struct ConfigurationConnection
     ConfigurationConnection()
     {
         socket = zmq_socket (context, ZMQ_REQ);
-        int val = 2000000;
-        zmq_setsockopt( socket, ZMQ_RCVTIMEO, &val, sizeof(int) );
-        zmq_setsockopt( socket, ZMQ_SNDTIMEO, &val, sizeof(int) );
         char * melissa_server_master_node = getenv(
             "MELISSA_SERVER_MASTER_NODE");
         if (melissa_server_master_node == nullptr)
@@ -348,9 +340,8 @@ struct ConfigurationConnection
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
             assert(false);
         }
-        std::string port_name(melissa_server_master_node);
-        //std::string port_name = fix_port_name(
-        //    melissa_server_master_node);
+        std::string port_name = fix_port_name(
+            melissa_server_master_node);
         D("Configuration Connection to %s", port_name.c_str());
         zmq_connect (socket, port_name.c_str());
     }
@@ -409,7 +400,6 @@ struct ConfigurationConnection
         int type = REGISTER_FIELD;
         header[0] = type;
         header[1] = getCommSize();
-        std::cout << "fti-dbg runner comm size: " << header[1] << std::endl;
         strcpy(reinterpret_cast<char*>(&header[2]), field_name);
         ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
 

@@ -9,6 +9,7 @@
 #include "Assimilator.h"
 #include "DummyAssimilator.h"
 #include "PDAFAssimilator.h"
+#include "EmptyAssimilator.h"
 
 std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
                                                  assimilator_type,
@@ -24,8 +25,13 @@ std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
         L("Chosing PDAF Assimilator");
         return std::make_shared<PDAFAssimilator>(field);
         break;
+    case ASSIMILATOR_EMPTY:
+        L("Chosing Empty Assimilator");
+        return std::make_shared<EmptyAssimilator>(field);
+        break;
     default:
         assert(false);         // should never be reached.
+        return nullptr;
     }
 }
 

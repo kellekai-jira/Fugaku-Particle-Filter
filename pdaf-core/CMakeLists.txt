@@ -21,5 +21,6 @@ add_library(pdaf STATIC ${ALL_PDAF})
 target_compile_options(pdaf BEFORE PUBLIC -fPIC)
 
 
-target_link_libraries(pdaf gfortran lapack blas m)
+#target_link_libraries(pdaf gfortran lapack blas m)
+target_link_libraries(pdaf gfortran ${Fortran_MATH_LIBRARIES} m)
 

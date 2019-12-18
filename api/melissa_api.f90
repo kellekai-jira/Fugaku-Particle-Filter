@@ -23,7 +23,7 @@ end subroutine melissa_init_f
 function melissa_expose(field_name,&
     values) bind(c, name = 'melissa_expose')
     use ISO_C_BINDING, only: C_BOOL, C_CHAR, C_DOUBLE, C_INT
-    integer(C_INT) :: melissa_expose
+    integer(kind=C_INT) :: melissa_expose
     character(kind=C_CHAR), intent(in), dimension(*) :: field_name
     real(kind=C_DOUBLE), intent(inout), dimension(*) :: values
 end function melissa_expose

@@ -34,6 +34,8 @@ void Field::calculate_parts(int server_comm_size)
         // low: better naming: local state size is in doubles not in bytes!
         ens_it->set_local_vect_size(local_vect_size);          
     }
+
+    assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too big. (there are more server ranks than field elements. this makes not much sense!
     D("Calculated parts");
 }
 
@@ -50,6 +52,7 @@ Part & Field::getPart(int simu_rank)
         }
     }
     assert(false);     // Did not find the part!
+    return *parts.end();
 }
 
 size_t Field::globalVectSize() {

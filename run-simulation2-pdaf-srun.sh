@@ -25,6 +25,7 @@ function ctrl_c() {
 }
 
 precommand="xterm_gdb"
+precommand=""
 #precommand="xterm_gdb valgrind --leak-check=yes"
 rm -rf output
 mkdir -p output
@@ -46,9 +47,9 @@ then
   #n_simulation=$5
   #n_runners=$6
 
-  n_server=3
-  n_simulation=2
-  n_runners=3
+  n_server=1
+  n_simulation=1
+  n_runners=1
 
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
@@ -77,11 +78,11 @@ killall example_simulation
 
 
 $MPIEXEC -n $n_server \
-  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
   $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
 
+export MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000"
 
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
@@ -89,8 +90,6 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   $MPIEXEC -n $n_simulation \
-    -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
-    -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
     $precommand $sim_exe_path &
 
 

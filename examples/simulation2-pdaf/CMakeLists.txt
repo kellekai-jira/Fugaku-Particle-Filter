@@ -9,7 +9,7 @@ file(GLOB
 
 
 # PDAF:
-target_link_libraries(simulation2-pdaf gfortran lapack blas m)
+target_link_libraries(simulation2-pdaf gfortran ${Fortran_MATH_LIBRARIES} m)
 
 # To link against pdaf stuff:
 target_link_libraries(simulation2-pdaf ${MPI_Fortran_LIBRARIES})

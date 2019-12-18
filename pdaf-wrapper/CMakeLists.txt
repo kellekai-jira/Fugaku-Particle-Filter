@@ -18,8 +18,8 @@ target_compile_options(pdaf_wrapper BEFORE PUBLIC -fPIC)
 
 # PDAF:
 target_link_libraries(pdaf_wrapper pdaf)
-target_link_libraries(pdaf_wrapper gfortran lapack blas m)
+target_link_libraries(pdaf_wrapper gfortran m)
 
 # To link against pdaf stuff:
-target_link_libraries(pdaf_wrapper ${MPI_Fortran_LIBRARIES})
+target_link_libraries(pdaf_wrapper ${MPI_Fortran_LIBRARIES} ${Fortran_MATH_LIBRARIES})
 

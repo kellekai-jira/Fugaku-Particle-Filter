@@ -36,11 +36,12 @@ enum Phase
 #define D(...)
 #else
 // debug mode
-#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+#define D(x ...) if(comm_rank == 0) {printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__);}
 #endif
 
 // normal logging:
-#define L(x ...) printf("[%d] ", comm_rank); printf(x); printf("\n")
+#define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); printf("\n");}
 
 #define DBG_FILE( PREFIX ) std::string(PREFIX) + "." + std::to_string(MPI::COMM_WORLD.Get_rank()) + "." + std::to_string(getpid()) + ".txt"
 

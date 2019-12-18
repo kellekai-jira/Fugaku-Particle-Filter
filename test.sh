@@ -1,24 +1,40 @@
 #!/bin/bash
 
-source /home/kellekai/WORK/FTI/EoCoE/opt/pdaf/bin/melissa-da_set_env.sh
+#set -e
+#set -x
+
+source build/install/bin/melissa-da_set_env.sh
 
 cd output
 
 echo test with verification from standard model
 
 verification_path=$PDAF_PATH/tutorial/verification/online_2D_parallelmodel
+
 verification_path=$PDAF_PATH/tutorial/online_2D_parallelmodel
+
+# To create the testset
+if [ ! -f "$verification_path/ens_06_step08_ana.txt" ]; then
+  cd $verification_path
+  make model_pdaf
+  mpirun -np 18 ./model_pdaf -dim_ens 9
+  cd -
+fi
+
+
+
+#verification_path=/home/friese/workspace/PDAF-D_V1.14/tutorial/online_2D_parallelmodel
 
 check="python2 $verification_path/../../testsuite/tests_dummy1D/check.py"
 
 cd $verification_path
-mpirun --oversubscribe -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
+#mpirun -np 9 ./model_pdaf -dim_ens 9 -filtertype 6
 cd -
 
-rm failed.log
+rm -f failed.log
 
 function my_diff {
-  ../diff.py $fn1 $verification_path/$fn2
+  python ../diff.py $fn1 $verification_path/$fn2
   res=$?
   if [ "$res" != "0" ];
   then
@@ -49,7 +65,7 @@ do
 
         #diff -sq $fn1 $verification_path/$fn2
         #diff -q $fn1 $verification_path/$fn2
-        my_diff $fn1 $verification_path/$fn2 &
+        my_diff $fn1 $verification_path/$fn2  &
       #done
     done
   done

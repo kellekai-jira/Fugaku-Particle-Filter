@@ -2,12 +2,18 @@
 
   # usage ./run.sh test <n_server> <n_simulation> <n_runners>
 
-n_server=3
+n_server=2
 n_simulation=3
 n_runners=4
 
 ensemble_size=5
-total_steps=1440
+total_steps=30
+
+problem_size=40
+
+#in s
+max_runner_timeout=5
+
 
 ######################################################
 
@@ -22,44 +28,32 @@ function ctrl_c() {
         exit 0
 }
 
-precommand="xterm_gdb"
-#precommand="xterm_gdb valgrind --leak-check=yes"
-rm -f nc.vg.*
+precommand=""
 
-#precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
-#precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
-#precommand="xterm -e valgrind --vgdb=yes --vgdb-error=0 --leak-check=full --track-origins=yes --show-reachable=yes"
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  total_steps=$2    # 200
-  ensemble_size=$3  # 42
-  n_server=$4       # 3
-  n_simulation=$5   # 2
-  n_runners=$6      # 10
-
-
-  echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
-
-  precommand=""
+  total_steps=$2
+  ensemble_size=$3
+  n_server=$4
+  n_simulation=$5
+  n_runners=$6
 else
-  # compile:
-  # abort on error!
   set -e
   cd ../..
   ./compile.sh
   cd -
   set +e
-
-  echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 fi
+
+echo running with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 
 source ../../build/install/bin/melissa-da_set_env.sh
 
 bin_path="$MELISSA_DA_PATH/bin"
 
 server_exe="melissa_server"
-sim_exe="simulation1"
+sim_exe="simulation3-empty"
 
 killall xterm
 killall $server_exe
@@ -69,11 +63,11 @@ server_exe_path="$bin_path/$server_exe"
 sim_exe_path="$bin_path/$sim_exe"
 
 
-rm output.txt
+rm server.log.*
 
 $MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe_path $total_steps $ensemble_size &
+  /bin/bash -c "$precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.\$\$" &
 
 sleep 1
 
@@ -85,7 +79,7 @@ do
   $MPIEXEC -n $n_simulation \
     -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
     -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    $precommand $sim_exe_path &
+    $precommand $sim_exe_path $problem_size &
 
 #LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so $MPIEXEC -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/simulation1 &
 
@@ -95,3 +89,8 @@ done
 
 wait
 
+
+server_rank_0_log=`ls server.log.* | head -n 1`
+echo Server rank 0  log file: $server_rank_0_log
+
+sed -n '/Run information/,/End Run information/p' $server_rank_0_log | sed -e '1,2 d; $ d' >> output.csv
