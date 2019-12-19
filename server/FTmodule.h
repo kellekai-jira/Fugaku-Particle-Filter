@@ -3,18 +3,21 @@
 
 #define FTI_CONFIG "config.fti"
 
-#include <fti.h>
+#ifdef WITH_FTI
+#   include <fti.h>
+#endif
 #include "Field.h"
 #include <map>
 #include <memory>
 #include "FTthreadManager.h"
+#include "MpiManager.h"
 
 class FTmodule {
 
     public:
 
-        void init( void * epoch_counter );
-        void protect_background( std::unique_ptr<Field> & field );
+        void init( MpiManager & mpi, int & epoch_counter );
+        void protect_background( MpiManager & mpi, std::unique_ptr<Field> & field );
         void store_subset( std::unique_ptr<Field> & field, int dataset_id, int runner_rank );
         void initCP( int epoch ); 
         void finalizeCP( void ); 

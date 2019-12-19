@@ -8,9 +8,9 @@
 #ifndef ASSIMILATOR_H_
 #define ASSIMILATOR_H_
 
-#include <mpi.h>
 #include <memory>
 #include "Field.h"
+#include "MpiManager.h"
 
 enum AssimilatorType
 {
@@ -33,7 +33,7 @@ public:
 
 // returns how many steps must be performed by the model in the next iteration
 // returns -1 if it wants to quit.
-virtual int do_update_step() = 0;
+virtual int do_update_step( MpiManager & mpi ) = 0;
 
 
 int getNSteps() const {

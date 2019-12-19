@@ -7,7 +7,6 @@
 
 #include "EmptyAssimilator.h"
 #include <algorithm>
-#include "MpiManager.h"
 
 EmptyAssimilator::EmptyAssimilator(Field & field_) :
     field(field_)
@@ -25,8 +24,8 @@ EmptyAssimilator::EmptyAssimilator(Field & field_) :
 
 }
 
-int EmptyAssimilator::do_update_step() {
+int EmptyAssimilator::do_update_step( MpiManager & mpi ) {
     L("Doing empty update step...\n");
-    MPI_Barrier(mpi().comm());
+    MPI_Barrier(mpi.comm());
     return getNSteps();
 }

@@ -72,11 +72,11 @@ void PDAFAssimilator::getAllEnsembleMembers()
 }
 
 // called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
-int PDAFAssimilator::do_update_step()
+int PDAFAssimilator::do_update_step( MpiManager & mpi )
 {
     int status;      //    ! Status flag for filter routines
 
-    MPI_Barrier(mpi().comm());      // TODO: remove this line!
+    MPI_Barrier(mpi.comm());      // TODO: remove this line!
     L("Doing update step...\n");
 
 

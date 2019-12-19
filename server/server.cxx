@@ -52,6 +52,7 @@ int ENSEMBLE_SIZE = 5;
 int TOTAL_STEPS = 5;
 
 FTmodule FT;
+MpiManager mpi;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
@@ -377,9 +378,9 @@ void broadcast_field_information_and_calculate_parts() {
     }
 
     MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0,
-              mpi().comm());                                                             // 1:fieldname
+              mpi.comm());                                                             // 1:fieldname
     MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0,
-              mpi().comm());                                                                     // 2:runner_comm_size
+              mpi.comm());                                                                     // 2:runner_comm_size
 
     if (comm_rank != 0)
     {
@@ -392,7 +393,7 @@ void broadcast_field_information_and_calculate_parts() {
 
     MPI_Bcast(field->local_vect_sizes_runner.data(),
               runner_comm_size,
-              my_MPI_SIZE_T, 0, mpi().comm());                                                             // 3:local_vect_sizes_runner
+              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 3:local_vect_sizes_runner
 
     field->calculate_parts(comm_size);
 
@@ -497,9 +498,9 @@ bool schedule_new_task(int runner_id)
          receiving_rank++)
     {
         // REM: MPI_Ssend to be sure that all messages are received!
-        // MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, mpi().comm());
+        // MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank, TAG_NEW_TASK, mpi.comm());
         MPI_Isend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank,
-                  TAG_NEW_TASK, mpi().comm(),
+                  TAG_NEW_TASK, mpi.comm(),
                   &requests[receiving_rank-1]);
     }
 
@@ -516,7 +517,7 @@ void check_schedule_new_tasks()
     assert(comm_rank != 0);
     int received;
 
-    MPI_Iprobe(0, TAG_NEW_TASK, mpi().comm(), &received,
+    MPI_Iprobe(0, TAG_NEW_TASK, mpi.comm(), &received,
                MPI_STATUS_IGNORE);
     if (!received)
         return;
@@ -527,7 +528,7 @@ void check_schedule_new_tasks()
 
     NewTask new_task;
     MPI_Recv(&new_task, sizeof(new_task), MPI_BYTE, 0, TAG_NEW_TASK,
-             mpi().comm(), MPI_STATUS_IGNORE);
+             mpi.comm(), MPI_STATUS_IGNORE);
 
     highest_received_task_id = std::max(new_task.task_id,
                                         highest_received_task_id);
@@ -667,10 +668,10 @@ void check_due_dates() {
 
             int buf[2] = { it->state_id, it->runner_id};
             MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-                      mpi().comm());
+                      mpi.comm());
             // if BSend does not find memory use the send version
             //MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-                      //mpi().comm());
+                      //mpi.comm());
             L("Finished kill request to rank 0");
         }
     }
@@ -681,14 +682,14 @@ void check_kill_requests() {
     for (int detector_rank = 1; detector_rank < comm_size; detector_rank++)
     {
         int received;
-        MPI_Iprobe(detector_rank, TAG_KILL_RUNNER, mpi().comm(),
+        MPI_Iprobe(detector_rank, TAG_KILL_RUNNER, mpi.comm(),
                    &received, MPI_STATUS_IGNORE);
         if (!received)
             continue;
 
         int buf[2];
         MPI_Recv(buf, 2, MPI_INT, detector_rank, TAG_KILL_RUNNER,
-                 mpi().comm(), MPI_STATUS_IGNORE);
+                 mpi.comm(), MPI_STATUS_IGNORE);
         Task t({buf[0], buf[1]});
         L("Got state_id to kill... %d, killing runner_id %d",
           t.state_id, t.runner_id);
@@ -909,13 +910,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         {
             int received;
 
-            MPI_Iprobe(rank, TAG_RANK_FINISHED, mpi().comm(),
+            MPI_Iprobe(rank, TAG_RANK_FINISHED, mpi.comm(),
                        &received, MPI_STATUS_IGNORE);
             if (received)
             {
                 int highest_task_id;
                 MPI_Recv(&highest_task_id, 1, MPI_INT, rank,
-                         TAG_RANK_FINISHED, mpi().comm(),
+                         TAG_RANK_FINISHED, mpi.comm(),
                          MPI_STATUS_IGNORE);
                 if (highest_task_id == task_id)
                 {
@@ -946,7 +947,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             for (int rank = 1; rank < comm_size; rank++)
             {
                 MPI_Send(nullptr, 0, MPI_BYTE, rank,
-                         TAG_ALL_FINISHED, mpi().comm());
+                         TAG_ALL_FINISHED, mpi.comm());
             }
         }
     }
@@ -972,19 +973,19 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                 // only send once when we finished a new task that was received later.  REM: using Bsend as faster as buffere, buffering not necessary here...
 
                 MPI_Send(&highest_received_task_id, 1, MPI_INT,
-                         0, TAG_RANK_FINISHED, mpi().comm());
+                         0, TAG_RANK_FINISHED, mpi.comm());
                 highest_sent_task_id = highest_received_task_id;                  // do not send again..
             }
 
             // now wait for rank 0 to tell us that we can finish.
             int received;
-            MPI_Iprobe(0, TAG_ALL_FINISHED, mpi().comm(),
+            MPI_Iprobe(0, TAG_ALL_FINISHED, mpi.comm(),
                        &received, MPI_STATUS_IGNORE);
             if (received)
             {
                 L("receiving tag all finished message");
                 MPI_Recv(nullptr, 0, MPI_BYTE, 0,
-                         TAG_ALL_FINISHED, mpi().comm(),
+                         TAG_ALL_FINISHED, mpi.comm(),
                          MPI_STATUS_IGNORE);
                 finished = true;
             }
@@ -1001,7 +1002,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
         // get new analysis states from update step
         L("====> Update step %d/%d", current_step, TOTAL_STEPS);
-        current_nsteps = assimilator->do_update_step();
+        current_nsteps = assimilator->do_update_step( mpi );
         
 	FT.finalizeCP();
 
@@ -1067,11 +1068,11 @@ int main(int argc, char * argv[])
     assert(TOTAL_STEPS > 1);
     assert(ENSEMBLE_SIZE > 0);
     
-    mpi().init();
-    FT.init( &current_step ); 
+    mpi.init();
+    FT.init( mpi, current_step ); 
         
-    comm_size = mpi().size();
-    comm_rank = mpi().rank();
+    comm_size = mpi.size();
+    comm_rank = mpi.rank();
 
     std::shared_ptr<Assimilator> assimilator;      // will be inited later when we know the field dimensions.
 
@@ -1111,7 +1112,7 @@ int main(int argc, char * argv[])
     char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];
     MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
                data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
-               0, mpi().comm());
+               0, mpi.comm());
 
 #ifdef REPORT_TIMING
     // Start Timing:
@@ -1182,7 +1183,7 @@ int main(int argc, char * argv[])
                     ASSIMILATOR_TYPE, *field);
                 current_nsteps = assimilator->getNSteps();
                 
-                FT.protect_background( field );
+                FT.protect_background( mpi, field );
 
                 D("Change Phase");
                 phase = PHASE_SIMULATION;

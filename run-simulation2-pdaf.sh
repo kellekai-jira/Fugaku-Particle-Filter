@@ -75,28 +75,25 @@ killall xterm
 killall lorenz_96
 killall example_simulation
 
-
-$MPIEXEC -n $n_server \
-  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
+MPIEXEC=mpirun
+set -x
+$MPIEXEC -n $n_server $server_exe_path $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
 
 
+export MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000"
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
-  $MPIEXEC -n $n_simulation \
-    -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
-    -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    $precommand $sim_exe_path &
+  $MPIEXEC -n $n_simulation $sim_exe_path &
 
 
   echo .
 done
-
+set +x
 
 wait
 

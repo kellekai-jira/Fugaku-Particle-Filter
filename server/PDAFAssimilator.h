@@ -11,6 +11,7 @@
 #include "Field.h"
 #include <vector>
 #include "Assimilator.h"
+#include "MpiManager.h"
 
 class PDAFAssimilator : public Assimilator
 {
@@ -21,7 +22,7 @@ void getAllEnsembleMembers();
 public:
 ~PDAFAssimilator();
 PDAFAssimilator(Field & field);
-virtual int do_update_step();
+virtual int do_update_step( MpiManager & mpi );
 };
 
 #endif /* PDAFASSIMILATOR_H_ */

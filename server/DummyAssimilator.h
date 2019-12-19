@@ -9,6 +9,7 @@
 #define DUMMYASSIMILATOR_H_
 
 #include "Assimilator.h"
+#include "MpiManager.h"
 
 
 class DummyAssimilator : public Assimilator
@@ -17,7 +18,7 @@ private:
 Field & field;
 public:
 DummyAssimilator(Field & field_);
-virtual int do_update_step();
+virtual int do_update_step( MpiManager & mpi );
 };
 
 #endif /* DUMMYASSIMILATOR_H_ */

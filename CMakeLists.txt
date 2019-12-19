@@ -29,7 +29,7 @@ option(WITH_FTI_THREADS OFF)
 
 if(WITH_FTI OR WITH_FTI_THREADS)
   find_package(FTI REQUIRED)
-endif(WITH_FTI)
+endif(WITH_FTI OR WITH_FTI_THREADS)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})

@@ -7,7 +7,6 @@
 
 #include "DummyAssimilator.h"
 #include <algorithm>
-#include "MpiManager.h"
 
 DummyAssimilator::DummyAssimilator(Field & field_) :
     field(field_)
@@ -25,9 +24,9 @@ DummyAssimilator::DummyAssimilator(Field & field_) :
 
 }
 
-int DummyAssimilator::do_update_step() {
+int DummyAssimilator::do_update_step( MpiManager & mpi ) {
     L("Doing dummy update step...\n");
-    MPI_Barrier(mpi().comm());
+    MPI_Barrier(mpi.comm());
     int state_id = 0;
     for (auto ens_it = field.ensemble_members.begin(); ens_it !=
          field.ensemble_members.end(); ens_it++)
