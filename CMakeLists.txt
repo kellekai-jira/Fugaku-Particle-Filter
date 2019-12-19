@@ -2,7 +2,6 @@ project(melissa LANGUAGES CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
 
 find_package(MPI REQUIRED)
-
 # ZeroMQ #
 
 option(INSTALL_ZMQ OFF)

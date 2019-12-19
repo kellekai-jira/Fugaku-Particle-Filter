@@ -9,7 +9,7 @@ ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
 
 assimilator_type=0 # dummy
-#assimilator_type=1 # pdaf
+assimilator_type=1 # pdaf
 
 ######################################################
 
@@ -33,8 +33,6 @@ rm -f nc.vg.*
 
 rm -f *_ana.txt
 rm -f *_for.txt
-
-cp ../config.fti .
 
 #precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
@@ -77,25 +75,28 @@ killall xterm
 killall lorenz_96
 killall example_simulation
 
-MPIEXEC=mpirun
-set -x
-$MPIEXEC -n $n_server $server_exe_path $total_steps $ensemble_size $assimilator_type &
+
+$MPIEXEC -n $n_server \
+  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
 
 sleep 1
 
 
-export MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000"
 max_runner=`echo "$n_runners - 1" | bc`
 for i in `seq 0 $max_runner`;
 do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
-  $MPIEXEC -n $n_simulation $sim_exe_path &
+  $MPIEXEC -n $n_simulation \
+    -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
+    -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+    $precommand $sim_exe_path &
 
 
   echo .
 done
-set +x
+
 
 wait
 
