@@ -1,5 +1,12 @@
 #include "MpiManager.h"
 #include <cassert>
+#include "utils.h"
+
+MpiManager::MpiManager() :
+    m_comm_key("mpi_comm_world")
+{
+    m_comms[m_comm_key] = MPI_COMM_NULL;
+}
 
 void MpiManager::init()
 {
@@ -13,37 +20,38 @@ void MpiManager::init()
 #else
     MPI_Init(NULL, NULL);
 #endif
-    m_comm = MPI_COMM_WORLD;
-    MPI_Comm_size( m_comm, &m_size );
-    MPI_Comm_rank( m_comm, &m_rank );
-
-    m_valid = true;
+    m_comms[m_comm_key] = MPI_COMM_WORLD;
+    MPI_Comm_size( m_comms[m_comm_key], &m_size );
+    MPI_Comm_rank( m_comms[m_comm_key], &m_rank );
 }
 
-
-void MpiManager::update_comm( MPI_Comm & comm )
+void MpiManager::register_comm( std::string key, MPI_Comm & comm )
 {
-    m_comm = comm;
-    MPI_Comm_size( m_comm, &m_size );
-    MPI_Comm_rank( m_comm, &m_rank );
-    m_valid = true;
+    m_comms[key] = std::move(comm);
+}
+
+void MpiManager::set_comm( std::string key )
+{
+    assert( m_comms.count(key) > 0 && "invalid key for MPI communicator!");
+
+    m_comm_key = key;
+    
+    MPI_Comm_size( m_comms[m_comm_key], &m_size );
+    MPI_Comm_rank( m_comms[m_comm_key], &m_rank );
 }
 
 const MPI_Comm & MpiManager::comm()
 {
-    assert( m_valid && "not a valid MPI environment!" );
-    return m_comm;
+    return m_comms[m_comm_key];
 }
 
 const int & MpiManager::size()
 {
-    assert( m_valid && "not a valid MPI environment!" );
     return m_size;
 }
 
 const int & MpiManager::rank()
 {
-    assert( m_valid && "not a valid MPI environment!" );
     return m_rank;
 }
 

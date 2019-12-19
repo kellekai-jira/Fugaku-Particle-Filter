@@ -26,7 +26,9 @@ class FTmodule {
         void finalize( void ); 
 
     private:
-       
+        
+        MPI_Comm m_fti_comm;
+        MPI_Comm m_fti_comm_dup;
         FTthreadManager FTsched;
         bool m_checkpointing;
         std::map<std::string,int> id_map;

@@ -8,11 +8,15 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     m_checkpointing = false;
     id_check.clear();
     FTI_Init( FTI_CONFIG, mpi.comm() );
-#ifdef WITH_FTI_THREADS
-    mpi.update_comm( FTI_COMM_DUP )
+#ifdef WITH_FTI_THREADS 
+    MPI_Comm_dup( FTI_COMM_WORLD, &m_fti_comm_dup );
+    mpi.register_comm( "fti_comm_dup", m_fti_comm_dup );
+    mpi.set_comm( "fti_comm_dup" );
     FTsched.init(1);
 #else
-    mpi.update_comm( FTI_COMM_WORLD );
+    m_fti_comm = FTI_COMM_WORLD;
+    mpi.register_comm( "fti_comm", m_fti_comm );
+    mpi.set_comm( "fti_comm" );
 #endif
     // protect global variables and set id_offset for subset ids
     hsize_t dim = 1;

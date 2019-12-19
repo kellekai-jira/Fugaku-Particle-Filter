@@ -34,6 +34,8 @@ rm -f nc.vg.*
 rm -f *_ana.txt
 rm -f *_for.txt
 
+cp ../config.fti .
+
 #precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --vgdb=yes --vgdb-error=0 --leak-check=full --track-origins=yes --show-reachable=yes"

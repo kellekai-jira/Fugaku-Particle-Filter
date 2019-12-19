@@ -7,14 +7,14 @@ file(GLOB
 
 add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
 
-if(WITH_FTI)
-  target_link_libraries(melissa_server ${FTI_DYNAMIC_LIB})
-  target_include_directories(melissa_server PUBLIC ${FTI_INCLUDE_DIR})
-  target_compile_definitions(melissa_server PUBLIC WITH_FTI)
+if(WITH_FTI OR WITH_FTI_THREADS)
+    target_include_directories(melissa_server PUBLIC "${FTI_INCLUDE_DIR}")
+    target_link_libraries(melissa_server ${FTI_LIBRARY})
+    target_compile_definitions(melissa_server PUBLIC WITH_FTI)
   if(WITH_FTI_THREADS)  
-      target_compile_definitions(melissa_server PUBLIC WITH_FTI_THREADS)
+    target_compile_definitions(melissa_server PUBLIC WITH_FTI_THREADS)
   endif(WITH_FTI_THREADS)
-endif(WITH_FTI)
+endif(WITH_FTI OR WITH_FTI_THREADS)
 
 if(INSTALL_ZMQ)
   add_dependencies(melissa_server ZeroMQ)

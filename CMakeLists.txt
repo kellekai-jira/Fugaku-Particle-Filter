@@ -1,8 +1,6 @@
 project(melissa LANGUAGES CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 find_package(MPI REQUIRED)
 
 # ZeroMQ #
@@ -28,7 +26,17 @@ option(WITH_FTI OFF)
 option(WITH_FTI_THREADS OFF)
 
 if(WITH_FTI OR WITH_FTI_THREADS)
-  find_package(FTI REQUIRED)
+    if(EXISTS "${FTI_PATH}/lib/libfti.so")
+        set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
+    else()
+        message(FATAL_ERROR "could not find FTI library in ${FTI_PATH}/lib")
+    endif()
+    if(EXISTS "${FTI_PATH}/include/fti.h")
+        set(FTI_INCLUDE_DIR "${FTI_PATH}/include/")
+    else()
+        message(FATAL_ERROR "could not find FTI header file in ${FTI_PATH}/include")
+    endif()
+    message("-- found fti (${FTI_LIBRARY})")
 endif(WITH_FTI OR WITH_FTI_THREADS)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
