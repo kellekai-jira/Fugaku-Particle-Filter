@@ -32,11 +32,11 @@ rm -f nc.vg.*
 if [[ "$1" == "test" ]];
 then
   # TODO: add ensemble size, max timesteps
-  total_steps=$2    # 200
-  ensemble_size=$3  # 42
-  n_server=$4       # 3
-  n_simulation=$5   # 2
-  n_runners=$6      # 10
+  total_steps=$2
+  ensemble_size=$3
+  n_server=$4
+  n_simulation=$5
+  n_runners=$6
 
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.

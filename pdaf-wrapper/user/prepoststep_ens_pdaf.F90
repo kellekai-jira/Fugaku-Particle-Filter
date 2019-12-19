@@ -77,8 +77,8 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
   REAL :: rmserror_est                ! estimated RMS error
   REAL, ALLOCATABLE :: variance_p(:)  ! model state variances
   REAL, ALLOCATABLE :: field(:,:)     ! global model field
-  CHARACTER(len=3) :: ensstr          ! String for ensemble member
-  CHARACTER(len=3) :: stepstr         ! String for time step
+  CHARACTER(len=2) :: ensstr          ! String for ensemble member
+  CHARACTER(len=2) :: stepstr         ! String for time step
   CHARACTER(len=3) :: anastr          ! String for call type (initial, forecast, analysis)
   ! Variables for parallelization - global fields
   INTEGER :: off_p   ! Row-offset according to domain decomposition
@@ -269,28 +269,28 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
 
         ! Set string for time step
         IF (step>=0) THEN
-           WRITE (stepstr, '(i3.3)') step
+           WRITE (stepstr, '(i2.2)') step
         ELSE
-           WRITE (stepstr, '(i3.3)') -step
+           WRITE (stepstr, '(i2.2)') -step
         END IF
 
         ALLOCATE(field(ny, nx))
 
-        !DO member = 1, dim_ens
-        !   DO j = 1, nx
-        !      field(1:ny, j) = ens(1 + (j-1)*ny : j*ny, member)
-        !   END DO
+        DO member = 1, dim_ens
+           DO j = 1, nx
+              field(1:ny, j) = ens(1 + (j-1)*ny : j*ny, member)
+           END DO
 
-        !   WRITE (ensstr, '(i3.3)') member
+           WRITE (ensstr, '(i2.2)') member
 
-        !   OPEN(11, file = 'ens_'//TRIM(ensstr)//'_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
+           OPEN(11, file = 'ens_'//TRIM(ensstr)//'_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
 
-        !   DO i = 1, ny
-        !      WRITE (11, *) field(i, :)
-        !   END DO
+           DO i = 1, ny
+              WRITE (11, *) field(i, :)
+           END DO
 
-        !   CLOSE(11)
-        !END DO
+           CLOSE(11)
+        END DO
 
      END IF mype0b
 

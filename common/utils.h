@@ -12,16 +12,10 @@
 #include <mpi.h>
 
 #include <iostream>
-#include <fstream>
 
 #include <stdint.h>
 #include <limits.h>
 #include <vector>
-
-#include <sys/types.h>
-#include <unistd.h>
-
-int get_cpu_id();
 
 enum Phase
 {
@@ -42,19 +36,6 @@ enum Phase
 
 // normal logging:
 #define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); printf("\n");}
-
-#define DBG_FILE( PREFIX ) std::string(PREFIX) + "." + std::to_string(MPI::COMM_WORLD.Get_rank()) + "." + std::to_string(getpid()) + ".txt"
-
-#define DF( PREFIX, MSG, ... ) do \
-{ \
-    std::fstream dfile; \
-    dfile.open( DBG_FILE( PREFIX ), std::ios::app ); \
-    char msg[1000]; \
-    snprintf( msg, 1000, MSG "\n", ##__VA_ARGS__); \
-    msg[999]='\0'; \
-    dfile << msg << std::endl; \
-    dfile.close(); \
-} while(0)
 
 
 #define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D( \

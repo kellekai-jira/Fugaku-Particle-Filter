@@ -79,11 +79,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 
   call get_environment_variable( 'DATASET_PATH', dataset_path )
   DO member = 1, dim_ens
-     IF ( member < 10 ) THEN
-        WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
-     ELSE
-        WRITE (ensstr, '(i2)') member ! todo what if dim_ens > 9?
-     ENDIF
+     WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
      OPEN(11, &
        file = TRIM(dataset_path)//'/ens_'// &
        TRIM(ensstr)//'.txt', status='old')

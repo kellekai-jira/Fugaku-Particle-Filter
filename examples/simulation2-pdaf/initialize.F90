@@ -46,8 +46,8 @@ SUBROUTINE initialize()
 ! **********************
 
 ! *** Model specifications ***
-  nx = 4096 !36          ! Extent of grid in x-direction
-  ny = 4096 !18          ! Extent of grid in y-direction
+  nx = 36          ! Extent of grid in x-direction
+  ny = 18          ! Extent of grid in y-direction
 
 ! *** Screen output ***
   IF (mype_world == 0) THEN
@@ -56,15 +56,14 @@ SUBROUTINE initialize()
   END IF
 
 ! *** Initialize size of local nx for parallelization ***
-  !IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
-  !     npes_model==6 .OR.npes_model==9) THEN
-  !   ! Split x-diection in chunks of equal size
-  !   nx_p = nx / npes_model
-  !ELSE
-  !   WRITE (*,*) 'ERROR: Invalid number of processes'
-  !   CALL abort_parallel()
-  !END IF
-  nx_p = nx / npes_model
+  IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
+       npes_model==6 .OR.npes_model==9) THEN
+     ! Split x-diection in chunks of equal size
+     nx_p = nx / npes_model
+  ELSE
+     WRITE (*,*) 'ERROR: Invalid number of processes'
+     CALL abort_parallel()
+  END IF
 
   IF (mype_world == 0) THEN
      WRITE (*, '(/2x, a, i3, a)') &
@@ -103,5 +102,6 @@ SUBROUTINE initialize()
   DEALLOCATE(field)
 
   CALL MELISSA_INIT_F(melissa_field_name, nx_p*ny, MPI_COMM_WORLD)
+
 
 END SUBROUTINE initialize

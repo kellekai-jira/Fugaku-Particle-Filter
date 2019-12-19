@@ -996,9 +996,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
     if (finished)
     {
-
-        FT.flushCP();
         FT.recover();
+        FT.flushCP();
 
         // get new analysis states from update step
         L("====> Update step %d/%d", current_step, TOTAL_STEPS);
@@ -1286,6 +1285,6 @@ int main(int argc, char * argv[])
     zmq_ctx_destroy(context);
     
     FT.finalize();
-    MPI_Finalize();
+    mpi.finalize();
 
 }

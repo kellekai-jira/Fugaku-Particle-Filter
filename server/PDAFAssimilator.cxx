@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <csignal>
 #include "utils.h"
-#include "MpiManager.h"
 
 #include "pdaf-wrapper.h"
 
