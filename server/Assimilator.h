@@ -16,7 +16,8 @@ enum AssimilatorType
 {
     ASSIMILATOR_DUMMY = 0,
     ASSIMILATOR_PDAF = 1,
-    ASSIMILATOR_EMPTY = 2
+    ASSIMILATOR_EMPTY = 2,
+    ASSIMILATOR_CHECK_STATELESS = 3
 };
 
 class Assimilator
