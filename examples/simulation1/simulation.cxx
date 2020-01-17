@@ -18,10 +18,16 @@ int GLOBAL_VECT_SIZE = 40;
 //const int GLOBAL_VECT_SIZE = 1000*100*10;
 //const int GLOBAL_VECT_SIZE = 1000*1000*10;
 
+// Define this if you want to check if the statefullnes test can fail:
+//#define BE_STATEFUL
+
 using namespace std;
 
 int main(int argc, char * args[])
 {
+#ifdef BE_STATEFUL
+    int secret_state = 3;
+#endif
     if (argc > 1) {
       GLOBAL_VECT_SIZE = atoi(args[1]);
       printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
@@ -75,12 +81,19 @@ int main(int argc, char * args[])
     int nsteps = 1;
     do
     {
+#ifdef BE_STATEFUL
+      // cheange the secret test
+      secret_state ++;
+#endif
         for (int step = 0; step < nsteps; step++)
         {
             int i = 0;
             for (auto it = state1.begin(); it != state1.end(); it++)
             {
                 *it += offsets[comm_rank] + i;
+#ifdef BE_STATEFUL
+                *it += secret_state;
+#endif
 
                 i++;
             }
