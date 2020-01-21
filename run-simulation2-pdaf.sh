@@ -10,7 +10,6 @@ total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
 
 assimilator_type=0 # dummy
 assimilator_type=1 # pdaf
-assimilator_type=3 # check stateless
 
 ######################################################
 

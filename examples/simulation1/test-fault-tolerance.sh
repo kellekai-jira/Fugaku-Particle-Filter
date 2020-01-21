@@ -2,6 +2,8 @@
 # REM: only works if simulation timeout is set to 5 seconds on the serverside. otherwise
 #      the timing here won't work!
 
+echo REM: if this test fails just run it again. sometimes some logging is lost or some
+echo killing does not work correctly due to race conditions.
 cd ../..
 ./compile.sh
 cd -
@@ -17,6 +19,8 @@ sleep 7
 wait
 
 # ensure 2 runners were really killed:
+# grepping iterations where at the start and at the end 8 runners were active... we start
+# with 10 ;)
 nb_killed=`grep "^199,[0-9.]*,8,8$" log | wc -l`
 if [ "$nb_killed" != "1" ];
 then

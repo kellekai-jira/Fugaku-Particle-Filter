@@ -77,7 +77,7 @@ rm output.txt
 
 $MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe_path $total_steps $ensemble_size 3 10 &
+  $precommand $server_exe_path $total_steps $ensemble_size &
 sleep 1
 
 max_runner=`echo "$n_runners - 1" | bc`

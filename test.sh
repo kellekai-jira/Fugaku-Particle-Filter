@@ -13,6 +13,11 @@ verification_path=$PDAF_PATH/tutorial/verification/online_2D_parallelmodel
 
 verification_path=$PDAF_PATH/tutorial/online_2D_parallelmodel
 
+
+echo sometimes it is useful to rebuild the reference files
+echo "(especially after an PDAF update)"
+echo for this type rm $verification_path/ens_06_step08_ana.txt
+
 # To create the testset
 if [ ! -f "$verification_path/ens_06_step08_ana.txt" ]; then
   cd $verification_path
