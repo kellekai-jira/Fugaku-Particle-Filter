@@ -15,16 +15,20 @@
 
 #include "Assimilator.h"
 
-class CheckStatelessAssimilator: public Assimilator {
-    Field & field;
+class CheckStatelessAssimilator : public Assimilator
+{
+Field & field;
 private:
-    const double mean_value = 4.3;
-    const double magnitude  = 0.1;
-    std::vector<std::vector<double>> init_states;
-    std::vector<std::vector<double>> correct_states;
+const double mean_value = 4.3;
+const double magnitude  = 0.1;
+std::vector<std::vector<double> > init_states;
+std::vector<std::vector<double> > correct_states;
+
+void print_result(const bool good);
+
 public:
-    CheckStatelessAssimilator(Field & field_);
-    virtual int do_update_step();
+CheckStatelessAssimilator(Field & field_);
+virtual int do_update_step();
 };
 
 #endif /* CHECKSTATELESSASSIMILATOR_H_ */

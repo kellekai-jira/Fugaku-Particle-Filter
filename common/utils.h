@@ -30,12 +30,14 @@ enum Phase
 #define D(...)
 #else
 // debug mode
-//#define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
-#define D(x ...) if(comm_rank == 0) {printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__);}
+// #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
+#define D(x ...) if(comm_rank == 0) {printf(x); printf(" (%s:%d)\n", __FILE__, \
+                                                       __LINE__);}
 #endif
 
 // normal logging:
-#define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); printf("\n");}
+#define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
+                                      printf("\n");}
 
 
 #define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D( \

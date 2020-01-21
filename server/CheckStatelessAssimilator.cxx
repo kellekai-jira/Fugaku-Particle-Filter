@@ -9,7 +9,7 @@
 #include <algorithm>
 
 CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
-field(field_)
+    field(field_)
 {
     nsteps = 1;
 
@@ -36,41 +36,63 @@ field(field_)
 
 }
 
+
+void CheckStatelessAssimilator::print_result(const bool good)
+{
+
+    if (good) {
+        L("**** Check Successful! Simulation seems stateless !");
+    }
+    else
+    {
+        L("**** Check NOT Successful! Simulation seems stateful !");
+    }
+    L("**** (at least over one timestep on %lu ensemble members",
+        field.ensemble_members.size());
+    L("**** members and initial values around %f +- %f) !", mean_value,
+        magnitude);
+}
+
 int CheckStatelessAssimilator::do_update_step()
 {
     static bool isFirst = true;
-    if (isFirst) {
+    if (isFirst)
+    {
         // analysis state keeps the same
         // store output
         int index = 0;
         for (auto ens_it = field.ensemble_members.begin(); ens_it !=
              field.ensemble_members.end(); ens_it++)
         {
-            std::copy(ens_it->state_background.begin(), ens_it->state_background.end(),
-                    correct_states[index].begin());
+            std::copy(ens_it->state_background.begin(),
+                      ens_it->state_background.end(),
+                      correct_states[index].begin());
             index++;
         }
         isFirst = false;
-    } else {
+    }
+    else
+    {
         int index = 0;
         for (auto ens_it = field.ensemble_members.begin(); ens_it !=
              field.ensemble_members.end(); ens_it++)
         {
             // analysis state is enough:
-            if (ens_it->state_background != correct_states[index]) {
+            if (ens_it->state_background != correct_states[index])
+            {
                 L("Error: Vectors are not equal. Is there some hidden state?");
                 print_vector(ens_it->state_background);
                 L("!=");
                 print_vector(correct_states[index]);
-                assert(false);
+
+                print_result(false);
+                return -1;
             }
             index++;
         }
 
-        //we did the check. so quit now!
-        L("**** Check successful! Simulation seems stateless !");
-        L("**** (at least over one timestep on %lu ensemble", field.ensemble_members.size());
-        L("**** members and initial values around %f +- %f) !", mean_value, magnitude);
+        // we did the check. so quit now!
+        print_result(true);
         return -1;
     }
 

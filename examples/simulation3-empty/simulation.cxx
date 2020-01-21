@@ -14,9 +14,9 @@
 
 
 int GLOBAL_VECT_SIZE = 40;
-//const int GLOBAL_VECT_SIZE = 1000;
-//const int GLOBAL_VECT_SIZE = 1000*100*10;
-//const int GLOBAL_VECT_SIZE = 1000*1000*10;
+// const int GLOBAL_VECT_SIZE = 1000;
+// const int GLOBAL_VECT_SIZE = 1000*100*10;
+// const int GLOBAL_VECT_SIZE = 1000*1000*10;
 
 using namespace std;
 
@@ -25,9 +25,10 @@ int comm_rank = -1;
 
 int main(int argc, char * args[])
 {
-    if (argc > 1) {
-      GLOBAL_VECT_SIZE = atoi(args[1]);
-      printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
+    if (argc > 1)
+    {
+        GLOBAL_VECT_SIZE = atoi(args[1]);
+        printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
     }
 
     int comm_size;
@@ -70,7 +71,7 @@ int main(int argc, char * args[])
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0);
-    //printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
+    // printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 
 
     static bool is_first_timestep = true;
@@ -80,11 +81,12 @@ int main(int argc, char * args[])
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        //usleep(10000);
-        //usleep(1000000);
+        // usleep(10000);
+        // usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
-        printf("calculating from timestep %d\n", melissa_get_current_timestamp()); 
+        printf("calculating from timestep %d\n",
+               melissa_get_current_timestamp());
 
         if (nsteps > 0 && is_first_timestep)
         {
