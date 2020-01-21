@@ -40,7 +40,8 @@ CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
 void CheckStatelessAssimilator::print_result(const bool good)
 {
 
-    if (good) {
+    if (good)
+    {
         L("**** Check Successful! Simulation seems stateless !");
     }
     else
@@ -48,9 +49,9 @@ void CheckStatelessAssimilator::print_result(const bool good)
         L("**** Check NOT Successful! Simulation seems stateful !");
     }
     L("**** (at least over one timestep on %lu ensemble members",
-        field.ensemble_members.size());
+      field.ensemble_members.size());
     L("**** members and initial values around %f +- %f) !", mean_value,
-        magnitude);
+      magnitude);
 }
 
 int CheckStatelessAssimilator::do_update_step()
