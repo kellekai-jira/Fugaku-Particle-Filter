@@ -8,7 +8,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "../api/melissa_api.h"
+#include <melissa_api.h>
 
 #include <csignal>
 
