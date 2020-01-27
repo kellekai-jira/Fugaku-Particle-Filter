@@ -11,7 +11,7 @@
 CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
     field(field_)
 {
-  L("**** Performing the stateless checking instead of assimilation...");
+    L("**** Performing the stateless checking instead of assimilation...");
     nsteps = 1;
 
     // otherwise release mode will make problems!
@@ -101,32 +101,36 @@ int CheckStatelessAssimilator::do_update_step()
     return 1;
 }
 
-void CheckStatelessAssimilator::store_init_state_part(const int ensemble_member_id, const Part & part, const
-                                                 double * values)
+void CheckStatelessAssimilator::store_init_state_part(const int
+                                                      ensemble_member_id, const
+                                                      Part & part, const
+                                                      double * values)
 {
     EnsembleMember & member = field.ensemble_members[ensemble_member_id];
     assert(part.send_count + part.local_offset_server <=
            member.state_background.size());
-    std::copy(values, values + part.send_count, init_states[ensemble_member_id].data() +
+    std::copy(values, values + part.send_count,
+              init_states[ensemble_member_id].data() +
               part.local_offset_server);
 
     // Also copy into analysis state to send it back right again!
     std::copy(values, values + part.send_count,
-        member.state_analysis.data() +
+              member.state_analysis.data() +
               part.local_offset_server);
 }
 
 
 
-int CheckStatelessAssimilator::on_init_state(const int runner_id, const Part & part, const double * values)
+int CheckStatelessAssimilator::on_init_state(const int runner_id, const
+                                             Part & part, const double * values)
 {
     // let's use this to set the init.
     // you may not have more runners than ensemble members here! Otherwise some
     // would stay uninitialized!
     assert(runner_id < field.ensemble_members.size());
     field.ensemble_members[runner_id].
-        store_background_state_part(part,
-                values);
+    store_background_state_part(part,
+                                values);
     store_init_state_part(runner_id, part,
-            values);
+                          values);
 }

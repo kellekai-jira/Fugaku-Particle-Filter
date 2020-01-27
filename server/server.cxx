@@ -842,8 +842,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // Some assimilators depend on something like this.
             // namely the CheckStateless assimilator
             assimilator->on_init_state(runner_id, part, reinterpret_cast
-                                          <double*>(zmq_msg_data(
-                                                        &data_msg)));
+                                       <double*>(zmq_msg_data(
+                                                     &data_msg)));
         }
 
         // otherwise we throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
@@ -913,7 +913,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 }
 
 // returns true if the whole assimilation (all time steps) finished
-bool check_finished(std::shared_ptr<Assimilator> assimilator) {
+bool check_finished(std::shared_ptr<Assimilator> assimilator)
+{
     // check if all data was received. If yes: start Update step to calculate next analysis state
 
     size_t connections =
@@ -944,11 +945,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
 
         }
-#else
-    // May the compiler optimie out the following line:
-    finished_ranks = comm_size - 1;
-#endif
-
         finished = finished_ranks == comm_size-1 &&           // comm size without rank 0
                    unscheduled_tasks.size() == 0 &&
                    scheduled_sub_tasks.size() == 0 &&
@@ -956,8 +952,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                    0 &&
                    finished_sub_tasks.size() == ENSEMBLE_SIZE *
                    connections;
-        // L("rank 0: D %d ", finished_ranks);
-#ifdef RUNNERS_MAY_CRASH
+
         if (finished)
         {
             L(
@@ -971,7 +966,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
         }
     }
-    else // this else only exists if RUNNERS_MAY_CRASH
+    else
     {
         // rank != 0:
         finished = false;
@@ -1012,52 +1007,61 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
 
     }
+#else
+    // RUNNERS MAY NOT CRASH:
+    // if everythin finished and nothing to reschedule: all fine!
+    finished = unscheduled_tasks.size() == 0 &&
+               scheduled_sub_tasks.size() == 0 &&
+               running_sub_tasks.size() ==
+               0 &&
+               finished_sub_tasks.size() == ENSEMBLE_SIZE *
+               connections;
 #endif
 
-        if (finished)
-        {
-            // @Kai: you probably want to uncomment this if....
+    if (finished)
+    {
+        // @Kai: you probably want to uncomment this if....
 //      if (isRecovering) {
-            // get new analysis states from checkpoint....
+        // get new analysis states from checkpoint....
 //          FTI_Recover;
 //          isRecovering = false;
 //      } else {
-            // get new analysis states from update step
-            L("====> Update step %d/%d", current_step, TOTAL_STEPS);
-            current_nsteps = assimilator->do_update_step();
+        // get new analysis states from update step
+        L("====> Update step %d/%d", current_step, TOTAL_STEPS);
+        current_nsteps = assimilator->do_update_step();
 
 //      }
 #ifdef REPORT_TIMING
-            if (comm_rank == 0)
-            {
-                timing->stop_iteration();
-            }
+        if (comm_rank == 0)
+        {
+            timing->stop_iteration();
+        }
 #endif
 
-            if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
-            {
-                end_all_runners();
-                return true;
-            }
-
-            init_new_timestamp();
-
-            // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
-            if (comm_rank == 0)
-            {
-                for (auto runner_it = idle_runners.begin(); runner_it !=
-                     idle_runners.end(); runner_it++)
-                {
-                    L("Rescheduling after update step for timestep %d",
-                      current_step);
-                    schedule_new_task(runner_it->first);
-                }
-
-            }
+        if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
+        {
+            end_all_runners();
+            return true;
         }
 
-        return false;
+        init_new_timestamp();
+
+        // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
+        if (comm_rank == 0)
+        {
+            for (auto runner_it = idle_runners.begin(); runner_it !=
+                 idle_runners.end(); runner_it++)
+            {
+                L("Rescheduling after update step for timestep %d",
+                  current_step);
+                schedule_new_task(runner_it->first);
+            }
+
+        }
     }
+
+    return false;
+}
 
 /// optional parameters [MAX_TIMESTAMP [ENSEMBLE_SIZE]]
 int main(int argc, char * argv[])
@@ -1091,7 +1095,7 @@ int main(int argc, char * argv[])
     // Get the rank of the process
     MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
-    std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
+    std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
 
     context = zmq_ctx_new ();
     int major, minor, patch;
@@ -1108,7 +1112,7 @@ int main(int argc, char * argv[])
         configuration_socket = zmq_socket(context, ZMQ_REP);
         const char * configuration_socket_addr = "tcp://*:4000";
         int rc = zmq_bind(configuration_socket,
-                          configuration_socket_addr);                            // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
+                          configuration_socket_addr);              // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
         L("Configuration socket listening on port %s",
           configuration_socket_addr);
         ZMQ_CHECK(rc);
@@ -1209,18 +1213,18 @@ int main(int argc, char * argv[])
 
         if (phase == PHASE_SIMULATION)
         {
-// X     if simulation requests work see if work in list. if so launch it. if not save connection
-// X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
-// X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
-// X     check for due dates. if detected: black list (move to killed) runner + state. send state AND runner to rank0
-// X     if finished and did not send yet the highest task id send to rank 0 that we finished.
-// X     check for messages from rank 0 that we finished and if so start update
-//
-//       rank 0:
-// X     if runner request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this runner. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
-// X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
-// X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
-// X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
+            // X     if simulation requests work see if work in list. if so launch it. if not save connection
+            // X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
+            // X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
+            // X     check for due dates. if detected: black list (move to killed) runner + state. send state AND runner to rank0
+            // X     if finished and did not send yet the highest task id send to rank 0 that we finished.
+            // X     check for messages from rank 0 that we finished and if so start update
+            //
+            //       rank 0:
+            // X     if runner request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this runner. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
+            // X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
+            // X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
+            // X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
 
 #ifdef RUNNERS_MAY_CRASH
             // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
@@ -1246,18 +1250,18 @@ int main(int argc, char * argv[])
 
             if (check_finished(assimilator))
             {
-                break;              // all runners finished.
+                break;          // all runners finished.
             }
 
 
             /// REM: Tasks are either unscheduled, scheduled, running or finished.
             size_t connections =
                 field->connected_runner_ranks.size();
-//          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
-//                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
-//                  scheduled_sub_tasks.size(),
-//                  running_sub_tasks.size(),
-//                  finished_sub_tasks.size());
+            //          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
+            //                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
+            //                  scheduled_sub_tasks.size(),
+            //                  running_sub_tasks.size(),
+            //                  finished_sub_tasks.size());
 
             // all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
             assert(

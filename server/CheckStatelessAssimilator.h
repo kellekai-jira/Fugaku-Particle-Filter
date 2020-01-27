@@ -23,13 +23,15 @@ std::vector<std::vector<double> > init_states;
 std::vector<std::vector<double> > correct_states;
 
 void print_result(const bool good);
-void store_init_state_part(const int ensemble_member_id, const Part & part, const
-                                                 double * values);
+void store_init_state_part(const int ensemble_member_id, const Part & part,
+                           const
+                           double * values);
 
 public:
 CheckStatelessAssimilator(Field & field_);
 virtual int do_update_step();
-virtual int on_init_state(const int runner_id, const Part & part, const double * values);
+virtual int on_init_state(const int runner_id, const Part & part, const
+                          double * values);
 
 };
 
