@@ -60,8 +60,6 @@ AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
 
 
-// TODO: why defining public and not in main? Assimilators should handle the first step on their own...
-std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
 
 
 
@@ -731,7 +729,7 @@ void check_kill_requests() {
     }
 }
 
-void handle_data_response() {
+void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
     // TODO: move to send and receive function as on api side... maybe use zproto library?
     zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
     zmq_msg_init(&identity_msg);
@@ -840,26 +838,12 @@ void handle_data_response() {
         }
         else if (runner_state_id == -1)
         {
-          // we are getting the very first timestep here!
-          // Some assimilators depend on something like this.
-          // namely the CheckStateless assimilator
-          // let's use this to set the init.
-          if (ASSIMILATOR_TYPE == ASSIMILATOR_CHECK_STATELESS)
-          {
-            // you may not have more runners than ensemble members here! Otherwise some
-            // would stay uninitialized!
-            assert(runner_id < ENSEMBLE_SIZE);
-            CheckStatelessAssimilator * a = dynamic_cast<CheckStatelessAssimilator*>(assimilator.get());
-            field->ensemble_members[runner_id].
-            store_background_state_part(part,
-                                        reinterpret_cast
-                                        <double*>(zmq_msg_data(
-                                                      &data_msg)));
-            a->store_init_state_part(runner_id, part,
-                                        reinterpret_cast
-                                        <double*>(zmq_msg_data(
-                                                      &data_msg)));
-          }
+            // we are getting the very first timestep here!
+            // Some assimilators depend on something like this.
+            // namely the CheckStateless assimilator
+            assimilator->on_init_state(runner_id, part, reinterpret_cast
+                                          <double*>(zmq_msg_data(
+                                                        &data_msg)));
         }
 
         // otherwise we throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
@@ -1107,6 +1091,7 @@ int main(int argc, char * argv[])
     // Get the rank of the process
     MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
+    std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
 
     context = zmq_ctx_new ();
     int major, minor, patch;
@@ -1255,7 +1240,7 @@ int main(int argc, char * argv[])
 
             if (items[0].revents & ZMQ_POLLIN)
             {
-                handle_data_response();
+                handle_data_response(assimilator);
                 // REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
             }
 

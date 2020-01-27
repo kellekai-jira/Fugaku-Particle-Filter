@@ -115,3 +115,18 @@ void CheckStatelessAssimilator::store_init_state_part(const int ensemble_member_
         member.state_analysis.data() +
               part.local_offset_server);
 }
+
+
+
+int CheckStatelessAssimilator::on_init_state(const int runner_id, const Part & part, const double * values)
+{
+    // let's use this to set the init.
+    // you may not have more runners than ensemble members here! Otherwise some
+    // would stay uninitialized!
+    assert(runner_id < field.ensemble_members.size());
+    field.ensemble_members[runner_id].
+        store_background_state_part(part,
+                values);
+    store_init_state_part(runner_id, part,
+            values);
+}

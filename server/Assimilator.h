@@ -36,6 +36,12 @@ public:
 // returns -1 if it wants to quit.
 virtual int do_update_step() = 0;
 
+// executed when first state messages are received from the simulations.
+// normally such messages are discarded and a proper analysis state is sent back
+// see the CheckStatelessAssimilator to see how to use this function.
+virtual int on_init_state(const int runner_id, const Part & part, const double * values)
+{};
+
 
 int getNSteps() const {
     return nsteps;
