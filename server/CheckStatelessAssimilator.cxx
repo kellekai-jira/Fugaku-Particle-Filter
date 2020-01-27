@@ -11,6 +11,7 @@
 CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
     field(field_)
 {
+  L("**** Performing the stateless checking instead of assimilation...");
     nsteps = 1;
 
     // otherwise release mode will make problems!
