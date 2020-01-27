@@ -21,14 +21,7 @@ CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
     for (auto ens_it = field.ensemble_members.begin(); ens_it !=
          field.ensemble_members.end(); ens_it++)
     {
-        // analysis state is enough:
-        double r = std::rand()*magnitude/RAND_MAX;  // Note: 1+rand()%6 is biased
-        double value = mean_value + r;
-        std::fill(ens_it->state_analysis.begin(),
-                  ens_it->state_analysis.end(), value);
         init_states[index].resize(ens_it->state_analysis.size());
-        std::fill(init_states[index].begin(), init_states[index].end(), value);
-
         correct_states[index].resize(ens_it->state_analysis.size());
 
         index++;
@@ -43,16 +36,15 @@ void CheckStatelessAssimilator::print_result(const bool good)
 
     if (good)
     {
-        L("**** Check Successful! Simulation seems stateless !");
+        L("**** Check Successful! Simulation seems stateless!");
     }
     else
     {
-        L("**** Check NOT Successful! Simulation seems stateful !");
+        L("**** Check NOT Successful! Simulation seems stateful!");
     }
     L("**** (at least over one timestep on %lu ensemble members",
       field.ensemble_members.size());
-    L("**** members and initial values around %f +- %f) !", mean_value,
-      magnitude);
+    L("**** members and inited due to the first received state!");
 }
 
 int CheckStatelessAssimilator::do_update_step()
@@ -69,6 +61,13 @@ int CheckStatelessAssimilator::do_update_step()
             std::copy(ens_it->state_background.begin(),
                       ens_it->state_background.end(),
                       correct_states[index].begin());
+
+            // set analysis state back to init to recalculate the same timestep again.
+            // then we will check in the else branch if the results are equal!
+            std::copy(init_states[index].begin(),
+                      init_states[index].end(),
+                      ens_it->state_analysis.begin());
+
             index++;
         }
         isFirst = false;
@@ -88,17 +87,31 @@ int CheckStatelessAssimilator::do_update_step()
                 print_vector(correct_states[index]);
 
                 print_result(false);
-                return -1;
+                return -1;  // stop assimilation
             }
             index++;
         }
 
         // we did the check. so quit now!
         print_result(true);
-        return -1;
+        return -1;  // stop assimilation
     }
 
 
     return 1;
 }
 
+void CheckStatelessAssimilator::store_init_state_part(const int ensemble_member_id, const Part & part, const
+                                                 double * values)
+{
+    EnsembleMember & member = field.ensemble_members[ensemble_member_id];
+    assert(part.send_count + part.local_offset_server <=
+           member.state_background.size());
+    std::copy(values, values + part.send_count, init_states[ensemble_member_id].data() +
+              part.local_offset_server);
+
+    // Also copy into analysis state to send it back right again!
+    std::copy(values, values + part.send_count,
+        member.state_analysis.data() +
+              part.local_offset_server);
+}

@@ -42,6 +42,7 @@
 #include <set>
 
 #include "Assimilator.h"
+#include "CheckStatelessAssimilator.h"
 
 #include "Timing.h"
 
@@ -55,6 +56,14 @@ int TOTAL_STEPS = 5;
 
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
+
+
+
+
+// TODO: why defining public and not in main? Assimilators should handle the first step on their own...
+std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
+
+
 
 // in seconds:
 long long MAX_RUNNER_TIMEOUT = 5;
@@ -798,7 +807,6 @@ void handle_data_response() {
         // good timestamp? There are 2 cases: timestamp 0 or good timestamp...
         assert (runner_timestamp == 0 || runner_timestamp ==
                 current_step);
-        // we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 
         // Save state part in background_states.
@@ -830,6 +838,34 @@ void handle_data_response() {
                                         <double*>(zmq_msg_data(
                                                       &data_msg)));
         }
+        else if (runner_state_id == -1)
+        {
+          // we are getting the very first timestep here!
+          // Some assimilators depend on something like this.
+          // namely the CheckStateless assimilator
+          // let's use this to set the init.
+          if (ASSIMILATOR_TYPE == ASSIMILATOR_CHECK_STATELESS)
+          {
+            // you may not have more runners than ensemble members here! Otherwise some
+            // would stay uninitialized!
+            assert(runner_id < ENSEMBLE_SIZE);
+            CheckStatelessAssimilator * a = dynamic_cast<CheckStatelessAssimilator*>(assimilator.get());
+            field->ensemble_members[runner_id].
+            store_background_state_part(part,
+                                        reinterpret_cast
+                                        <double*>(zmq_msg_data(
+                                                      &data_msg)));
+            a->store_init_state_part(runner_id, part,
+                                        reinterpret_cast
+                                        <double*>(zmq_msg_data(
+                                                      &data_msg)));
+          }
+        }
+
+        // otherwise we throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
+
+
+
 
         // whcih atm can not even happen if more than one fields as they do there communication one after another.
         // TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
@@ -1039,156 +1075,155 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         return false;
     }
 
-/// optional parameters [MAX_TIMESTAMP [ENSEMBLESIZE]]
-    int main(int argc, char * argv[])
+/// optional parameters [MAX_TIMESTAMP [ENSEMBLE_SIZE]]
+int main(int argc, char * argv[])
+{
+    check_data_types();
+
+    // Read in configuration from command line
+    if (argc >= 2)
     {
-        check_data_types();
-
-        // Read in configuration from command line
-        if (argc >= 2)
-        {
-            TOTAL_STEPS = atoi(argv[1]);
-        }
-        if (argc >= 3)
-        {
-            ENSEMBLE_SIZE = atoi(argv[2]);
-        }
-        if (argc >= 4)
-        {
-            ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
-        }
-        if (argc >= 5)
-        {
-            MAX_RUNNER_TIMEOUT = atoi(argv[4]);
-        }
+        TOTAL_STEPS = atoi(argv[1]);
+    }
+    if (argc >= 3)
+    {
+        ENSEMBLE_SIZE = atoi(argv[2]);
+    }
+    if (argc >= 4)
+    {
+        ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
+    }
+    if (argc >= 5)
+    {
+        MAX_RUNNER_TIMEOUT = atoi(argv[4]);
+    }
 
 
-        assert(TOTAL_STEPS > 1);
-        assert(ENSEMBLE_SIZE > 0);
+    assert(TOTAL_STEPS > 1);
+    assert(ENSEMBLE_SIZE > 0);
 
-        MPI_Init(NULL, NULL);
-        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        // Get the rank of the process
-        MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    // Get the rank of the process
+    MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
-        std::shared_ptr<Assimilator> assimilator;  // will be inited later when we know the field dimensions.
 
-        context = zmq_ctx_new ();
-        int major, minor, patch;
-        zmq_version (&major, &minor, &patch);
-        D("Current 0MQ version is %d.%d.%d", major, minor, patch);
-        D("**server rank = %d", comm_rank);
-        L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS,
-          ENSEMBLE_SIZE);
+    context = zmq_ctx_new ();
+    int major, minor, patch;
+    zmq_version (&major, &minor, &patch);
+    D("Current 0MQ version is %d.%d.%d", major, minor, patch);
+    D("**server rank = %d", comm_rank);
+    L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS,
+      ENSEMBLE_SIZE);
 
-        // Start sockets:
-        void * configuration_socket = NULL;
-        if (comm_rank == 0)
-        {
-            configuration_socket = zmq_socket(context, ZMQ_REP);
-            const char * configuration_socket_addr = "tcp://*:4000";
-            int rc = zmq_bind(configuration_socket,
-                              configuration_socket_addr);                            // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
-            L("Configuration socket listening on port %s",
-              configuration_socket_addr);
-            ZMQ_CHECK(rc);
-            assert(rc == 0);
+    // Start sockets:
+    void * configuration_socket = NULL;
+    if (comm_rank == 0)
+    {
+        configuration_socket = zmq_socket(context, ZMQ_REP);
+        const char * configuration_socket_addr = "tcp://*:4000";
+        int rc = zmq_bind(configuration_socket,
+                          configuration_socket_addr);                            // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
+        L("Configuration socket listening on port %s",
+          configuration_socket_addr);
+        ZMQ_CHECK(rc);
+        assert(rc == 0);
 
-        }
+    }
 
-        data_response_socket = zmq_socket(context, ZMQ_ROUTER);
-        char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
-        sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
-        zmq_bind(data_response_socket, data_response_port_name);
+    data_response_socket = zmq_socket(context, ZMQ_ROUTER);
+    char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
+    sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
+    zmq_bind(data_response_socket, data_response_port_name);
 
-        char hostname[MPI_MAX_PROCESSOR_NAME];
-        melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
-        sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+
-                comm_rank);
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
+    sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+
+            comm_rank);
 
-        char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];
-        MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
-                   data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
-                   0, MPI_COMM_WORLD);
+    char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];
+    MPI_Gather(data_response_port_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+               data_response_port_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+               0, MPI_COMM_WORLD);
 
 #ifdef REPORT_TIMING
-        // Start Timing:
-        if (comm_rank == 0)
-        {
-            timing = std::make_unique<Timing>(TOTAL_STEPS);
-        }
+    // Start Timing:
+    if (comm_rank == 0)
+    {
+        timing = std::make_unique<Timing>(TOTAL_STEPS);
+    }
 #endif
 
 #ifdef REPORT_MEMORY
-        // for memory benchmarking:
-        int last_seconds_memory = 0;
+    // for memory benchmarking:
+    int last_seconds_memory = 0;
 #endif
 
-        // Server main loop:
-        while (true)
-        {
+    // Server main loop:
+    while (true)
+    {
 #ifdef NDEBUG
-            // usleep(1);
+        // usleep(1);
 #else
-            usleep(10);     // to chill down the processor! TODO remove when measuring!
+        usleep(10);     // to chill down the processor! TODO remove when measuring!
 #endif
-            // Wait for requests
-            /* Poll for events indefinitely */
-            // REM: the poll item needs to be recreated all the time!
-            zmq_pollitem_t items [2] = {
-                {data_response_socket, 0, ZMQ_POLLIN, 0},
-                {configuration_socket, 0, ZMQ_POLLIN, 0}
-            };
-            if (comm_rank == 0)
+        // Wait for requests
+        /* Poll for events indefinitely */
+        // REM: the poll item needs to be recreated all the time!
+        zmq_pollitem_t items [2] = {
+            {data_response_socket, 0, ZMQ_POLLIN, 0},
+            {configuration_socket, 0, ZMQ_POLLIN, 0}
+        };
+        if (comm_rank == 0)
+        {
+            // Check for killed runners... (due date violation)
+            // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
+            ZMQ_CHECK(zmq_poll (items, 2, 0));
+        }
+        else
+        {
+            // ZMQ_CHECK(zmq_poll (items, 1, -1));
+            // Check for new tasks to schedule and killed runners so do not block on polling (due date violation)...
+            ZMQ_CHECK(zmq_poll (items, 1, 0));
+        }
+        /* Returned events will be stored in items[].revents */
+
+        // answer requests
+        if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
+        {
+            answer_configuration_message(configuration_socket,
+                                         data_response_port_names);
+        }
+
+        // coming from fresh init...
+        if (phase == PHASE_INIT)
+        {
+            if ((comm_rank == 0 && field != nullptr) ||
+                comm_rank != 0)
             {
-                // Check for killed runners... (due date violation)
-                // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
-                ZMQ_CHECK(zmq_poll (items, 2, 0));
+                // check if initialization on rank 0 finished
+                // (rank 0 does some more intitialization than the other server ranks)
+                // other ranks will just Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
+                // propagate all fields to the other server clients on first message receive!
+                // low: if multi field: check fields! (see if the field names we got are the ones we wanted)
+                // propagate all fields to the other server clients on first message receive!
+                broadcast_field_information_and_calculate_parts();
+                init_new_timestamp();
+
+                // init assimilator as we know the field size now.
+                assimilator = Assimilator::create(
+                    ASSIMILATOR_TYPE, *field);
+                current_nsteps = assimilator->getNSteps();
+
+                D("Change Phase");
+                phase = PHASE_SIMULATION;
+                // @Kai: now we got all the field information (which dimensions it will have. So now we cann initialize the fti stuff on the server side if isRecovering....
+                // FTI_Protect....
             }
-            else
-            {
-                // ZMQ_CHECK(zmq_poll (items, 1, -1));
-                // Check for new tasks to schedule and killed runners so do not block on polling (due date violation)...
-                ZMQ_CHECK(zmq_poll (items, 1, 0));
-            }
-            /* Returned events will be stored in items[].revents */
+        }
 
-            // answer requests
-            if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
-            {
-                answer_configuration_message(configuration_socket,
-                                             data_response_port_names);
-            }
-
-            // coming from fresh init...
-            if (phase == PHASE_INIT)
-            {
-                if ((comm_rank == 0 && field != nullptr) ||
-                    comm_rank != 0)
-                {
-                    // check if initialization on rank 0 finished
-                    // (rank 0 does some more intitialization than the other server ranks)
-                    // other ranks will just Wait for rank 0 to finish field registrations. rank 0 does this in answer_configu
-                    // propagate all fields to the other server clients on first message receive!
-                    // low: if multi field: check fields! (see if the field names we got are the ones we wanted)
-                    // propagate all fields to the other server clients on first message receive!
-                    broadcast_field_information_and_calculate_parts();
-                    init_new_timestamp();
-
-                    // init assimilator as we know the field size now.
-                    assimilator = Assimilator::create(
-                        ASSIMILATOR_TYPE, *field);
-                    current_nsteps = assimilator->getNSteps();
-
-                    D("Change Phase");
-                    phase = PHASE_SIMULATION;
-                    // @Kai: now we got all the field information (which dimensions it will have. So now we cann initialize the fti stuff on the server side if isRecovering....
-                    // FTI_Protect....
-                }
-            }
-
-            if (phase == PHASE_SIMULATION)
-            {
+        if (phase == PHASE_SIMULATION)
+        {
 // X     if simulation requests work see if work in list. if so launch it. if not save connection
 // X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
 // X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
@@ -1203,86 +1238,86 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 // X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
 
 #ifdef RUNNERS_MAY_CRASH
-                // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
-                check_due_dates();
+            // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
+            check_due_dates();
 
-                if (comm_rank == 0)
-                {
-                    check_kill_requests();
-                }
+            if (comm_rank == 0)
+            {
+                check_kill_requests();
+            }
 #endif
 
-                if (comm_rank != 0)
-                {
-                    // check if rank 0 wants us to schedule some new tasks.
-                    check_schedule_new_tasks();
-                }
+            if (comm_rank != 0)
+            {
+                // check if rank 0 wants us to schedule some new tasks.
+                check_schedule_new_tasks();
+            }
 
-                if (items[0].revents & ZMQ_POLLIN)
-                {
-                    handle_data_response();
-                    // REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
-                }
+            if (items[0].revents & ZMQ_POLLIN)
+            {
+                handle_data_response();
+                // REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
+            }
 
-                if (check_finished(assimilator))
-                {
-                    break;              // all runners finished.
-                }
+            if (check_finished(assimilator))
+            {
+                break;              // all runners finished.
+            }
 
 
-                /// REM: Tasks are either unscheduled, scheduled, running or finished.
-                size_t connections =
-                    field->connected_runner_ranks.size();
+            /// REM: Tasks are either unscheduled, scheduled, running or finished.
+            size_t connections =
+                field->connected_runner_ranks.size();
 //          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
 //                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
 //                  scheduled_sub_tasks.size(),
 //                  running_sub_tasks.size(),
 //                  finished_sub_tasks.size());
 
-                // all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
-                assert(
-                    unscheduled_tasks.size() * connections +                      // scale on amount of subtasks.
-                    scheduled_sub_tasks.size() +
-                    running_sub_tasks.size() +
-                    finished_sub_tasks.size() == connections *
-                    ENSEMBLE_SIZE);
-            }
+            // all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
+            assert(
+                unscheduled_tasks.size() * connections +                      // scale on amount of subtasks.
+                scheduled_sub_tasks.size() +
+                running_sub_tasks.size() +
+                finished_sub_tasks.size() == connections *
+                ENSEMBLE_SIZE);
+        }
 
 #ifdef REPORT_MEMORY
-            int seconds = static_cast<int>(time (NULL));
+        int seconds = static_cast<int>(time (NULL));
 
-            if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
-            {
-                MemoryReportValue();
-                last_seconds_memory = seconds;
-            }
-#endif
-
-        }
-
-        if (comm_rank == 0)
+        if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
         {
-            L(
-                "Executed %d timesteps with %d ensemble members each, with a runner timeout of %lli seconds",
-                TOTAL_STEPS,
-                ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
-#ifdef REPORT_TIMING
-            timing->report(field->local_vect_sizes_runner.size(), comm_size,
-                           ENSEMBLE_SIZE,field->globalVectSize());
+            MemoryReportValue();
+            last_seconds_memory = seconds;
+        }
 #endif
-        }
-
-        D("Ending Server.");
-        // TODO: check if we need to delete some more stuff!
-
-        // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
-        // sleep(3);
-        zmq_close(data_response_socket);
-        if (comm_rank == 0)
-        {
-            zmq_close(configuration_socket);
-        }
-        zmq_ctx_destroy(context);
-        MPI_Finalize();
 
     }
+
+    if (comm_rank == 0)
+    {
+        L(
+            "Executed %d timesteps with %d ensemble members each, with a runner timeout of %lli seconds",
+            TOTAL_STEPS,
+            ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
+#ifdef REPORT_TIMING
+        timing->report(field->local_vect_sizes_runner.size(), comm_size,
+                       ENSEMBLE_SIZE,field->globalVectSize());
+#endif
+    }
+
+    D("Ending Server.");
+    // TODO: check if we need to delete some more stuff!
+
+    // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
+    // sleep(3);
+    zmq_close(data_response_socket);
+    if (comm_rank == 0)
+    {
+        zmq_close(configuration_socket);
+    }
+    zmq_ctx_destroy(context);
+    MPI_Finalize();
+
+}

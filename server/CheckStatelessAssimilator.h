@@ -14,13 +14,12 @@
 #define CHECKSTATELESSASSIMILATOR_H_
 
 #include "Assimilator.h"
+#include "Part.h"
 
 class CheckStatelessAssimilator : public Assimilator
 {
 Field & field;
 private:
-const double mean_value = 4.3;
-const double magnitude  = 0.1;
 std::vector<std::vector<double> > init_states;
 std::vector<std::vector<double> > correct_states;
 
@@ -29,6 +28,9 @@ void print_result(const bool good);
 public:
 CheckStatelessAssimilator(Field & field_);
 virtual int do_update_step();
+
+void store_init_state_part(const int ensemble_member_id, const Part & part, const
+                                                 double * values);
 };
 
 #endif /* CHECKSTATELESSASSIMILATOR_H_ */
