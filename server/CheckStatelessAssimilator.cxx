@@ -7,6 +7,7 @@
 
 #include "CheckStatelessAssimilator.h"
 #include <algorithm>
+#include <cmath>
 
 CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
     field(field_)
@@ -79,16 +80,52 @@ int CheckStatelessAssimilator::do_update_step()
              field.ensemble_members.end(); ens_it++)
         {
             // analysis state is enough:
-            if (ens_it->state_background != correct_states[index])
+            // calculate max diff
+            double max_diff = 0.0;
+            double min_value = correct_states[index][0];
+            double max_value = correct_states[index][0];
+            for (int i = 0; i < correct_states[index].size(); ++i)
             {
-                L("Error: Vectors are not equal. Is there some hidden state?");
+                double a = correct_states[index][i];
+                double b = ens_it->state_background[i];
+                if (std::isnan(a) && std::isnan(b))
+                {
+                    continue;
+                }
+                if (std::isnan(-a) && std::isnan(-b))
+                {
+                    continue;
+                }
+
+                min_value = std::min(min_value, correct_states[index][i]);
+                min_value = std::min(min_value, ens_it->state_background[i]);
+
+                max_value = std::max(max_value, correct_states[index][i]);
+                max_value = std::max(max_value, ens_it->state_background[i]);
+
+                double ndiff = std::abs(correct_states[index][i] -
+                                        ens_it->state_background[i]);
+                max_diff = std::max(ndiff, max_diff);
+
+            }
+
+
+            const int eps = 0.00001;
+            L("Max diff: %f, value range: %f .. %f", max_diff, min_value,
+              max_value);
+
+            if (max_diff > eps)
+            {
+                L(
+                    "Error: Vectors are not equal (max diff >%f). Is there some hidden state?",
+                    eps);
                 print_vector(ens_it->state_background);
                 L("!=");
                 print_vector(correct_states[index]);
-
                 print_result(false);
-                return -1;  // stop assimilation
+                return -1;      // stop assimilation
             }
+
             index++;
         }
 
