@@ -29,7 +29,9 @@ class FTmodule {
         
         MPI_Comm m_fti_comm;
         MPI_Comm m_fti_comm_dup;
+#ifdef WITH_FTI_THREADS
         FTthreadManager FTsched;
+#endif
         bool m_checkpointing;
         std::map<std::string,int> id_map;
         bool m_restart;
