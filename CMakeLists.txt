@@ -23,8 +23,23 @@ endif(INSTALL_ZMQ)
 
 option(WITH_FTI OFF)
 option(WITH_FTI_THREADS OFF)
-
-if(WITH_FTI OR WITH_FTI_THREADS)
+option(INSTALL_FTI OFF)
+if(INSTALL_FTI)
+    include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
+    ExternalProject_Add(FTI
+        GIT_REPOSITORY https://github.com/leobago/fti.git
+        GIT_TAG melissa
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/FTI
+        CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1
+        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
+    MESSAGE(STATUS "FTI will be installed")
+    set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
+    set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
+    set(FTI_INCLUDE_DIR "${FTI_PATH}/include/")
+    set(WITH_FTI TRUE)
+elseif(WITH_FTI OR WITH_FTI_THREADS)
     if(EXISTS "${FTI_PATH}/lib/libfti.so")
         set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
     else()
@@ -36,7 +51,7 @@ if(WITH_FTI OR WITH_FTI_THREADS)
         message(FATAL_ERROR "could not find FTI header file in ${FTI_PATH}/include")
     endif()
     message("-- found fti (${FTI_LIBRARY})")
-endif(WITH_FTI OR WITH_FTI_THREADS)
+endif()
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
