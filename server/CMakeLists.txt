@@ -1,3 +1,9 @@
+if(WITH_FTI)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/FTmodule.cpp ${CMAKE_CURRENT_SOURCE_DIR}/FTmodule.cxx)
+    if(WITH_FTI_THREADS)
+        file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/FTthreadManager.cpp ${CMAKE_CURRENT_SOURCE_DIR}/FTthreadManager.cxx)
+    endif(WITH_FTI_THREADS)
+endif(WITH_FTI)
 file(GLOB
      ALL_SERVER
      RELATIVE

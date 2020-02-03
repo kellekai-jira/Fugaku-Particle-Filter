@@ -1,3 +1,5 @@
+#ifdef WITH_FTI_THREADS
+
 #include "FTthreadManager.h"
 #include <iostream>
 #include <algorithm>
@@ -82,3 +84,5 @@ void FTthreadManager::synchronize()
         std::this_thread::yield();
     }
 }
+
+#endif //WITH_FTI_THREADS

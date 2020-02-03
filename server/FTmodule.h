@@ -3,13 +3,13 @@
 
 #define FTI_CONFIG "config.fti"
 
-#ifdef WITH_FTI
-#   include <fti.h>
-#endif
+#include <fti.h>
 #include "Field.h"
 #include <map>
 #include <memory>
+#ifdef WITH_FTI_THREADS
 #include "FTthreadManager.h"
+#endif
 #include "MpiManager.h"
 
 class FTmodule {

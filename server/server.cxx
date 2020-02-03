@@ -28,7 +28,9 @@
 #include "melissa-da_config.h"
 
 #include "Field.h"
-#include "FTmodule.h"
+#ifdef WITH_FTI
+#   include "FTmodule.h"
+#endif
 #include "messages.h"
 #include "Part.h"
 #include "utils.h"
@@ -51,7 +53,9 @@ extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
 int ENSEMBLE_SIZE = 5;
 int TOTAL_STEPS = 5;
 
+#ifdef WITH_FTI
 FTmodule FT;
+#endif
 MpiManager mpi;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
@@ -830,7 +834,9 @@ void handle_data_response() {
                                         <double*>(zmq_msg_data(
                                                       &data_msg)));
             // checkpoint to disk 
+#ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
+#endif
         }
 
         // whcih atm can not even happen if more than one fields as they do there communication one after another.
@@ -996,15 +1002,17 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
     if (finished)
     {
+#ifdef WITH_FTI
         FT.recover();
         FT.flushCP();
-
+#endif
         // get new analysis states from update step
         L("====> Update step %d/%d", current_step, TOTAL_STEPS);
         current_nsteps = assimilator->do_update_step( mpi );
         
+#ifdef WITH_FTI
 	FT.finalizeCP();
-
+#endif
 //      }
 #ifdef REPORT_TIMING
         if (comm_rank == 0)
@@ -1032,9 +1040,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
 
         }
-        
+#ifdef WITH_FTI
         FT.initCP( current_step );
-    
+#endif
     }
 
     return false;
@@ -1068,8 +1076,10 @@ int main(int argc, char * argv[])
     assert(ENSEMBLE_SIZE > 0);
     
     mpi.init();
+#ifdef WITH_FTI
     FT.init( mpi, current_step ); 
-        
+#endif
+
     comm_size = mpi.size();
     comm_rank = mpi.rank();
 
@@ -1182,8 +1192,9 @@ int main(int argc, char * argv[])
                     ASSIMILATOR_TYPE, *field);
                 current_nsteps = assimilator->getNSteps();
                 
+#ifdef WITH_FTI
                 FT.protect_background( mpi, field );
-
+#endif
                 D("Change Phase");
                 phase = PHASE_SIMULATION;
 
@@ -1284,7 +1295,9 @@ int main(int argc, char * argv[])
     }
     zmq_ctx_destroy(context);
     
+#ifdef WITH_FTI
     FT.finalize();
+#endif
     mpi.finalize();
 
 }

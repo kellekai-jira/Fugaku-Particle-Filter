@@ -1,10 +1,11 @@
+#ifdef WITH_FTI
+
 #include "FTmodule.h"
 #include <algorithm>
 #include "MpiManager.h"
 
 void FTmodule::init( MpiManager & mpi, int & epoch_counter ) 
 {
-#ifdef WITH_FTI
     m_checkpointing = false;
     id_check.clear();
     FTI_Init( FTI_CONFIG, mpi.comm() );
@@ -28,12 +29,10 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     m_id_offset++;
     m_restart = static_cast<bool>(FTI_Status());
     m_protected = false;
-#endif
 }
 
 void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & field )
 {
-#ifdef WITH_FTI
     int comm_size_server = mpi.size(); 
     int comm_size_runner = field->local_vect_sizes_runner.size();
     size_t local_vect_sizes_server[comm_size_server];
@@ -89,12 +88,10 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
         dataset_id++;
     }
     m_protected = true;
-#endif
 }
 
 void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank )
 {
-#ifdef WITH_FTI
     if( m_checkpointing ) {
         std::string key(field->name);
         key += "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank );
@@ -107,12 +104,10 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
             id_check.insert(key);
         }
     }
-#endif
 }
   
 void FTmodule::initCP( int epoch ) 
 {   
-#ifdef WITH_FTI
     if( !m_checkpointing ) {
         id_check.clear();
         m_checkpointing = true;
@@ -121,12 +116,11 @@ void FTmodule::initCP( int epoch )
             FTI_AddVarICP( id );
         }
     }
-#endif
 }
 
 void FTmodule::flushCP( void ) 
 {
-#if defined WITH_FTI && WITH_FTI_THREADS
+#ifdef WITH_FTI_THREADS
     if( m_checkpointing ) {
         FTsched.synchronize();
         FTsched.submit( FTI_FinalizeICP );
@@ -136,7 +130,6 @@ void FTmodule::flushCP( void )
 
 void FTmodule::finalizeCP( void ) 
 {
-#ifdef WITH_FTI
     if( m_checkpointing ) {
 #ifdef WITH_FTI_THREADS
         FTsched.synchronize();
@@ -145,22 +138,19 @@ void FTmodule::finalizeCP( void )
 #endif
         m_checkpointing = false;
     }
-#endif
 }
 
 void FTmodule::recover( void )
 {
-#ifdef WITH_FTI
     if( m_restart && m_protected ) {
         FTI_Recover();
         m_restart = false;
     }
-#endif
 }
 
 void FTmodule::finalize( void )
 {
-#ifdef WITH_FTI
     FTI_Finalize();
-#endif
 }
+
+#endif //WITH_FTI
