@@ -256,7 +256,9 @@ SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, statu
        init_obsvar_l_pdaf, &           ! Initialize local mean observation error variance
        init_obs_f_pdaf, &              ! Provide full vector of measurements for PE-local domain
        obs_op_f_pdaf, &                ! Obs. operator for full obs. vector for PE-local domain
-       init_dim_obs_f_pdaf             ! Get dimension of full obs. vector for PE-local domain
+       init_dim_obs_f_pdaf, &          ! Get dimension of full obs. vector for PE-local domain
+       add_obs_error_pdaf, &
+       init_obscovar_pdaf
 
   Print *, "put state!"
 
@@ -264,9 +266,13 @@ SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, statu
   !collect_state_from => state_background
   CALL C_F_POINTER( state_background, collect_state_from,[dim_state_background])
 
-  CALL PDAF_put_state_estkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
-    init_obs_pdaf, prepoststep_ens_pdaf, prodRinvA_pdaf, init_obsvar_pdaf, status)
+  !CALL PDAF_put_state_estkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
+    !init_obs_pdaf, prepoststep_ens_pdaf, prodRinvA_pdaf, init_obsvar_pdaf, status)
 
+    !assuming filtertype = 2
+  CALL PDAF_put_state_enkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
+      init_obs_pdaf, prepoststep_ens_pdaf, add_obs_error_pdaf, init_obscovar_pdaf, &
+      status)
 
   !IF (filtertype == 6) THEN
      !CALL PDAF_assimilate_estkf(collect_state_pdaf, distribute_state_pdaf, &

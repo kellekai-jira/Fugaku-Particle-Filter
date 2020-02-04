@@ -22,7 +22,7 @@ use iso_c_binding
 ! *** Variables specific for 2D tutorial model ***
 
   INTEGER :: total_steps
-  INTEGER :: nx, ny               ! Size of 2D grid
+  INTEGER :: nx, ny, nz               ! Size of 2D grid
 !  REAL, ALLOCATABLE :: field_p(:,:) ! Decomposed model field
 
   INTEGER :: nx_p                 ! Process-local size in x-direction

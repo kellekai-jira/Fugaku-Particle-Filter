@@ -58,7 +58,7 @@ void PDAFAssimilator::getAllEnsembleMembers()
                                               &status);
 
         // copy the rest of the state from the background as we do not perform assimilaton on it.
-        std::copy(eit->begin() + dim, eit->state_background.end(),
+        std::copy(eit->state_background.begin() + dim, eit->state_background.end(),
                 eit->state_analysis.begin() + dim);
 
         assert(nsteps == nnsteps || nsteps == -1);          // every get state should give the same nsteps!
