@@ -1,4 +1,29 @@
-!$Id: obs_op_pdaf.F90 1857 2017-12-14 18:26:01Z lnerger $
+!-------------------------------------------------------------------------------------------
+!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
+!
+!This file is part of TerrSysMP-PDAF
+!
+!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
+!it under the terms of the GNU Lesser General Public License as published by
+!the Free Software Foundation, either version 3 of the License, or
+!(at your option) any later version.
+!
+!TerrSysMP-PDAF is distributed in the hope that it will be useful,
+!but WITHOUT ANY WARRANTY; without even the implied warranty of
+!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!GNU LesserGeneral Public License for more details.
+!
+!You should have received a copy of the GNU Lesser General Public License
+!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
+!-------------------------------------------------------------------------------------------
+!
+!
+!-------------------------------------------------------------------------------------------
+!obs_op_pdaf.F90: TerrSysMP-PDAF implementation of routine
+!                 'obs_op_pdaf' (PDAF online coupling)
+!-------------------------------------------------------------------------------------------
+
+!$Id: obs_op_pdaf.F90 1441 2013-10-04 10:33:42Z lnerger $
 !BOP
 !
 ! !ROUTINE: obs_op_pdaf --- Implementation of observation operator
@@ -14,20 +39,17 @@ SUBROUTINE obs_op_pdaf(step, dim_p, dim_obs_p, state_p, m_state_p)
 ! It has to perform the operation of the
 ! observation operator acting on a state vector.
 ! For domain decomposition, the action is on the
-! PE-local sub-domain of the state and has to 
-! provide the observed sub-state for the PE-local 
+! PE-local sub-domain of the state and has to
+! provide the observed sub-state for the PE-local
 ! domain.
-!
-! Implementation for the 2D online example
-! with or without parallelization.
 !
 ! !REVISION HISTORY:
 ! 2013-02 - Lars Nerger - Initial code
 ! Later revisions - see svn log
 !
 ! !USES:
-  USE mod_assimilation, &
-       ONLY: obs_index_p
+   USE mod_assimilation, &
+        ONLY: obs_index_p
 
   IMPLICIT NONE
 
@@ -37,7 +59,7 @@ SUBROUTINE obs_op_pdaf(step, dim_p, dim_obs_p, state_p, m_state_p)
   INTEGER, INTENT(in) :: dim_obs_p          ! Dimension of observed state
   REAL, INTENT(in)    :: state_p(dim_p)     ! PE-local model state
   REAL, INTENT(out) :: m_state_p(dim_obs_p) ! PE-local observed state
-
+  integer :: i
 ! !CALLING SEQUENCE:
 ! Called by: PDAF_seek_analysis   (as U_obs_op)
 ! Called by: PDAF_seik_analysis, PDAF_seik_analysis_newT
@@ -45,8 +67,6 @@ SUBROUTINE obs_op_pdaf(step, dim_p, dim_obs_p, state_p, m_state_p)
 !EOP
 
 ! *** local variables ***
-  INTEGER :: i       ! Counter
-
 
 ! *********************************************
 ! *** Perform application of measurement    ***

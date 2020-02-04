@@ -1,5 +1,5 @@
 /*
- * PDAFEnKFAssimilator.cxx
+ * PDAFAssimilator.cxx
  *
  *  Created on: Aug 14, 2019
  *      Author: friese
@@ -49,11 +49,18 @@ void PDAFAssimilator::getAllEnsembleMembers()
     for (auto eit = field.ensemble_members.begin(); eit !=
          field.ensemble_members.end(); eit++)
     {
-        const int dim = eit->state_analysis.size();
+        //const int dim = eit->state_analysis.size();
+        const int dim = 50*50*12/2;
+
         double * data = eit->state_analysis.data();
         // int nnsteps =
         int nnsteps = cwrapper_PDAF_get_state(&doexit, &dim, &data,
                                               &status);
+
+        // copy the rest of the state from the background as we do not perform assimilaton on it.
+        std::copy(eit->begin() + dim, eit->state_background.end(),
+                eit->state_analysis.begin() + dim);
+
         assert(nsteps == nnsteps || nsteps == -1);          // every get state should give the same nsteps!
         nsteps = nnsteps;
 
@@ -88,7 +95,8 @@ int PDAFAssimilator::do_update_step()
          field.ensemble_members.end(); eit++)
     {
 
-        const int dim = eit->state_background.size();
+        //const int dim = eit->state_background.size();
+        const int dim  = 50*50*12/2;
         const double * data = eit->state_background.data();
         cwrapper_PDFA_put_state(&dim, &data, &status);
 

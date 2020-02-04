@@ -1,4 +1,29 @@
-!$Id: add_obs_error_pdaf.F90 1565 2015-02-28 17:04:41Z lnerger $
+!-------------------------------------------------------------------------------------------
+!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
+!
+!This file is part of TerrSysMP-PDAF
+!
+!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
+!it under the terms of the GNU Lesser General Public License as published by
+!the Free Software Foundation, either version 3 of the License, or
+!(at your option) any later version.
+!
+!TerrSysMP-PDAF is distributed in the hope that it will be useful,
+!but WITHOUT ANY WARRANTY; without even the implied warranty of
+!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!GNU LesserGeneral Public License for more details.
+!
+!You should have received a copy of the GNU Lesser General Public License
+!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
+!-------------------------------------------------------------------------------------------
+!
+!
+!-------------------------------------------------------------------------------------------
+!add_obs_error_pdaf.F90: TerrSysMP-PDAF implementation of routine
+!                        'add_obs_error_pdaf' (PDAF online coupling)
+!-------------------------------------------------------------------------------------------
+
+!$Id: add_obs_error_pdaf.F90 1441 2013-10-04 10:33:42Z lnerger $
 !BOP
 !
 ! !ROUTINE: add_obs_error_pdaf --- Add observation error covariance matrix
@@ -16,16 +41,15 @@ SUBROUTINE add_obs_error_pdaf(step, dim_obs_p, C_p)
 ! matrix to the provided matrix C_p for the 
 ! PE-local domain .
 ! 
-! Implementation for the 2D online example
-! with or without parallelization.
-!
 ! !REVISION HISTORY:
 ! 2013-02 - Lars Nerger - Initial code
 ! Later revisions - see svn log
 !
 ! !USES:
-  USE mod_assimilation, &
-       ONLY: rms_obs
+   USE mod_assimilation, &
+        ONLY: rms_obs, obs_nc2pdaf
+
+   use mod_read_obs, only: multierr,clm_obserr, pressure_obserr
 
   IMPLICIT NONE
 
@@ -60,8 +84,22 @@ SUBROUTINE add_obs_error_pdaf(step, dim_obs_p, C_p)
 ! *** here, thus R is diagonal      ***
 ! *************************************
 
-  DO i = 1, dim_obs_p
-     C_p(i, i) = C_p(i, i) + variance_obs
-  ENDDO
+  if(multierr.ne.1) then
+    DO i = 1, dim_obs_p
+       C_p(i, i) = C_p(i, i) + variance_obs
+    ENDDO
+  endif
+
+ 
+  if(multierr.eq.1) then
+    do i=1,dim_obs_p
+#if defined CLMSA
+      C_p(i,i) = C_p(i,i) + clm_obserr(obs_nc2pdaf(i))*clm_obserr(obs_nc2pdaf(i))
+#else
+      C_p(i,i) = C_p(i,i) + pressure_obserr(obs_nc2pdaf(i))*pressure_obserr(obs_nc2pdaf(i))
+#endif
+    enddo
+  endif
+
 
 END SUBROUTINE add_obs_error_pdaf
