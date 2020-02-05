@@ -71,7 +71,6 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 
 
   ! TODO: probably we do not the nx ny nz and so on up there?
-  CALL initialize_tsmp()
 
 ! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
   ! Initialize PDAF  ! TODO: dirty to call this here but init_pdaf depends on init_ens and init ens needs nx, ny and nx_p....
@@ -85,9 +84,6 @@ SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
   IMPLICIT NONE
 
   CALL finalize_pdaf()
-
-
-  CALL finalize_tsmp()
 
 END SUBROUTINE
 
