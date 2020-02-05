@@ -30,7 +30,7 @@ void store_init_state_part(const int ensemble_member_id, const Part & part,
 public:
 CheckStatelessAssimilator(Field & field_);
 virtual int do_update_step();
-virtual int on_init_state(const int runner_id, const Part & part, const
+virtual void on_init_state(const int runner_id, const Part & part, const
                           double * values);
 
 };

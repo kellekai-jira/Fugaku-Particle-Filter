@@ -158,7 +158,7 @@ void CheckStatelessAssimilator::store_init_state_part(const int
 
 
 
-int CheckStatelessAssimilator::on_init_state(const int runner_id, const
+void CheckStatelessAssimilator::on_init_state(const int runner_id, const
                                              Part & part, const double * values)
 {
     // let's use this to set the init.

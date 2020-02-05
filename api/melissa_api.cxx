@@ -16,7 +16,6 @@
 
 #include "melissa_api.h"
 
-
 // TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
 // Forward declarations:
 void melissa_finalize();
@@ -120,7 +119,7 @@ struct ServerRankConnection
                                ZMQ_SNDMORE));
 
         D(
-            "-> Simulation runnerid %d, rank %d sending statid %d timestamp=%d fieldname=%s, %lu bytes",
+            "-> Simulation runnerid %d, rank %d sending stateid %d timestamp=%d fieldname=%s, %lu bytes",
             getRunnerId(), getCommRank(), current_state_id,
             timestamp,
             field_name, doubles_to_send * sizeof(double));
@@ -430,6 +429,10 @@ bool first_melissa_init(MPI_Comm comm_)
 
     context = zmq_ctx_new ();
     comm = comm_;
+
+    // activate logging:
+    comm_rank = getCommRank();
+
     bool register_field = false;
     if (getCommRank() == 0)
     {

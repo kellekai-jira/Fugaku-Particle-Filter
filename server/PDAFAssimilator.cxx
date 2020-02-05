@@ -25,27 +25,33 @@ PDAFAssimilator::~PDAFAssimilator() {
 PDAFAssimilator::PDAFAssimilator(Field &field_)
     : field(field_) {
     // call to fortran:
-    int vectsize = field.globalVectSize();
+    int vect_size = field.globalVectSize();
 
-    // ass size_t might be too big...:
+    // as size_t might be too big for fortran...:
     int local_vect_size = field.local_vect_size;
 
     // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
     assert (ENSEMBLE_SIZE <= 9);
-    cwrapper_init_pdaf(&vectsize, &local_vect_size, &ENSEMBLE_SIZE);
+    // we transmit only one third to pdaf
+    const int pdaf_vect_size = 50*50*12;
+    const int pdaf_local_vect_size = 50*50*12/2;
+    cwrapper_init_pdaf(&pdaf_vect_size, &pdaf_local_vect_size, &ENSEMBLE_SIZE);
     cwrapper_init_user(&TOTAL_STEPS);
     nsteps = -1;
 
     // init ensemble!
+    // we actually only do this herre to not confuse pdaf. PDAF want's us to start with
+    // a get state phase I 'guess' ;)
     getAllEnsembleMembers();
 }
 
 
 
-void PDAFAssimilator::store_init_state_part(const int
-                                            ensemble_member_id, const
-                                            Part & part, const
-                                            double * values)
+//void PDAFAssimilator::on_init_state_part(const int
+                                            //ensemble_member_id, const
+                                            //Part & part, const
+                                            //double * values)
+void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, const double * values)
 {
     // We need the init state part of density and saturation as those are not inited by
     // init_ens.F90 To be sure we just copy everything, even if the pressure part
@@ -53,28 +59,31 @@ void PDAFAssimilator::store_init_state_part(const int
     // REM: we only send the pressure part for assimilation to PDAF later.
 
     assert(part.send_count + part.local_offset_server <=
-           field.ensemble_members[ensemble_member_id].state_background.size());
+           field.ensemble_members[0].state_background.size());
 
-    if (ensemble_member_id != 0)
+    if (runner_id != 0)
     {
-        // Only copy state from ensemble member 0 as they are inited from the same file
-        // anyway. Further so we init all the ensemble memebers even if there are less
+        // Only copy state from runner 0 as they are inited from the same file
+        // This runner may not crash. otherwise we never start...
+        // anyway. Further so we init all the ensemble members even if there are less
         // runners than ensemble members.
         return;
     }
 
+    D("Setting all the ensemble members to the received states");
 
     for (int member_id = 0; member_id < field.ensemble_members.size(); member_id++)
     {
-        // copy into all others background states....
-        if (member_id != 0)
-        {
-            std::copy(values, values + part.send_count,
-                      field.ensemble_members[member_id].state_background.data() +
-                      part.local_offset_server);
-        }
+        // copy into all background states....
+        // (here some cacheline optimization could be done by traversing the array in
+        // the other way but this is not important at all as this code is executed only
+        // once)
+        std::copy(values, values + part.send_count,
+                  field.ensemble_members[member_id].state_background.data() +
+                  part.local_offset_server);
 
         // Also copy into analysis state to send it back right again!
+        // --> start all members from the same atm.... really boring! need to change this! = FIXME
         std::copy(values, values + part.send_count,
                   field.ensemble_members[member_id].state_analysis.data() +
                   part.local_offset_server);

@@ -22,10 +22,8 @@ public:
 ~PDAFAssimilator();
 PDAFAssimilator(Field & field);
 virtual int do_update_step();
-void store_init_state_part(const int
-                           ensemble_member_id, const
-                           Part & part, const
-                           double * values);
+virtual void on_init_state(const int runner_id, const Part & part, const
+                          double * values);
 };
 
 #endif /* PDAFASSIMILATOR_H_ */

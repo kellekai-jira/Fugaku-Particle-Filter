@@ -26,7 +26,7 @@ function ctrl_c() {
         exit 0
 }
 
-#precommand="xterm_gdb"
+precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
 rm -f nc.vg.*
 
