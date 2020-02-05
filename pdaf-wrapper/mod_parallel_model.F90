@@ -40,6 +40,7 @@ save
     integer :: npes_model
     integer :: mype_world
     integer :: npes_world
+    INTEGER :: MPIerr      ! Error flag for MPI
     bind(c) :: mype_model
     ! model input parameters
     real(c_double), bind(c) :: t_start

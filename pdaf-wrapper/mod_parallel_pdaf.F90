@@ -36,7 +36,7 @@ MODULE mod_parallel_pdaf
 ! variables that are only used, if data assimialtion with PDAF
 ! is performed.
 ! In addition methods to initialize and finalize MPI are provided.
-! The initialization routine is only for the model itself, the 
+! The initialization routine is only for the model itself, the
 ! more complex initialization of communicators for xecution with
 ! PDAF is peformed in init\_parallel\_pdaf.
 !
@@ -46,15 +46,16 @@ MODULE mod_parallel_pdaf
 !
 ! !USES:
   IMPLICIT NONE
-  SAVE 
+  SAVE
 
   INCLUDE 'mpif.h'
 
 ! !PUBLIC DATA MEMBERS:
   ! Additional variables for use with PDAF
-  INTEGER :: n_modeltasks         ! Number of parallel model tasks
-  INTEGER :: n_filterpes  = 1         ! Number of PEs for filter analysis
-  INTEGER :: COMM_filter ! MPI communicator for filter PEs 
+  INTEGER :: n_modeltasks = 1        ! Number of parallel model tasks. Fixed to one for
+  !melissa-da
+  INTEGER :: n_filterpes  = 1        ! Number of PEs for filter analysis
+  INTEGER :: COMM_filter ! MPI communicator for filter PEs
   INTEGER :: mype_filter, npes_filter ! # PEs and PE rank in COMM_filter
   INTEGER :: COMM_couple ! MPI communicator for coupling filter and model
   LOGICAL :: modelpe     ! Whether we are on a PE in a COMM_model

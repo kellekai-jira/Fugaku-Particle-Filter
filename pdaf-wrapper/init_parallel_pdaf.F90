@@ -1,29 +1,4 @@
-!-------------------------------------------------------------------------------------------
-!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
-!
-!This file is part of TerrSysMP-PDAF
-!
-!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
-!it under the terms of the GNU Lesser General Public License as published by
-!the Free Software Foundation, either version 3 of the License, or
-!(at your option) any later version.
-!
-!TerrSysMP-PDAF is distributed in the hope that it will be useful,
-!but WITHOUT ANY WARRANTY; without even the implied warranty of
-!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!GNU LesserGeneral Public License for more details.
-!
-!You should have received a copy of the GNU Lesser General Public License
-!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
-!-------------------------------------------------------------------------------------------
-!
-!
-!-------------------------------------------------------------------------------------------
-!init_parallel_pdaf.F90: TerrSysMP-PDAF implementation of routine
-!                        'init_parallel_pdaf' (PDAF online coupling)
-!-------------------------------------------------------------------------------------------
-
-!$Id: init_parallel_pdaf.F90 1442 2013-10-04 10:35:19Z lnerger $
+!$Id: init_parallel_pdaf.F90 1477 2014-07-06 18:59:11Z lnerger $
 !BOP
 !
 ! !ROUTINE: init_parallel_pdaf --- Initialize communicators for PDAF
@@ -85,24 +60,14 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 ! Later revisions - see svn log
 !
 ! !USES:
-! TEMPLATE: The include from mod_parallel_model has to be adapted to a particular model
- ! gh, universal pe world
-   USE mod_parallel_model, &
-        ONLY: MPI_COMM_WORLD, mype_model, npes_model, COMM_model, &
-            mype_world, npes_world
+  USE mod_parallel_model, &
+       ONLY: mype_world, npes_world, MPI_COMM_WORLD, mype_model, npes_model, &
+       COMM_model, MPIerr
   USE mod_parallel_pdaf, &
        ONLY: mype_filter, npes_filter, COMM_filter, filterpe, n_modeltasks, &
-       local_npes_model, task_id, COMM_couple, MPIerr, MPI_UNDEFINED
-  ! Un-comment the following 2 lines in case a serial model is used
-!   USE mod_parallel_pdaf, &
-!        ONLY: MPI_COMM_WORLD, mype_model, npes_model, COMM_model, npes_world, mype_world
-!   then remove local declaration of npes_world and mype_world
+       local_npes_model, task_id, COMM_couple, MPI_UNDEFINED
   USE parser, &
        ONLY: parse
-#if defined use_comm_da
-  USE mod_oasis_data, &
-       only: da_comm
-#endif
 
   IMPLICIT NONE
 
@@ -130,8 +95,6 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   INTEGER :: my_color, color_couple ! Variables for communicator-splitting
   LOGICAL :: iniflag            ! Flag whether MPI is initialized
   CHARACTER(len=32) :: handle   ! handle for command line parser
-  ! gh, universal pe world
-  !INTEGER :: npes_world, mype_world   ! Rank and size on MPI_COMM_WORLD
 
 
   ! *** Initialize MPI if not yet initialized ***
@@ -143,6 +106,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   ! *** Initialize PE information on COMM_world ***
   CALL MPI_Comm_size(MPI_COMM_WORLD, npes_world, MPIerr)
   CALL MPI_Comm_rank(MPI_COMM_WORLD, mype_world, MPIerr)
+
 
   ! *** Parse number of model tasks ***
   ! *** The module variable is N_MODELTASKS. Since it has to be equal
@@ -186,7 +150,6 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   ! *** Store # PEs per ensemble                 ***
   ! *** used for info on PE 0 and for generation ***
   ! *** of model communicators on other Pes      ***
-
   ALLOCATE(local_npes_model(n_modeltasks))
 
   local_npes_model = FLOOR(REAL(npes_world) / REAL(n_modeltasks))
@@ -291,7 +254,6 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   END IF
 
 
-
 ! ******************************************************************************
 ! *** Initialize model equivalents to COMM_model, npes_model, and mype_model ***
 ! ******************************************************************************
@@ -299,9 +261,6 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   ! If the names of the variables for COMM_model, npes_model, and
   ! mype_model are different in the numerical model, the
   ! model-internal variables should be initialized at this point.
-!
-#if defined use_comm_da
-  da_comm = comm_model
-#endif
+
 
 END SUBROUTINE init_parallel_pdaf
