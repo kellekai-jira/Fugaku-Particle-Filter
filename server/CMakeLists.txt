@@ -20,7 +20,7 @@ if(WITH_FTI OR WITH_FTI_THREADS)
         message(FATAL_ERROR "Could not find parallel HDF5 library! The one found is sequential. Please install a parallel HDF5 library!")
     endif(NOT(HDF5_IS_PARALLEL))
 
-    target_link_libraries(melissa_server ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES})
+    target_link_libraries(melissa_server ${HDF5_LIBRARIES})
   if(WITH_FTI_THREADS)
     target_compile_definitions(melissa_server PUBLIC WITH_FTI_THREADS)
   endif(WITH_FTI_THREADS)
