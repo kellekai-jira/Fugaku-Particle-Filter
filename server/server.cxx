@@ -168,6 +168,17 @@ struct RunnerRankConnection
             field->getPart(runner_rank).local_offset_runner,
             field->getPart(runner_rank).send_count);
         // print_vector(field->ensemble_members.at(state_id).state_analysis);
+        D("content=[%f,%f,%f,%f,%f...]",
+                field->ensemble_members.at(
+                    state_id).state_analysis.data()[0],
+                field->ensemble_members.at(
+                    state_id).state_analysis.data()[1],
+                field->ensemble_members.at(
+                    state_id).state_analysis.data()[2],
+                field->ensemble_members.at(
+                    state_id).state_analysis.data()[3],
+                field->ensemble_members.at(
+                    state_id).state_analysis.data()[4]);
 
         zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -826,6 +837,22 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                             &
                                                             data_msg))
           [0]);
+        D("values[1] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [1]);
+        D("values[2] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [2]);
+        D("values[3] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [3]);
+        D("values[4] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [4]);
         if (runner_timestamp == current_step)
         {
             D("storing this timestamp!...");
