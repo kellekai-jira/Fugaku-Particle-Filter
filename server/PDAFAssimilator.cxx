@@ -81,9 +81,14 @@ void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, cons
 
         // Also copy into analysis state to send it back right again!
         // --> start all members from the same atm.... really boring! need to change this! = FIXME
-        std::copy(values, values + part.send_count,
-                  field.ensemble_members[member_id].state_analysis.data() +
-                  part.local_offset_server);
+        //std::copy(values, values + part.send_count,
+                  //field.ensemble_members[member_id].state_analysis.data() +
+                  //part.local_offset_server);
+
+        // this seems a really good guess for all fields except for the pressure:
+        std::fill(field.ensemble_members[member_id].state_analysis.begin()+(50*50*12/2),
+                  field.ensemble_members[member_id].state_analysis.end(),
+                  1.0);
     }
 }
 

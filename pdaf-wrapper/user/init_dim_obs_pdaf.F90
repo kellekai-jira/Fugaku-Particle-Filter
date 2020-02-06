@@ -125,6 +125,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   is_multi_observation_files = .true.
   if (is_multi_observation_files) then
      write(current_observation_filename, '(a, i5.5)') trim(obs_filename)//'.', step
+     print *, "loading observations from ", current_observation_filename
 #if defined CLMSA
      if (mype_filter .eq. 0) then
         if(model == tag_model_parflow) then
@@ -177,10 +178,10 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
         allocate(clmobs_dr(2))
         if(allocated(clmobs_layer))deallocate(clmobs_layer)
         allocate(clmobs_layer(dim_obs))
-        if(multierr.eq.1) then 
-           if(allocated(clm_obserr))deallocate(clm_obserr)               
+        if(multierr.eq.1) then
+           if(allocated(clm_obserr))deallocate(clm_obserr)
            allocate(clm_obserr(dim_obs))
-        end if 
+        end if
      end if
 #endif
   end if
@@ -216,6 +217,9 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
      do i = 1, dim_obs
         do j = 1, enkf_subvecsize
            if (idx_obs_nc(i) .eq. idx_map_subvec2state_fortran(j)) then
+               ! FIXME: this check is complete nonsense! just check if x coordinate in domain and that's it.... (for now... later
+               ! when we split it into other directions than the x axis it gets up.
+               ! this thing is inited in oasis... since we do not use oasis for now it is not inited....
               dim_obs_p = dim_obs_p + 1
            end if
         end do
@@ -240,7 +244,9 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   end if
 #endif
 
-  print *, "init_dim_obs_pdaf: dim_obs_p is", dim_obs_p
+  print *, "init_dim_obs_pdaf: dim_obs_p is", dim_obs_p, "/", dim_obs, " total obs"
+  print *, "at timestep", step
+  print *, "mype_filter is (should be 0 to read out...)", mype_filter
 
   !IF (ALLOCATED(obs_index)) DEALLOCATE(obs_index)
   !IF (ALLOCATED(obs)) DEALLOCATE(obs)
@@ -266,11 +272,13 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
 
 #ifndef CLMSA
   if (model .eq. tag_model_parflow) then
-     ! allocate pressure_obserr_p observation error for parflow run at PE-local domain 
+     ! allocate pressure_obserr_p observation error for parflow run at PE-local domain
      if((multierr.eq.1) .and. (.not.allocated(pressure_obserr_p))) allocate(pressure_obserr_p(dim_obs_p))
      count = 1
      do i = 1, dim_obs
         do j = 1, enkf_subvecsize
+        ! FIXME: again: this check is soo stupid! just check if i'm in the same part of the domain..... probably this catches some
+        ! special cases where the subvector division is not regular...
            if (idx_obs_nc(i) .eq. idx_map_subvec2state_fortran(j)) then
               !print *, j
               !obs_index(count) = j
@@ -286,7 +294,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   end if
   call mpi_allreduce(MPI_IN_PLACE,obs_nc2pdaf,dim_obs,MPI_INTEGER,MPI_SUM,comm_filter,ierror)
 #endif
-            
+
 #if defined CLMSA
   if(model .eq. tag_model_clm) then
      ! allocate clm_obserr_p observation error for clm run at PE-local domain

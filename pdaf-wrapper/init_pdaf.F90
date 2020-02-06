@@ -63,7 +63,7 @@ SUBROUTINE init_pdaf()
         covartype, type_forget, forget, dim_bias, rank_analysis_enkf, &
         locweight, local_range, srange, int_rediag, filename, &
         type_trans, type_sqrt, delt_obs, dim_state_p_count, dim_state_p_stride,&
-        dim_lag
+        dim_lag, obs_filename
 #if defined CLMSA
     ! kuw: get access to clm variables
     USE shr_kind_mod , only : r8 => shr_kind_r8
@@ -317,6 +317,8 @@ SUBROUTINE init_pdaf()
             screen, status_pdaf)
     END IF whichinit
 
+    ! TODO: parse this from command line options?:
+    obs_filename="observations_16/swc_obs"
 
     ! *** Check whether initialization of PDAF was successful ***
     IF (status_pdaf /= 0) THEN
