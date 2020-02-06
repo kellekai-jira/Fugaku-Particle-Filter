@@ -25,10 +25,10 @@ PDAFAssimilator::~PDAFAssimilator() {
 PDAFAssimilator::PDAFAssimilator(Field &field_)
     : field(field_) {
     // call to fortran:
-    int vect_size = field.globalVectSize();
+    //int vect_size = field.globalVectSize();
 
     // as size_t might be too big for fortran...:
-    int local_vect_size = field.local_vect_size;
+    //int local_vect_size = field.local_vect_size;
 
     // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
     assert (ENSEMBLE_SIZE <= 9);
@@ -47,10 +47,6 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
 
 
 
-//void PDAFAssimilator::on_init_state_part(const int
-                                            //ensemble_member_id, const
-                                            //Part & part, const
-                                            //double * values)
 void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, const double * values)
 {
     // We need the init state part of density and saturation as those are not inited by
@@ -63,6 +59,7 @@ void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, cons
 
     if (runner_id != 0)
     {
+        // This does not work with more than one runner because of race conditions!
         // Only copy state from runner 0 as they are inited from the same file
         // This runner may not crash. otherwise we never start...
         // anyway. Further so we init all the ensemble members even if there are less
@@ -72,7 +69,7 @@ void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, cons
 
     D("Setting all the ensemble members to the received states");
 
-    for (int member_id = 0; member_id < field.ensemble_members.size(); member_id++)
+    for (size_t member_id = 0; member_id < field.ensemble_members.size(); member_id++)
     {
         // copy into all background states....
         // (here some cacheline optimization could be done by traversing the array in
