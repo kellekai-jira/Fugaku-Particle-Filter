@@ -280,9 +280,11 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
      ! TODO: here we assume that we decompose only along the x axis! When the domain is split differently it becomes hard...
         ! special cases where the subvector division is not regular...
         if ((25*mype_filter<x_idx_obs_nc(i)).and.(x_idx_obs_nc(i) < 25*(mype_filter+1))) then
-           !print *, j
+           !print *, "index 0 or 1", x_idx_obs_nc(i)
            !obs_index(count) = j
            !obs(count) = pressure_obs(i)
+           ! calculate j:
+           j = (y_idx_obs_nc(i)-1)*25 + (z_idx_obs_nc(i)-1)*25*50 + x_idx_obs_nc(i) - mype_filter * 25
            obs_index_p(count) = j
            obs_p(count) = pressure_obs(i)
            if(multierr.eq.1) pressure_obserr_p(count) = pressure_obserr(i)
