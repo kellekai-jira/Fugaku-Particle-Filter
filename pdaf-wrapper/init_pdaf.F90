@@ -50,11 +50,11 @@ SUBROUTINE init_pdaf()
     !        ONLY: nx, ny, nx_p
 
     USE mod_parallel_model, &    ! Parallelization variables for model
-        ONLY: mype_world, COMM_model, abort_parallel,  model, npes_model, &
+        ONLY: mype_world, COMM_model, abort_parallel,  npes_model, &
         mpi_success, mpi_comm_world, mpi_integer, mype_model
-    use mod_tsmp, &
-        only: pf_statevecsize, nprocpf, tag_model_parflow, tag_model_clm, nprocclm, pf_statevec, pf_statevec_fortran, &
-        idx_map_subvec2state, idx_map_subvec2state_fortran
+    !use mod_tsmp, &
+        !only: pf_statevecsize, nprocpf, tag_model_parflow, tag_model_clm, nprocclm, pf_statevec, pf_statevec_fortran, &
+        !idx_map_subvec2state, idx_map_subvec2state_fortran
     USE mod_parallel_pdaf, &     ! Parallelization variables fro assimilation
         ONLY: n_modeltasks, task_id, COMM_filter, COMM_couple, filterpe
     USE mod_assimilation, &      ! Variables for assimilation

@@ -50,7 +50,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   USE mod_parallel_pdaf, &
        ONLY: mype_filter, comm_filter, npes_filter
   use mod_parallel_model, &
-       only: mpi_integer, model, mpi_double_precision, mpi_in_place, mpi_sum
+       only: mpi_integer, mpi_double_precision, mpi_in_place, mpi_sum
   USE mod_assimilation, &
        ONLY: obs_p, obs_index_p, dim_obs, obs_filename, dim_state_p, &
        pressure_obserr_p, clm_obserr_p, obs_nc2pdaf
@@ -61,12 +61,13 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
        clmobs_lon, clmobs_lat,clmobs_layer, clmobs_dr, clm_obserr
   use mod_tsmp, &
 #if defined CLMSA
-       only: idx_map_subvec2state_fortran, tag_model_parflow, enkf_subvecsize, &
-       tag_model_clm, point_obs
+       !only: idx_map_subvec2state_fortran, tag_model_parflow, enkf_subvecsize, &
+       !tag_model_clm, point_obs
 #else
-       only: idx_map_subvec2state_fortran, tag_model_parflow, enkf_subvecsize, &
-       tag_model_clm, point_obs
+       !only: idx_map_subvec2state_fortran, tag_model_parflow, enkf_subvecsize, &
+       !tag_model_clm, point_obs
 #endif
+    only: tag_model_parflow
 
 
 #if defined CLMSA
@@ -152,7 +153,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   if (mype_filter .ne. 0) then ! for all non-master proc
 #ifndef CLMSA
      !if(model == tag_model_parflow) then
-        if(allocated(idx_obs_nc))deallocate(idx_obs_nc)
+        if(allocated(idx_obs_nc))deallocate(idx_obs_nc)! TODO: idx_obs_nc is not used!
         allocate(idx_obs_nc(dim_obs))
         if(allocated(pressure_obs))deallocate(pressure_obs)
         allocate(pressure_obs(dim_obs))
@@ -213,20 +214,20 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
 
   ! select the obs in my domain
   dim_obs_p = 0
-  if (model .eq. tag_model_parflow) then
+  !if (model .eq. tag_model_parflow) then
      do i = 1, dim_obs
-        do j = 1, enkf_subvecsize
-           if (idx_obs_nc(i) .eq. idx_map_subvec2state_fortran(j)) then
-               ! FIXME: this check is complete nonsense! just check if x coordinate in domain and that's it.... (for now... later
-               ! when we split it into other directions than the x axis it gets up.
-               ! this thing is inited in oasis... since we do not use oasis for now it is not inited....
-              dim_obs_p = dim_obs_p + 1
-           end if
-        end do
+
+        if ((25*mype_filter<x_idx_obs_nc(i)).and.(x_idx_obs_nc(i) < 25*(mype_filter+1))) then
+            ! TODO: here we assume that we decompose only along the x axis!
+            ! just check if x coordinate in domain and that's it.... (for now... later
+            ! when we split it into other directions than the x axis it gets up.
+            ! this thing is inited in oasis... since we do not use oasis for now it is not inited....
+            dim_obs_p = dim_obs_p + 1
+        end if
      end do
      ! saving the size of local observation vector to variable dim_state_p
      !dim_state_p = dim_obs_p
-  end if
+  !end if
 
 #if defined CLMSA
   if(model .eq. tag_model_clm) then
@@ -271,27 +272,25 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
 
 
 #ifndef CLMSA
-  if (model .eq. tag_model_parflow) then
+  !if (model .eq. tag_model_parflow) then
      ! allocate pressure_obserr_p observation error for parflow run at PE-local domain
      if((multierr.eq.1) .and. (.not.allocated(pressure_obserr_p))) allocate(pressure_obserr_p(dim_obs_p))
      count = 1
      do i = 1, dim_obs
-        do j = 1, enkf_subvecsize
-        ! FIXME: again: this check is soo stupid! just check if i'm in the same part of the domain..... probably this catches some
+     ! TODO: here we assume that we decompose only along the x axis! When the domain is split differently it becomes hard...
         ! special cases where the subvector division is not regular...
-           if (idx_obs_nc(i) .eq. idx_map_subvec2state_fortran(j)) then
-              !print *, j
-              !obs_index(count) = j
-              !obs(count) = pressure_obs(i)
-              obs_index_p(count) = j
-              obs_p(count) = pressure_obs(i)
-              if(multierr.eq.1) pressure_obserr_p(count) = pressure_obserr(i)
-              obs_nc2pdaf(local_dis(mype_filter+1)+count) = i
-              count = count + 1
-           end if
-        end do
+        if ((25*mype_filter<x_idx_obs_nc(i)).and.(x_idx_obs_nc(i) < 25*(mype_filter+1))) then
+           !print *, j
+           !obs_index(count) = j
+           !obs(count) = pressure_obs(i)
+           obs_index_p(count) = j
+           obs_p(count) = pressure_obs(i)
+           if(multierr.eq.1) pressure_obserr_p(count) = pressure_obserr(i)
+           obs_nc2pdaf(local_dis(mype_filter+1)+count) = i
+           count = count + 1
+        end if
      end do
-  end if
+  !end if
   call mpi_allreduce(MPI_IN_PLACE,obs_nc2pdaf,dim_obs,MPI_INTEGER,MPI_SUM,comm_filter,ierror)
 #endif
 

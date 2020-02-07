@@ -52,12 +52,12 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
     !   USE mod_model, &
     !        ONLY: nx, ny, nx_p
     USE mod_parallel_model, &
-        ONLY: mype_model, model, &
+        ONLY: mype_model, &
         mype_world
     USE mod_parallel_pdaf, &
         ONLY: mype_filter, task_id
-    use mod_tsmp, &
-        only: tag_model_parflow, pf_statevecsize, pf_statevec, pf_statevec_fortran
+    !use mod_tsmp, &
+        !only: tag_model_parflow, pf_statevecsize, pf_statevec, pf_statevec_fortran
     use netcdf
 
     IMPLICIT NONE

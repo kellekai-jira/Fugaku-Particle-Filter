@@ -45,8 +45,8 @@ save
     ! model input parameters
     real(c_double), bind(c) :: t_start
     !integer(c_int), bind(c) :: da_interval, model
-    integer(c_int), bind(c) ::  model
-    integer(c_int), bind(c, name = 'nsteps') :: total_steps
+    !integer(c_int), bind(c) ::  model
+    integer(c_int), bind(c, name = 'nsteps') :: total_steps  ! TODO: check if this is set correctly!
     integer :: tcycle
     interface
         subroutine read_enkfpar(parname) BIND(C, name='read_enkfpar')
