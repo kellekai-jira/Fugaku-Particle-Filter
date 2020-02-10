@@ -158,25 +158,25 @@ SUBROUTINE init_pdaf()
     allocate(dim_state_p_count(npes_model))
     call MPI_Gather(dim_state_p, 1, MPI_INTEGER, dim_state_p_count, 1, MPI_INTEGER, 0, comm_model, ierror)
 
-!    if (mype_model == 0) print *, "init_pdaf: dim_state_p_count in modified: ", dim_state_p_count
-!    IF (allocated(dim_state_p_stride)) deallocate(dim_state_p_stride)
-!    allocate(dim_state_p_stride(npes_model))
-!    do i = 1, npes_model
-!        dim_state_p_stride(i) = 0
-!        do j = 1, i - 1
-!            dim_state_p_stride(i) = dim_state_p_count(j) + dim_state_p_stride(i)
-!        end do
-!    end do
-!    if (mype_model == 0) print *, "init_pdaf: dim_state_p_stride in modified: ", dim_state_p_stride
+    if (mype_model == 0) print *, "init_pdaf: dim_state_p_count in modified: ", dim_state_p_count
+    IF (allocated(dim_state_p_stride)) deallocate(dim_state_p_stride)
+    allocate(dim_state_p_stride(npes_model))
+    do i = 1, npes_model
+        dim_state_p_stride(i) = 0
+        do j = 1, i - 1
+            dim_state_p_stride(i) = dim_state_p_count(j) + dim_state_p_stride(i)
+        end do
+    end do
+    if (mype_model == 0) print *, "init_pdaf: dim_state_p_stride in modified: ", dim_state_p_stride
 
-!    if (mype_model == 0) then
-!        dim_state = sum(dim_state_p_count)
-!    end if
-!    call MPI_BCAST(dim_state, 1, MPI_INTEGER, 0, comm_model, IERROR)
-!    !print  *, "my local state vector dimension is :" , dim_state_p
-!    !print  *, "my global state vector dimension is :" , dim_state
-!    !print *,""
-!    call MPI_Barrier(MPI_COMM_WORLD, ierror)
+    if (mype_model == 0) then
+        dim_state = sum(dim_state_p_count)
+    end if
+    call MPI_BCAST(dim_state, 1, MPI_INTEGER, 0, comm_model, IERROR)
+    !print  *, "my local state vector dimension is :" , dim_state_p
+    !print  *, "my global state vector dimension is :" , dim_state
+    !print *,""
+    call MPI_Barrier(MPI_COMM_WORLD, ierror)
     ! **********************************************************
     ! ***               CONTROL OF PDAF                      ***
     ! **********************************************************

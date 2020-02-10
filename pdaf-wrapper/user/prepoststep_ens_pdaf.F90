@@ -118,7 +118,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
     ! **********************
     ! *** INITIALIZATION ***
     ! **********************
-    if (2 .eq. 1) then
+    if (2 .eq. 1) then  !  all the following is deactivated!
     IF (mype_filter == 0) THEN
         IF (firsttime) THEN
             WRITE (*, '(8x, a)') 'Analize initial state ensemble'
