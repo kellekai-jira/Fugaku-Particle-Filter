@@ -46,7 +46,7 @@ inline void calculate_runners() {
 
 public:
 Timing(const int total_steps) {
-    info.resize(total_steps);
+    info.resize(total_steps);   // TODO: remove total_steps from server, assimilator tells when to stop! let info become a single linked list ;)
     cur = info.begin();
 }
 
@@ -64,19 +64,23 @@ inline void remove_runner() {
 inline void start_iteration() {
     calculate_runners();
     cur->start();
-    // D("******** start iteration");
+    //D("******** start iteration");
 }
 
 
 inline void stop_iteration() {
     cur->stop();
     cur++;
-    // D("******** stop iteration");
+    //D("******** stop iteration");
 }
 
 
 void report(const int cores_simulation, const int cores_server, const int
             ensemble_members, const size_t state_size) {
+    if (cur != info.end()) {
+        L("WARNING: the used assimilator quit the assimilation before %lu assimilation cycles were performed! The Run information will be incorrect!", info.size());
+    }
+
     std::cout <<
         "------------------- Timing information(csv): -------------------" <<
         std::endl;
@@ -104,7 +108,7 @@ void report(const int cores_simulation, const int cores_server, const int
               << std::endl;
     int number_simulations_max = -1;
     double runtime = 0.0;
-    if (info.size() >= 30)        // have at least 10 iterations for stats
+    if (info.size() >= 30 && cur == info.end())        // have at least 10 iterations for stats
     {       // 10 warmup and 10 cooldown
         for (auto it = info.begin()+10; it != info.end()-10; it++)
         {
