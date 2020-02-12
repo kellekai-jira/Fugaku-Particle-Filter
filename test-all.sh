@@ -5,10 +5,6 @@
 ./test.sh
 res1=$?
 
-cd examples/simulation1
-./test-fault-tolerance.sh
-res2=$?
-
 
 # check if simulation stateless check works
 
@@ -16,16 +12,24 @@ cd examples
 ./check_stateless.sh ../build/install/bin/simulation1
 res3=$?
 
+set +e
 ./check_stateless.sh ../build/install/bin/simulation1-stateful
-if $?
+if [ "$?" == "0" ]
 then
   res4=1
 else
   # suppose it to fail as stateful
   res4=0
 fi
+set -e
+
+cd ..
 
 
+cd examples/simulation1
+./test-fault-tolerance.sh
+res2=$?
+cd ../..
 
 res=$((res1+res2+res3+res4))
 echo passed 0=$res

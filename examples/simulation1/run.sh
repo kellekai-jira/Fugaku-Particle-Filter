@@ -12,7 +12,6 @@ n_runners=1
 
 ensemble_size=5
 total_steps=1440
-total_steps=31
 
 ######################################################
 
