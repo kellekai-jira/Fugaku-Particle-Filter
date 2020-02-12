@@ -69,26 +69,36 @@ void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, cons
 
     D("Setting all the ensemble members to the received states");
 
+
     for (size_t member_id = 0; member_id < field.ensemble_members.size(); member_id++)
     {
+    // TODO Really dirty:
+        std::vector<double> backup(50*50*12/2); // saving the state that contains the pressure.... to replaying it later ... we really need different buffers for assimilated and not assimilated state!
+        std::copy(field.ensemble_members[member_id].state_analysis.begin(),
+                field.ensemble_members[member_id].state_analysis.begin()+ backup.size(),
+                backup.begin());
         // copy into all background states....
         // (here some cacheline optimization could be done by traversing the array in
         // the other way but this is not important at all as this code is executed only
         // once)
-        std::copy(values, values + part.send_count,
-                  field.ensemble_members[member_id].state_background.data() +
-                  part.local_offset_server);
+        //std::copy(values, values + part.send_count,
+        //          field.ensemble_members[member_id].state_background.data() +
+        //          part.local_offset_server);
 
         // Also copy into analysis state to send it back right again!
         // --> start all members from the same atm.... really boring! need to change this! = FIXME
-        //std::copy(values, values + part.send_count,
-                  //field.ensemble_members[member_id].state_analysis.data() +
-                  //part.local_offset_server);
+        std::copy(values, values + part.send_count,
+                  field.ensemble_members[member_id].state_analysis.data() +
+                  part.local_offset_server);
 
-        // this seems a really good guess for all fields except for the pressure:
-        std::fill(field.ensemble_members[member_id].state_analysis.begin()+(50*50*12/2),
-                  field.ensemble_members[member_id].state_analysis.end(),
-                  1.0);
+        // FIXME: this seems a really good guess for all fields except for the pressure:
+        // FIXMEnot at all a good guess:
+        //std::fill(field.ensemble_members[member_id].state_analysis.begin()+(50*50*12/2),
+                  //field.ensemble_members[member_id].state_analysis.end(),
+                  //1.0);
+
+        std::copy(backup.begin(), backup.end(),
+                field.ensemble_members[member_id].state_analysis.begin());
     }
 }
 
