@@ -20,7 +20,7 @@ Field & field;
 void getAllEnsembleMembers();
 public:
 ~PDAFAssimilator();
-PDAFAssimilator(Field & field);
+PDAFAssimilator(Field & field, const int total_steps);
 virtual int do_update_step();
 };
 

@@ -52,7 +52,8 @@ int getNSteps() const {
 virtual ~Assimilator() = default;
 
 static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
-                                           Field & field);
+                                           Field & field, const int
+                                           total_steps);
 };
 
 

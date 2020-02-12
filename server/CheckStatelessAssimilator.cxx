@@ -9,7 +9,8 @@
 #include <algorithm>
 #include <cmath>
 
-CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_) :
+CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_, const int
+                                                     total_steps) :
     field(field_)
 {
     L("**** Performing the stateless checking instead of assimilation...");

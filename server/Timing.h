@@ -1,4 +1,4 @@
-#include <vector>
+#include <list>
 #include <chrono>  // TODO:  use clock instead??!
 #include <iostream>
 
@@ -27,8 +27,8 @@ struct TimingIteration
 class Timing
 {
 private:
-std::vector<TimingIteration> info;
-std::vector<TimingIteration>::iterator cur;
+std::list<TimingIteration> info;
+std::list<TimingIteration>::iterator cur;
 
 int runners = 0;
 
@@ -45,8 +45,7 @@ inline void calculate_runners() {
 }
 
 public:
-Timing(const int total_steps) {
-    info.resize(total_steps);   // TODO: remove total_steps from server, assimilator tells when to stop! let info become a single linked list ;)
+Timing() {
     cur = info.begin();
 }
 
@@ -62,6 +61,7 @@ inline void remove_runner() {
 }
 
 inline void start_iteration() {
+    cur = info.insert(info.end(), TimingIteration());
     calculate_runners();
     cur->start();
     // D("******** start iteration");
@@ -107,22 +107,35 @@ void report(const int cores_simulation, const int cores_server, const int
         "------------------- Run information(csv): -------------------" <<
         std::endl;
     std::cout <<
-        "cores simulation,number simulations(max),cores server,runtime per iteration mean (ms),ensemble members,state size,timesteps,mean bandwidth (MB/s)"
+        "cores simulation,number simulations(max),cores server,runtime per iteration mean (ms),ensemble members,state size,timesteps,mean bandwidth (MB/s),timesteps used for means"
               << std::endl;
     int number_simulations_max = -1;
     double runtime = 0.0;
+    int timesteps_used = 0;
     if (info.size() >= 30 && cur == info.end())        // have at least 10 iterations for stats
     {       // 10 warmup and 10 cooldown
-        for (auto it = info.begin()+10; it != info.end()-10; it++)
+
+        auto begin = info.begin();
+        std::advance(begin, 10);
+        auto end = info.rbegin();
+        std::advance(end, 10);
+
+
+
+        for (auto it = begin; it != end.base(); it++)
         {
+            timesteps_used++;
             if (number_simulations_max < it->max_runners)
             {
                 number_simulations_max = it->max_runners;
             }
             runtime += it->get_walltime();
         }
-        runtime /= info.size()-20;
+        runtime /= timesteps_used;
+        assert(timesteps_used == info.size() - 20);
     }
+
+
     std::cout << cores_simulation << ',';
     std::cout << number_simulations_max << ',';
     std::cout << cores_server << ',';
@@ -130,7 +143,9 @@ void report(const int cores_simulation, const int cores_server, const int
     std::cout << ensemble_members << ',';
     std::cout << state_size << ',';
     std::cout << info.size() << ',';
-    std::cout << 8*state_size*ensemble_members*2.0/runtime*1000/1024/1024;
+    std::cout << 8*state_size*ensemble_members*2.0/runtime*1000/1024/1024 <<
+        ',';
+    std::cout << timesteps_used;
 
     std::cout << std::endl;
     std::cout <<

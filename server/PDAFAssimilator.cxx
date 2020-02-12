@@ -15,14 +15,13 @@
 #include "pdaf-wrapper.h"
 
 extern int ENSEMBLE_SIZE;
-extern int TOTAL_STEPS;
 
 PDAFAssimilator::~PDAFAssimilator() {
     // call to fortran:
     cwrapper_PDAF_deallocate();
 }
 
-PDAFAssimilator::PDAFAssimilator(Field &field_)
+PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps)
     : field(field_) {
     // call to fortran:
     // int vect_size = field.globalVectSize();
@@ -36,7 +35,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
     const int pdaf_vect_size = 50*50*12;
     const int pdaf_local_vect_size = 50*50*12/2;
     cwrapper_init_pdaf(&pdaf_vect_size, &pdaf_local_vect_size, &ENSEMBLE_SIZE);
-    cwrapper_init_user(&TOTAL_STEPS);
+    cwrapper_init_user(&total_steps);
     nsteps = -1;
 
     // init ensemble!

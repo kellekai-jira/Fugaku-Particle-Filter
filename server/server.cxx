@@ -47,10 +47,9 @@
 #include "Timing.h"
 
 extern int ENSEMBLE_SIZE;
-extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
 
 int ENSEMBLE_SIZE = 5;
-int TOTAL_STEPS = 5;
+
 
 
 
@@ -72,6 +71,8 @@ const int TAG_RANK_FINISHED = 44;
 const int TAG_ALL_FINISHED = 45;
 
 int highest_received_task_id = 0;
+
+unsigned int assimilation_cycles = 0;
 
 // only important on ranks != 0:
 int highest_sent_task_id = 0;
@@ -1050,8 +1051,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 //          isRecovering = false;
 //      } else {
         // get new analysis states from update step
-        L("====> Update step %d/%d", current_step, TOTAL_STEPS);
+        L("====> Update step %d", current_step);
         current_nsteps = assimilator->do_update_step();
+        assimilation_cycles++;
 
 //      }
 #ifdef REPORT_TIMING
@@ -1061,7 +1063,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         }
 #endif
 
-        if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
+        if (current_nsteps == -1)
         {
             end_all_runners();
             return true;
@@ -1091,10 +1093,12 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
+    int param_total_steps = 5;
+
     // Read in configuration from command line
     if (argc >= 2)
     {
-        TOTAL_STEPS = atoi(argv[1]);
+        param_total_steps = atoi(argv[1]);
     }
     if (argc >= 3)
     {
@@ -1110,7 +1114,6 @@ int main(int argc, char * argv[])
     }
 
 
-    assert(TOTAL_STEPS > 1);
     assert(ENSEMBLE_SIZE > 0);
 
     MPI_Init(NULL, NULL);
@@ -1125,8 +1128,7 @@ int main(int argc, char * argv[])
     zmq_version (&major, &minor, &patch);
     D("Current 0MQ version is %d.%d.%d", major, minor, patch);
     D("**server rank = %d", comm_rank);
-    L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS,
-      ENSEMBLE_SIZE);
+    L("Start server with %d ensemble members", ENSEMBLE_SIZE);
 
     // Start sockets:
     void * configuration_socket = NULL;
@@ -1162,7 +1164,7 @@ int main(int argc, char * argv[])
     // Start Timing:
     if (comm_rank == 0)
     {
-        timing = std::make_unique<Timing>(TOTAL_STEPS);
+        timing = std::make_unique<Timing>();
     }
 #endif
 
@@ -1224,7 +1226,7 @@ int main(int argc, char * argv[])
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
-                    ASSIMILATOR_TYPE, *field);
+                    ASSIMILATOR_TYPE, *field, param_total_steps);
                 current_nsteps = assimilator->getNSteps();
 
                 D("Change Phase");
@@ -1310,8 +1312,8 @@ int main(int argc, char * argv[])
     if (comm_rank == 0)
     {
         L(
-            "Executed %d timesteps with %d ensemble members each, with a runner timeout of %lli seconds",
-            TOTAL_STEPS,
+            "Executed %d assimilation cycles with %d ensemble members each, with a runner timeout of %lli seconds",
+            assimilation_cycles,
             ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
 #ifdef REPORT_TIMING
         timing->report(field->local_vect_sizes_runner.size(), comm_size,
