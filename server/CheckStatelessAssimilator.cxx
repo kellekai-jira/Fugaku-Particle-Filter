@@ -159,7 +159,8 @@ void CheckStatelessAssimilator::store_init_state_part(const int
 
 
 void CheckStatelessAssimilator::on_init_state(const int runner_id, const
-                                             Part & part, const double * values)
+                                              Part & part, const
+                                              double * values)
 {
     // let's use this to set the init.
     // you may not have more runners than ensemble members here! Otherwise some

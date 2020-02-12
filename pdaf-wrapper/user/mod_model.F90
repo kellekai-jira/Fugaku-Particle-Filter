@@ -27,4 +27,9 @@ use iso_c_binding
 
   INTEGER :: nx_p                 ! Process-local size in x-direction
 
+  ! global variables for init_ens_hidden
+  INTEGER :: dimid_t, dimid_x, dimid_y, dimid_z  ! dim ids
+  INTEGER :: dim_t, dim_x, dim_y, dim_z  ! dims
+  INTEGER :: dens_varid, satur_varid, ncid ! other id's
+
 END MODULE mod_model

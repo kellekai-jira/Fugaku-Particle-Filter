@@ -169,16 +169,16 @@ struct RunnerRankConnection
             field->getPart(runner_rank).send_count);
         // print_vector(field->ensemble_members.at(state_id).state_analysis);
         D("content=[%f,%f,%f,%f,%f...]",
-                field->ensemble_members.at(
-                    state_id).state_analysis.data()[0],
-                field->ensemble_members.at(
-                    state_id).state_analysis.data()[1],
-                field->ensemble_members.at(
-                    state_id).state_analysis.data()[2],
-                field->ensemble_members.at(
-                    state_id).state_analysis.data()[3],
-                field->ensemble_members.at(
-                    state_id).state_analysis.data()[4]);
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[0],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[1],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[2],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[3],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[4]);
 
         zmq_msg_send(&data_msg, data_response_socket, 0);
 
@@ -872,14 +872,10 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                        <double*>(zmq_msg_data(
                                                      &data_msg)));
         }
-
-        // otherwise we throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
-
-
-
-
-        // whcih atm can not even happen if more than one fields as they do there communication one after another.
-        // TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
+        // otherwise we throw away timestamp 0 as we want to init the simulation!
+        // One could indeed try to generate ensemble members from the initial state but
+        // this is a too special case so we rely on other mechanics for initialization of
+        // an initial state.
 
 
         // Check if we can answer directly with new data... means starting of a new model task
@@ -894,7 +890,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 
         if (found != scheduled_sub_tasks.end())
         {
-            // found a new task. send back directly!
+            // Found a new task. Send back directly!
 
             D(
                 "send after receive! to runner rank %d on runner_id %d",

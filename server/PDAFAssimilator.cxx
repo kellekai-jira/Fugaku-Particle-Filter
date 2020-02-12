@@ -25,10 +25,10 @@ PDAFAssimilator::~PDAFAssimilator() {
 PDAFAssimilator::PDAFAssimilator(Field &field_)
     : field(field_) {
     // call to fortran:
-    //int vect_size = field.globalVectSize();
+    // int vect_size = field.globalVectSize();
 
     // as size_t might be too big for fortran...:
-    //int local_vect_size = field.local_vect_size;
+    // int local_vect_size = field.local_vect_size;
 
     // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
     assert (ENSEMBLE_SIZE <= 9);
@@ -43,64 +43,20 @@ PDAFAssimilator::PDAFAssimilator(Field &field_)
     // we actually only do this herre to not confuse pdaf. PDAF want's us to start with
     // a get state phase I 'guess' ;)
     getAllEnsembleMembers();
-}
-
-
-
-void PDAFAssimilator::on_init_state(const int runner_id, const Part & part, const double * values)
-{
-    // We need the init state part of density and saturation as those are not inited by
-    // init_ens.F90 To be sure we just copy everything, even if the pressure part
-    // get's overwritten later.
-    // REM: we only send the pressure part for assimilation to PDAF later.
-
-    assert(part.send_count + part.local_offset_server <=
-           field.ensemble_members[0].state_background.size());
-
-    if (runner_id != 0)
+    for (int member_id = 0; member_id <
+         static_cast<int>(field.ensemble_members.size()); member_id++)
     {
-        // This does not work with more than one runner because of race conditions!
-        // Only copy state from runner 0 as they are inited from the same file
-        // This runner may not crash. otherwise we never start...
-        // anyway. Further so we init all the ensemble members even if there are less
-        // runners than ensemble members.
-        return;
-    }
+        const int dim_p = 50*50*12/2 * 2; // saturation + dens
+        const int dim_ens = field.ensemble_members.size();
+        double * hidden_state_p;
+        hidden_state_p =
+            field.ensemble_members[member_id].state_analysis.data() + (50*50*12/
+                                                                       2);
 
-    D("Setting all the ensemble members to the received states");
-
-
-    for (size_t member_id = 0; member_id < field.ensemble_members.size(); member_id++)
-    {
-    // TODO Really dirty:
-        std::vector<double> backup(50*50*12/2); // saving the state that contains the pressure.... to replaying it later ... we really need different buffers for assimilated and not assimilated state!
-        std::copy(field.ensemble_members[member_id].state_analysis.begin(),
-                field.ensemble_members[member_id].state_analysis.begin()+ backup.size(),
-                backup.begin());
-        // copy into all background states....
-        // (here some cacheline optimization could be done by traversing the array in
-        // the other way but this is not important at all as this code is executed only
-        // once)
-        //std::copy(values, values + part.send_count,
-        //          field.ensemble_members[member_id].state_background.data() +
-        //          part.local_offset_server);
-
-        // Also copy into analysis state to send it back right again!
-        // --> start all members from the same atm.... really boring! need to change this! = FIXME
-        std::copy(values, values + part.send_count,
-                  field.ensemble_members[member_id].state_analysis.data() +
-                  part.local_offset_server);
-
-        // FIXME: this seems a really good guess for all fields except for the pressure:
-        // FIXMEnot at all a good guess:
-        //std::fill(field.ensemble_members[member_id].state_analysis.begin()+(50*50*12/2),
-                  //field.ensemble_members[member_id].state_analysis.end(),
-                  //1.0);
-
-        std::copy(backup.begin(), backup.end(),
-                field.ensemble_members[member_id].state_analysis.begin());
+        cwrapper_init_ens_hidden(&dim_p, &dim_ens, &member_id, hidden_state_p);
     }
 }
+
 
 void PDAFAssimilator::getAllEnsembleMembers()
 {
@@ -111,7 +67,7 @@ void PDAFAssimilator::getAllEnsembleMembers()
     for (auto eit = field.ensemble_members.begin(); eit !=
          field.ensemble_members.end(); eit++)
     {
-        //const int dim = eit->state_analysis.size();
+        // const int dim = eit->state_analysis.size();
         const int dim = 50*50*12/2;
 
         double * data = eit->state_analysis.data();
@@ -120,8 +76,9 @@ void PDAFAssimilator::getAllEnsembleMembers()
                                               &status);
 
         // copy the rest of the state from the background as we do not perform assimilaton on it.
-        std::copy(eit->state_background.begin() + dim, eit->state_background.end(),
-                eit->state_analysis.begin() + dim);
+        std::copy(eit->state_background.begin() + dim,
+                  eit->state_background.end(),
+                  eit->state_analysis.begin() + dim);
 
         assert(nsteps == nnsteps || nsteps == -1);          // every get state should give the same nsteps!
         nsteps = nnsteps;
@@ -157,7 +114,7 @@ int PDAFAssimilator::do_update_step()
          field.ensemble_members.end(); eit++)
     {
 
-        //const int dim = eit->state_background.size();
+        // const int dim = eit->state_background.size();
         const int dim  = 50*50*12/2;
         const double * data = eit->state_background.data();
         cwrapper_PDFA_put_state(&dim, &data, &status);

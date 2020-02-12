@@ -183,7 +183,7 @@ SUBROUTINE init_pdaf()
 
     ! *** Forecast length (time interval between analysis steps) ***
     delt_obs = 2     ! Number of time steps between analysis/assimilation steps
-    !delt_obs = 1     ! Set to 1 to not confuse melissa server...
+    delt_obs = 1     ! Set to 1 to not confuse melissa server...
 
     ! *** IO options ***
     screen      = 2  ! Write screen output (1) for output, (2) add timings

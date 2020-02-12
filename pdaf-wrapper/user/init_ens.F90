@@ -84,9 +84,6 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
     INTEGER, DIMENSION(1:4) :: start  ! start of the slice we want to read from the netcdf file
     INTEGER, DIMENSION(1:4) :: ct  ! count/size of the slice we want to read from the netcdf file
 
-    !REAL, DIMENSION(1:1, 1:12, 1:50, 1:25) :: tmp ! just for testing dimensions
-    REAL, DIMENSION(1:1500) :: tmp ! just for testing dimensions
-
     character(len = nf90_max_name) :: RecordDimName
 
 
@@ -130,8 +127,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 
     !end if
     ! TODO: here is a static filename for now... path realtive to server cwd
-    call check( nf90_open("./press.nc", nf90_nowrite, ncid) )
-    !call check( nf90_open("./p2.nc", nf90_nowrite, ncid) )
+    call check( nf90_open("./init_ens.nc", nf90_nowrite, ncid) )
 
 
     call check(nf90_inq_dimid(ncid, "longitude",     dimid_x))
@@ -160,9 +156,6 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
         print *, "i = ", i, ", mype_world = ", mype_world
         start = (/ 1+25*mype_world, 1, 1, i /)  ! start i+100 timesteps later?
         ct = (/ 25, 50, 12, 1 /)
-        !call check(nf90_get_var(ncid, pres_varid, tmp, &
-            !start, &
-            !ct))
         call check(nf90_get_var(ncid, pres_varid, ens_p(:, i), &
             start, &
             ct))

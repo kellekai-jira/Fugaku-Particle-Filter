@@ -31,7 +31,7 @@ public:
 CheckStatelessAssimilator(Field & field_);
 virtual int do_update_step();
 virtual void on_init_state(const int runner_id, const Part & part, const
-                          double * values);
+                           double * values);
 
 };
 

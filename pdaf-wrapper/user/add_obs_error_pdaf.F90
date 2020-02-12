@@ -36,11 +36,11 @@ SUBROUTINE add_obs_error_pdaf(step, dim_obs_p, C_p)
 ! Used in the filters: EnKF
 !
 ! The routine is called during the analysis step
-! by PDAF\_enkf\_analysis_X (X=rlm or rsm).  It 
-! has to add the observation error covariance 
-! matrix to the provided matrix C_p for the 
+! by PDAF\_enkf\_analysis_X (X=rlm or rsm).  It
+! has to add the observation error covariance
+! matrix to the provided matrix C_p for the
 ! PE-local domain .
-! 
+!
 ! !REVISION HISTORY:
 ! 2013-02 - Lars Nerger - Initial code
 ! Later revisions - see svn log
@@ -75,6 +75,7 @@ SUBROUTINE add_obs_error_pdaf(step, dim_obs_p, C_p)
 ! **********************
 
     variance_obs = rms_obs ** 2
+    !variance_obs = 1.0
 
 
 ! *************************************
@@ -90,7 +91,7 @@ SUBROUTINE add_obs_error_pdaf(step, dim_obs_p, C_p)
     ENDDO
   endif
 
- 
+
   if(multierr.eq.1) then
     do i=1,dim_obs_p
 #if defined CLMSA

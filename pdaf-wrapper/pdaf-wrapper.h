@@ -28,6 +28,14 @@ int cwrapper_PDAF_get_state(int * doexit, const int * dim_state_analysis,
 void cwrapper_PDFA_put_state(const int * dim_state_background, const
                              double * state_background[], int * status);
 
+
+// as arrays of pointers do not work in fortran, call this function once per ensemble
+// member_id so the function needs to handle it intelligently to not always open and
+// close the netcdf file (check member_id against dim_ens or 0 to know if it should open
+// or not ;)
+void cwrapper_init_ens_hidden(const int * dim_p, const int * dim_ens, const
+                              int * member_id, double state_p[]);
+
 #ifdef __cplusplus
 }
 #endif

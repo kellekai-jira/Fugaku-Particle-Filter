@@ -78,6 +78,21 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 
 END SUBROUTINE
 
+SUBROUTINE cwrapper_init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p) &
+        BIND(C,name='cwrapper_init_ens_hidden')
+    USE iso_c_binding
+    IMPLICIT NONE
+    INTEGER, INTENT(in) :: dim_p                   ! PE-local state dimension
+    INTEGER, INTENT(in) :: dim_ens                 ! Size of ensemble
+    INTEGER, INTENT(in) :: member_id
+    REAL(C_DOUBLE), INTENT(out)   :: hidden_state_p(dim_p)            ! PE-local state ensemble of member_id
+
+    EXTERNAL :: init_ens_hidden
+
+    CALL init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p)
+END SUBROUTINE
+
+
 SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
   USE iso_c_binding
 

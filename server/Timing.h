@@ -64,21 +64,24 @@ inline void remove_runner() {
 inline void start_iteration() {
     calculate_runners();
     cur->start();
-    //D("******** start iteration");
+    // D("******** start iteration");
 }
 
 
 inline void stop_iteration() {
     cur->stop();
     cur++;
-    //D("******** stop iteration");
+    // D("******** stop iteration");
 }
 
 
 void report(const int cores_simulation, const int cores_server, const int
             ensemble_members, const size_t state_size) {
-    if (cur != info.end()) {
-        L("WARNING: the used assimilator quit the assimilation before %lu assimilation cycles were performed! The Run information will be incorrect!", info.size());
+    if (cur != info.end())
+    {
+        L(
+            "WARNING: the used assimilator quit the assimilation before %lu assimilation cycles were performed! The Run information will be incorrect!",
+            info.size());
     }
 
     std::cout <<
