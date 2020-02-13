@@ -35,12 +35,12 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   USE iso_c_binding
 
   USE mod_model, &
-    ONLY: total_steps, nx, ny, nz, nx_p
+    ONLY: nx, ny, nz, nx_p
   ! the following probably replaces mod_model!
   USE mod_tsmp
 
   USE mod_parallel_model, &
-    ONLY: npes_model, abort_parallel
+    ONLY: npes_model, abort_parallel, total_steps
 
 
   IMPLICIT NONE
@@ -213,7 +213,6 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 
   Print *, "get state!"
 
-  !distribute_state_to => state_analysis  ! TODO: maybe this pointersetting is erronous?
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
   ! TODO: parameters depend on filtertype
   ! Ensemble-based filters (SEIK, EnKF, ETKF, LSEIK, LETKF, ESTKF, LESTKF)

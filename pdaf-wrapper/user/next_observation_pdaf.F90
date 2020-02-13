@@ -36,15 +36,15 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
 ! Used in the filters: SEEK/SEIK/EnKF/LSEIK/ETKF/LETKF/ESTKF/LESTKF
 !
 ! The subroutine is called before each forecast phase
-! by PDAF\_get\_state. It has to initialize the number 
-! of time steps until the next available observation 
-! (nsteps) and the current model time (time). In 
+! by PDAF\_get\_state. It has to initialize the number
+! of time steps until the next available observation
+! (nsteps) and the current model time (time). In
 ! addition the exit flag (exit) has to be initialized.
-! It indicates if the data assimilation process is 
-! completed such that the ensemble loop in the model 
+! It indicates if the data assimilation process is
+! completed such that the ensemble loop in the model
 ! routine can be exited.
 !
-! The routine is called by all processes. 
+! The routine is called by all processes.
 !
 ! !REVISION HISTORY:
 ! 2013-09 - Lars Nerger - Initial code
@@ -73,7 +73,7 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
   integer :: counter,no_obs=0
   character (len = 110) :: fn
   !kuw end
-  
+
   time = 0.0    ! Not used in fully-parallel implementation variant
   doexit = 0
 
@@ -88,7 +88,7 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
   !nsteps  = 0
   write(*,*) 'total_steps (in next_observation_pdaf): ',total_steps
   do
-    !nsteps  = nsteps  + delt_obs 
+    !nsteps  = nsteps  + delt_obs
     counter = counter + delt_obs
     if(counter>total_steps) exit
     write(fn, '(a, i5.5)') trim(obs_filename)//'.', counter
@@ -98,25 +98,26 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
   nsteps = counter - stepnow
   write(*,*)'stepnow (in next_observation_pdaf):',stepnow
   write(*,*)'no_obs, nsteps, counter (in next_observation_pdaf): ',no_obs,nsteps,counter
+
   !kuw end
 
 
 
 
-!  IF (stepnow + nsteps <= total_steps) THEN
-!   if (2<1) then
-!    ! *** During the assimilation process ***
-!    nsteps = delt_obs   ! This assumes a constant time step interval
-!    doexit = 0          ! Do not exit assimilation
-!    IF (mype_world == 0) WRITE (*, '(i7, 3x, a, i7)') &
-!         stepnow, 'Next observation at time step', stepnow + nsteps
-! ELSE
-!    ! *** End of assimilation process ***
-!    nsteps = 0          ! No more steps
-!    doexit = 1          ! Exit assimilation
-!    IF (mype_world == 0) WRITE (*, '(i7, 3x, a)') &
-!         stepnow, 'No more observations - end assimilation'
-! END IF
+  IF (stepnow + nsteps <= total_steps) THEN
+   !if (2<1) then
+    ! *** During the assimilation process ***
+    nsteps = delt_obs   ! This assumes a constant time step interval
+    doexit = 0          ! Do not exit assimilation
+    IF (mype_world == 0) WRITE (*, '(i7, 3x, a, i7)') &
+         stepnow, 'Next observation at time step', stepnow + nsteps
+ ELSE
+    ! *** End of assimilation process ***
+    nsteps = 0          ! No more steps
+    doexit = 1          ! Exit assimilation
+    IF (mype_world == 0) WRITE (*, '(i7, 3x, a)') &
+         stepnow, 'No more observations - end assimilation'
+ END IF
 ! *******************************************************
 ! *** Set number of time steps until next observation ***
 ! *******************************************************
