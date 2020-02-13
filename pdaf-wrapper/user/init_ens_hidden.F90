@@ -22,8 +22,6 @@ SUBROUTINE init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p)
     ! Later revisions - see svn log
     !
     ! !USES:
-    !   USE mod_model, &
-    !        ONLY: nx, ny, nx_p
     USE mod_parallel_model, &
         ONLY: mype_model, &
         mype_world

@@ -49,8 +49,6 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
     ! Later revisions - see svn log
     !
     ! !USES:
-    !   USE mod_model, &
-    !        ONLY: nx, ny, nx_p
     USE mod_parallel_model, &
         ONLY: mype_model, &
         mype_world

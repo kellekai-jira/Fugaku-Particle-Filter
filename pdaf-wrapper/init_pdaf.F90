@@ -45,9 +45,6 @@ SUBROUTINE init_pdaf()
     ! 2008-10 - Lars Nerger - Initial code
     ! Later revisions - see svn log
     !
-    ! !USES:
-    !   USE mod_model, &             ! Model variables
-    !        ONLY: nx, ny, nx_p
 
     USE mod_parallel_model, &    ! Parallelization variables for model
         ONLY: mype_world, COMM_model, abort_parallel,  npes_model, &

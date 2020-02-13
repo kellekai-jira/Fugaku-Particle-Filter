@@ -34,13 +34,8 @@ END SUBROUTINE
 SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user')
   USE iso_c_binding
 
-  USE mod_model, &
-    ONLY: nx, ny, nz, nx_p
-  ! the following probably replaces mod_model!
-  USE mod_tsmp
-
   USE mod_parallel_model, &
-    ONLY: npes_model, abort_parallel, total_steps
+    ONLY: abort_parallel, total_steps, npes_model
 
 
   IMPLICIT NONE
@@ -49,31 +44,21 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   total_steps = param_total_steps
 
 
-! *** Model specifications ***
-  nx = 50          ! Extent of grid in x-direction
-  ny = 50          ! Extent of grid in y-direction
-  ny = 12          ! Extent of grid in y-direction
-
   !IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==5 .OR. npes_model==10 .OR. &
        !npes_model==25 .OR. npes_model=50 ) THEN
-       !! TODO: make it working also with other numbers!
      !! Split x-diection in chunks of equal size
      !nx_p = nx / npes_model
 
-  IF (npes_model==2) THEN
+  IF (npes_model/=2) THEN
       ! TODO: for the moment we allow only this size...
-
-     nx_p = nx / npes_model
-  ELSE
+       !! TODO: make it working also with other numbers!
      WRITE (*,*) 'ERROR: Invalid number of processes'
      CALL abort_parallel()
   END IF
 
 
-  ! TODO: probably we do not the nx ny nz and so on up there?
-
-! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
-  ! Initialize PDAF  ! TODO: dirty to call this here but init_pdaf depends on init_ens and init ens needs nx, ny and nx_p....
+  ! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
+  ! Initialize PDAF
   CALL init_pdaf()
 
 END SUBROUTINE

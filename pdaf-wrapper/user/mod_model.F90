@@ -21,11 +21,6 @@ use iso_c_binding
 
 ! *** Variables specific for 2D tutorial model ***
 
-  INTEGER :: nx, ny, nz               ! Size of 2D grid
-!  REAL, ALLOCATABLE :: field_p(:,:) ! Decomposed model field
-
-  INTEGER :: nx_p                 ! Process-local size in x-direction
-
   ! global variables for init_ens_hidden
   INTEGER :: dimid_t, dimid_x, dimid_y, dimid_z  ! dim ids
   INTEGER :: dim_t, dim_x, dim_y, dim_z  ! dims
