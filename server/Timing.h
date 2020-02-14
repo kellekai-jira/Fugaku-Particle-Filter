@@ -1,102 +1,208 @@
 #include <list>
 #include <chrono>  // TODO:  use clock instead??!
 #include <iostream>
+#include <numeric>
+#include <map>
+#include <utility>
 
 #include "utils.h"
 
-struct TimingIteration
+#ifdef REPORT_TIMING
+#ifndef NDEBUG
+#define trigger(type, param) if (comm_rank == 0) { timing->trigger_event(type, param); auto now = std::chrono::high_resolution_clock::now(); double xxxxt = std::chrono::duration<double, std::milli>(now.time_since_epoch()).count(); D("Trigger event %d with parameter %d at %f ms", type, param, xxxxt); }
+#else
+#define trigger(type, param) if (comm_rank == 0) timing->trigger_event(type, param)
+#endif
+#else
+#define trigger(type, param)
+#endif
+
+
+enum TimingEventType {
+    ADD_RUNNER                  =0,  // parameter = runner_id
+    REMOVE_RUNNER               =1,  // parameter = runner_id
+    START_ITERATION             =2,  // parameter = timestep
+    STOP_ITERATION              =3,  // parameter = timestep
+    START_FILTER_UPDATE         =4,  // parameter = timestep
+    STOP_FILTER_UPDATE          =5,  // parameter = timestep
+    START_IDLE_RUNNER           =6,  // parameter = runner_id
+    STOP_IDLE_RUNNER            =7,  // parameter = runner_id
+    START_PROPAGATE_STATE       =8,  // parameter = state_id
+    STOP_PROPAGATE_STATE        =9,  // parameter = state_id
+};
+
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+
+double diff_to_millis(const TimePoint &lhs, const TimePoint &rhs) {
+    return std::chrono::duration<double, std::milli>(lhs-rhs).count();
+}
+
+struct TimingEvent
 {
-    std::chrono::time_point<std::chrono::high_resolution_clock> t_start;
-    std::chrono::time_point<std::chrono::high_resolution_clock> t_end;
-    int min_runners = -1;
-    int max_runners = 0;
 
-    inline void start() {
-        t_start = std::chrono::high_resolution_clock::now();
-    }
-    inline void stop() {
-        t_end = std::chrono::high_resolution_clock::now();
+    TimingEventType type;
+    TimePoint time;
+    int parameter = -1;
+
+    TimingEvent(TimingEventType type_, const int parameter_) :
+        type(type_), parameter(parameter_)
+    {
+        time = std::chrono::high_resolution_clock::now();
     }
 
-    double get_walltime() {
+    double operator-(const TimingEvent &rhs) const {
         // in milliseconds
-        return std::chrono::duration<double, std::milli>(t_end-t_start).count();
+        return std::chrono::duration<double, std::milli>(time-rhs.time).count();
     }
 };
+
+double get_walltime(const TimingEvent &a, const TimingEvent &b) {
+    // in milliseconds
+    return std::chrono::duration<double, std::milli>(a.time-b.time).count();
+}
 
 class Timing
 {
 private:
-std::list<TimingIteration> info;
-std::list<TimingIteration>::iterator cur;
+std::list<TimingEvent> events;
 
-int runners = 0;
+    void calculate_runners(int *runners, int *min_runners, int *max_runners) {
+        if (*runners < *min_runners || *min_runners == -1)
+        {
+            *min_runners = *runners;
+        }
 
-inline void calculate_runners() {
-    if (runners < cur->min_runners || cur->min_runners == -1)
-    {
-        cur->min_runners = runners;
+        if (*runners > *max_runners)
+        {
+            *max_runners = *runners;
+        }
     }
-
-    if (runners > cur->max_runners)
-    {
-        cur->max_runners = runners;
-    }
-}
 
 public:
-Timing() {
-    cur = info.begin();
+void trigger_event(TimingEventType type, const int parameter)
+{
+    events.push_back(TimingEvent(type, parameter));
 }
 
-inline void add_runner() {
-    runners++;
-    calculate_runners();
-}
-
-// effectively this happens if server rank 0 recognizes a due date violation or if it gets a NEW kill request (he did not know yet...)
-inline void remove_runner() {
-    runners--;
-    calculate_runners();
-}
-
-inline void start_iteration() {
-    cur = info.insert(info.end(), TimingIteration());
-    calculate_runners();
-    cur->start();
-    // D("******** start iteration");
-}
-
-
-inline void stop_iteration() {
-    cur->stop();
-    cur++;
-    // D("******** stop iteration");
-}
 
 
 void report(const int cores_simulation, const int cores_server, const int
             ensemble_members, const size_t state_size) {
-    if (cur != info.end())
-    {
-        L(
-            "WARNING: the used assimilator quit the assimilation before %lu assimilation cycles were performed! The Run information will be incorrect!",
-            info.size());
-    }
+
+
 
     std::cout <<
         "------------------- Timing information(csv): -------------------" <<
         std::endl;
-    std::cout << "iteration,walltime (ms),min_runners,max_runners" << std::endl;
-    int index = 0;
-    for (auto it = info.begin(); it != info.end(); it++)
+    std::cout << "iteration,walltime (ms),walltime filter update (ms),min_runners,max_runners,accumulated runner idle time,corresponding pdaf state per runner runner idle time,pdaf slack/melissa-da slack" << std::endl;
+    TimePoint *iteration_start;
+    TimePoint *filter_update_start;
+    double filter_update_walltime;
+    int iterations = 0;
+    double sum_runtime = 0.0;
+    int runners = 0;
+    std::vector<double> job_walltimes(ensemble_members);
+    std::vector<TimePoint> job_start_timepoint(ensemble_members);
+    int number_runners_max = -1;
+
+    std::map<const int, double> runner_idle_time;
+    std::map<const int, TimePoint> runner_idle_timepoint;
+
+    int min_runners = -1;
+    int max_runners = 0;
+    double job_max_wt=0.0;
+    for (auto it = events.begin(); it != events.end(); it++)
     {
-        std::cout << index << ',';
-        std::cout << it->get_walltime() << ',';
-        std::cout << it->min_runners << ',';
-        std::cout << it->max_runners;
-        std::cout << std::endl;
-        index++;
+        switch (it->type) {
+            case ADD_RUNNER: {
+                runners++;
+                number_runners_max = std::max(number_runners_max, runners);
+                calculate_runners(&runners, &min_runners, &max_runners);
+                break;
+                             }
+            case REMOVE_RUNNER: {
+                runners--;
+                calculate_runners(&runners, &min_runners, &max_runners);
+                break;
+                                }
+
+            case START_IDLE_RUNNER: {
+                runner_idle_timepoint[it->parameter] = it->time;
+                break;
+                                    }
+            case STOP_IDLE_RUNNER: {
+                runner_idle_time.emplace(it->parameter, 0.0);
+                runner_idle_time[it->parameter] += diff_to_millis(it->time, runner_idle_timepoint[it->parameter]);
+                break;
+                                   }
+
+            case START_PROPAGATE_STATE: {
+                job_start_timepoint[it->parameter] = it->time;
+                break;
+                                        }
+            case STOP_PROPAGATE_STATE: {
+                double wt = diff_to_millis(it->time, job_start_timepoint[it->parameter]);
+                job_walltimes[it->parameter] = wt;
+                job_max_wt = std::max(wt, job_max_wt);
+                break;
+                                       }
+
+            case START_FILTER_UPDATE: {
+                filter_update_start = &it->time;
+                break;
+                                      }
+            case STOP_FILTER_UPDATE: {
+                filter_update_walltime = diff_to_millis(it->time, *filter_update_start);
+                break;
+                                     }
+
+            case START_ITERATION: {
+                iteration_start = &it->time;
+                calculate_runners(&runners, &min_runners, &max_runners);
+                break;
+                                  }
+            case STOP_ITERATION: {
+
+                const double accumulated_idle_time = std::accumulate(std::begin(runner_idle_time), std::end(runner_idle_time), 0.0,
+                                          [](const double previous, const std::pair<const int, double>& p)
+                                          { return previous + p.second; });
+
+
+                double corresponding_idle_time = 0.0;
+                for (auto it = job_walltimes.begin(); it != job_walltimes.end(); it++) {
+                    corresponding_idle_time += job_max_wt - *it;
+                }
+                corresponding_idle_time += filter_update_walltime*(ensemble_members-1);
+
+                // As the update walltime is a subpart of the idle time...
+                assert(accumulated_idle_time > filter_update_walltime*min_runners);
+
+                double wt = diff_to_millis(it->time, *iteration_start);
+                std::cout << iterations << ',';
+                std::cout << wt << ',';
+                std::cout << filter_update_walltime << ',';
+                std::cout << min_runners << ',';
+                std::cout << max_runners << ',';
+                std::cout << accumulated_idle_time << ',';
+                std::cout << corresponding_idle_time << ',';
+                std::cout << corresponding_idle_time/accumulated_idle_time;
+                std::cout << std::endl;
+
+                // calculate some stats for later too:
+                sum_runtime += wt;
+
+                iterations++;
+                //assert(iterations == it->parameter);  // FIXME does not work for pdaf if delt_obs != 1
+
+                // reset stuff:
+                runner_idle_time.clear();
+                max_runners = 0;
+                min_runners = -1;
+                job_max_wt=0.0;
+
+                break;
+                                 }
+        }
     }
     std::cout <<
         "------------------- End Timing information -------------------" <<
@@ -107,46 +213,28 @@ void report(const int cores_simulation, const int cores_server, const int
         "------------------- Run information(csv): -------------------" <<
         std::endl;
     std::cout <<
-        "cores simulation,number simulations(max),cores server,runtime per iteration mean (ms),ensemble members,state size,timesteps,mean bandwidth (MB/s),timesteps used for means"
+        "cores simulation,number runnrs(max),cores server,runtime per iteration mean (ms),ensemble members,state size,timesteps,mean bandwidth (MB/s),timesteps used for means"
               << std::endl;
-    int number_simulations_max = -1;
-    double runtime = 0.0;
-    int timesteps_used = 0;
-    if (info.size() >= 30 && cur == info.end())        // have at least 10 iterations for stats
-    {       // 10 warmup and 10 cooldown
-
-        auto begin = info.begin();
-        std::advance(begin, 10);
-        auto end = info.rbegin();
-        std::advance(end, 10);
-
-
-
-        for (auto it = begin; it != end.base(); it++)
-        {
-            timesteps_used++;
-            if (number_simulations_max < it->max_runners)
-            {
-                number_simulations_max = it->max_runners;
-            }
-            runtime += it->get_walltime();
-        }
-        runtime /= timesteps_used;
-        assert(timesteps_used == info.size() - 20);
+    if (iterations < 10)        // have at least 10 iterations for stats
+    {       // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!
+        sum_runtime = 0.0;
     }
+
+    double mean_runtime = sum_runtime / static_cast<double>(iterations);
+
+
 
 
     std::cout << cores_simulation << ',';
-    std::cout << number_simulations_max << ',';
+    std::cout << number_runners_max << ',';
     std::cout << cores_server << ',';
-    std::cout << runtime << ',';
+    std::cout << mean_runtime << ',';
     std::cout << ensemble_members << ',';
     std::cout << state_size << ',';
-    std::cout << info.size() << ',';
-    std::cout << 8*state_size*ensemble_members*2.0/runtime*1000/1024/1024 <<
+    std::cout << iterations << ',';
+    std::cout << 8*state_size*ensemble_members*2.0/mean_runtime*1000/1024/1024 <<
         ',';
-    std::cout << timesteps_used;
-
+    std::cout << iterations;
     std::cout << std::endl;
     std::cout <<
         "------------------- End Run information -------------------" <<

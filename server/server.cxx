@@ -159,6 +159,7 @@ struct RunnerRankConnection
                           field->getPart(runner_rank).send_count *
                           sizeof(double), NULL, NULL);
 
+        trigger(START_PROPAGATE_STATE, state_id);
         D("-> Server sending %lu bytes for state %d, timestamp=%d",
           field->getPart(runner_rank).send_count *
           sizeof(double),
@@ -295,13 +296,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     static int highest_runner_id = 0;
     assert(zmq_msg_size(&msg) == sizeof(int));
 
-#ifdef REPORT_TIMING
-    if (comm_rank == 0)
-    {
-        timing->add_runner();
-    }
-#endif
-
+    trigger(ADD_RUNNER, buf[1]);
 
     D("Server registering Runner ID %d", buf[1]);
 
@@ -445,6 +440,7 @@ bool try_launch_subtask(std::shared_ptr<SubTask> &sub_task) {
     if (found_runner->second->connected_runner_ranks.empty())
     {
         idle_runners.erase(found_runner);
+        trigger(STOP_IDLE_RUNNER, sub_task->runner_id);
     }
 
     return true;
@@ -601,12 +597,6 @@ void end_all_runners()
 
 void init_new_timestamp()
 {
-#ifdef REPORT_TIMING
-    if (comm_rank == 0)
-    {
-        timing->start_iteration();
-    }
-#endif
     size_t connections =
         field->connected_runner_ranks.size();
     // init or finished....
@@ -622,6 +612,11 @@ void init_new_timestamp()
     task_id = 1;
 
     current_step += current_nsteps;
+
+    trigger(START_ITERATION, current_step);
+    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+        trigger(START_IDLE_RUNNER, it->first);
+    }
 
     assert(unscheduled_tasks.size() == 0);
 
@@ -665,9 +660,7 @@ void check_due_dates() {
 
         if (comm_rank == 0)
         {
-#ifdef REPORT_TIMING
-            timing->remove_runner();
-#endif
+            trigger(REMOVE_RUNNER, it->runner_id);
 
             // reschedule directly if possible
             if (idle_runners.size() > 0)
@@ -715,9 +708,7 @@ void check_kill_requests() {
         bool is_new = killed.emplace(t).second;
         if (is_new)
         {
-#ifdef REPORT_TIMING
-            timing->remove_runner();
-#endif
+            trigger(REMOVE_RUNNER, t.runner_id);
         }
         else
         {
@@ -856,6 +847,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
           [4]);
         if (runner_timestamp == current_step)
         {
+            trigger(STOP_PROPAGATE_STATE, runner_state_id);
             D("storing this timestamp!...");
             // zero copy is unfortunately for send only. so copy internally...
             field->ensemble_members[runner_state_id].
@@ -910,6 +902,11 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                     Runner>(
                                                     new Runner()))
                            .first->second;
+
+            if (runner_rank == 0) {
+                trigger(START_IDLE_RUNNER, runner_id);
+            }
+
             runner->connected_runner_ranks.emplace(runner_rank,
                                                    csr);
             D("save connection runner_id %d, runner rank %d",
@@ -1052,16 +1049,16 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 //      } else {
         // get new analysis states from update step
         L("====> Update step %d", current_step);
+        trigger(START_FILTER_UPDATE, current_step);
         current_nsteps = assimilator->do_update_step();
+        trigger(STOP_FILTER_UPDATE, current_step);
         assimilation_cycles++;
 
 //      }
-#ifdef REPORT_TIMING
-        if (comm_rank == 0)
-        {
-            timing->stop_iteration();
+        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+            trigger(STOP_IDLE_RUNNER, it->first);
         }
-#endif
+        trigger(STOP_ITERATION, current_step);
 
         if (current_nsteps == -1)
         {
