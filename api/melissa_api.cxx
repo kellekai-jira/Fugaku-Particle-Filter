@@ -14,6 +14,8 @@
 
 #include "utils.h"
 
+#include "melissa-da_config.h"
+#include "ApiTiming.h"
 #include "melissa_api.h"
 
 // TODO ensure sizeof(size_t is the same on server and api... also for other types?? but the asserts are doing this already at the beginning as we receive exactly 2 ints....
@@ -25,10 +27,14 @@ void *context;
 
 int runner_id = -1;
 
-const int getRunnerId() {
+int getRunnerId() {
     assert(runner_id != -1);      // must be inited
     return runner_id;
 }
+
+#ifdef REPORT_TIMING
+std::unique_ptr<ApiTiming> timing(nullptr);
+#endif
 
 /// Communicator used for simulation/Runner
 MPI_Comm comm;
@@ -181,6 +187,7 @@ struct ServerRankConnection
         }
         else if (type == END_RUNNER)
         {         // TODO use zmq cpp for less errors!
+                  // TODO: is this really an error?
             printf(
                 "Error: Server decided to end this runner now.\n");
             melissa_finalize();
@@ -433,6 +440,15 @@ bool first_melissa_init(MPI_Comm comm_)
     // activate logging:
     comm_rank = getCommRank();
 
+#ifdef REPORT_TIMING
+    // Start Timing:
+    if (comm_rank == 0)
+    {
+        timing = std::make_unique<ApiTiming>();
+    }
+    trigger(START_ITERATION, 1);
+#endif
+
     bool register_field = false;
     if (getCommRank() == 0)
     {
@@ -512,6 +528,8 @@ void melissa_init_no_mpi(const char *field_name,
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
 int melissa_expose(const char *field_name, double *values)
 {
+    trigger(STOP_ITERATION, -1);
+    trigger(START_IDLE_RUNNER, -1);
     assert(phase != PHASE_FINAL);
     if (phase == PHASE_INIT)
     {
@@ -526,12 +544,28 @@ int melissa_expose(const char *field_name, double *values)
 
     // Now Send data to the melissa server
     assert(field.name == field_name);
+
     field.putState(values, field_name);
 
     // @Kai: here we could checkpoint the values variable ! using fti. The server than could recover from such a checkpoint.
 
     // and request new data
     int nsteps = field.getState(values);
+    trigger(STOP_IDLE_RUNNER, -1);
+
+    if (nsteps > 0)
+    {
+        trigger(START_ITERATION, nsteps);
+    }
+    else
+    {
+#ifdef REPORT_TIMING
+        if (comm_rank == 0)
+        {
+            timing->report(getCommSize(), field.local_vect_size);
+        }
+#endif
+    }
 
     // TODO: this will block other fields!
 

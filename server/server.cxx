@@ -44,7 +44,7 @@
 #include "Assimilator.h"
 #include "CheckStatelessAssimilator.h"
 
-#include "Timing.h"
+#include "ServerTiming.h"
 
 extern int ENSEMBLE_SIZE;
 
@@ -109,7 +109,7 @@ std::set<Task> killed;  // when a runner from this list connects we thus respond
 std::unique_ptr<Field> field(nullptr);
 
 #ifdef REPORT_TIMING
-std::unique_ptr<Timing> timing(nullptr);
+std::unique_ptr<ServerTiming> timing(nullptr);
 #endif
 
 void my_free(void * data, void * hint)
@@ -1161,7 +1161,7 @@ int main(int argc, char * argv[])
     // Start Timing:
     if (comm_rank == 0)
     {
-        timing = std::make_unique<Timing>();
+        timing = std::make_unique<ServerTiming>();
     }
 #endif
 
