@@ -14,8 +14,6 @@
 
 #include "pdaf-wrapper.h"
 
-extern int ENSEMBLE_SIZE;
-
 PDAFAssimilator::~PDAFAssimilator() {
     // call to fortran:
     cwrapper_PDAF_deallocate();
@@ -31,11 +29,12 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps)
     // int local_vect_size = field.local_vect_size;
 
     // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
-    assert (ENSEMBLE_SIZE <= 9);
+    assert (field.ensemble_members.size() <= 9);
     // we transmit only one third to pdaf
     const int pdaf_vect_size = 50*50*12;
     const int pdaf_local_vect_size = 50*50*12/2;
-    cwrapper_init_pdaf(&pdaf_vect_size, &pdaf_local_vect_size, &ENSEMBLE_SIZE);
+    const int ensemble_size = field.ensemble_members.size();
+    cwrapper_init_pdaf(&pdaf_vect_size, &pdaf_local_vect_size, &ensemble_size);
     cwrapper_init_user(&total_steps);
     nsteps = -1;
 
