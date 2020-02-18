@@ -11,6 +11,7 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
   INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
 
 
+  print *, "Using the pdaf wrapper functions for parflow-pure!"
 
   ! *** Define state dimension ***
   dim_state   = param_dim_state    ! Global state dimension
@@ -34,11 +35,9 @@ END SUBROUTINE
 SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user')
   USE iso_c_binding
 
-  USE mod_model, &
-    ONLY: total_steps, nx, ny, nx_p
-
   USE mod_parallel_model, &
-    ONLY: npes_model, abort_parallel
+    ONLY: abort_parallel, total_steps, npes_model
+
 
   IMPLICIT NONE
 
@@ -46,27 +45,39 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   total_steps = param_total_steps
 
 
-! *** Model specifications ***
-  nx = 36          ! Extent of grid in x-direction
-  ny = 18          ! Extent of grid in y-direction
+  !IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==5 .OR. npes_model==10 .OR. &
+       !npes_model==25 .OR. npes_model=50 ) THEN
+     !! Split x-diection in chunks of equal size
+     !nx_p = nx / npes_model
 
-
-  IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
-       npes_model==6 .OR.npes_model==9) THEN
-       ! TODO: make it working also with other numbers!
-     ! Split x-diection in chunks of equal size
-     nx_p = nx / npes_model
-  ELSE
+  IF (npes_model/=2) THEN
+      ! TODO: for the moment we allow only this size...
+       !! TODO: make it working also with other numbers!
      WRITE (*,*) 'ERROR: Invalid number of processes'
      CALL abort_parallel()
   END IF
 
 
-! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
-  ! Initialize PDAF  ! TODO: dirty to call this here but init_pdaf depends on init_ens and init ens needs nx, ny and nx_p....
+  ! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
+  ! Initialize PDAF
   CALL init_pdaf()
 
 END SUBROUTINE
+
+SUBROUTINE cwrapper_init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p) &
+        BIND(C,name='cwrapper_init_ens_hidden')
+    USE iso_c_binding
+    IMPLICIT NONE
+    INTEGER, INTENT(in) :: dim_p                   ! PE-local state dimension
+    INTEGER, INTENT(in) :: dim_ens                 ! Size of ensemble
+    INTEGER, INTENT(in) :: member_id
+    REAL(C_DOUBLE), INTENT(out)   :: hidden_state_p(dim_p)            ! PE-local state ensemble of member_id
+
+    EXTERNAL :: init_ens_hidden
+
+    CALL init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p)
+END SUBROUTINE
+
 
 SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
   USE iso_c_binding
@@ -188,7 +199,6 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 
   Print *, "get state!"
 
-  !distribute_state_to => state_analysis  ! TODO: maybe this pointersetting is erronous?
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
   ! TODO: parameters depend on filtertype
   ! Ensemble-based filters (SEIK, EnKF, ETKF, LSEIK, LETKF, ESTKF, LESTKF)
@@ -242,7 +252,9 @@ SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, statu
        init_obsvar_l_pdaf, &           ! Initialize local mean observation error variance
        init_obs_f_pdaf, &              ! Provide full vector of measurements for PE-local domain
        obs_op_f_pdaf, &                ! Obs. operator for full obs. vector for PE-local domain
-       init_dim_obs_f_pdaf             ! Get dimension of full obs. vector for PE-local domain
+       init_dim_obs_f_pdaf, &          ! Get dimension of full obs. vector for PE-local domain
+       add_obs_error_pdaf, &
+       init_obscovar_pdaf
 
   Print *, "put state!"
 
@@ -250,9 +262,13 @@ SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, statu
   !collect_state_from => state_background
   CALL C_F_POINTER( state_background, collect_state_from,[dim_state_background])
 
-  CALL PDAF_put_state_estkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
-    init_obs_pdaf, prepoststep_ens_pdaf, prodRinvA_pdaf, init_obsvar_pdaf, status)
+  !CALL PDAF_put_state_estkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
+    !init_obs_pdaf, prepoststep_ens_pdaf, prodRinvA_pdaf, init_obsvar_pdaf, status)
 
+    !assuming filtertype = 2
+  CALL PDAF_put_state_enkf(my_collect_state, init_dim_obs_pdaf, obs_op_pdaf, &
+      init_obs_pdaf, prepoststep_ens_pdaf, add_obs_error_pdaf, init_obscovar_pdaf, &
+      status)
 
   !IF (filtertype == 6) THEN
      !CALL PDAF_assimilate_estkf(collect_state_pdaf, distribute_state_pdaf, &

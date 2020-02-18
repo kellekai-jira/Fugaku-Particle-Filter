@@ -1,61 +1,103 @@
-!-------------------------------------------------------------------------------------------
-!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
+!$Id: mod_parallel_model.F90 1411 2013-09-25 14:04:41Z lnerger $
+!BOP
 !
-!This file is part of TerrSysMP-PDAF
-!
-!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
-!it under the terms of the GNU Lesser General Public License as published by
-!the Free Software Foundation, either version 3 of the License, or
-!(at your option) any later version.
-!
-!TerrSysMP-PDAF is distributed in the hope that it will be useful,
-!but WITHOUT ANY WARRANTY; without even the implied warranty of
-!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!GNU LesserGeneral Public License for more details.
-!
-!You should have received a copy of the GNU Lesser General Public License
-!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
-!-------------------------------------------------------------------------------------------
-!
-!
-!-------------------------------------------------------------------------------------------
-!mod_parallel_model.F90: Module for control of parallel models of TerrSysMP
-!-------------------------------------------------------------------------------------------
+! !MODULE:
+MODULE mod_parallel_model
 
-module mod_parallel_model
-    use iso_c_binding
-    include 'mpif.h'
-save
-    ! mpi related
-    integer :: npes_parflow
-    integer :: coupcol
-#if defined PARFLOW_STAND_ALONE
-! Parflow stand alone directly use binded communicator
-    integer(c_int),bind(c,name='comm_model_pdaf') :: comm_model
-#else
-! CLM stand alone use comm_model directly, while TerrSysMP use this and da_comm
-    integer :: comm_model
-#endif
-    integer :: mype_model
-    integer :: npes_model
-    integer :: mype_world
-    integer :: npes_world
-    INTEGER :: MPIerr      ! Error flag for MPI
-    bind(c) :: mype_model
-    ! model input parameters
-    real(c_double), bind(c) :: t_start
-    !integer(c_int), bind(c) :: da_interval, model
-    !integer(c_int), bind(c) ::  model
-    integer(c_int), bind(c, name = 'nsteps') :: total_steps  ! TODO: check if this is set correctly!
-    integer :: tcycle
-    interface
-        subroutine read_enkfpar(parname) BIND(C, name='read_enkfpar')
-            use iso_c_binding
-            implicit none
-            character, dimension(*), intent(in) :: parname
-        end subroutine read_enkfpar
-    end interface
-contains
-    subroutine abort_parallel
-    end subroutine abort_parallel
-end module mod_parallel_model
+! !DESCRIPTION:
+! This modules provides variables for the MPI parallelization
+! of the tutorial model to be shared between model-related routines.
+!
+! In addition, methods to initialize and finalize MPI are provided.
+!
+! !REVISION HISTORY:
+! 2004-10 - Lars Nerger - Initial code
+! Later revisions - see svn log
+!
+! !USES:
+  IMPLICIT NONE
+  SAVE
+
+  INCLUDE 'mpif.h'
+
+! !PUBLIC DATA MEMBERS:
+  ! Basic variables for model state integrations
+  INTEGER :: COMM_model  ! MPI communicator for model tasks
+  INTEGER :: mype_model  ! Number of PEs in COMM_model
+  INTEGER :: npes_model  ! PE rank in COMM_model
+  INTEGER :: mype_world  ! Number of PEs in MPI_COMM_WORLD
+  INTEGER :: npes_world  ! PE rank in MPI_COMM_WORLD
+  INTEGER :: MPIerr      ! Error flag for MPI
+!EOP
+
+CONTAINS
+!-------------------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: init_parallel - Initialize MPI
+!
+! !INTERFACE:
+  SUBROUTINE init_parallel()
+
+! !DESCRIPTION:
+! Routine to initialize MPI, the number of PEs
+! (npes\_world) and the rank of a PE (mype\_world).
+! The model is executed within the scope of the
+! communicator Comm_model. It is also initialized
+! here together with its size (npes\_model) and
+! the rank of a PE (mype\_model) within Comm_model.
+!EOP
+
+    IMPLICIT NONE
+
+    INTEGER :: i  ! error flag
+
+    ! Reuse mpi inited by server
+
+    CALL MPI_Comm_Size(MPI_COMM_WORLD,npes_world,i)
+    CALL MPI_Comm_Rank(MPI_COMM_WORLD,mype_world,i)
+
+    ! Initialize model communicator, its size and the process rank
+    ! Here the same as for MPI_COMM_WORLD
+    Comm_model = MPI_COMM_WORLD   !pdaf will think there is one model. do w e really need this?....
+    npes_model = npes_world
+    mype_model = mype_world
+
+  END SUBROUTINE init_parallel
+!-------------------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: finalize_parallel - Finalize MPI
+!
+! !INTERFACE:
+  SUBROUTINE finalize_parallel()
+
+! !DESCRIPTION:
+! Routine to finalize MPI
+!EOP
+
+    IMPLICIT NONE
+
+    CALL  MPI_Barrier(MPI_COMM_WORLD,MPIerr)
+    ! Server will call MPI_Finalize
+
+  END SUBROUTINE finalize_parallel
+!-------------------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: abort_parallel - Abort MPI
+!
+! !INTERFACE:
+  SUBROUTINE abort_parallel()
+
+! !DESCRIPTION:
+! Routine to abort MPI program
+!EOP
+
+    IMPLICIT NONE
+
+    CALL  MPI_Abort(MPI_COMM_WORLD, 1, MPIerr)
+
+  END SUBROUTINE abort_parallel
+
+END MODULE mod_parallel_model

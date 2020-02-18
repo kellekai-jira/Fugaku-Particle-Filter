@@ -1,29 +1,4 @@
-!-------------------------------------------------------------------------------------------
-!Copyright (c) 2013-2016 by Wolfgang Kurtz, Guowei He and Mukund Pondkule (Forschungszentrum Juelich GmbH)
-!
-!This file is part of TerrSysMP-PDAF
-!
-!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
-!it under the terms of the GNU Lesser General Public License as published by
-!the Free Software Foundation, either version 3 of the License, or
-!(at your option) any later version.
-!
-!TerrSysMP-PDAF is distributed in the hope that it will be useful,
-!but WITHOUT ANY WARRANTY; without even the implied warranty of
-!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!GNU LesserGeneral Public License for more details.
-!
-!You should have received a copy of the GNU Lesser General Public License
-!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
-!-------------------------------------------------------------------------------------------
-!
-!
-!-------------------------------------------------------------------------------------------
-!next_observation_pdaf.F90: TerrSysMP-PDAF implementation of routine
-!                           'next_observation_pdaf' (PDAF online coupling)
-!-------------------------------------------------------------------------------------------
-
-!$Id: next_observation_pdaf.F90 1441 2013-10-04 10:33:42Z lnerger $
+!$Id: next_observation_pdaf.F90 1565 2015-02-28 17:04:41Z lnerger $
 !BOP
 !
 ! !ROUTINE: next_observation_pdaf --- Initialize information on next observation
@@ -36,27 +11,31 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
 ! Used in the filters: SEEK/SEIK/EnKF/LSEIK/ETKF/LETKF/ESTKF/LESTKF
 !
 ! The subroutine is called before each forecast phase
-! by PDAF\_get\_state. It has to initialize the number
-! of time steps until the next available observation
-! (nsteps) and the current model time (time). In
+! by PDAF\_get\_state. It has to initialize the number 
+! of time steps until the next available observation 
+! (nsteps) and the current model time (time). In 
 ! addition the exit flag (exit) has to be initialized.
-! It indicates if the data assimilation process is
-! completed such that the ensemble loop in the model
+! It indicates if the data assimilation process is 
+! completed such that the ensemble loop in the model 
 ! routine can be exited.
 !
-! The routine is called by all processes.
+! The routine is called by all processes. 
+!         
+! Version for the dummy model. Identical for
+! mode- and domain-decomposition .
 !
 ! !REVISION HISTORY:
-! 2013-09 - Lars Nerger - Initial code
+! 2004-10 - Lars Nerger - Initial code
 ! Later revisions - see svn log
 !
 ! !USES:
   USE mod_assimilation, &
        ONLY: delt_obs
   USE mod_parallel_model, &
-       ONLY: mype_world, total_steps
-  USE mod_assimilation, &
-       ONLY: obs_filename
+       ONLY: mype_world
+  USE mod_model, &
+       ONLY: total_steps
+
   IMPLICIT NONE
 
 ! !ARGUMENTS:
@@ -69,86 +48,27 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
 ! Called by: PDAF_get_state   (as U_next_obs)
 !EOP
 
-  !kuw: local variables
-  integer :: counter,no_obs=0
-  character (len = 110) :: fn
-  !kuw end
 
-  time = 0.0    ! Not used in fully-parallel implementation variant
-  doexit = 0
-
-  !kuw: implementation for at least 1 existing observation per observation file
-  !!print *, "stepnow", stepnow
-  !write(*,*)'stepnow (in next_observation_pdaf):',stepnow
-  !nsteps = delt_obs
-  !kuw end
-
-  !kuw: check, for observation file with at least 1 observation
-  counter = stepnow
-  !nsteps  = 0
-  write(*,*) 'total_steps (in next_observation_pdaf): ',total_steps
-  do
-    !nsteps  = nsteps  + delt_obs
-    counter = counter + delt_obs
-    if(counter>total_steps) exit
-    write(fn, '(a, i5.5)') trim(obs_filename)//'.', counter
-    call check_n_observationfile(fn,no_obs)
-    if(no_obs>0) exit
-  end do
-  nsteps = counter - stepnow
-  write(*,*)'stepnow (in next_observation_pdaf):',stepnow
-  write(*,*)'no_obs, nsteps, counter (in next_observation_pdaf): ',no_obs,nsteps,counter
-
-  !kuw end
-
-
-
-
-  IF (stepnow + nsteps <= total_steps) THEN
-   !if (2<1) then
-    ! *** During the assimilation process ***
-    nsteps = delt_obs   ! This assumes a constant time step interval
-    doexit = 0          ! Do not exit assimilation
-    IF (mype_world == 0) WRITE (*, '(i7, 3x, a, i7)') &
-         stepnow, 'Next observation at time step', stepnow + nsteps
- ELSE
-    ! *** End of assimilation process ***
-    nsteps = 0          ! No more steps
-    doexit = 1          ! Exit assimilation
-    IF (mype_world == 0) WRITE (*, '(i7, 3x, a)') &
-         stepnow, 'No more observations - end assimilation'
- END IF
 ! *******************************************************
 ! *** Set number of time steps until next observation ***
 ! *******************************************************
 
-!   nsteps = ???
+  time = 0.0          ! Not used in this implementation
 
-! *********************
-! *** Set exit flag ***
-! *********************
+  IF (stepnow + nsteps <= total_steps) THEN
+     ! *** During the assimilation process ***
+     nsteps = delt_obs   ! This assumes a constant time step interval
+     doexit = 0          ! Do not exit assimilation
 
-!   doexit = ??
-  !print *, "next_observation_pdaf finished"
+     IF (mype_world == 0) WRITE (*, '(i7, 3x, a, i7)') &
+          stepnow, 'Next observation at time step', stepnow + nsteps
+  ELSE
+     ! *** End of assimilation process ***
+     nsteps = 0          ! No more steps
+     doexit = 1          ! Exit assimilation
+
+     IF (mype_world == 0) WRITE (*, '(i7, 3x, a)') &
+          stepnow, 'No more observations - end assimilation'
+  END IF
 
 END SUBROUTINE next_observation_pdaf
-
-subroutine check_n_observationfile(fn,nn)
-  use netcdf
-  implicit none
-  character(len=*),intent(in) :: fn
-  integer, intent(out)        :: nn
-
-  integer :: ncid, varid, status !,dimid
-  !character (len = *), parameter :: dim_name = "dim_obs"
-  character (len = *), parameter :: varname = "no_obs"
-  character(len = nf90_max_name) :: recorddimname
-
-  call check(nf90_open(fn, nf90_nowrite, ncid))
-  !call check(nf90_inq_dimid(ncid, dim_name, dimid))
-  !call check(nf90_inquire_dimension(ncid, dimid, recorddimname, nn))
-  call check( nf90_inq_varid(ncid, varname, varid) )
-  call check( nf90_get_var(ncid, varid, nn) )
-  call check(nf90_close(ncid))
-
-end subroutine

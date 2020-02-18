@@ -1,29 +1,4 @@
-!-------------------------------------------------------------------------------------------
-!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
-!
-!This file is part of TerrSysMP-PDAF
-!
-!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
-!it under the terms of the GNU Lesser General Public License as published by
-!the Free Software Foundation, either version 3 of the License, or
-!(at your option) any later version.
-!
-!TerrSysMP-PDAF is distributed in the hope that it will be useful,
-!but WITHOUT ANY WARRANTY; without even the implied warranty of
-!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!GNU LesserGeneral Public License for more details.
-!
-!You should have received a copy of the GNU Lesser General Public License
-!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
-!-------------------------------------------------------------------------------------------
-!
-!
-!-------------------------------------------------------------------------------------------
-!parser_mpi.F90: TerrSysMP-PDAF implementation of routine
-!                'parser_mpi' (PDAF online coupling)
-!-------------------------------------------------------------------------------------------
-
-!$Id: parser_mpi.F90 1442 2013-10-04 10:35:19Z lnerger $
+!$Id: parser_mpi.F90 1581 2015-06-07 08:18:34Z lnerger $
 !BOP
 !
 ! !MODULE:
@@ -237,7 +212,7 @@ CONTAINS
           CALL get_command_argument(i+1, str2)
 #endif
           IF (str1 == TRIM(string)) THEN
-             READ(str2,'(A)') parsed_string
+             READ(str2, *) parsed_string
              modified = .TRUE.
           END IF
        ENDDO
@@ -294,7 +269,7 @@ CONTAINS
 ! *** Finalize ***
     IF (modified) THEN
        logvalue = parsed_log
-       IF (mype == 0) WRITE (*, '(2x, a, a, a, l)') &
+       IF (mype == 0) WRITE (*, '(2x, a, a, a, l1)') &
             'PARSER: ', TRIM(handle), '=', parsed_log
     END IF
   END SUBROUTINE parse_logical

@@ -76,6 +76,9 @@ add_subdirectory(examples/simulation1)
 add_subdirectory(examples/simulation2-pdaf)
 add_subdirectory(examples/simulation3-empty)
 
+# install the special parflow pure pdaf wrapper....
+add_subdirectory(examples/parflow-pure/pdaf-wrapper)
+
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     PERMISSIONS OWNER_WRITE

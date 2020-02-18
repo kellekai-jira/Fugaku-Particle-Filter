@@ -1,4 +1,29 @@
-!$Id: init_pdaf_parse.F90 1589 2015-06-12 11:57:58Z lnerger $
+!-------------------------------------------------------------------------------------------
+!Copyright (c) 2013-2016 by Wolfgang Kurtz and Guowei He (Forschungszentrum Juelich GmbH)
+!
+!This file is part of TerrSysMP-PDAF
+!
+!TerrSysMP-PDAF is free software: you can redistribute it and/or modify
+!it under the terms of the GNU Lesser General Public License as published by
+!the Free Software Foundation, either version 3 of the License, or
+!(at your option) any later version.
+!
+!TerrSysMP-PDAF is distributed in the hope that it will be useful,
+!but WITHOUT ANY WARRANTY; without even the implied warranty of
+!MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!GNU LesserGeneral Public License for more details.
+!
+!You should have received a copy of the GNU Lesser General Public License
+!along with TerrSysMP-PDAF.  If not, see <http://www.gnu.org/licenses/>.
+!-------------------------------------------------------------------------------------------
+!
+!
+!-------------------------------------------------------------------------------------------
+!init_pdaf_parse.F90: TerrSysMP-PDAF implementation of routine
+!                     'init_pdaf_parse' (PDAF online coupling)
+!-------------------------------------------------------------------------------------------
+
+!$Id: init_pdaf_parse.F90 1442 2013-10-04 10:35:19Z lnerger $
 !BOP
 !
 ! !ROUTINE: init_pdaf_parse - Parse command line options for PDAF
@@ -20,12 +45,14 @@ SUBROUTINE init_pdaf_parse()
 ! !USES:
   USE parser, &           ! Parser function
        ONLY: parse
+  USE mod_parallel_model, &     ! Parallelization variables
+       ONLY: mype_world
   USE mod_assimilation, & ! Variables for assimilation
        ONLY: screen, filtertype, subtype, dim_ens, delt_obs, &
        rms_obs, model_error, model_err_amp, incremental, type_forget, &
        forget, epsilon, rank_analysis_enkf, locweight, local_range, &
        srange, int_rediag, filename, type_trans, dim_obs, &
-       type_sqrt
+       type_sqrt, obs_filename, dim_lag
 
   IMPLICIT NONE
 
@@ -98,5 +125,13 @@ SUBROUTINE init_pdaf_parse()
   handle = 'filename'                ! Set name of output file
   CALL parse(handle, filename)
 
+  ! *** user defined observation filename *** !
+  handle = 'obs_filename'
+  call parse(handle, obs_filename)
+
+  !kuw: add smoother support
+  handle = 'smoother_lag'
+  call parse(handle, dim_lag)
+  !kuw end
 
 END SUBROUTINE init_pdaf_parse
