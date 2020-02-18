@@ -31,7 +31,7 @@ function ctrl_c() {
 }
 
 precommand="xterm_gdb"
-precommand=""
+#precommand=""
 
 
 
@@ -117,15 +117,16 @@ tclsh pfin.tcl
 set +e
 # TODO: check if works with preload!
 preload="$MELISSA_DA_PATH/lib/libmelissa_pdaf_wrapper_parflow_pure.so"
-preload2="LD_PRELOAD=$MELISSA_DA_PATH/lib/libmelissa_pdaf_wrapper_parflow_pure.so"
-echo $MPIEXEC -n $n_server \
-  -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  -x LD_PRELOAD="$preload" \
-  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type $timeout &> server.out &
+PRELOAD_VAR="LD_PRELOAD"
+if [ ! -z "$precommand" ];
+then
+    PRELOAD_VAR="XTERM_GDB_LD_PRELOAD"
+fi
 $MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  -x LD_PRELOAD="$preload" \
+  -x $PRELOAD_VAR="$preload" \
   $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type $timeout &> server.out &
+
 
 sleep 1
 
