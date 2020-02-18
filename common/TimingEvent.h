@@ -4,7 +4,8 @@
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
-enum TimingEventType {
+enum TimingEventType
+{
     ADD_RUNNER                  = 0,  // parameter = runner_id
     REMOVE_RUNNER               = 1,  // parameter = runner_id
     START_ITERATION             = 2,  // parameter = timestep
@@ -19,9 +20,23 @@ enum TimingEventType {
 
 #ifdef REPORT_TIMING
 #ifndef NDEBUG
-#define trigger(type, param) if (comm_rank == 0) { timing->trigger_event(type, param); auto now = std::chrono::high_resolution_clock::now(); double xxxxt = std::chrono::duration<double, std::milli>(now.time_since_epoch()).count(); D("Trigger event %d with parameter %d at %f ms", type, param, xxxxt); }
+#define trigger(type, param) if (comm_rank == 0) { timing->trigger_event(type, \
+                                                                         param); \
+                                                   auto now = \
+                                                       std::chrono:: \
+                                                       high_resolution_clock:: \
+                                                       now(); double \
+                                                       xxxxt = \
+                                                       std::chrono::duration< \
+                                                           double, std::milli>( \
+                                                           now.time_since_epoch()) \
+                                                       . \
+                                                       count(); D( \
+                                                       "Trigger event %d with parameter %d at %f ms", \
+                                                       type, param, xxxxt); }
 #else
-#define trigger(type, param) if (comm_rank == 0) timing->trigger_event(type, param)
+#define trigger(type, param) if (comm_rank == 0) timing->trigger_event(type, \
+                                                                       param)
 #endif
 #else
 #define trigger(type, param)
@@ -53,15 +68,17 @@ struct TimingEvent
 
 };
 
-class Timing {
-    public:
-        std::list<TimingEvent> events;
-        void trigger_event(TimingEventType type, const int parameter)
-        {
-            events.push_back(TimingEvent(type, parameter));
-        }
+class Timing
+{
+public:
+    std::list<TimingEvent> events;
+    void trigger_event(TimingEventType type, const int parameter)
+    {
+        events.push_back(TimingEvent(type, parameter));
+    }
     void print_events() {
-        std::cout << "------------ Timing Event List (csv) ------------" << std::endl;
+        std::cout << "------------ Timing Event List (csv) ------------" <<
+            std::endl;
         std::cout << "time first event (ms),event,parameter" << std::endl;
         const TimePoint &start=events.begin()->time;
         for (auto it = events.begin(); it != events.end(); it++)
@@ -71,7 +88,8 @@ class Timing {
             std::cout << it->type << ',';
             std::cout << it->parameter << std::endl;
         }
-        std::cout << "------------ End Timing Event List (csv) ------------" << std::endl;
+        std::cout << "------------ End Timing Event List (csv) ------------" <<
+            std::endl;
     }
 };
 

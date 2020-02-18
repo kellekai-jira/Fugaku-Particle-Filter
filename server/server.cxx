@@ -614,7 +614,8 @@ void init_new_timestamp()
     current_step += current_nsteps;
 
     trigger(START_ITERATION, current_step);
-    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+    {
         trigger(START_IDLE_RUNNER, it->first);
     }
 
@@ -903,7 +904,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                     new Runner()))
                            .first->second;
 
-            if (runner_rank == 0) {
+            if (runner_rank == 0)
+            {
                 trigger(START_IDLE_RUNNER, runner_id);
             }
 
@@ -1055,7 +1057,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         assimilation_cycles++;
 
 //      }
-        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+        {
             trigger(STOP_IDLE_RUNNER, it->first);
         }
         trigger(STOP_ITERATION, current_step);

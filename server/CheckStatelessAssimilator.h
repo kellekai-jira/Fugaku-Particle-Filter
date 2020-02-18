@@ -17,21 +17,21 @@
 
 class CheckStatelessAssimilator : public Assimilator
 {
-Field & field;
+    Field & field;
 private:
-std::vector<std::vector<double> > init_states;
-std::vector<std::vector<double> > correct_states;
+    std::vector<std::vector<double> > init_states;
+    std::vector<std::vector<double> > correct_states;
 
-void print_result(const bool good);
-void store_init_state_part(const int ensemble_member_id, const Part & part,
-                           const
-                           double * values);
+    void print_result(const bool good);
+    void store_init_state_part(const int ensemble_member_id, const Part & part,
+                               const
+                               double * values);
 
 public:
-CheckStatelessAssimilator(Field & field_, const int total_steps);
-virtual int do_update_step();
-virtual void on_init_state(const int runner_id, const Part & part, const
-                           double * values);
+    CheckStatelessAssimilator(Field & field_, const int total_steps);
+    virtual int do_update_step();
+    virtual void on_init_state(const int runner_id, const Part & part, const
+                               double * values);
 
 };
 

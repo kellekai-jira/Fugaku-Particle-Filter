@@ -15,13 +15,13 @@
 class PDAFAssimilator : public Assimilator
 {
 private:
-Field & field;
+    Field & field;
 
-void getAllEnsembleMembers();
+    void getAllEnsembleMembers();
 public:
-~PDAFAssimilator();
-PDAFAssimilator(Field & field, const int total_steps);
-virtual int do_update_step();
+    ~PDAFAssimilator();
+    PDAFAssimilator(Field & field, const int total_steps);
+    virtual int do_update_step();
 };
 
 #endif /* PDAFASSIMILATOR_H_ */

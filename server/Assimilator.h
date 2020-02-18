@@ -23,7 +23,7 @@ enum AssimilatorType
 class Assimilator
 {
 protected:
-int nsteps = -1;
+    int nsteps = -1;
 public:
 // REM: the constructor must init the ensemble! (analysis states!)
 // called if every state was saved.
@@ -34,26 +34,26 @@ public:
 
 // returns how many steps must be performed by the model in the next iteration
 // returns -1 if it wants to quit.
-virtual int do_update_step() = 0;
+    virtual int do_update_step() = 0;
 
 // executed when first state messages are received from the simulations.
 // normally such messages are discarded and a proper analysis state is sent back
 // see the CheckStatelessAssimilator to see how to use this function.
-virtual void on_init_state(const int runner_id, const Part & part, const
-                           double * values)
-{
-};
+    virtual void on_init_state(const int runner_id, const Part & part, const
+                               double * values)
+    {
+    };
 
 
-int getNSteps() const {
-    return nsteps;
-};
+    int getNSteps() const {
+        return nsteps;
+    };
 
-virtual ~Assimilator() = default;
+    virtual ~Assimilator() = default;
 
-static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
-                                           Field & field, const int
-                                           total_steps);
+    static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
+                                               Field & field, const int
+                                               total_steps);
 };
 
 

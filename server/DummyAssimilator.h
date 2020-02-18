@@ -14,12 +14,12 @@
 class DummyAssimilator : public Assimilator
 {
 private:
-Field & field;
-const int total_steps;
-int step = 0;
+    Field & field;
+    const int total_steps;
+    int step = 0;
 public:
-DummyAssimilator(Field & field_, const int total_steps);
-virtual int do_update_step();
+    DummyAssimilator(Field & field_, const int total_steps);
+    virtual int do_update_step();
 };
 
 #endif /* DUMMYASSIMILATOR_H_ */
