@@ -4,7 +4,7 @@
 n_server=2      # TODO: make this changeable
 n_simulation=2  # TODO this is fixed so far and may not be changed
 n_runners=4
-n_runners=1
+#n_runners=1
 
 ensemble_size=3
 ensemble_size=1
@@ -31,7 +31,7 @@ function ctrl_c() {
 }
 
 precommand="xterm_gdb"
-#precommand=""
+precommand=""
 
 
 
@@ -161,8 +161,13 @@ postfix=".${n_runners}runners.${ensemble_size}members"
 sed -n -e '/^------------------- Timing information(csv): -------------------$/,/^------------------- End Timing information -------------------$/{ /^------------------- Timing information(csv): -------------------$/d; /^------------------- End Timing information -------------------$/d; p; }' server.out > server-all.csv$postfix
 sed -n -e '/^------------------- Run information(csv): -------------------$/,/^------------------- End Run information -------------------$/{ /^------------------- Run information(csv): -------------------$/d; /^------------------- End Run information -------------------$/d; p; }' server.out > server-short.csv$postfix
 
-sed -n -e '/^------------------- Timing information(csv): -------------------$/,/^------------------- End Timing information -------------------$/{ /^------------------- Timing information(csv): -------------------$/d; /^------------------- End Timing information -------------------$/d; p; }' runner_0/simulation.out > simulation-all.csv$postfix
-sed -n -e '/^------------------- Run information(csv): -------------------$/,/^------------------- End Run information -------------------$/{ /^------------------- Run information(csv): -------------------$/d; /^------------------- End Run information -------------------$/d; p; }' runner_0/simulation.out > simulation-short.csv$postfix
+for i in `seq 0 $max_runner`;
+do
+sed -n -e '/^------------------- Timing information(csv): -------------------$/,/^------------------- End Timing information -------------------$/{ /^------------------- Timing information(csv): -------------------$/d; /^------------------- End Timing information -------------------$/d; p; }' runner_$i/simulation.out > simulation-all.csv$postfix.$i
+sed -n -e '/^------------------- Run information(csv): -------------------$/,/^------------------- End Run information -------------------$/{ /^------------------- Run information(csv): -------------------$/d; /^------------------- End Run information -------------------$/d; p; }' runner_$i/simulation.out > simulation-short.csv$postfix.$i
+done
+
+
 
 # generate nc files
 cd runner_0
