@@ -42,7 +42,7 @@ SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
 
 # need all these options (especially default integer for mkl)
 #SET(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
-SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
+SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64 -real-size 64")
 
 SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
 
