@@ -141,10 +141,10 @@ public:
 
 
                 double corresponding_idle_time = 0.0;
-                for (auto it = job_walltimes.begin(); it != job_walltimes.end();
-                     it++)
+                for (auto jwtit = job_walltimes.begin(); jwtit != job_walltimes.end();
+                     jwtit++)
                 {
-                    corresponding_idle_time += job_max_wt - *it;
+                    corresponding_idle_time += job_max_wt - *jwtit;
                 }
                 corresponding_idle_time += filter_update_walltime*
                                            (ensemble_members-
