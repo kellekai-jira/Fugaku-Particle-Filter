@@ -14,6 +14,8 @@
 // return std::chrono::duration<double, std::milli>(a.time-b.time).count();
 // }
 
+const int warmup = 30;
+
 class ServerTiming : public Timing
 {
 private:
@@ -165,7 +167,10 @@ public:
                 std::cout << std::endl;
 
                 // calculate some stats for later too:
-                sum_runtime += wt;
+                if (iterations >= warmup)
+                {
+                    sum_runtime += wt;
+                }
 
                 iterations++;
                 // assert(iterations == it->parameter);  // FIXME does not work for pdaf if delt_obs != 1
@@ -191,12 +196,12 @@ public:
         std::cout <<
             "cores simulation,number runnrs(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means"
                   << std::endl;
-        if (iterations < 10)    // have at least 10 iterations for stats
+        if (iterations - warmup < 10)    // have at least 10 iterations for stats
         {   // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!
             sum_runtime = 0.0;
         }
 
-        double mean_runtime = sum_runtime / static_cast<double>(iterations);
+        double mean_runtime = sum_runtime / static_cast<double>(iterations - warmup);
 
 
 
@@ -211,7 +216,7 @@ public:
         std::cout << 8*state_size*ensemble_members*2.0/mean_runtime*1000/1024/
             1024 <<
             ',';
-        std::cout << iterations;
+        std::cout << (iterations-warmup);
         std::cout << std::endl;
         std::cout <<
             "------------------- End Run information -------------------" <<
