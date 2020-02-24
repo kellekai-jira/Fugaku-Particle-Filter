@@ -473,7 +473,7 @@ void add_sub_tasks(NewTask &new_task) {
     for (auto it = csr.begin(); it != csr.end(); it++)
     {
         std::shared_ptr<SubTask> sub_task (new SubTask(new_task, *it));
-        L("Adding subtask for runner rank %d", *it);
+        D("Adding subtask for runner rank %d", *it);
 
         if (try_launch_subtask(sub_task))
         {
@@ -1148,7 +1148,7 @@ int main(int argc, char * argv[])
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
     char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
     sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
-    zmq_bind(data_response_socket, data_response_port_name);
+    ZMQ_CHECK(zmq_bind(data_response_socket, data_response_port_name));
 
     char hostname[MPI_MAX_PROCESSOR_NAME];
     melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);

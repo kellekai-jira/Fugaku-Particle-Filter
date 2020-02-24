@@ -349,7 +349,8 @@ struct ConfigurationConnection
         std::string port_name = fix_port_name(
             melissa_server_master_node);
         D("Configuration Connection to %s", port_name.c_str());
-        zmq_connect (socket, port_name.c_str());
+        ZMQ_CHECK(zmq_connect (socket, port_name.c_str()));
+        D("Configuration Connection successful!");
     }
 
     /// returns true if field registering is requested by the server

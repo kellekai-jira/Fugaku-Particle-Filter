@@ -96,9 +96,6 @@ export MPIEXEC="srun"
 #--hint=nomultithread
 
 
-#get hostnames with this simple trick (assuming wir are in a job allocation ;)
-server_host_0=`srun -N 1 -n 1 hostname`
-export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
 rm $tmpfile
 
 bin_path="$MELISSA_DA_PATH/bin"
@@ -125,6 +122,11 @@ rm server.log.*
 nodelist=`srun hostname | cut -d '.' -f 1`
 nodelist=`echo $nodelist | sed -e 's/ /,/g'`
 nodelist_pointer=1
+
+#get hostnames with this simple trick (assuming wir are in a job allocation ;)
+server_host_0=`echo $nodelist | cut -d ',' -f 1`
+export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
+echo masternodename: $MELISSA_SERVER_MASTER_NODE
 
 
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`

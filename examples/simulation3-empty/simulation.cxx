@@ -85,8 +85,8 @@ int main(int argc, char * args[])
         // usleep(1000000);
 
         nsteps = melissa_expose("variableX", state1.data());
-        printf("calculating from timestep %d\n",
-               melissa_get_current_timestamp());
+        //printf("calculating from timestep %d\n",
+        //       melissa_get_current_timestamp());
 
         if (nsteps > 0 && is_first_timestep)
         {
