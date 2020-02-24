@@ -51,6 +51,8 @@
 
 #include "ServerTiming.h"
 
+#include "LauncherConnection.h"
+
 extern int ENSEMBLE_SIZE;
 
 int ENSEMBLE_SIZE = 5;
@@ -1187,6 +1189,7 @@ int main(int argc, char * argv[])
     {
         MAX_RUNNER_TIMEOUT = atoi(argv[4]);
     }
+    // last argument must be the launcher name!
 
 
     assert(ENSEMBLE_SIZE > 0);
@@ -1234,6 +1237,10 @@ int main(int argc, char * argv[])
             exit(1);
         }
     }
+#define USE_LAUNCHER
+#ifdef USE_LAUNCHER
+    LauncherConnection launcher(context, argv[argc-1], comm_rank);
+#endif
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
     char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
@@ -1415,6 +1422,10 @@ int main(int argc, char * argv[])
 
     // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
     // sleep(3);
+#ifdef USE_LAUNCHER
+    // close the sockets before the context is destroyed!
+    LauncherConnection.~LauncherConnection();
+#endif
     zmq_close(data_response_socket);
     if (comm_rank == 0)
     {
