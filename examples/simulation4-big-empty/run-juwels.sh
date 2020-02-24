@@ -126,9 +126,9 @@ nodelist=`echo $nodelist | sed -e 's/ /,/g'`
 nodelist_pointer=1
 
 #get hostnames with this simple trick (assuming wir are in a job allocation ;)
-server_host_0=`echo $nodelist | cut -d ',' -f 1`
-export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
-echo masternodename: $MELISSA_SERVER_MASTER_NODE
+#server_host_0=`echo $nodelist | cut -d ',' -f 1`
+#export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
+#echo masternodename: $MELISSA_SERVER_MASTER_NODE
 
 
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
@@ -149,12 +149,18 @@ export SCAN_ANALYZE_OPTS="--time-correct"
 #export SCOREP_ENABLE_TRACING=true
 #scalasca -analyze
 #scan
+tmpfile="masternodename.$RANDOM"
 $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
-  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
+  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout $tmpfile &> server.log.all &
+
 
 precommand=""
 
-sleep 1
+sleep 10
+
+export MELISSA_SERVER_MASTER_NODE=`cat $tmpfile`
+echo masternodename: $MELISSA_SERVER_MASTER_NODE
+#rm $tmpfile
 
 export SCOREP_ENABLE_TRACING=false
 export SCOREP_ENABLE_PROFILING=false

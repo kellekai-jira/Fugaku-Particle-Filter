@@ -35,6 +35,8 @@
 #include "utils.h"
 #include "memory.h"
 
+#include <fstream>
+
 #include <time.h>
 
 // one could also use an set which might be faster but we would need to
@@ -1130,6 +1132,9 @@ int main(int argc, char * argv[])
     D("**server rank = %d", comm_rank);
     L("Start server with %d ensemble members", ENSEMBLE_SIZE);
 
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
+
     // Start sockets:
     void * configuration_socket = NULL;
     if (comm_rank == 0)
@@ -1143,6 +1148,18 @@ int main(int argc, char * argv[])
         ZMQ_CHECK(rc);
         assert(rc == 0);
 
+        // write nodename into file (must be last commandline argument)
+        char * hostname_file = argv[argc-1];
+        std::fstream f(hostname_file, f.binary | f.trunc | f.out);
+        if (f.is_open())
+        {
+            f << "tcp://" << hostname << ":4000" << std::endl;
+        }
+        else
+        {
+            L("could not open %s to write the hostname in it!", hostname_file);
+            exit(1);
+        }
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
@@ -1150,8 +1167,6 @@ int main(int argc, char * argv[])
     sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
     ZMQ_CHECK(zmq_bind(data_response_socket, data_response_port_name));
 
-    char hostname[MPI_MAX_PROCESSOR_NAME];
-    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
     sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+
             comm_rank);
 
@@ -1172,6 +1187,7 @@ int main(int argc, char * argv[])
     // for memory benchmarking:
     int last_seconds_memory = 0;
 #endif
+
 
     // Server main loop:
     while (true)

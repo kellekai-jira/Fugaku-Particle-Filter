@@ -16,7 +16,7 @@ count=1
 MAX_TIMESTAMP=300
 MAX_TIMESTAMP=1400
 MAX_TIMESTAMP=100
-#MAX_TIMESTAMP=3
+MAX_TIMESTAMP=3
 
 
 MAX_ENSEMBLE_MEMBERS=5
@@ -55,18 +55,19 @@ echo 'cores simulation,number runnrs(max),cores server,runtime per iteration mea
 #for ensemble_members in 100 200 400 800 1600;
 #for ensemble_members in 100;
 #for ensemble_members in 1000;
-for ensemble_members in 500;
-#for ensemble_members in 1;
+#for ensemble_members in 500;
+for ensemble_members in 1;
 #for ensemble_members in 400;
 do
-  #for server_procs in 12;
-  for server_procs in 24;
+  for server_procs in 12;
+  #for server_procs in 24;
   do
     for simulation_procs in 48;
     do
       #for model_task_runners in 1 2 4;   # works on 8 nodes on juwels...
       #for model_task_runners in 7; # 2 4;   # works on 8 nodes on juwels...
-      for model_task_runners in 6; # 2 4;   # works on 8 nodes on juwels...
+      #for model_task_runners in 6; # 2 4;   # works on 8 nodes on juwels...
+      for model_task_runners in 1; # 2 4;   # works on 8 nodes on juwels...
       do
         echo "-----------------------------------------------------------------------------"
         echo step $count of $max_count:
