@@ -18,7 +18,7 @@ killall `basename $sim_exe_path`
 
 server_exe_path="$bin_path/$server_exe"
 
-precommand="xterm_gdb"
+precommand=""
 
 rm output.txt
 

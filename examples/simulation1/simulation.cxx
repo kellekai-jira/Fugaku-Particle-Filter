@@ -73,11 +73,13 @@ int main(int argc, char * args[])
 #ifdef USE_HIDDEN_STATE
     melissa_init("variableX",
                  local_vect_size,
-                 MPI_COMM_WORLD,
-                 secret_state.size());
+                 secret_state.size(),
+                 MPI_COMM_WORLD
+                 );
 #else
     melissa_init("variableX",
                  local_vect_size,
+                 0,
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 #endif
     vector<double> state1(local_vect_size);
@@ -117,7 +119,7 @@ int main(int argc, char * args[])
         nsteps = melissa_expose("variableX", state1.data(),
                                 secret_state.data());
 #else
-        nsteps = melissa_expose("variableX", state1.data());
+        nsteps = melissa_expose("variableX", state1.data(), nullptr);
 #endif
 
         if (nsteps > 0 && is_first_timestep)

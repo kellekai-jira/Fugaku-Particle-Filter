@@ -572,8 +572,8 @@ int melissa_get_current_state_id()
 
 void melissa_init(const char *field_name,
                   const int local_vect_size,
-                  MPI_Comm comm_,
-                  const int local_hidden_vect_size)
+                  const int local_hidden_vect_size,
+                  MPI_Comm comm_)
 {
     // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
 
@@ -617,10 +617,11 @@ void melissa_init(const char *field_name,
 bool no_mpi = false;
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const int  *local_vect_size) {     // comm is casted into an pointer to an mpi communicaotr if not null.
+                         const int  *local_vect_size,
+                         const int  *local_hidden_vect_size) {     // comm is casted into an pointer to an mpi communicaotr if not null.
     MPI_Init(NULL, NULL);      // TODO: maybe we also do not need to do this? what happens if we clear out this line?
     no_mpi = true;
-    melissa_init(field_name, *local_vect_size, MPI_COMM_WORLD);
+    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size, MPI_COMM_WORLD);
 }
 
 
@@ -674,10 +675,6 @@ int melissa_expose(const char *field_name, double *values,
     return nsteps;
 }
 
-void melissa_expose_f(const char * field_name, double * values) {
-    melissa_expose(field_name, values, nullptr);
-}
-
 void melissa_finalize()  // TODO: when using more serverranks, wait until an end message was received from every before really ending... or actually not. as we always have only an open connection to one server rank...
 {
     // sleep(3);
@@ -718,9 +715,10 @@ int melissa_get_current_timestamp()
 
 void melissa_init_f(const char *field_name,
                     int        *local_vect_size,
+                    int        *local_hidden_vect_size,
                     MPI_Fint   *comm_fortran)
 {
 
     MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
-    melissa_init(field_name, *local_vect_size, comm);
+    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size, comm);
 }
