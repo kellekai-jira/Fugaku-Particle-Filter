@@ -135,9 +135,9 @@ struct ServerRankConnection
         D("values[0]  = %.3f", values[0]);
         D("values[1]  = %.3f", values[1]);
         D("values[2]  = %.3f", values[2]);
-        //D("hidden values[0]  = %.3f", values_hidden[0]);
-        //D("hidden values[1]  = %.3f", values_hidden[1]);
-        //D("hidden values[2]  = %.3f", values_hidden[2]);
+        // D("hidden values[0]  = %.3f", values_hidden[0]);
+        // D("hidden values[1]  = %.3f", values_hidden[1]);
+        // D("hidden values[2]  = %.3f", values_hidden[2]);
         // D("values[35] = %.3f", values[35]);
         zmq_msg_init_data(&msg_data, values, doubles_to_send *
                           sizeof(double), NULL, NULL);
@@ -226,9 +226,9 @@ struct ServerRankConnection
                 std::copy(buf, buf + doubles_expected_hidden,
                           out_values_hidden);
 
-                //print_vector(std::vector<double>(out_values_hidden,
-                                                 //out_values_hidden +
-                                                 //doubles_expected_hidden));
+                // print_vector(std::vector<double>(out_values_hidden,
+                // out_values_hidden +
+                // doubles_expected_hidden));
                 zmq_msg_close(&msg);  // TODO; should work all with the same message!
             }
 
@@ -335,19 +335,19 @@ struct Field
         auto hidden_part = parts_hidden.begin();
         for (auto part=parts.begin(); part != parts.end(); ++part)
         {
+
             if (part->rank_runner == getCommRank())
             {
                 size_t hidden_sendcount = 0;
                 size_t hidden_local_offest_runner = 0;
-                if (hidden_part != parts_hidden.end())
+                if (parts_hidden.size() > 0)
                 {
-
+                    // assume the same parts (just different sizes) exist for the hidden state
                     assert(hidden_part->rank_runner == getCommRank());  // Same part...
 
                     hidden_sendcount = hidden_part->send_count;
                     hidden_local_offest_runner =
                         hidden_part->local_offset_runner;
-                    ++hidden_part;
                 }
 
                 connected_server_ranks.push_back(
@@ -356,6 +356,10 @@ struct Field
                      hidden_sendcount,
                      hidden_local_offest_runner,
                      ServerRanks::get(part->rank_server)});
+            }
+            if (parts_hidden.size() > 0)    // doing the hidden parts thing...
+            {
+                hidden_part++;
             }
         }
     }
@@ -621,7 +625,8 @@ void melissa_init_no_mpi(const char *field_name,
                          const int  *local_hidden_vect_size) {     // comm is casted into an pointer to an mpi communicaotr if not null.
     MPI_Init(NULL, NULL);      // TODO: maybe we also do not need to do this? what happens if we clear out this line?
     no_mpi = true;
-    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size, MPI_COMM_WORLD);
+    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size,
+                 MPI_COMM_WORLD);
 }
 
 

@@ -209,9 +209,9 @@ struct RunnerRankConnection
             double * tmp = field->ensemble_members.at(
                 state_id).state_hidden.data();
             tmp += hidden_part.local_offset_server;
-            //D("Hidden values to send:");
-            //print_vector(std::vector<double>(tmp, tmp +
-                                             //hidden_part.send_count));
+            // D("Hidden values to send:");
+            // print_vector(std::vector<double>(tmp, tmp +
+            // hidden_part.send_count));
             ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
         }
 
@@ -902,9 +902,9 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                    sizeof(double));
             values_hidden = reinterpret_cast<double*>(zmq_msg_data(
                                                           &data_msg_hidden));
-            //D("hidden values received:");
-            //print_vector(std::vector<double>(values_hidden, values_hidden +
-                                             //hidden_part.send_count));
+            // D("hidden values received:");
+            // print_vector(std::vector<double>(values_hidden, values_hidden +
+            // hidden_part.send_count));
         }
 
 

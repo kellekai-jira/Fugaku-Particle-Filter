@@ -32,13 +32,18 @@ void Field::calculate_parts(int server_comm_size)
         if (part_it->rank_server == comm_rank)
         {
             local_vect_size += part_it->send_count;
+            // REFACTOR: maybe we can use the exact same data structures on the api side and on the server side?
             connected_runner_ranks.emplace(part_it->rank_runner);
-            if (part_it_hidden != parts_hidden.end())
+            if (parts_hidden.size() > 0)
             {
+                // assume the same parts (just different sizes) exist for the hidden state
                 assert(part_it_hidden->rank_server == comm_rank);
                 local_vect_size_hidden += part_it_hidden->send_count;
-                part_it_hidden++;
             }
+        }
+        if (parts_hidden.size() > 0)
+        {
+            part_it_hidden++;
         }
     }
 
