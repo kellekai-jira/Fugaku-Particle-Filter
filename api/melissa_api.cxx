@@ -105,12 +105,14 @@ struct ServerRankConnection
         zmq_close(data_request_socket);
     }
 
-    void send(double * values, const size_t doubles_to_send, const int
+    void send(double * values, const size_t doubles_to_send,
+              double * values_hidden, const size_t doubles_to_send_hidden,
+              const int
               current_state_id, const int timestamp, const
               char * field_name)
     {
         // send simuid, rank, stateid, timestamp, field_name next message: doubles
-        zmq_msg_t msg_header, msg_data;
+        zmq_msg_t msg_header, msg_data, msg_data_hidden;
         zmq_msg_init_size(&msg_header, 4 * sizeof(int) +
                           MPI_MAX_PROCESSOR_NAME * sizeof(char));
         int * header = reinterpret_cast<int*>(zmq_msg_data(
@@ -125,20 +127,43 @@ struct ServerRankConnection
                                ZMQ_SNDMORE));
 
         D(
-            "-> Simulation runnerid %d, rank %d sending stateid %d timestamp=%d fieldname=%s, %lu bytes",
+            "-> Simulation runnerid %d, rank %d sending stateid %d timestamp=%d fieldname=%s, %lu+%lu hidden bytes",
             getRunnerId(), getCommRank(), current_state_id,
             timestamp,
-            field_name, doubles_to_send * sizeof(double));
-        // D("values[0]  = %.3f", values[0]);
-        // D("values[1]  = %.3f", values[1]);
-        // D("values[5]  = %.3f", values[5]);
+            field_name, doubles_to_send * sizeof(double),
+            doubles_to_send_hidden * sizeof(double));
+        D("values[0]  = %.3f", values[0]);
+        D("values[1]  = %.3f", values[1]);
+        D("values[2]  = %.3f", values[2]);
+        //D("hidden values[0]  = %.3f", values_hidden[0]);
+        //D("hidden values[1]  = %.3f", values_hidden[1]);
+        //D("hidden values[2]  = %.3f", values_hidden[2]);
         // D("values[35] = %.3f", values[35]);
         zmq_msg_init_data(&msg_data, values, doubles_to_send *
                           sizeof(double), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, 0));
+        int flag;
+        if (doubles_to_send_hidden > 0)
+        {
+            flag = ZMQ_SNDMORE;
+        }
+        else
+        {
+            flag = 0;
+        }
+
+        ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, flag));
+
+        if (doubles_to_send_hidden > 0)
+        {
+            zmq_msg_init_data(&msg_data_hidden, values_hidden,
+                              doubles_to_send_hidden *
+                              sizeof(double), NULL, NULL);
+            ZMQ_CHECK(zmq_msg_send(&msg_data_hidden, data_request_socket, 0));
+        }
     }
 
     int receive(double * out_values, size_t doubles_expected,
+                double * out_values_hidden, size_t doubles_expected_hidden,
                 int * out_current_state_id, int *out_timestamp)
     {
 // receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
@@ -166,9 +191,10 @@ struct ServerRankConnection
             ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
 
             D(
-                "<- Simulation got %lu bytes, expected %lu bytes... for state %d, timestamp=%d, nsteps=%d (socket=%p)",
+                "<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... for state %d, timestamp=%d, nsteps=%d (socket=%p)",
                 zmq_msg_size(&msg), doubles_expected *
                 sizeof(double),
+                doubles_expected_hidden * sizeof(double),
                 *out_current_state_id, *out_timestamp, nsteps,
                 data_request_socket);
 
@@ -183,6 +209,29 @@ struct ServerRankConnection
             //                                 out_values +
             //                                 doubles_expected));
             zmq_msg_close(&msg);
+
+            if (doubles_expected_hidden > 0)
+            {
+                assert_more_zmq_messages(data_request_socket);
+
+                // zero copy is for sending only!
+                zmq_msg_init(&msg);
+
+                ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
+                assert(zmq_msg_size(&msg) == doubles_expected_hidden *
+                       sizeof(double));
+
+                buf = reinterpret_cast<double*>(zmq_msg_data(
+                                                    &msg));
+                std::copy(buf, buf + doubles_expected_hidden,
+                          out_values_hidden);
+
+                //print_vector(std::vector<double>(out_values_hidden,
+                                                 //out_values_hidden +
+                                                 //doubles_expected_hidden));
+                zmq_msg_close(&msg);  // TODO; should work all with the same message!
+            }
+
             assert_no_more_zmq_messages(data_request_socket);
         }
         else if (type == END_RUNNER)
@@ -257,6 +306,10 @@ struct ConnectedServerRank
 {
     size_t send_count;
     size_t local_vector_offset;
+
+    size_t send_count_hidden;
+    size_t local_vector_offset_hidden;
+
     ServerRankConnection &server_rank;
 };
 
@@ -266,24 +319,50 @@ struct Field
     int current_state_id;
     int timestamp;
     size_t local_vect_size;
+    size_t local_hidden_vect_size;
     std::vector<ConnectedServerRank> connected_server_ranks;
-    void initConnections(const std::vector<size_t> &local_vect_sizes) {
+    void initConnections(const std::vector<size_t> &local_vect_sizes, const
+                         std::vector<size_t> &local_hidden_vect_sizes) {
         std::vector<Part> parts = calculate_n_to_m(server.comm_size,
                                                    local_vect_sizes);
+        std::vector<Part> parts_hidden = calculate_n_to_m(server.comm_size,
+                                                          local_hidden_vect_sizes);
+
+        assert(parts_hidden.size() == 0 || parts_hidden.size() == parts.size());
+        // for this to hold true the hidden state should be at least as big as
+        // server.comm_size
+
+        auto hidden_part = parts_hidden.begin();
         for (auto part=parts.begin(); part != parts.end(); ++part)
         {
             if (part->rank_runner == getCommRank())
             {
+                size_t hidden_sendcount = 0;
+                size_t hidden_local_offest_runner = 0;
+                if (hidden_part != parts_hidden.end())
+                {
+
+                    assert(hidden_part->rank_runner == getCommRank());  // Same part...
+
+                    hidden_sendcount = hidden_part->send_count;
+                    hidden_local_offest_runner =
+                        hidden_part->local_offset_runner;
+                    ++hidden_part;
+                }
+
                 connected_server_ranks.push_back(
                     {part->send_count,
                      part->local_offset_runner,
+                     hidden_sendcount,
+                     hidden_local_offest_runner,
                      ServerRanks::get(part->rank_server)});
             }
         }
     }
 
     // TODO: this will crash if there are more than two fields? maybe use dealer socket that supports send send recv recv scheme.
-    void putState(double * values, const char * field_name) {
+    void putState(double * values, double * hidden_values, const
+                  char * field_name) {
         // send every state part to the right server rank
         for (auto csr = connected_server_ranks.begin(); csr !=
              connected_server_ranks.end(); ++csr)
@@ -291,7 +370,10 @@ struct Field
             D("put state, local offset: %lu, send count: %lu",
               csr->local_vector_offset, csr->send_count);
             csr->server_rank.send(&values[csr->local_vector_offset],
-                                  csr->send_count, current_state_id,
+                                  csr->send_count,
+                                  &hidden_values[csr->local_vector_offset_hidden
+                                  ],
+                                  csr->send_count_hidden, current_state_id,
                                   timestamp,
                                   field_name);
         }
@@ -300,7 +382,7 @@ struct Field
 
     }
 
-    int getState(double * values) {
+    int getState(double * values, double * values_hidden) {
         int nsteps = -1;
         // TODO: an optimization would be to poll instead of receiving directly. this way we receive first whoever comes first. but as we need to synchronize after it probably does not matter a lot?
         for (auto csr = connected_server_ranks.begin(); csr !=
@@ -319,6 +401,8 @@ struct Field
             int nnsteps = csr->server_rank.receive(
                 &values[csr->local_vector_offset],
                 csr->send_count,
+                &values_hidden[csr->local_vector_offset_hidden],
+                csr->send_count_hidden,
                 &current_state_id, &timestamp);
             assert (nsteps == -1 || nsteps == nnsteps);             // be sure that all send back the same nsteps...
             nsteps = nnsteps;
@@ -349,8 +433,7 @@ struct ConfigurationConnection
         std::string port_name = fix_port_name(
             melissa_server_master_node);
         D("Configuration Connection to %s", port_name.c_str());
-        ZMQ_CHECK(zmq_connect (socket, port_name.c_str()));
-        D("Configuration Connection successful!");
+        zmq_connect (socket, port_name.c_str());
     }
 
     /// returns true if field registering is requested by the server
@@ -397,9 +480,11 @@ struct ConfigurationConnection
     }
 
     // TODO: high water mark and so on?
-    void register_field(const char * field_name, size_t local_vect_sizes[])
+    void register_field(const char * field_name, size_t local_vect_sizes[],
+                        size_t local_hidden_vect_sizes[])
     {
-        zmq_msg_t msg_header, msg_local_vect_sizes, msg_reply;
+        zmq_msg_t msg_header, msg_local_vect_sizes, msg_local_hidden_vect_sizes,
+                  msg_reply;
         zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) +
                           MPI_MAX_PROCESSOR_NAME * sizeof(char) );
         int * header = reinterpret_cast<int*>(zmq_msg_data(
@@ -412,7 +497,11 @@ struct ConfigurationConnection
 
         zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes,
                           getCommSize() * sizeof(size_t), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, 0));
+        ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, ZMQ_SNDMORE));
+
+        zmq_msg_init_data(&msg_local_hidden_vect_sizes, local_hidden_vect_sizes,
+                          getCommSize() * sizeof(size_t), NULL, NULL);
+        ZMQ_CHECK(zmq_msg_send(&msg_local_hidden_vect_sizes, socket, 0));
 
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
@@ -480,9 +569,11 @@ int melissa_get_current_state_id()
 }
 
 
+
 void melissa_init(const char *field_name,
                   const int local_vect_size,
-                  MPI_Comm comm_)
+                  MPI_Comm comm_,
+                  const int local_hidden_vect_size)
 {
     // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
 
@@ -494,10 +585,17 @@ void melissa_init(const char *field_name,
     field.current_state_id = -1;     // We are beginning like this...
     field.timestamp = 0;
     field.local_vect_size = local_vect_size;
+    field.local_hidden_vect_size = local_hidden_vect_size;
     std::vector<size_t> local_vect_sizes(getCommSize());
     // synchronize local_vect_sizes and
     MPI_Allgather(&field.local_vect_size, 1, my_MPI_SIZE_T,
                   local_vect_sizes.data(), 1, my_MPI_SIZE_T,
+                  comm);
+
+    std::vector<size_t> local_hidden_vect_sizes(getCommSize());
+    // synchronize local_hidden_vect_sizes and
+    MPI_Allgather(&field.local_hidden_vect_size, 1, my_MPI_SIZE_T,
+                  local_hidden_vect_sizes.data(), 1, my_MPI_SIZE_T,
                   comm);
 
     D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
@@ -505,13 +603,14 @@ void melissa_init(const char *field_name,
     if (register_field)
     {
         // Tell the server which kind of data he has to expect
-        ccon->register_field(field_name, local_vect_sizes.data());
+        ccon->register_field(field_name, local_vect_sizes.data(),
+                             local_hidden_vect_sizes.data());
     }
 
 
 
     // Calculate to which server ports the local part of the field will connect
-    field.initConnections(local_vect_sizes);
+    field.initConnections(local_vect_sizes, local_hidden_vect_sizes);
 
 
 }
@@ -527,7 +626,8 @@ void melissa_init_no_mpi(const char *field_name,
 
 /// returns 0 if simulation should end now.
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
-int melissa_expose(const char *field_name, double *values)
+int melissa_expose(const char *field_name, double *values,
+                   double *hidden_values)
 {
     trigger(STOP_ITERATION, -1);
     trigger(START_IDLE_RUNNER, -1);
@@ -546,12 +646,12 @@ int melissa_expose(const char *field_name, double *values)
     // Now Send data to the melissa server
     assert(field.name == field_name);
 
-    field.putState(values, field_name);
+    field.putState(values, hidden_values, field_name);
 
     // @Kai: here we could checkpoint the values variable ! using fti. The server than could recover from such a checkpoint.
 
     // and request new data
-    int nsteps = field.getState(values);
+    int nsteps = field.getState(values, hidden_values);
     trigger(STOP_IDLE_RUNNER, -1);
 
     if (nsteps > 0)
@@ -563,7 +663,8 @@ int melissa_expose(const char *field_name, double *values)
 #ifdef REPORT_TIMING
         if (comm_rank == 0)
         {
-            timing->report(getCommSize(), field.local_vect_size);
+            timing->report(getCommSize(), field.local_vect_size +
+                           field.local_hidden_vect_size);
         }
 #endif
     }
@@ -574,7 +675,7 @@ int melissa_expose(const char *field_name, double *values)
 }
 
 void melissa_expose_f(const char * field_name, double * values) {
-    melissa_expose(field_name, values);
+    melissa_expose(field_name, values, nullptr);
 }
 
 void melissa_finalize()  // TODO: when using more serverranks, wait until an end message was received from every before really ending... or actually not. as we always have only an open connection to one server rank...

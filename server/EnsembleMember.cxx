@@ -9,16 +9,22 @@
 #include <cassert>
 #include "../common/utils.h"
 
-void EnsembleMember::set_local_vect_size(int local_vect_size)
+void EnsembleMember::set_local_vect_size(const int local_vect_size, const int
+                                         local_vect_size_hidden)
 {
     state_analysis.reserve(local_vect_size);
     state_analysis.resize(local_vect_size);
     state_background.reserve(local_vect_size);
     state_background.resize(local_vect_size);
+
+    state_hidden.reserve(local_vect_size_hidden);
+    state_hidden.resize(local_vect_size_hidden);
 }
 
 void EnsembleMember::store_background_state_part(const Part & part, const
-                                                 double * values)
+                                                 double * values, const
+                                                 Part & hidden_part, const
+                                                 double * values_hidden)
 {
     D("before_assert %lu %lu %lu", part.send_count,
       part.local_offset_server, state_background.size());
@@ -26,4 +32,10 @@ void EnsembleMember::store_background_state_part(const Part & part, const
            state_background.size());
     std::copy(values, values + part.send_count, state_background.data() +
               part.local_offset_server);
+
+    assert(hidden_part.send_count + hidden_part.local_offset_server <=
+           state_hidden.size());
+    std::copy(values_hidden, values_hidden + hidden_part.send_count,
+              state_hidden.data() +
+              hidden_part.local_offset_server);
 }

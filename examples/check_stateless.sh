@@ -18,6 +18,7 @@ killall `basename $sim_exe_path`
 
 server_exe_path="$bin_path/$server_exe"
 
+precommand="xterm_gdb"
 
 rm output.txt
 
@@ -26,13 +27,13 @@ log=`tempfile`
 echo logging to $log
 $MPIEXEC -n 1 \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $precommand $server_exe_path 10 3 3 10 &> $log &  # start server in stateless check mode
+  $precommand $server_exe_path 3 1 3 10 &> $log &  # start server in stateless check mode
 sleep 1
 
 $MPIEXEC -n 1 \
   -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-  $sim_exe_path &>/dev/null &
+  $precommand $sim_exe_path &>/dev/null &
 
 
 echo .

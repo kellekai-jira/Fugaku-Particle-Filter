@@ -141,7 +141,8 @@ public:
 
 
                 double corresponding_idle_time = 0.0;
-                for (auto jwtit = job_walltimes.begin(); jwtit != job_walltimes.end();
+                for (auto jwtit = job_walltimes.begin(); jwtit !=
+                     job_walltimes.end();
                      jwtit++)
                 {
                     corresponding_idle_time += job_max_wt - *jwtit;
@@ -201,7 +202,8 @@ public:
             sum_runtime = 0.0;
         }
 
-        double mean_runtime = sum_runtime / static_cast<double>(iterations - warmup);
+        double mean_runtime = sum_runtime / static_cast<double>(iterations -
+                                                                warmup);
 
 
 
