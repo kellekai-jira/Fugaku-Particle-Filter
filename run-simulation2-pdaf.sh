@@ -28,6 +28,7 @@ precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
 rm -rf output
 mkdir -p output
+cp config.fti output/
 cd output
 rm -f nc.vg.*
 
