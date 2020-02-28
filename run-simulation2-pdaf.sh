@@ -11,6 +11,7 @@ total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
 assimilator_type=0 # dummy
 assimilator_type=1 # pdaf
 
+restart_from_checkpoint=1
 ######################################################
 
 # trap ctrl-c and call ctrl_c()
@@ -24,16 +25,21 @@ function ctrl_c() {
         exit 0
 }
 
-precommand="xterm_gdb"
+#precommand="xterm_gdb"
 #precommand="xterm_gdb valgrind --leak-check=yes"
-rm -rf output
+[ "$restart_from_checkpoint" != "1" ] && rm -rf output
 mkdir -p output
-cp config.fti output/
 cd output
 rm -f nc.vg.*
-
+cp ../config.fti ./
 rm -f *_ana.txt
 rm -f *_for.txt
+
+if [ "$restart_from_checkpoint" == "1" ];
+then
+    echo restarting from checkpoint
+    sed -i -e 's/\(failure\s*=\s*\)0$/\13/g' config.fti
+fi
 
 #precommand="xterm -e valgrind --track-origins=yes --leak-check=full --show-reachable=yes --log-file=nc.vg.%p"
 #precommand="xterm -e valgrind --show-reachable=no --log-file=nc.vg.%p"
@@ -67,6 +73,7 @@ else
 fi
 
 source ../build/install/bin/melissa-da_set_env.sh
+
 
 sim_exe_path="$MELISSA_DA_PATH/bin/simulation2-pdaf"
 server_exe_path="$MELISSA_DA_PATH/bin/melissa_server"
