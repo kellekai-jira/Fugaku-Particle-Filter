@@ -38,6 +38,12 @@ void melissa_init_f(const char *field_name,
 int melissa_expose(const char *field_name, double *values,
                    double *hidden_values);
 
+/// wrapper needed for the FORTRAN interface when using no hidden state as nullptr
+/// transfer between FORTRAN and C is not trivial
+int melissa_expose_f(const char *field_name, double *values)
+{
+    return melissa_expose(field_name, values, NULL);
+}
 
 /// For debug reasons it sometimes is practical to have the melissa current state id outside of melissa.
 /// returns -1 if no state is currently calculated.

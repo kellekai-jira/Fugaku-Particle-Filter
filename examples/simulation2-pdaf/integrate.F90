@@ -42,7 +42,6 @@ SUBROUTINE integrate()
   REAL, ALLOCATABLE :: field(:,:) ! GLobal model field
 
   REAL(kind=C_DOUBLE) :: field_double(nx_p * ny)
-  REAL(kind=C_DOUBLE), POINTER, DIMENSION(:) :: dummy => NULL ()
 
   INTEGER :: nsteps = 1    ! if not 0 we are timestepping.
 
@@ -58,19 +57,19 @@ SUBROUTINE integrate()
   stepping: DO WHILE (nsteps > 0)
      WRITE (*, *) 'integrating how many timesteps?', nsteps
      DO step = 1, nsteps
-		 IF (mype_world==0) WRITE (*,*) 'step', step
+         IF (mype_world==0) WRITE (*,*) 'step', step
 
-	! *** Time step: Shift field vertically ***
-		 DO j = 1, nx_p
-			store = field_p(ny, j)
+    ! *** Time step: Shift field vertically ***
+         DO j = 1, nx_p
+            store = field_p(ny, j)
 
-			DO i = ny-1,1,-1
-			   field_p(i+1, j) = field_p(i, j)
-			END DO
+            DO i = ny-1,1,-1
+               field_p(i+1, j) = field_p(i, j)
+            END DO
 
-			field_p(1, j) = store
+            field_p(1, j) = store
 
-		 END DO
+         END DO
      END DO
 
 
@@ -82,7 +81,7 @@ SUBROUTINE integrate()
        END DO
      END DO
 
-     nsteps = melissa_expose(melissa_field_name, field_double, dummy)
+     nsteps = melissa_expose(melissa_field_name, field_double)
 
      counter = 1
      DO j = 1, nx_p

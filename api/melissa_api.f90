@@ -22,13 +22,21 @@ subroutine melissa_init_f(field_name,&
 end subroutine melissa_init_f
 
 
-function melissa_expose(field_name,&
+function melissa_expose_hidden(field_name,&
     values, hidden_values) bind(c, name = 'melissa_expose')
+    use ISO_C_BINDING, only: C_CHAR, C_DOUBLE, C_INT
+    integer(kind=C_INT) :: melissa_expose_hidden
+    character(kind=C_CHAR), intent(in), dimension(*) :: field_name
+    real(kind=C_DOUBLE), intent(inout), dimension(*) :: values
+    real(kind=C_DOUBLE), intent(inout), dimension(*) :: hidden_values
+end function melissa_expose_hidden
+
+function melissa_expose(field_name,&
+    values) bind(c, name = 'melissa_expose_f')
     use ISO_C_BINDING, only: C_CHAR, C_DOUBLE, C_INT
     integer(kind=C_INT) :: melissa_expose
     character(kind=C_CHAR), intent(in), dimension(*) :: field_name
     real(kind=C_DOUBLE), intent(inout), dimension(*) :: values
-    real(kind=C_DOUBLE), intent(inout), dimension(*) :: hidden_values
 end function melissa_expose
 
 end interface
