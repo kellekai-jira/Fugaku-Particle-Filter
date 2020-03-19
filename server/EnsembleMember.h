@@ -18,8 +18,13 @@ public:
     std::vector<double> state_analysis;
     std::vector<double> state_background;
 
-    void set_local_vect_size(int local_vect_size);
-    void store_background_state_part(const Part & part, const double * values);
+    std::vector<double> state_hidden;
+
+    void set_local_vect_size(const int local_vect_size, const int
+                             local_vect_size_hidden);
+    void store_background_state_part(const Part & part, const
+                                     double * values, const Part & hidden_part,
+                                     const double * hidden_values);
 };
 
 

@@ -24,12 +24,19 @@ struct Field
     std::vector<size_t> local_vect_sizes_runner;
     std::vector<Part> parts;
 
+    size_t local_vect_size_hidden;
+    std::vector<size_t> local_vect_sizes_runner_hidden;
+    std::vector<Part> parts_hidden;
+
     std::set<int> connected_runner_ranks;
 
     Field(const std::string &name, const int simu_comm_size_, const size_t
           ensemble_size_);
     void calculate_parts(int server_comm_size);
-    Part & getPart(int simu_rank);
+
+    // low: maybe inline those two getPart... functions?
+    const Part & getPart(int simu_rank) const;
+    const Part & getPartHidden(int simu_rank) const;
 
     size_t globalVectSize();
 };

@@ -135,6 +135,7 @@ struct RunnerRankConnection
         zmq_msg_t empty_msg;
         zmq_msg_t header_msg;
         zmq_msg_t data_msg;
+        zmq_msg_t data_msg_hidden;
 
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
@@ -153,18 +154,20 @@ struct RunnerRankConnection
         zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
         // we do not know when it will really send. send is non blocking!
 
+        const Part & part = field->getPart(runner_rank);
         zmq_msg_init_data(&data_msg,
                           field->ensemble_members.at(
                               state_id).state_analysis.data() +
-                          field->getPart(
-                              runner_rank).local_offset_server,
-                          field->getPart(runner_rank).send_count *
+                          part.local_offset_server,
+                          part.send_count *
                           sizeof(double), NULL, NULL);
 
         trigger(START_PROPAGATE_STATE, state_id);
-        D("-> Server sending %lu bytes for state %d, timestamp=%d",
-          field->getPart(runner_rank).send_count *
+        const Part & hidden_part = field->getPartHidden(runner_rank);
+        D("-> Server sending %lu + %lu hidden bytes for state %d, timestamp=%d",
+          part.send_count *
           sizeof(double),
+          hidden_part.send_count * sizeof(double),
           header[0], header[1]);
         D(
             "local server offset %lu, local runner offset %lu, sendcount=%lu",
@@ -184,7 +187,33 @@ struct RunnerRankConnection
           field->ensemble_members.at(
               state_id).state_analysis.data()[4]);
 
-        zmq_msg_send(&data_msg, data_response_socket, 0);
+        int flag;
+        if (hidden_part.send_count > 0)
+        {
+            flag = ZMQ_SNDMORE;
+        }
+        else
+        {
+            flag = 0;
+        }
+        ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
+
+        if (flag == ZMQ_SNDMORE)
+        {
+            zmq_msg_init_data(&data_msg_hidden,
+                              field->ensemble_members.at(
+                                  state_id).state_hidden.data() +
+                              hidden_part.local_offset_server,
+                              hidden_part.send_count *
+                              sizeof(double), NULL, NULL);
+            double * tmp = field->ensemble_members.at(
+                state_id).state_hidden.data();
+            tmp += hidden_part.local_offset_server;
+            // D("Hidden values to send:");
+            // print_vector(std::vector<double>(tmp, tmp +
+            // hidden_part.send_count));
+            ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
+        }
 
         // close connection:
         // but do not free it. send is going to free it.
@@ -327,7 +356,6 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(phase == PHASE_INIT);              // we accept new fields only if in initialization phase.
     assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) +
            MPI_MAX_PROCESSOR_NAME * sizeof(char));
-    // TODO: does the following line really work?
     assert(field == nullptr);              // we accept only one field for now.
 
     int runner_comm_size = buf[1];
@@ -348,13 +376,26 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
     memcpy (field->local_vect_sizes_runner.data(), zmq_msg_data(&msg),
             runner_comm_size * sizeof(size_t));
+    zmq_msg_close(&msg);
+
+    // always await a hidden state
+    assert_more_zmq_messages(configuration_socket);
+    zmq_msg_init(&msg);
+    zmq_msg_recv(&msg, configuration_socket, 0);
+    assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
+    memcpy (field->local_vect_sizes_runner_hidden.data(), zmq_msg_data(&msg),
+            runner_comm_size * sizeof(size_t));
+
+
+    // msg is closed outside by caller...
+
+
     field->name = field_name;
 
     // ack
     zmq_msg_t msg_reply;
     zmq_msg_init(&msg_reply);
     zmq_msg_send(&msg_reply, configuration_socket, 0);
-
 }
 
 void answer_configuration_message(void * configuration_socket,
@@ -738,7 +779,7 @@ void check_kill_requests() {
 
 void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
     // TODO: move to send and receive function as on api side... maybe use zproto library?
-    zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
+    zmq_msg_t identity_msg, empty_msg, header_msg, data_msg, data_msg_hidden;
     zmq_msg_init(&identity_msg);
     zmq_msg_init(&empty_msg);
     zmq_msg_init(&header_msg);
@@ -816,7 +857,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 
         // Save state part in background_states.
         assert(field->name == field_name);
-        Part & part = field->getPart(runner_rank);
+        const Part & part = field->getPart(runner_rank);
         assert(zmq_msg_size(&data_msg) == part.send_count *
                sizeof(double));
         D(
@@ -849,6 +890,25 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                             &
                                                             data_msg))
           [4]);
+
+        const Part & hidden_part = field->getPartHidden(runner_rank);
+        double * values_hidden = nullptr;
+
+        if (hidden_part.send_count > 0)
+        {
+            assert_more_zmq_messages(data_response_socket);
+            zmq_msg_init(&data_msg_hidden);
+            zmq_msg_recv(&data_msg_hidden, data_response_socket, 0);
+            assert(zmq_msg_size(&data_msg_hidden) == hidden_part.send_count *
+                   sizeof(double));
+            values_hidden = reinterpret_cast<double*>(zmq_msg_data(
+                                                          &data_msg_hidden));
+            // D("hidden values received:");
+            // print_vector(std::vector<double>(values_hidden, values_hidden +
+            // hidden_part.send_count));
+        }
+
+
         if (runner_timestamp == current_step)
         {
             trigger(STOP_PROPAGATE_STATE, runner_state_id);
@@ -858,7 +918,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             store_background_state_part(part,
                                         reinterpret_cast
                                         <double*>(zmq_msg_data(
-                                                      &data_msg)));
+                                                      &data_msg)), hidden_part,
+                                        values_hidden);
         }
         else if (runner_state_id == -1)
         {
@@ -867,7 +928,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // namely the CheckStateless assimilator
             assimilator->on_init_state(runner_id, part, reinterpret_cast
                                        <double*>(zmq_msg_data(
-                                                     &data_msg)));
+                                                     &data_msg)), hidden_part,
+                                       values_hidden);
         }
         // otherwise we throw away timestamp 0 as we want to init the simulation!
         // One could indeed try to generate ensemble members from the initial state but

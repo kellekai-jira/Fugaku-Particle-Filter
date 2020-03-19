@@ -21,7 +21,7 @@ PDAFAssimilator::~PDAFAssimilator() {
 
 PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps)
     : field(field_) {
-        L("Using the patched assimilator for parflow-pure!");
+    L("Using the patched assimilator for parflow-pure!");
     // call to fortran:
     // int vect_size = field.globalVectSize();
 

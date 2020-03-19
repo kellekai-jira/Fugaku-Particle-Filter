@@ -42,6 +42,7 @@ SUBROUTINE integrate()
   REAL, ALLOCATABLE :: field(:,:) ! GLobal model field
 
   REAL(kind=C_DOUBLE) :: field_double(nx_p * ny)
+  REAL(kind=C_DOUBLE), POINTER, DIMENSION(:) :: dummy => NULL ()
 
   INTEGER :: nsteps = 1    ! if not 0 we are timestepping.
 
@@ -81,7 +82,7 @@ SUBROUTINE integrate()
        END DO
      END DO
 
-     nsteps = melissa_expose(melissa_field_name, field_double)
+     nsteps = melissa_expose(melissa_field_name, field_double, dummy)
 
      counter = 1
      DO j = 1, nx_p

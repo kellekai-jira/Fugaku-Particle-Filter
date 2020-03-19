@@ -40,7 +40,8 @@ public:
 // normally such messages are discarded and a proper analysis state is sent back
 // see the CheckStatelessAssimilator to see how to use this function.
     virtual void on_init_state(const int runner_id, const Part & part, const
-                               double * values)
+                               double * values, const Part & hidden_part,
+                               const double * values_hidden)
     {
     };
 

@@ -26,8 +26,7 @@ using namespace std;
 int main(int argc, char * args[])
 {
 #ifdef BE_STATEFUL
-    int secret_state = 3;
-#else
+    vector<double> secret_state {3.0, 4.0, 5.0};
 #endif
     if (argc > 1)
     {
@@ -71,9 +70,18 @@ int main(int argc, char * args[])
         next_offset += counts[rank];
     }
 
+#ifdef USE_HIDDEN_STATE
     melissa_init("variableX",
                  local_vect_size,
+                 secret_state.size(),
+                 MPI_COMM_WORLD
+                 );
+#else
+    melissa_init("variableX",
+                 local_vect_size,
+                 0,
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+#endif
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0);
     printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
@@ -85,7 +93,8 @@ int main(int argc, char * args[])
     {
 #ifdef BE_STATEFUL
         // cheange the secret test
-        secret_state++;
+        secret_state.at(0)++;
+        secret_state.at(1)++;
 #endif
         for (int step = 0; step < nsteps; step++)
         {
@@ -94,7 +103,7 @@ int main(int argc, char * args[])
             {
                 *it += offsets[comm_rank] + i;
 #ifdef BE_STATEFUL
-                *it += secret_state;
+                *it += secret_state.at(0) + secret_state.at(1);
 #endif
 
                 i++;
@@ -106,7 +115,12 @@ int main(int argc, char * args[])
         usleep(10000);
         // usleep(1000000);
 
-        nsteps = melissa_expose("variableX", state1.data());
+#ifdef USE_HIDDEN_STATE
+        nsteps = melissa_expose("variableX", state1.data(),
+                                secret_state.data());
+#else
+        nsteps = melissa_expose("variableX", state1.data(), nullptr);
+#endif
 
         if (nsteps > 0 && is_first_timestep)
         {
