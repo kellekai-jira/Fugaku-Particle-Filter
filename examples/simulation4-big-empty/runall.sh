@@ -16,6 +16,7 @@ count=1
 MAX_TIMESTAMP=300
 MAX_TIMESTAMP=1400
 MAX_TIMESTAMP=100
+MAX_TIMESTAMP=50
 #MAX_TIMESTAMP=3
 
 
@@ -36,7 +37,7 @@ else
 fi
 
 #for convenient csv output:
-echo 'cores simulation,number runnrs(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means' >> output.csv
+echo 'cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means' >> output.csv
 
 
 
@@ -60,7 +61,8 @@ for ensemble_members in 500;
 #for ensemble_members in 400;
 do
   #for server_procs in 12;
-  for server_procs in 24;
+  #for server_procs in 24 32 48 64 80 96;
+  for server_procs in 80 96;
   do
     for simulation_procs in 48;
     do

@@ -194,7 +194,7 @@ public:
             "------------------- Run information(csv): -------------------" <<
             std::endl;
         std::cout <<
-            "cores simulation,number runnrs(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means"
+            "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means"
                   << std::endl;
         if (iterations - warmup < 10)    // have at least 10 iterations for stats
         {   // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!

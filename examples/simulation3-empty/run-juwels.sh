@@ -68,6 +68,8 @@ then
   n_simulation=$5
   n_runners=$6
 
+  ## TODO: remove this line!
+  CORES_PER_SERVER_NODE=$((n_server/2))  # always use 2 nodes!
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 
