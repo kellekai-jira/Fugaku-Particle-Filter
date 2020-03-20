@@ -200,8 +200,8 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 
 END FUNCTION
 
-SUBROUTINE cwrapper_PDFA_put_state(dim_state_background, state_background, status) &
-  BIND(C, name='cwrapper_PDFA_put_state')
+SUBROUTINE cwrapper_PDAF_put_state(dim_state_background, state_background, status) &
+  BIND(C, name='cwrapper_PDAF_put_state')
 
   USE iso_c_binding
 

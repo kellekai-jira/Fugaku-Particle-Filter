@@ -89,7 +89,7 @@ int PDAFAssimilator::do_update_step()
 
         const int dim = eit->state_background.size();
         const double * data = eit->state_background.data();
-        cwrapper_PDFA_put_state(&dim, &data, &status);
+        cwrapper_PDAF_put_state(&dim, &data, &status);
 
         if (status != 0)
         {

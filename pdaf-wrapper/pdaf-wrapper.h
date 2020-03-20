@@ -25,7 +25,7 @@ void cwrapper_PDAF_deallocate();
 // old, TODO: remove, also remove from f90 file.
 int cwrapper_PDAF_get_state(int * doexit, const int * dim_state_analysis,
                             double * state_analysis[], int * status);
-void cwrapper_PDFA_put_state(const int * dim_state_background, const
+void cwrapper_PDAF_put_state(const int * dim_state_background, const
                              double * state_background[], int * status);
 
 #ifdef __cplusplus
