@@ -4,7 +4,7 @@
 
 proc_name=$1
 
-procs=`ps ax | grep $proc_name | grep -v grep | cut -d' ' -f 1`
+procs=`ps ax | grep $proc_name | grep -v grep | sed -e 's/^[ ]*//g' | cut -d' ' -f 1`
 lines=`echo "$procs" | wc -l`
 killid=$(($RANDOM % $lines + 1))
 pid=`echo "$procs" | cut -d$'\n' -f$killid`
