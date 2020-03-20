@@ -8,6 +8,9 @@
 // TODO: heavely test fault tollerance with a good testcase.
 // TODO 3. check with real world sim and DA.
 // TODO: clean up L logs and D debug logs
+//
+// TODO: check for other erase bugs...(erasing from a container while iterating over
+// the same container)
 
 
 
@@ -531,7 +534,7 @@ void add_sub_tasks(NewTask &new_task) {
 
 /// schedules a new task on a model task runner and tries to run it.
 static int task_id = 1; // low: aftrer each update step one could reset the task id and also the highest sent task id and so on to never get overflows!
-bool schedule_new_task(int runner_id)
+bool schedule_new_task(const int runner_id)
 {
     assert(comm_rank == 0);
     if (unscheduled_tasks.size() <= 0)
@@ -724,8 +727,8 @@ void check_due_dates() {
 
             int buf[2] = { it->state_id, it->runner_id};
             // bsend does not work...
-            //MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-            //          MPI_COMM_WORLD);
+            // MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+            // MPI_COMM_WORLD);
             // if BSend does not find memory use the send version
             MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
                      MPI_COMM_WORLD);
@@ -1139,9 +1142,12 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
         {
-            for (auto runner_it = idle_runners.begin(); runner_it !=
-                 idle_runners.end(); runner_it++)
+            // As in this loop we might erase some idle runners from the list we may not
+            // do a simple for loop.
+            while (!idle_runners.empty())
             {
+                auto runner_it = idle_runners.begin();
+                // maybe it's easier to erase not the firstelement?
                 L("Rescheduling after update step for timestep %d",
                   current_step);
                 schedule_new_task(runner_it->first);
