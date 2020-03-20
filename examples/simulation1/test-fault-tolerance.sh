@@ -21,11 +21,12 @@ wait
 # ensure 2 runners were really killed:
 # grepping iterations where at the start and at the end 8 runners were active... we start
 # with 10 ;)
-nb_killed=`grep "^199,[0-9.]*,8,8$" log | wc -l`
+nb_killed=`grep -c '^199,\([0-9]*.[0-9]*,\)\{3\}8,8,.*$' log`
 if [ "$nb_killed" != "1" ];
 then
   echo ERROR: Something went wrong!
   echo ERROR: not exactly 2 model task runners were killed?
+  echo DEBUG: maybe the regex turned wrong? Try cat log !
   exit 1
 fi
 
