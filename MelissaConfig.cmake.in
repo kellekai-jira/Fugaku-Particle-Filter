@@ -11,4 +11,20 @@
 set(PN Melissa)
 set_and_check(${PN}_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/include")
 set_and_check(${PN}_LIBRARY "@CMAKE_INSTALL_PREFIX@/lib/libmelissa_api.so")
+
+# Build flags, libraries and includes needed for projects building other
+# melissa-pdaf assimilators/pdaf-wrappers:
+set(${PN}_MPI_Fortran_LIBRARIES "@MPI_Fortran_LIBRARIES@")
+set(${PN}_Fortran_MATH_LIBRARIES "@Fortran_MATH_LIBRARIES@")
+
+set(${PN}_CMAKE_Fortran_FLAGS "@CMAKE_Fortran_FLAGS@")
+set(${PN}_CMAKE_C_FLAGS "@MPI_C_COMPILE_FLAGS@")
+
+set(${PN}_BUILD_INCLUDE_DIRS "@ZeroMQ_INCLUDE_DIR@;@CMAKE_SOURCE_DIR@/server;@CMAKE_SOURCE_DIR@/common;@MPI_INCLUDE_PATH@")
+
+set(${PN}_pdaf_LIBRARY "@CMAKE_INSTALL_PREFIX@/lib/libpdaf.a")
+
+
+
+
 check_required_components(${PN})
