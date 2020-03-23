@@ -7,7 +7,7 @@
 
 #include "EnsembleMember.h"
 #include <cassert>
-#include "../common/utils.h"
+#include "utils.h"
 
 void EnsembleMember::set_local_vect_size(const int local_vect_size, const int
                                          local_vect_size_hidden)

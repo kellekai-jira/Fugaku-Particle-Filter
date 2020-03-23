@@ -455,6 +455,10 @@ void broadcast_field_information_and_calculate_parts() {
               runner_comm_size,
               my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                                             // 3:local_vect_sizes_runner
 
+    MPI_Bcast(field->local_vect_sizes_runner_hidden.data(),
+              runner_comm_size,
+              my_MPI_SIZE_T, 0, MPI_COMM_WORLD);                                                             // 4:local_vect_sizes_runner_hidden
+
     field->calculate_parts(comm_size);
 
 }
