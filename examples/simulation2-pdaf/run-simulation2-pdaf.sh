@@ -60,13 +60,13 @@ else
   echo '(patch-PDAF....)'
   echo compiling....
   set -e
-  cd ..
+  cd ../../..
   ./compile.sh
   cd -
   set +e
 fi
 
-source ../build/install/bin/melissa-da_set_env.sh
+source ../../../build/install/bin/melissa-da_set_env.sh
 
 sim_exe_path="$MELISSA_DA_PATH/bin/simulation2-pdaf"
 server_exe_path="$MELISSA_DA_PATH/bin/melissa_server"

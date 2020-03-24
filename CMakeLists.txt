@@ -1,5 +1,6 @@
 project(Melissa LANGUAGES CXX Fortran)
 cmake_minimum_required(VERSION 3.2.2)
+enable_testing()
 
 find_package(MPI REQUIRED)
 # ZeroMQ #
@@ -76,9 +77,9 @@ add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
 add_subdirectory(api)
-add_subdirectory(examples/simulation1)
-add_subdirectory(examples/simulation2-pdaf)
-add_subdirectory(examples/simulation3-empty)
+add_subdirectory(launcher)
+
+add_subdirectory(examples)
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
@@ -102,3 +103,4 @@ write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Conf
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
               DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
+

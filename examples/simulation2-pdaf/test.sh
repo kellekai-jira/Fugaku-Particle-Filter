@@ -3,7 +3,7 @@
 #set -e
 #set -x
 
-source build/install/bin/melissa-da_set_env.sh
+source ../../build/install/bin/melissa-da_set_env.sh
 
 cd output
 

@@ -3,6 +3,8 @@
 add_executable(simulation1 simulation.cxx)
 target_link_libraries(simulation1 melissa_api)
 INSTALL(TARGETS simulation1 RUNTIME DESTINATION bin)
+add_test(NAME stateless
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../check_stateless.sh ${CMAKE_CURRENT_BINARY_DIR}/simulation1)
 
 # add a stateful simulation for testing
 add_executable(simulation1-stateful simulation.cxx)
@@ -10,8 +12,17 @@ target_compile_definitions(simulation1-stateful PRIVATE -DBE_STATEFUL)
 target_link_libraries(simulation1-stateful melissa_api)
 INSTALL(TARGETS simulation1-stateful RUNTIME DESTINATION bin)
 
+# we expect a no here, so negate the result!
+add_test(NAME stateful
+    COMMAND /bin/bash -c "! ${CMAKE_CURRENT_SOURCE_DIR}/../check_stateless.sh ${CMAKE_CURRENT_BINARY_DIR}/simulation1-stateful")
+
 # add a stateful simulation for testing using hidden states (so at the end it is stateless
 add_executable(simulation1-hidden simulation.cxx)
 target_compile_definitions(simulation1-hidden PRIVATE -DUSE_HIDDEN_STATE -DBE_STATEFUL)
 target_link_libraries(simulation1-hidden melissa_api)
 INSTALL(TARGETS simulation1-hidden RUNTIME DESTINATION bin)
+add_test(NAME stateless-hidden
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../check_stateless.sh ${CMAKE_CURRENT_BINARY_DIR}/simulation1-hidden)
+
+add_test(NAME fault-tolerance
+    COMMAND ./test-fault-tolerance.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

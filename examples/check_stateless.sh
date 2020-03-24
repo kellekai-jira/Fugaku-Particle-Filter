@@ -7,6 +7,12 @@ fi
 
 source ../build/install/bin/melissa-da_set_env.sh
 
+if [ -z "$MELISSA_DA_PATH" ];
+then
+    echo Error: cannot find MELISSA_DA_PATH. Please source melissa-da_set_env.sh !
+    exit 1
+fi
+
 bin_path="$MELISSA_DA_PATH/bin"
 
 server_exe="melissa_server"
