@@ -36,6 +36,10 @@
 #include "messages.h"
 #include "Part.h"
 #include "utils.h"
+
+#include "melissa_utils.h"  // melissa_utils from melissa-sa for melissa_get_node_name
+#include "melissa_messages.h"
+
 #include "memory.h"
 
 #include <fstream>
@@ -1189,7 +1193,8 @@ int main(int argc, char * argv[])
     {
         MAX_RUNNER_TIMEOUT = atoi(argv[4]);
     }
-    // last argument must be the launcher name!
+    // Last argument must be the launcher host name!
+    // Or if not using the launcher the file where the server host name shall be stored to.
 
 
     assert(ENSEMBLE_SIZE > 0);
@@ -1200,6 +1205,10 @@ int main(int argc, char * argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
     std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
+#define USE_LAUNCHER
+#ifdef USE_LAUNCHER
+    std::shared_ptr<LauncherConnection> launcher;
+#endif
 
     context = zmq_ctx_new ();
     int major, minor, patch;
@@ -1224,6 +1233,9 @@ int main(int argc, char * argv[])
         ZMQ_CHECK(rc);
         assert(rc == 0);
 
+#ifdef USE_LAUNCHER
+        launcher = std::make_shared<LauncherConnection>(context, argv[argc-1]);
+#else
         // write nodename into file (must be last commandline argument)
         char * hostname_file = argv[argc-1];
         std::fstream f(hostname_file, f.binary | f.trunc | f.out);
@@ -1236,11 +1248,8 @@ int main(int argc, char * argv[])
             L("could not open %s to write the hostname in it!", hostname_file);
             exit(1);
         }
-    }
-#define USE_LAUNCHER
-#ifdef USE_LAUNCHER
-    LauncherConnection launcher(context, argv[argc-1], comm_rank);
 #endif
+    }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
     char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
@@ -1269,6 +1278,16 @@ int main(int argc, char * argv[])
 #endif
 
 
+    int items_to_poll = 1;
+    if (comm_rank == 0)
+    {
+        // poll configuration socket
+        items_to_poll++;
+#ifdef USE_LAUNCHER
+        items_to_poll++;
+#endif
+    }
+
     // Server main loop:
     while (true)
     {
@@ -1280,29 +1299,38 @@ int main(int argc, char * argv[])
         // Wait for requests
         /* Poll for events indefinitely */
         // REM: the poll item needs to be recreated all the time!
-        zmq_pollitem_t items [2] = {
-            {data_response_socket, 0, ZMQ_POLLIN, 0},
-            {configuration_socket, 0, ZMQ_POLLIN, 0}
-        };
+        zmq_pollitem_t items [items_to_poll];
+        items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
+        items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
+#ifdef USE_LAUNCHER
         if (comm_rank == 0)
         {
-            // Check for killed runners... (due date violation)
-            // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
-            ZMQ_CHECK(zmq_poll (items, 2, 0));
+            items[2] = {launcher->getTextPuller(), 0, ZMQ_POLLIN, 0};
         }
-        else
-        {
-            // ZMQ_CHECK(zmq_poll (items, 1, -1));
-            // Check for new tasks to schedule and killed runners so do not block on polling (due date violation)...
-            ZMQ_CHECK(zmq_poll (items, 1, 0));
-        }
+#endif
+
+
+        // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
+        ZMQ_CHECK(zmq_poll (items, items_to_poll, 0));
         /* Returned events will be stored in items[].revents */
 
         // answer requests
-        if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
+        if (comm_rank == 0 )
         {
-            answer_configuration_message(configuration_socket,
-                                         data_response_port_names);
+            if (items[1].revents & ZMQ_POLLIN)
+            {
+                answer_configuration_message(configuration_socket,
+                        data_response_port_names);
+            }
+
+#ifdef USE_LAUNCHER
+            if (items[2].revents & ZMQ_POLLIN)
+            {
+                launcher->receiveText();
+            } else {
+                launcher->checkLauncherDueDate();
+            }
+#endif
         }
 
         // coming from fresh init...
@@ -1423,8 +1451,11 @@ int main(int argc, char * argv[])
     // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
     // sleep(3);
 #ifdef USE_LAUNCHER
-    // close the sockets before the context is destroyed!
-    LauncherConnection.~LauncherConnection();
+    if (comm_rank == 0)
+    {
+        // send stop message, close the launcher sockets before the context is destroyed!
+        launcher.reset();
+    }
 #endif
     zmq_close(data_response_socket);
     if (comm_rank == 0)

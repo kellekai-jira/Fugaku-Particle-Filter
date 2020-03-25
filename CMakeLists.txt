@@ -1,4 +1,4 @@
-project(Melissa LANGUAGES CXX Fortran)
+project(Melissa LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.2.2)
 enable_testing()
 
@@ -77,7 +77,6 @@ add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
 add_subdirectory(api)
-add_subdirectory(launcher)
 
 add_subdirectory(examples)
 

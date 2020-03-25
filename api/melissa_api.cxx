@@ -14,6 +14,8 @@
 
 #include "utils.h"
 
+#include "melissa_utils.h"
+
 #include "melissa-da_config.h"
 #include "ApiTiming.h"
 #include "melissa_api.h"

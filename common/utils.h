@@ -64,7 +64,6 @@ enum Phase
 
 // Functions:
 void check_data_types();
-void melissa_get_node_name (char *node_name, size_t buf_len);
 
 template <typename T>
 inline void print_vector (const std::vector<T> &vec)

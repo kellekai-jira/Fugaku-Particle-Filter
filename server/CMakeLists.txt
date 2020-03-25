@@ -3,6 +3,7 @@ file(GLOB
      RELATIVE
      ${CMAKE_CURRENT_SOURCE_DIR}
      *.cxx
+     *.c
      )
 
 add_executable(melissa_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)

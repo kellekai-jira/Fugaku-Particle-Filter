@@ -1,0 +1,8 @@
+To launch with python call
+
+```
+source $HOME/workspace/melissa-da/melissa/install/bin/melissa_set_env.sh
+source $HOME/workspace/melissa-da/build/install/bin/melissa-da_set_env.sh
+
+python script.py
+```
