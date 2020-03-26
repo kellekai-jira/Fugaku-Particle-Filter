@@ -53,7 +53,7 @@ std::string fix_port_name(const char * port_name_)
     if (found != std::string::npos && port_name[found-1] == '/' &&
         port_name[found + strlen(my_host_name)] == ':')
     {
-        port_name = port_name.substr(0, found) + "localhost" +
+        port_name = port_name.substr(0, found) + "127.0.0.1" +
                     port_name.substr(found + strlen(my_host_name));
     }
     return port_name;

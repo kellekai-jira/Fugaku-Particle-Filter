@@ -33,17 +33,17 @@ LauncherConnection::LauncherConnection(void * context, std::string launcher_host
     text_requester = zmq_socket (context, ZMQ_REQ);
 
     const int linger = 10000;
-    std::string launcher_addr = "tcp://" + launcher_host + ":3000";  // TODO: make as option
+    std::string launcher_addr = "tcp://" + launcher_host + ":5555";  // TODO: make as option
     zmq_setsockopt (text_pusher, ZMQ_LINGER, &linger, sizeof(int));
     ZMQ_CHECK(zmq_connect (text_pusher, launcher_addr.c_str()));
 
-    launcher_addr = "tcp://" + launcher_host + ":3001";  // TODO: make as option
+    launcher_addr = "tcp://" + launcher_host + ":5556";  // TODO: make as option
     zmq_setsockopt(text_puller, ZMQ_SUBSCRIBE, "", 0);
     zmq_setsockopt (text_puller, ZMQ_LINGER, &linger, sizeof(int));
     ZMQ_CHECK(zmq_connect (text_puller, launcher_addr.c_str()));
 
     // === opent req-rep port  === //
-    launcher_addr = "tcp://" + launcher_host + ":3002";  // TODO: make as option
+    launcher_addr = "tcp://" + launcher_host + ":5554";  // TODO: make as option
     zmq_setsockopt (text_requester, ZMQ_LINGER, &linger, sizeof(int));
     const int recv_timeout = 100000; // recv timeout
     zmq_setsockopt (text_requester, ZMQ_RCVTIMEO, &recv_timeout, sizeof(int));
@@ -78,7 +78,7 @@ void LauncherConnection::receiveText()
     zmq_msg_t msg;
     zmq_msg_init (&msg);
     zmq_msg_recv (&msg, text_puller, 0);
-    D("Recieved %s\n", zmq_msg_data (&msg));
+    D("Launcher message recieved %s", zmq_msg_data (&msg));
     updateLauncherDueDate();
     // ATM We do not care what the launcher sends us. We only check if it is still alive
     //process_launcher_message(zmq_msg_data (&msg), server_ptr);

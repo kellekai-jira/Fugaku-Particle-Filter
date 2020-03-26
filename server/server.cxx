@@ -1301,13 +1301,13 @@ int main(int argc, char * argv[])
         // REM: the poll item needs to be recreated all the time!
         zmq_pollitem_t items [items_to_poll];
         items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
-        items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
-#ifdef USE_LAUNCHER
         if (comm_rank == 0)
         {
+            items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
+#ifdef USE_LAUNCHER
             items[2] = {launcher->getTextPuller(), 0, ZMQ_POLLIN, 0};
-        }
 #endif
+        }
 
 
         // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
@@ -1457,6 +1457,7 @@ int main(int argc, char * argv[])
         launcher.reset();
     }
 #endif
+
     zmq_close(data_response_socket);
     if (comm_rank == 0)
     {
