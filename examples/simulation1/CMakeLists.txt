@@ -14,7 +14,9 @@ INSTALL(TARGETS simulation1-stateful RUNTIME DESTINATION bin)
 
 # we expect a no here, so negate the result!
 add_test(NAME stateful
-    COMMAND /bin/bash -c "! ${CMAKE_CURRENT_SOURCE_DIR}/../check_stateless.sh ${CMAKE_CURRENT_BINARY_DIR}/simulation1-stateful")
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../check_stateless.sh ${CMAKE_CURRENT_BINARY_DIR}/simulation1-stateful)
+
+set_tests_properties(stateful PROPERTIES WILL_FAIL TRUE)
 
 # add a stateful simulation for testing using hidden states (so at the end it is stateless
 add_executable(simulation1-hidden simulation.cxx)
