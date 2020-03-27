@@ -128,7 +128,7 @@ def check_job(job):
 MAX_RUNNERS=1  # refactor those global variables somehow?
 PROCS_RUNNER=1
 def check_load():
-    time.sleep(1)
+    #time.sleep(1)
     # TODO: use max runners here!
     try:
         out = str(subprocess.check_output(["pidof", EXECUTABLE])).split()
@@ -163,22 +163,30 @@ def run_melissa_da_study(
         procs_runner=1,
         n_runners=1):
 
+    assert(cluster_name == 'local')  # cannot handle others atm!
+
+    # TODO: dirty: setting global variables. Use a class variable or sth like this...
+    global EXECUTABLE_WITH_PATH
+    global EXECUTABLE
+
+    EXECUTABLE_WITH_PATH = executable
+    EXECUTABLE = executable.split('/')[-1]
+
+    global MAX_RUNNERS
+    global PROCS_RUNNER
+    MAX_RUNNERS = n_runners
+    PROCS_RUNNER = procs_runner
     import os
     def cleanup():
         os.system('killall melissa_server')
         os.system('killall gdb')
         os.system('killall xterm')
         os.system('killall mpiexec')
+        os.system('killall %s' % EXECUTABLE)
     cleanup()
 
-    EXECUTABLE_WITH_PATH = executable
-    EXECUTABLE = executable.split('/')[-1]
-    global MAX_RUNNERS
-    global PROCS_RUNNER
-    MAX_RUNNERS = n_runners
-    PROCS_RUNNER = procs_runner
 
-    assert(cluster_name == 'local')  # cannot handle others atm!
+
 
     from launcher import melissa
 
@@ -200,8 +208,9 @@ def run_melissa_da_study(
     melissa_study.set_checkpoint_interval(300)     # server checkpoints every 300 seconds
     melissa_study.set_verbosity(3)                 # verbosity: 0: only errors, 1: errors + warnings, 2: usefull infos (default), 3: debug info
 
-    melissa_study.set_batch_size(1)                # trick the interface...
-    melissa_study.set_sampling_size(1)                # trick the interface...
+    # each runner is started seperately:
+    melissa_study.set_batch_size(1)
+    melissa_study.set_sampling_size(n_runners)  #  == n_runnners.
 
     melissa_study.set_assimilation(True)
 
