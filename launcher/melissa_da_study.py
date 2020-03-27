@@ -24,6 +24,7 @@ melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
 
 EXECUTABLE='simulation1'
+EXECUTABLE_WITH_PATH='simulation1'
 WORKDIR = os.getcwd() + '/STATS'
 
 if (not os.path.isdir(WORKDIR)):
@@ -99,10 +100,9 @@ def launch_runner(group):
         os.mkdir(runner_dir)
     os.chdir(runner_dir)
 
-    cmd = '%s %s/bin/%s' % (
+    cmd = '%s %s' % (
             precommand,
-            melissa_da_path,
-            EXECUTABLE
+            EXECUTABLE_WITH_PATH
             )
 
     melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
@@ -125,15 +125,19 @@ def check_job(job):
     print('Checking for job_id %d: state: %d' % (job.job_id, state))
     job.job_status = state
 
+MAX_RUNNERS=1  # refactor those global variables somehow?
+PROCS_RUNNER=1
 def check_load():
-    # We only run one group at a time
-    #time.sleep(1)
     time.sleep(1)
+    # TODO: use max runners here!
     try:
         out = str(subprocess.check_output(["pidof", EXECUTABLE])).split()
     except:
         return True
-    if len(out) > 3:
+
+    print('========= len out:%d/%d' % (len(out), MAX_RUNNERS* PROCS_RUNNER))
+    if len(out) >= MAX_RUNNERS * PROCS_RUNNER:
+    #if len(out) > 1:
         return False
     else:
         time.sleep(2)
@@ -141,3 +145,89 @@ def check_load():
 
 def kill_job(job):
     os.system('kill '+str(job.job_id))
+
+
+# Assimilator types:
+ASSIMILATOR_DUMMY = 0
+ASSIMILATOR_PDAF = 1
+ASSIMILATOR_EMPTY = 2
+ASSIMILATOR_CHECK_STATELESS = 3
+
+def run_melissa_da_study(
+        executable='simulation1',
+        total_steps=3,
+        ensemble_size=3,
+        assimilator_type=ASSIMILATOR_DUMMY,
+        cluster_name='local',
+        procs_server=1,
+        procs_runner=1,
+        n_runners=1):
+
+    import os
+    def cleanup():
+        os.system('killall melissa_server')
+        os.system('killall gdb')
+        os.system('killall xterm')
+        os.system('killall mpiexec')
+    cleanup()
+
+    EXECUTABLE_WITH_PATH = executable
+    EXECUTABLE = executable.split('/')[-1]
+    global MAX_RUNNERS
+    global PROCS_RUNNER
+    MAX_RUNNERS = n_runners
+    PROCS_RUNNER = procs_runner
+
+    assert(cluster_name == 'local')  # cannot handle others atm!
+
+    from launcher import melissa
+
+# dirty but convenient to kill stuff...
+    import signal
+    import sys
+
+    def signal_handler(sig, frame):
+        cleanup()
+
+        sys.exit(1)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    melissa_study = melissa.Study()
+    melissa_study.set_working_directory(WORKDIR)
+
+    melissa_study.set_simulation_timeout(400)      # simulations are restarted if no life sign for 400 seconds
+    melissa_study.set_checkpoint_interval(300)     # server checkpoints every 300 seconds
+    melissa_study.set_verbosity(3)                 # verbosity: 0: only errors, 1: errors + warnings, 2: usefull infos (default), 3: debug info
+
+    melissa_study.set_batch_size(1)                # trick the interface...
+    melissa_study.set_sampling_size(1)                # trick the interface...
+
+    melissa_study.set_assimilation(True)
+
+# some secret options...:
+    melissa_study.set_option('assimilation_total_steps', total_steps)
+    melissa_study.set_option('assimilation_ensemble_size', ensemble_size)
+    melissa_study.set_option('assimilation_assimilator_type', assimilator_type)  # ASSIMILATOR_DUMMY
+    melissa_study.set_option('assimilation_max_runner_timeout', 5)  # seconds, timeout checked frin tge server sude,
+
+    melissa_study.set_option('server_cores', procs_server)  # overall cores for the server
+    melissa_study.set_option('server_nodes', 1)  # using that many nodes  ... on  a well defined cluster the other can be guessed probably. TODO: make changeable. best in dependence of cluster cores per node constant...
+
+    melissa_study.set_option('simulation_cores', procs_runner)  # cores of one runner
+    melissa_study.set_option('simulation_nodes', 1)  # using that many nodes
+
+    melissa_study.simulation.launch(launch_runner)
+    melissa_study.server.launch(launch_server)
+    melissa_study.check_job(check_job)
+    melissa_study.simulation.check_job(check_job)
+    melissa_study.server.restart(launch_server)
+    melissa_study.check_scheduler_load(check_load)
+    melissa_study.cancel_job(kill_job)
+
+    melissa_study.run()
+
+
+# exporting for import * :
+__all__ = ['run_melissa_da_study', 'ASSIMILATOR_PDAF', 'ASSIMILATOR_CHECK_STATELESS',
+           'ASSIMILATOR_DUMMY', 'ASSIMILATOR_EMPTY', 'ASSIMILATOR_DUMMY']

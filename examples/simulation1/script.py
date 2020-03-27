@@ -19,9 +19,25 @@
     User defined options module
 """
 
+
 import getpass
 from launcher import melissa
 from functions import *
+
+## dirty but convenient to kill stuff...
+#import signal
+#import sys
+#import os
+#
+#def signal_handler(sig, frame):
+#    os.system('killall melissa_server')
+#    os.system('killall gdb')
+#    os.system('killall xterm')
+#    os.system('killall mpiexec')
+#
+#    sys.exit(0)
+#
+#signal.signal(signal.SIGINT, signal_handler)
 
 melissa_study = melissa.Study()
 melissa_study.set_working_directory(WORKDIR)

@@ -82,6 +82,9 @@ add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
 add_subdirectory(api)
 
+add_subdirectory(launcher)
+
+
 add_subdirectory(examples)
 
 find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
