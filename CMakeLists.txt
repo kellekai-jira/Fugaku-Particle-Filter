@@ -80,6 +80,8 @@ add_subdirectory(api)
 
 add_subdirectory(examples)
 
+find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
+
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     PERMISSIONS OWNER_WRITE
