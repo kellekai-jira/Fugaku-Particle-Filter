@@ -84,7 +84,7 @@ def launch_server(server):
             )
 
     # TODO: why not using return?
-    server.pid = cluster_launch(n_procs_server, n_nodes_server, cmd)
+    server.job_id = cluster_launch(n_procs_server, n_nodes_server, cmd)
 
 
 

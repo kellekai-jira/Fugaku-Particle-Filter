@@ -6,8 +6,6 @@ file(GLOB
      *.cxx
      )
 
- message ("All common: ${ALL_COMMON}")
-
 add_library(melissa_common OBJECT ${ALL_COMMON})
 
 if(INSTALL_ZMQ)
