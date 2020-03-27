@@ -66,25 +66,15 @@ def cluster_launch(n_procs, n_nodes, cmd, melissa_server_master_node=''):
 def launch_server(server):
     precommand = 'xterm_gdb'
     precommand = ''
-    total_steps = 10
-    ensemble_size = 5
-    assimilator_type = 0  # ASSIMILATOR_DUMMY
-    max_runner_timeout = 5  # seconds
-    n_procs_server = 1
-    n_nodes_server = 1
 
-    cmd = '%s %s/bin/melissa_server %d %d %d %d %s' % (
+    cmd = '%s %s/bin/melissa_server %s' % (
             precommand,
             os.getenv('MELISSA_DA_PATH'),
-            total_steps,
-            ensemble_size,
-            assimilator_type,
-            max_runner_timeout,
-            socket.gethostname()
+            server.cmd_opt
             )
 
     # TODO: why not using return?
-    server.job_id = cluster_launch(n_procs_server, n_nodes_server, cmd)
+    server.job_id = cluster_launch(server.cores, server.nodes, cmd)
 
 
 
@@ -101,8 +91,6 @@ def launch_server(server):
 # Once we have set the job IDs of our jobs, we can use it to define the fault tolerance functions. In our case, we will use the same function for the server and the simulations. It takes a `Job` object as argument, and sets its `status` attribute to 0 if it is waiting to be scheduled, 1 if it is currently running, or 2 if it is not running anymore. In your local machine, a job will never be have a 0 status, because it is launched immediately when `USER_FUNCTIONS['launch_group']` is called.
 
 def launch_runner(group):
-    n_nodes_simulation = 1
-    n_procs_simulation = 1
     precommand = 'xterm_gdb'
     precommand = ''
 
@@ -118,7 +106,7 @@ def launch_runner(group):
             )
 
     melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
-    group.job_id = cluster_launch(n_procs_simulation, n_procs_simulation, cmd, melissa_server_master_node)
+    group.job_id = cluster_launch(group.cores, group.nodes, cmd, melissa_server_master_node)
 
     os.chdir(WORKDIR)
 
