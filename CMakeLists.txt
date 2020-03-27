@@ -57,6 +57,10 @@ SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
 
 #SET(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
 
+
+# Testing convenience:                                                      $0 in the -c environment, not a part of $@
+SET(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
+
 # Fault tolerance
 option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a bit of MPI communication" ON)
 

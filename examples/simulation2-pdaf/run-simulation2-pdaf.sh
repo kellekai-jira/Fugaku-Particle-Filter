@@ -101,3 +101,8 @@ done
 
 wait
 
+if [[ "$1" == "test" ]];
+then
+    ./test.sh
+    exit $?
+fi
