@@ -13,7 +13,7 @@ file(GLOB
      )
 
 #add_library(pdaf_wrapper STATIC ${ALL_PDAF_WRAPPER} ${ALL_USER})
-add_library(pdaf_wrapper SHARED ${ALL_PDAF_WRAPPER} ${ALL_USER} PDAFAssimilator.cxx)
+add_library(pdaf_wrapper SHARED ${ALL_PDAF_WRAPPER} ${ALL_USER})
 target_include_directories(pdaf_wrapper PRIVATE ${CMAKE_SOURCE_DIR}/server)
 target_compile_options(pdaf_wrapper BEFORE PUBLIC -fPIC)
 

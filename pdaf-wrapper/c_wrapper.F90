@@ -72,6 +72,21 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 
 END SUBROUTINE
 
+SUBROUTINE cwrapper_init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p) &
+        BIND(C,name='cwrapper_init_ens_hidden')
+    USE iso_c_binding
+    IMPLICIT NONE
+    INTEGER, INTENT(in) :: dim_p                   ! PE-local state dimension
+    INTEGER, INTENT(in) :: dim_ens                 ! Size of ensemble
+    INTEGER, INTENT(in) :: member_id
+    REAL(C_DOUBLE), INTENT(out)   :: hidden_state_p(dim_p)            ! PE-local state ensemble of member_id
+
+    EXTERNAL :: init_ens_hidden
+
+    CALL init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p)
+END SUBROUTINE
+
+
 SUBROUTINE cwrapper_PDAF_deallocate() BIND(C,name='cwrapper_PDAF_deallocate')
   USE iso_c_binding
 
@@ -193,7 +208,6 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 
   Print *, "get state!"
 
-  !distribute_state_to => state_analysis  ! TODO: maybe this pointersetting is erronous?
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
   ! TODO: parameters depend on filtertype
   ! Ensemble-based filters (SEIK, EnKF, ETKF, LSEIK, LETKF, ESTKF, LESTKF)
