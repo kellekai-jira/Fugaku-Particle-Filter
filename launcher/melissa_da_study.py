@@ -119,11 +119,6 @@ def run_melissa_da_study(
         precommand = 'xterm_gdb'
         precommand = ''
 
-        runner_dir = '%s/runner%03d' % (WORKDIR, group.group_id)
-        if (not os.path.isdir(runner_dir)):
-            os.mkdir(runner_dir)
-        os.chdir(runner_dir)
-
         cmd = '%s %s' % (
                 precommand,
                 EXECUTABLE_WITH_PATH
