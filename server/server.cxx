@@ -1174,6 +1174,8 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
+    assert(argc == 6);
+
     int param_total_steps = 5;
 
     // Read in configuration from command line

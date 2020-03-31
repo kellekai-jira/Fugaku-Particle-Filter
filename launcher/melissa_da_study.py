@@ -31,6 +31,7 @@ ASSIMILATOR_PDAF = 1
 ASSIMILATOR_EMPTY = 2
 ASSIMILATOR_CHECK_STATELESS = 3
 
+started_runners = 0  # as Python seems to not support closurs this has to be global.
 
 def run_melissa_da_study(
         executable='simulation1',
@@ -40,10 +41,12 @@ def run_melissa_da_study(
         cluster_name='local',
         procs_server=1,
         procs_runner=1,
-        n_runners=1):
+        n_runners=1,
+        show_server_log = True,
+        show_simulation_log = True):
 
-    EXECUTABLE='simulation1'
-    EXECUTABLE_WITH_PATH='simulation1'
+    global started_runners
+    started_runners = 0
 
     old_cwd = os.getcwd()
     WORKDIR = old_cwd + '/STATS'
@@ -61,7 +64,7 @@ def run_melissa_da_study(
     #   cmd_opt: the options set by the launcher to pass to the server.
 
 
-    def cluster_launch(n_procs, n_nodes, cmd, melissa_server_master_node=''):
+    def cluster_launch(n_procs, n_nodes, cmd, melissa_server_master_node='', logfile=''):
         # TODO: use annas template engine here instead of this function!
         assert n_nodes == 1  # TODO: for the moment
         lib_path = os.getenv('LD_LIBRARY_PATH')
@@ -82,7 +85,14 @@ def run_melissa_da_study(
                 cmd)
 
         print("Launching %s" % run_cmd)
-        pid = subprocess.Popen(run_cmd.split()).pid
+        pid = 0
+
+        if logfile == '':
+            pid = subprocess.Popen(run_cmd.split()).pid
+        else:
+            with open(logfile, 'wb') as f:
+                pid = subprocess.Popen(run_cmd.split(), stdout=f).pid
+
         print("Process id: %d" % pid)
         return pid
 
@@ -99,7 +109,8 @@ def run_melissa_da_study(
                 )
 
         # TODO: why not using return?
-        server.job_id = cluster_launch(server.cores, server.nodes, cmd)
+        logfile = '' if show_server_log else 'server.log'
+        server.job_id = cluster_launch(server.cores, server.nodes, cmd, '', logfile)
 
 
 
@@ -125,9 +136,15 @@ def run_melissa_da_study(
                 )
 
         melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
-        group.job_id = cluster_launch(group.cores, group.nodes, cmd, melissa_server_master_node)
+
+        print('Starting runner! REM: the simulation group id != runner id!')
+        logfile = '' if show_simulation_log else 'simulation-%03d.log' % group.group_id
+        group.job_id = cluster_launch(group.cores, group.nodes, cmd, melissa_server_master_node, logfile)
 
         os.chdir(WORKDIR)
+
+        global started_runners
+        started_runners += 1
 
     def check_job(job):
         # Check the job state:
@@ -141,26 +158,13 @@ def run_melissa_da_study(
         except:
             state = 2
         # we set the job_status attribute of the Job object. Group and Server objects inherite of Job.
-        print('Checking for job_id %d: state: %d' % (job.job_id, state))
+        #print('Checking for job_id %d: state: %d' % (job.job_id, state))
         job.job_status = state
 
-    MAX_RUNNERS=1
-    PROCS_RUNNER=1
     def check_load():
-        #time.sleep(1)
-        # TODO: use max runners here!
-        try:
-            out = str(subprocess.check_output(["pidof", EXECUTABLE])).split()
-        except:
-            return True
+        global started_runners
+        return started_runners < MAX_RUNNERS
 
-        print('========= len out:%d/%d' % (len(out), MAX_RUNNERS* PROCS_RUNNER))
-        if len(out) >= MAX_RUNNERS * PROCS_RUNNER:
-        #if len(out) > 1:
-            return False
-        else:
-            time.sleep(2)
-            return True
 
     def kill_job(job):
         os.system('kill '+str(job.job_id))
