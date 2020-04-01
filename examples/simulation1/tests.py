@@ -8,6 +8,12 @@ import pandas as pd
 from io import StringIO
 
 import time
+from threading import Thread
+
+import subprocess
+import signal
+
+import random
 
 executable='simulation1'
 total_steps=3
@@ -18,23 +24,53 @@ procs_server=1
 procs_runner=1
 n_runners=1
 
+def killing_giraffe(name):
+    p = subprocess.Popen(['ps', '-x'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    pids = []
+    for line in out.splitlines():
+        if name in line.decode():
+            pids.append(int(line.split(None, 1)[0]))
+    assert len(pids) > 0
+    os.kill(random.choice(pids), signal.SIGKILL)
+
+def compare(reference_file):
+    print('Compare with %s...' % reference_file)
+    cmd = 'diff -s --side-by-side STATS/output.txt %s' % reference_file
+    ret = subprocess.call(cmd.split())
+    if ret != 0:
+        print("failed! Wrong output.txt generated!")
+        exit(ret)
+
+def get_csv_section(filename, section_name):
+    with open(filename, 'r') as f:
+        in_section = False
+        csv = ''
+        for line in f.readlines():
+            if ('End ' + section_name) in line:
+                return pd.read_csv(StringIO(csv))
+            if in_section:
+                csv += line
+            if section_name in line:
+                in_section = True
+        if (in_section):
+            print('Error Did not find section "End %s" marker in %s' %
+                    (section_name, filename))
+        else:
+            print('Error Did not find section "%s" marker in %s' %
+                    (section_name, filename))
+
+
+    assert False  # section begin or section end not found
+
+
 
 def get_run_information():
-    marker = 0
-    csv = ''
-    with open('STATS/server.log', 'r') as f:
-        marker = 0
-        for line in f.readlines():
-            marker -= 1
-            if marker > 0:
-                csv += line
-            if marker == 1:
-                return pd.read_csv(StringIO(csv))
-            if '------------------- Run information(csv): -------------------' in line:
-                marker = 3
+    return get_csv_section('STATS/server.log', 'Run information')
 
 
-    assert False  # Should be never reached. Wrong log file? Compiled without timing?
+def get_timing_information():
+    return get_csv_section('STATS/server.log', 'Timing information')
 
 
 def run():
@@ -71,10 +107,28 @@ if testcase == 'test-crashing-runner':
     procs_runner = 2
     n_runners = 10
 
+    class Giraffe(Thread):
+        def run(self):
+            time.sleep(2)
+            print('Crashing a runner...')
+            killing_giraffe('simulation1')
+            time.sleep(7)
+            print('Crashing a runner...')
+            killing_giraffe('simulation1')
+
+    giraffe = Giraffe()
+    giraffe.start()
     run()
 
-    print('TODO: validate')
-    sys.exit(0)
+    # wait for giraffe to finish:
+    giraffe.join()
+
+    compare('reference-giraffe.txt')
+
+    ti = get_timing_information()
+    assert len(ti['iteration']) == 200
+    assert ti['min_runners'][199] == 8
+    assert ti['max_runners'][199] == 8
 
 elif testcase == 'test-crashing-server':
     assert False # unimplemented
@@ -113,12 +167,8 @@ elif testcase == 'test-different-paralellism':
 
         run()
 
-        import subprocess
         # runner 0 does the output.
-        ret = subprocess.call('diff -s --side-by-side STATS/output.txt reference.txt'.split())
-        if ret != 0:
-            print("failed! Wrong output.txt generated!")
-            exit(ret)
+        compare('reference.txt')
 
 
         used_runners = get_run_information()['number runners(max)'][0]
@@ -127,12 +177,12 @@ elif testcase == 'test-different-paralellism':
                     (used_runners, n_runners))
             exit(1)
 
-        print("passed!")
 
-    exit(0)
 
 else:
     print('Error! does not know the testcase %s' % testcase)
     assert False
 
+print("passed!")
+exit(0)
 
