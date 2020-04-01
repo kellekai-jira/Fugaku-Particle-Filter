@@ -244,6 +244,32 @@ def run_melissa_da_study(
     os.chdir(old_cwd)
 
 
+def check_stateless(simulation_executable):
+    run_melissa_da_study(
+        executable=simulation_executable,
+        total_steps=3,
+        ensemble_size=1,
+        assimilator_type=ASSIMILATOR_CHECK_STATELESS,
+        cluster_name='local',
+        procs_server=1,
+        procs_runner=1,
+        n_runners=1,
+        show_server_log = False,
+        show_simulation_log = False)
+
+    with open('STATS/server.log', 'r') as f:
+        for line in f.readlines():
+            if '**** Check Successful' in line:
+                print('Simulation %s seems stateless'
+                        % simulation_executable)
+                return True
+
+    print('Simulation %s is stateful and thus cannot be used with melissa-da')
+    return False
+
 # exporting for import * :
-__all__ = ['run_melissa_da_study', 'ASSIMILATOR_PDAF', 'ASSIMILATOR_CHECK_STATELESS',
-           'ASSIMILATOR_DUMMY', 'ASSIMILATOR_EMPTY', 'ASSIMILATOR_DUMMY']
+__all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
+           'ASSIMILATOR_CHECK_STATELESS',
+           'ASSIMILATOR_DUMMY',
+           'ASSIMILATOR_EMPTY',
+           'ASSIMILATOR_DUMMY']

@@ -130,6 +130,10 @@ if testcase == 'test-crashing-runner':
     assert ti['min_runners'][199] == 8
     assert ti['max_runners'][199] == 8
 
+
+    # had 10 runners at the beginning?
+    assert 10 in list(ti['min_runners'])
+
 elif testcase == 'test-crashing-server':
     assert False # unimplemented
 elif testcase == 'test-crashing-launcher':
@@ -177,7 +181,10 @@ elif testcase == 'test-different-paralellism':
                     (used_runners, n_runners))
             exit(1)
 
-
+elif testcase == 'test-check-stateless':
+    assert check_stateless('simulation1')
+    assert check_stateless('simulation1-stateful') == False
+    assert check_stateless('simulation1-hidden')
 
 else:
     print('Error! does not know the testcase %s' % testcase)
