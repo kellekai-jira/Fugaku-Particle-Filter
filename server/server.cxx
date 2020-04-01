@@ -1207,10 +1207,7 @@ int main(int argc, char * argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
 
     std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
-#define USE_LAUNCHER
-#ifdef USE_LAUNCHER
     std::shared_ptr<LauncherConnection> launcher;
-#endif
 
     context = zmq_ctx_new ();
     int major, minor, patch;
@@ -1235,22 +1232,7 @@ int main(int argc, char * argv[])
         ZMQ_CHECK(rc);
         assert(rc == 0);
 
-#ifdef USE_LAUNCHER
         launcher = std::make_shared<LauncherConnection>(context, argv[argc-1]);
-#else
-        // write nodename into file (must be last commandline argument)
-        char * hostname_file = argv[argc-1];
-        std::fstream f(hostname_file, f.binary | f.trunc | f.out);
-        if (f.is_open())
-        {
-            f << "tcp://" << hostname << ":4000" << std::endl;
-        }
-        else
-        {
-            L("could not open %s to write the hostname in it!", hostname_file);
-            exit(1);
-        }
-#endif
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
@@ -1284,10 +1266,7 @@ int main(int argc, char * argv[])
     if (comm_rank == 0)
     {
         // poll configuration socket
-        items_to_poll++;
-#ifdef USE_LAUNCHER
-        items_to_poll++;
-#endif
+        items_to_poll += 2;
     }
 
     // Server main loop:
@@ -1306,9 +1285,7 @@ int main(int argc, char * argv[])
         if (comm_rank == 0)
         {
             items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
-#ifdef USE_LAUNCHER
             items[2] = {launcher->getTextPuller(), 0, ZMQ_POLLIN, 0};
-#endif
         }
 
 
@@ -1325,14 +1302,12 @@ int main(int argc, char * argv[])
                         data_response_port_names);
             }
 
-#ifdef USE_LAUNCHER
             if (items[2].revents & ZMQ_POLLIN)
             {
                 launcher->receiveText();
             } else {
                 launcher->checkLauncherDueDate();
             }
-#endif
         }
 
         // coming from fresh init...
@@ -1452,13 +1427,11 @@ int main(int argc, char * argv[])
 
     // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
     // sleep(3);
-#ifdef USE_LAUNCHER
     if (comm_rank == 0)
     {
         // send stop message, close the launcher sockets before the context is destroyed!
         launcher.reset();
     }
-#endif
 
     zmq_close(data_response_socket);
     if (comm_rank == 0)

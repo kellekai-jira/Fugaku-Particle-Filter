@@ -138,7 +138,7 @@ elif testcase == 'test-crashing-server':
     assert False # unimplemented
 elif testcase == 'test-crashing-launcher':
     assert False # unimplemented
-elif testcase == 'test-different-paralellism':
+elif testcase == 'test-different-parallelism':
     MAX_SERVER_PROCS = 3
     MAX_SIMULATION_PROCS = 3
     MAX_RUNNERS = 3
