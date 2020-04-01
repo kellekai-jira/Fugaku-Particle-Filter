@@ -15,6 +15,7 @@
 ###################################################################
 
 import os
+import sys
 import socket
 import time
 import subprocess
@@ -38,7 +39,7 @@ def run_melissa_da_study(
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
-        cluster_name='local',
+        cluster_name='local',  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
         procs_server=1,
         procs_runner=1,
         n_runners=1,
@@ -242,6 +243,9 @@ def run_melissa_da_study(
 
 
     os.chdir(old_cwd)
+
+    # flush print output to the console
+    sys.stdout.flush()
 
 
 def check_stateless(simulation_executable):

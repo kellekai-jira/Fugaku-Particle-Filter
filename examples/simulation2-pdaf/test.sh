@@ -5,7 +5,7 @@
 
 source ../../build/install/bin/melissa-da_set_env.sh
 
-cd output
+cd STATS
 
 echo test with verification from standard model
 

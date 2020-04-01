@@ -19,6 +19,6 @@ target_link_libraries(simulation2-pdaf melissa_api)
 
 INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
 #${CMAKE_CURRENT_SOURCE_DIR}/test.sh
-add_test(NAME Simulation2-PDAF
-    COMMAND ${in_env} ./run-simulation2-pdaf.sh test
+add_test(NAME simulation2-pdaf
+    COMMAND ${in_env} python ./tests.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
