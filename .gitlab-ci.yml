@@ -1,0 +1,26 @@
+stages:
+  - build
+  - test
+
+build:
+  type: build
+  tags:
+    - linux
+  script:
+    # Do not build zmq if it is already installed by the system to speed up run
+    - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10"
+  artifacts:
+    paths:
+      - build/
+      - install/
+
+test:
+  type: test
+  tags:
+    - linux
+  script:
+    - "cd build && ctest --verbose"
+  dependencies:
+    - build
+
+
