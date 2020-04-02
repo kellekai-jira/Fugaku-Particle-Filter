@@ -20,10 +20,12 @@ echo for this type rm $verification_path/ens_06_step08_ana.txt
 
 # To create the testset
 if [ ! -f "$verification_path/ens_06_step08_ana.txt" ]; then
+  set -e
   cd $verification_path
-  make model_pdaf
+  PDAF_ARCH=linux_gfortran_openmpi make model_pdaf
   mpirun -np 18 ./model_pdaf -dim_ens 9
   cd -
+  set +e
 fi
 
 
@@ -94,4 +96,5 @@ else
   echo FAILED! ERROR!
   echo $failed tests failed!
   echo see failed.log!
+  exit 1
 fi
