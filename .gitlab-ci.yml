@@ -11,24 +11,23 @@ build_deps:
   tags:
     - melissa-da
   script:
-    # Do not build zmq if it is already installed by the system to speed up run
-    - "mkdir melissa/build && cd melissa/build && cmake .. && make"
-    - ls -la
-    - find . -type d -iname "install"
-    - find . -type d -iname "build"
+    # don't forget to cd backwards at the ends so the artifacts can be found
+    - "mkdir melissa/build && cd melissa/build && cmake .. && make install && cd ../.."
   artifacts:
     paths:
-      - install/
+      - melissa/install/
 
 build:
   stage: build
   tags:
     - melissa-da
   script:
-    # Do not build zmq if it is already installed by the system to speed up run
-    - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10"
+    # don't forget to cd backwards at the ends so the artifacts can be found
+    - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10 install && cd .."
   artifacts:
     paths:
+      # export further...
+      - melissa/install/
       - build/
   dependencies:
     - build_deps
@@ -38,6 +37,11 @@ test:
   tags:
     - melissa-da
   script:
+    - find
+    - ls -la
+    - pwd
+    - find . -type d -iname "install"
+    - find . -type d -iname "build"
     - "cd build && ctest --verbose"
   dependencies:
     - build

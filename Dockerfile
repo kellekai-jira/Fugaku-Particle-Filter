@@ -40,3 +40,6 @@ ENV OMPI_MCA_btl "^vader"
 
 VOLUME /home/docker/.gitlab-runner
 WORKDIR /home/docker
+
+
+WARNING: don't forget to copy PDAF-D_V1.15 in /docker/workspace !!
