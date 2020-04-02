@@ -3,22 +3,7 @@ cmake_minimum_required(VERSION 3.2.2)
 enable_testing()
 
 find_package(MPI REQUIRED)
-# ZeroMQ #
-
-option(INSTALL_ZMQ OFF)
-if(INSTALL_ZMQ)
-  include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
-  ExternalProject_Add(ZeroMQ
-  URL https://github.com/zeromq/libzmq/releases/download/v4.3.1/zeromq-4.3.1.tar.gz
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/ZeroMQ
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}
-             -DCMAKE_INSTALL_LIBDIR:PATH=${CMAKE_INSTALL_PREFIX}/lib)
-  set(ZeroMQ_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
-  set(ZeroMQ_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}zmq${CMAKE_SHARED_LIBRARY_SUFFIX}" )
-  MESSAGE(STATUS "ZeroMQ will be installed")
-else(INSTALL_ZMQ)
-  find_package(ZeroMQ NO_MODULE REQUIRED)
-endif(INSTALL_ZMQ)
+include(melissa/melissa-zmq.cmake)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
