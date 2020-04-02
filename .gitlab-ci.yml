@@ -13,9 +13,12 @@ build_deps:
   script:
     # Do not build zmq if it is already installed by the system to speed up run
     - "mkdir melissa/build && cd melissa/build && cmake .. && make"
+    - ls -la
+    - find . -type d -iname "install"
+    - find . -type d -iname "build"
   artifacts:
     paths:
-      - melissa/install/
+      - install/
 
 build:
   stage: build
