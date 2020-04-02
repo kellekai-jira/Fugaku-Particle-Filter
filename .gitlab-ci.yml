@@ -37,11 +37,6 @@ test:
   tags:
     - melissa-da
   script:
-    - find
-    - ls -la
-    - pwd
-    - find . -type d -iname "install"
-    - find . -type d -iname "build"
     - "cd build && ctest --verbose"
   dependencies:
     - build
