@@ -112,7 +112,10 @@ if testcase == 'test-crashing-runner':
             time.sleep(2)
             print('Crashing a runner...')
             killing_giraffe('simulation1')
-            time.sleep(7)
+            time.sleep(4)
+            print('Crashing a runner...')
+            killing_giraffe('simulation1')
+            time.sleep(4)
             print('Crashing a runner...')
             killing_giraffe('simulation1')
 
@@ -127,12 +130,22 @@ if testcase == 'test-crashing-runner':
 
     ti = get_timing_information()
     assert len(ti['iteration']) == 200
-    assert ti['min_runners'][199] == 8
-    assert ti['max_runners'][199] == 8
 
+    was_at_max = False
+    minimum = 10
+    for index, row in ti.iterrows():
+        if row['max_runners'] == row['min_runners'] == 10:
+            was_at_max = True
+        if was_at_max:
+            if row['max_runners'] == row['min_runners'] and row['max_runners'] < minimum:
+                minimum = row['max_runners']
 
+    assert minimum < 10
     # had 10 runners at the beginning?
-    assert 10 in list(ti['min_runners'])
+    assert was_at_max
+
+    if ti['max_runners'][199] > minimum:
+        print('Launcher even recovered some of the broken runners')
 
 elif testcase == 'test-crashing-server':
     assert False # unimplemented
