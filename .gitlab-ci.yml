@@ -7,9 +7,9 @@ stages:
   - test
 
 build_deps:
-  type: build
+  stage: build_deps
   tags:
-    - linux
+    - melissa-da
   script:
     # Do not build zmq if it is already installed by the system to speed up run
     - "mkdir melissa/build && cd melissa/build && cmake .. && make"
@@ -18,9 +18,9 @@ build_deps:
       - melissa/install/
 
 build:
-  type: build
+  stage: build
   tags:
-    - linux
+    - melissa-da
   script:
     # Do not build zmq if it is already installed by the system to speed up run
     - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10"
@@ -28,12 +28,12 @@ build:
     paths:
       - build/
   dependencies:
-    - build_melissa
+    - build_deps
 
 test:
-  type: test
+  stage: test
   tags:
-    - linux
+    - melissa-da
   script:
     - "cd build && ctest --verbose"
   dependencies:
