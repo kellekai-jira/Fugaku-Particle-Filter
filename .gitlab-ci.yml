@@ -2,8 +2,20 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 stages:
+  - build_melissa
   - build
   - test
+
+build_melissa:
+  type: build
+  tags:
+    - linux
+  script:
+    # Do not build zmq if it is already installed by the system to speed up run
+    - "mkdir melissa/build && cd melissa/build && cmake .. && make"
+  artifacts:
+    paths:
+      - melissa/install/
 
 build:
   type: build
@@ -15,7 +27,8 @@ build:
   artifacts:
     paths:
       - build/
-      - install/
+  dependencies:
+    - build_melissa
 
 test:
   type: test
