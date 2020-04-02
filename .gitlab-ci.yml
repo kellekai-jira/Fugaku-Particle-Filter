@@ -2,11 +2,11 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 stages:
-  - build_melissa
+  - build_deps
   - build
   - test
 
-build_melissa:
+build_deps:
   type: build
   tags:
     - linux
