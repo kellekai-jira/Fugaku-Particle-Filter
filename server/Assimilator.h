@@ -12,6 +12,8 @@
 #include "Field.h"
 #include "MpiManager.h"
 
+// FIXME: move all assimilators into
+
 enum AssimilatorType
 {
     ASSIMILATOR_DUMMY = 0,
@@ -35,7 +37,7 @@ public:
 
 // returns how many steps must be performed by the model in the next iteration
 // returns -1 if it wants to quit.
-    virtual int do_update_step() = 0;
+    virtual int do_update_step(const int current_step) = 0;
 
 // executed when first state messages are received from the simulations.
 // normally such messages are discarded and a proper analysis state is sent back
@@ -55,7 +57,8 @@ public:
 
     static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
                                                Field & field, const int
-                                               total_steps);
+                                               total_steps,
+                                               MpiManager & _mpi);
 };
 
 

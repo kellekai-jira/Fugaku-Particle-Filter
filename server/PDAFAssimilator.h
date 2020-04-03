@@ -16,12 +16,13 @@ class PDAFAssimilator : public Assimilator
 {
 private:
     Field & field;
+    MpiManager & mpi;
 
     void getAllEnsembleMembers();
 public:
     ~PDAFAssimilator();
-    PDAFAssimilator(Field & field, const int total_steps);
-    virtual int do_update_step();
+    PDAFAssimilator(Field & field, const int total_steps, MpiManager & mpi);
+    virtual int do_update_step(const int current_step);
 };
 
 #endif /* PDAFASSIMILATOR_H_ */

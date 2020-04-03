@@ -17,9 +17,10 @@ private:
     Field & field;
     const int total_steps;
     int step = 0;
+    MpiManager & mpi;
 public:
-    EmptyAssimilator(Field & field_, const int total_steps);
-    virtual int do_update_step();
+    EmptyAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);
+    virtual int do_update_step(const int current_step);
 };
 
 #endif /* EMPTYASSIMILATOR_H_ */

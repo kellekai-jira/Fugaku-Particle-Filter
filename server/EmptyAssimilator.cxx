@@ -8,8 +8,8 @@
 #include "EmptyAssimilator.h"
 #include <algorithm>
 
-EmptyAssimilator::EmptyAssimilator(Field & field_, const int total_steps_) :
-    field(field_), total_steps(total_steps_)
+EmptyAssimilator::EmptyAssimilator(Field & field_, const int total_steps_, MpiManager & mpi_) :
+    field(field_), total_steps(total_steps_), mpi(mpi_)
 {
     nsteps = 1;
 
@@ -24,7 +24,7 @@ EmptyAssimilator::EmptyAssimilator(Field & field_, const int total_steps_) :
 
 }
 
-int EmptyAssimilator::do_update_step( MpiManager & mpi ) {
+int EmptyAssimilator::do_update_step(const int current_step) {
     L("Doing empty update step...\n");
     MPI_Barrier(mpi.comm());
 

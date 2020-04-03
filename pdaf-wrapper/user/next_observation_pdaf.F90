@@ -11,16 +11,16 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
 ! Used in the filters: SEEK/SEIK/EnKF/LSEIK/ETKF/LETKF/ESTKF/LESTKF
 !
 ! The subroutine is called before each forecast phase
-! by PDAF\_get\_state. It has to initialize the number 
-! of time steps until the next available observation 
-! (nsteps) and the current model time (time). In 
+! by PDAF\_get\_state. It has to initialize the number
+! of time steps until the next available observation
+! (nsteps) and the current model time (time). In
 ! addition the exit flag (exit) has to be initialized.
-! It indicates if the data assimilation process is 
-! completed such that the ensemble loop in the model 
+! It indicates if the data assimilation process is
+! completed such that the ensemble loop in the model
 ! routine can be exited.
 !
-! The routine is called by all processes. 
-!         
+! The routine is called by all processes.
+!
 ! Version for the dummy model. Identical for
 ! mode- and domain-decomposition .
 !
@@ -36,6 +36,9 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
   USE mod_model, &
        ONLY: total_steps
 
+  USE my_state_accessors, &
+      ONLY: current_step
+
   IMPLICIT NONE
 
 ! !ARGUMENTS:
@@ -49,26 +52,28 @@ SUBROUTINE next_observation_pdaf(stepnow, nsteps, doexit, time)
 !EOP
 
 
+!current_step  = stepnow  ! don't use this to restart from checkpoint...
+
 ! *******************************************************
 ! *** Set number of time steps until next observation ***
 ! *******************************************************
 
   time = 0.0          ! Not used in this implementation
 
-  IF (stepnow + nsteps <= total_steps) THEN
+  IF (current_step + nsteps <= total_steps) THEN
      ! *** During the assimilation process ***
      nsteps = delt_obs   ! This assumes a constant time step interval
      doexit = 0          ! Do not exit assimilation
 
      IF (mype_world == 0) WRITE (*, '(i7, 3x, a, i7)') &
-          stepnow, 'Next observation at time step', stepnow + nsteps
+          current_step, 'Next observation at time step', current_step + nsteps
   ELSE
      ! *** End of assimilation process ***
      nsteps = 0          ! No more steps
      doexit = 1          ! Exit assimilation
 
      IF (mype_world == 0) WRITE (*, '(i7, 3x, a)') &
-          stepnow, 'No more observations - end assimilation'
+          current_step, 'No more observations - end assimilation'
   END IF
 
 END SUBROUTINE next_observation_pdaf

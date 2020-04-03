@@ -10,7 +10,7 @@
 #include <cmath>
 
 CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_, const int
-                                                     total_steps) :
+                                                     total_steps, MpiManager & mpi_) :
     field(field_)
 {
     L("**** Performing the stateless checking instead of assimilation...");
@@ -56,8 +56,9 @@ void CheckStatelessAssimilator::print_result(const bool good)
     L("**** members and inited due to the first received state!");
 }
 
-int CheckStatelessAssimilator::do_update_step()
+int CheckStatelessAssimilator::do_update_step(const int current_step)
 {
+    // TODO: assert: not recovering from checkpoint. this will break things here as we do not use current_step
     static bool isFirst = true;
     if (isFirst)
     {

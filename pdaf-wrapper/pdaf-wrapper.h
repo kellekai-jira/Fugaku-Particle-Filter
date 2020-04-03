@@ -28,6 +28,8 @@ int cwrapper_PDAF_get_state(int * doexit, const int * dim_state_analysis,
 void cwrapper_PDAF_put_state(const int * dim_state_background, const
                              double * state_background[], int * status);
 
+void cwrapper_set_current_step(const int * new_current_step);
+
 #ifdef __cplusplus
 }
 #endif

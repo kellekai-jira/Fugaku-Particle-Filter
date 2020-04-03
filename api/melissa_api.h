@@ -49,7 +49,7 @@ int melissa_expose_f(const char *field_name, double *values)
 /// returns -1 if no state is currently calculated.
 int melissa_get_current_state_id();
 
-int melissa_get_current_timestamp();
+int melissa_get_current_step();
 
 
 #ifdef __cplusplus

@@ -33,8 +33,8 @@ private:
                                double * values_hidden);
 
 public:
-    CheckStatelessAssimilator(Field & field_, const int total_steps);
-    virtual int do_update_step();
+    CheckStatelessAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);
+    virtual int do_update_step(const int current_step);
     virtual void on_init_state(const int runner_id, const Part & part, const
                                double * values, const Part & hidden_part,
                                const double * values_hidden);

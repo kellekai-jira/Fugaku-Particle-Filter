@@ -4,12 +4,12 @@
 #include <algorithm>
 #include "MpiManager.h"
 
-void FTmodule::init( MpiManager & mpi, int & epoch_counter ) 
+void FTmodule::init( MpiManager & mpi, int & epoch_counter )
 {
     m_checkpointing = false;
     id_check.clear();
     FTI_Init( FTI_CONFIG, mpi.comm() );
-#ifdef WITH_FTI_THREADS 
+#ifdef WITH_FTI_THREADS
     MPI_Comm_dup( FTI_COMM_WORLD, &m_fti_comm_dup );
     mpi.register_comm( "fti_comm_dup", m_fti_comm_dup );
     mpi.set_comm( "fti_comm_dup" );
@@ -25,7 +25,7 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     hsize_t count = 1;
     FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
     FTI_Protect( m_id_offset, &epoch_counter, 1, FTI_INTG );
-    FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset ); 
+    FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset );
     m_id_offset++;
     m_restart = static_cast<bool>(FTI_Status());
     m_protected = false;
@@ -33,14 +33,10 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
 
 void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & field )
 {
-    int comm_size_server = mpi.size(); 
+    int comm_size_server = mpi.size();
     int comm_size_runner = field->local_vect_sizes_runner.size();
     size_t local_vect_sizes_server[comm_size_server];
-    size_t global_vect_size = 0;
-    for (size_t i = 0; i < comm_size_runner; ++i)
-    {
-        global_vect_size += field->local_vect_sizes_runner[i];
-    }
+    size_t global_vect_size = field->globalVectSize();
     for (int i = 0; i < comm_size_server; ++i)
     {
         // every server rank gets the same amount
@@ -59,7 +55,7 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
     }
     int myRank = mpi.rank();
     int dataset_rank = 1;
-    hsize_t state_dim = field->globalVectSize();    
+    hsize_t state_dim = field->globalVectSize();
     int dataset_id = 0 + m_id_offset; // equals state_id
     int subset_id = 0 + m_id_offset;
     int N_e = field->ensemble_members.size();
@@ -78,7 +74,7 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
             FTI_Protect( subset_id, ptr, it_part->send_count, FTI_DBLE );
             count_tot += count;
-            FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id ); 
+            FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id );
             std::string subset_name(dataset_name);
             subset_name += "_" + std::to_string( it_part->rank_runner );
             id_map[subset_name] = subset_id;
@@ -105,9 +101,9 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
         }
     }
 }
-  
-void FTmodule::initCP( int epoch ) 
-{   
+
+void FTmodule::initCP( int epoch )
+{
     if( !m_checkpointing ) {
         id_check.clear();
         m_checkpointing = true;
@@ -118,7 +114,7 @@ void FTmodule::initCP( int epoch )
     }
 }
 
-void FTmodule::flushCP( void ) 
+void FTmodule::flushCP( void )
 {
 #ifdef WITH_FTI_THREADS
     if( m_checkpointing ) {
@@ -128,7 +124,7 @@ void FTmodule::flushCP( void )
 #endif
 }
 
-void FTmodule::finalizeCP( void ) 
+void FTmodule::finalizeCP( void )
 {
     if( m_checkpointing ) {
 #ifdef WITH_FTI_THREADS

@@ -51,7 +51,7 @@
 #include <set>
 
 #include "Assimilator.h"
-#include "CheckStatelessAssimilator.h"  // FIXME: needed?
+//#include "CheckStatelessAssimilator.h"  // FIXME: needed?
 
 #include "ServerTiming.h"
 
@@ -85,7 +85,6 @@ const int TAG_ALL_FINISHED = 45;
 
 int highest_received_task_id = 0;
 
-unsigned int assimilation_cycles = 0;
 
 // only important on ranks != 0:
 int highest_sent_task_id = 0;
@@ -95,6 +94,9 @@ size_t IDENTITY_SIZE = 0;
 void * context;
 void * data_response_socket;
 
+unsigned int assimilation_cycles = 0;  // only used for logging stats at the end.
+
+// will be counted as announced by chosen assimilator. Will also b checkpointed to restart...
 int current_step = 0;  // will effectively start at 1.
 int current_nsteps = 1;  // this is important if there are less model task runners than ensemble members. for every model task runner at the beginning an ensemble state will be generated.
 
@@ -467,7 +469,7 @@ void broadcast_field_information_and_calculate_parts() {
               runner_comm_size,
               my_MPI_SIZE_T, 0, mpi.comm());                                                             // 4:local_vect_sizes_runner_hidden
 
-    field->calculate_parts(comm_size);  // FIXME: find all MPI_COMM_SIZE and replace by mpi.comm() !
+    field->calculate_parts(comm_size);
 
 }
 
@@ -658,7 +660,7 @@ void init_new_timestamp()
     size_t connections =
         field->connected_runner_ranks.size();
     // init or finished....
-    assert(current_step == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE *
+    assert(assimilation_cycles == 0 || finished_sub_tasks.size() == ENSEMBLE_SIZE *
            connections);
 
     assert(scheduled_sub_tasks.size() == 0);
@@ -1128,12 +1130,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
     if (finished)
     {
 #ifdef WITH_FTI
+        // FIXME: shortcut to here if recovering (do not do first background state calculation!)
         FT.recover();
 #endif
         // get new analysis states from update step
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
-        current_nsteps = assimilator->do_update_step();
+        current_nsteps = assimilator->do_update_step(current_step); // FIXME do time dependent update step!!
         trigger(STOP_FILTER_UPDATE, current_step);
 
 #ifdef WITH_FTI
@@ -1142,7 +1145,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.finalizeCP();
 #endif
 
-        assimilation_cycles++;  // FIXME: export this to fti, and give it to the assimilator! so it knows where to start!
+        assimilation_cycles++;
 //      }
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
         {
@@ -1174,7 +1177,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
         }
 #ifdef WITH_FTI
-        FT.initCP( current_step );  // FIXME: should be assimilation_cycle?
+        FT.initCP( current_step );
 #endif
     }
 
@@ -1342,7 +1345,7 @@ int main(int argc, char * argv[])
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
-                    ASSIMILATOR_TYPE, *field, param_total_steps);
+                    ASSIMILATOR_TYPE, *field, param_total_steps, mpi);
                 current_nsteps = assimilator->getNSteps();
 
 #ifdef WITH_FTI

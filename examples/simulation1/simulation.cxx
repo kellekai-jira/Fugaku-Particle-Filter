@@ -92,7 +92,7 @@ int main(int argc, char * args[])
     do
     {
 #ifdef BE_STATEFUL
-        // cheange the secret test
+        // advance secret state
         secret_state.at(0)++;
         secret_state.at(1)++;
 #endif
@@ -125,8 +125,21 @@ int main(int argc, char * args[])
         if (nsteps > 0 && is_first_timestep)
         {
             printf("First timestep to propagate: %d\n",
-                   melissa_get_current_timestamp());
+                   melissa_get_current_step());
             is_first_timestep = false;
+
+#ifndef USE_HIDDEN_STATE
+#ifdef BE_STATEFUL
+            // Recover secret/hidden state from current_step
+            int step = melissa_get_current_step();
+            for (int i = 1; i < step; ++i)
+            {
+                // advance secret state:
+                secret_state.at(0)++;
+                secret_state.at(1)++;
+            }
+#endif
+#endif
         }
 
         // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
@@ -140,8 +153,8 @@ int main(int argc, char * args[])
             if (comm_rank == 0)
             {
                 ofstream myfile;
-                // 1 is the smallest timestamp.
-                if (melissa_get_current_timestamp() == 1)
+                // 1 is the smallest time step.
+                if (melissa_get_current_step() == 1)
                 {
                     // remove old file...
                     myfile.open ("output.txt", ios::trunc);

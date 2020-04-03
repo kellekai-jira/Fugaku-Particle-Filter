@@ -20,8 +20,8 @@ PDAFAssimilator::~PDAFAssimilator() {
     cwrapper_PDAF_deallocate();
 }
 
-PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps)
-    : field(field_) {
+PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManager & mpi_)
+    : field(field_), mpi(mpi_) {
     // call to fortran:
     int vectsize = field.globalVectSize();
 
@@ -70,7 +70,7 @@ void PDAFAssimilator::getAllEnsembleMembers()
 }
 
 // called if every state was saved. returns nsteps, how many steps to be forcasted in the following forcast phase. returns -1 if it wants to quit.
-int PDAFAssimilator::do_update_step( MpiManager & mpi )
+int PDAFAssimilator::do_update_step(const int current_step)
 {
     int status;      //    ! Status flag for filter routines
 
@@ -82,6 +82,9 @@ int PDAFAssimilator::do_update_step( MpiManager & mpi )
     //        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
     //        ! *** PDAF: Distinct calls due to different name of analysis routine ***
     // TODO: at the moment we only support estkf!
+
+    cwrapper_set_current_step(&current_step);
+
     for (auto eit = field.ensemble_members.begin(); eit !=
          field.ensemble_members.end(); eit++)
     {

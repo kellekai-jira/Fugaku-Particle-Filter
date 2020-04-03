@@ -4,6 +4,9 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
 
   USE mod_assimilation, &
     ONLY: dim_state_p, dim_state, dim_ens, screen
+
+  USE my_state_accessors, &
+      ONLY: current_step
   IMPLICIT NONE
 
   INTEGER(kind=C_INT), intent(in) :: param_dim_state     ! Global state dimension
@@ -18,6 +21,7 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
 
   dim_ens = param_ensemble_size
 
+  current_step = 0 ! TODO: or set to one?
 
 
   ! Revise parallelization for ensemble assimilation
@@ -85,6 +89,7 @@ implicit none
 save
 real(C_DOUBLE), POINTER :: distribute_state_to(:)
 real(C_DOUBLE), POINTER :: collect_state_from(:)
+integer :: current_step
 end module
 
 ! called by get_state
@@ -267,3 +272,22 @@ SUBROUTINE cwrapper_PDAF_put_state(dim_state_background, state_background, statu
   !END IF
 
 END SUBROUTINE
+
+SUBROUTINE cwrapper_set_current_step(new_current_step) &
+  BIND(C, name='cwrapper_set_current_step')
+
+  USE iso_c_binding
+
+  USE my_state_accessors, &
+       ONLY: current_step
+
+  IMPLICIT NONE
+
+! Arguments
+  INTEGER(C_INT) :: new_current_step
+
+
+  current_step = new_current_step
+
+END SUBROUTINE
+

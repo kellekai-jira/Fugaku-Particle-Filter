@@ -25,6 +25,10 @@ if(INSTALL_ZMQ)
   add_dependencies(melissa_server ZeroMQ)
 endif(INSTALL_ZMQ)
 
+if(INSTALL_FTI)
+  add_dependencies(melissa_server FTI)
+endif(INSTALL_FTI)
+
 
 target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrapper)
 

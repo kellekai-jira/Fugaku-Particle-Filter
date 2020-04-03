@@ -21,11 +21,11 @@ struct Field
     std::vector<EnsembleMember> ensemble_members;
 
     size_t local_vect_size;
-    std::vector<size_t> local_vect_sizes_runner;
+    std::vector<size_t> local_vect_sizes_runner;  // how the field is distributed on each runner rank
     std::vector<Part> parts;
 
     size_t local_vect_size_hidden;
-    std::vector<size_t> local_vect_sizes_runner_hidden;
+    std::vector<size_t> local_vect_sizes_runner_hidden;  // how the hidden state is distributed on each runner rank
     std::vector<Part> parts_hidden;
 
     std::set<int> connected_runner_ranks;

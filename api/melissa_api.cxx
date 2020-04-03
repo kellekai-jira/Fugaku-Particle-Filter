@@ -110,10 +110,10 @@ struct ServerRankConnection
     void send(double * values, const size_t doubles_to_send,
               double * values_hidden, const size_t doubles_to_send_hidden,
               const int
-              current_state_id, const int timestamp, const
+              current_state_id, const int current_step, const
               char * field_name)
     {
-        // send simuid, rank, stateid, timestamp, field_name next message: doubles
+        // send simuid, rank, stateid, current_step, field_name next message: doubles
         zmq_msg_t msg_header, msg_data, msg_data_hidden;
         zmq_msg_init_size(&msg_header, 4 * sizeof(int) +
                           MPI_MAX_PROCESSOR_NAME * sizeof(char));
@@ -122,16 +122,16 @@ struct ServerRankConnection
         header[0] = getRunnerId();
         header[1] = getCommRank();
         header[2] = current_state_id;
-        header[3] = timestamp;         // is incremented on the server side
+        header[3] = current_step;         // is incremented on the server side
         strcpy(reinterpret_cast<char*>(&header[4]), field_name);
         D("sending on socket %p", data_request_socket);
         ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket,
                                ZMQ_SNDMORE));
 
         D(
-            "-> Simulation runnerid %d, rank %d sending stateid %d timestamp=%d fieldname=%s, %lu+%lu hidden bytes",
+            "-> Simulation runnerid %d, rank %d sending stateid %d current_step=%d fieldname=%s, %lu+%lu hidden bytes",
             getRunnerId(), getCommRank(), current_state_id,
-            timestamp,
+            current_step,
             field_name, doubles_to_send * sizeof(double),
             doubles_to_send_hidden * sizeof(double));
         D("values[0]  = %.3f", values[0]);
@@ -166,10 +166,10 @@ struct ServerRankConnection
 
     int receive(double * out_values, size_t doubles_expected,
                 double * out_values_hidden, size_t doubles_expected_hidden,
-                int * out_current_state_id, int *out_timestamp)
+                int * out_current_state_id, int *out_current_step)
     {
 // receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
-// the first message also contains out_current_state_id and out_timestamp
+// the first message also contains out_current_state_id and out_current_step
 // the 2nd message just consists of doubles that will be put into out_values
         zmq_msg_t msg;
         zmq_msg_init(&msg);
@@ -178,7 +178,7 @@ struct ServerRankConnection
         assert(zmq_msg_size(&msg) == 4 * sizeof(int));
         int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
         *out_current_state_id = buf[0];
-        *out_timestamp = buf[1];
+        *out_current_step = buf[1];
         int type = buf[2];
         int nsteps = buf[3];
         zmq_msg_close(&msg);
@@ -193,11 +193,11 @@ struct ServerRankConnection
             ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
 
             D(
-                "<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... for state %d, timestamp=%d, nsteps=%d (socket=%p)",
+                "<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... for state %d, current_step=%d, nsteps=%d (socket=%p)",
                 zmq_msg_size(&msg), doubles_expected *
                 sizeof(double),
                 doubles_expected_hidden * sizeof(double),
-                *out_current_state_id, *out_timestamp, nsteps,
+                *out_current_state_id, *out_current_step, nsteps,
                 data_request_socket);
 
             assert(zmq_msg_size(&msg) == doubles_expected *
@@ -319,7 +319,7 @@ struct Field
 {
     std::string name;
     int current_state_id;
-    int timestamp;
+    int current_step;
     size_t local_vect_size;
     size_t local_hidden_vect_size;
     std::vector<ConnectedServerRank> connected_server_ranks;
@@ -380,7 +380,7 @@ struct Field
                                   &hidden_values[csr->local_vector_offset_hidden
                                   ],
                                   csr->send_count_hidden, current_state_id,
-                                  timestamp,
+                                  current_step,
                                   field_name);
         }
 
@@ -409,7 +409,7 @@ struct Field
                 csr->send_count,
                 &values_hidden[csr->local_vector_offset_hidden],
                 csr->send_count_hidden,
-                &current_state_id, &timestamp);
+                &current_state_id, &current_step);
             assert (nsteps == -1 || nsteps == nnsteps);             // be sure that all send back the same nsteps...
             nsteps = nnsteps;
         }
@@ -589,7 +589,7 @@ void melissa_init(const char *field_name,
     // newField.current_state_id = getSimuId(); // We are beginning like this...
     field.name = field_name;
     field.current_state_id = -1;     // We are beginning like this...
-    field.timestamp = 0;
+    field.current_step = 0;
     field.local_vect_size = local_vect_size;
     field.local_hidden_vect_size = local_hidden_vect_size;
     std::vector<size_t> local_vect_sizes(getCommSize());
@@ -713,10 +713,10 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
     }
 }
 
-int melissa_get_current_timestamp()
+int melissa_get_current_step()
 {
     assert(phase == PHASE_SIMULATION);
-    return field.timestamp;
+    return field.current_step;
 }
 
 

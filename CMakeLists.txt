@@ -9,42 +9,37 @@ include(melissa/melissa-zmq.cmake)
 # FTI #
 
 option(WITH_FTI OFF)
-option(WITH_FTI_THREADS OFF)
-option(INSTALL_FTI OFF)
-if(INSTALL_FTI)
-    include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
-    ExternalProject_Add(FTI
-        GIT_REPOSITORY https://github.com/leobago/fti.git
-        GIT_TAG melissa
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/FTI
-        CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1
-        -DHDF5_ROOT=${HDF5_ROOT}
-        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
-    MESSAGE(STATUS "FTI will be installed")
-    set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
-    set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
-    set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
-    set(WITH_FTI TRUE)
-endif()
-if(WITH_FTI OR WITH_FTI_THREADS)
+if (WITH_FTI)
+    option(WITH_FTI_THREADS OFF)
+    option(INSTALL_FTI OFF)
+    if(INSTALL_FTI)
+        include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
+        ExternalProject_Add(FTI
+            GIT_REPOSITORY https://github.com/leobago/fti.git
+            GIT_TAG melissa
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS TRUE
+            PREFIX ${CMAKE_CURRENT_BINARY_DIR}/FTI
+            CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1
+            -DHDF5_ROOT=${HDF5_ROOT}
+            -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
+        MESSAGE(STATUS "FTI will be installed")
+        set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
+        set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
+        set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
+        set(WITH_FTI TRUE)
+    else()
+        set(FTI_PATH "" CACHE PATH "Path to FTI")
+        find_path(FTI_INCLUDE_DIR NAMES fti.h PATHS ${FTI_PATH}/include)
+        find_library(FTI_LIBRARY NAMES libfti.so PATHS ${FTI_PATH}/lib)
+        message("-- found fti (${FTI_LIBRARY})")
+    endif()
+
     if (WITH_FTI_THREADS)
         find_package(Threads REQUIRED)
         link_libraries(${CMAKE_THREAD_LIBS_INIT})
-        message("here")
     endif()
-    if(EXISTS "${FTI_PATH}/lib/libfti.so")
-        set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
-    else()
-        message(FATAL_ERROR "could not find FTI library in ${FTI_PATH}/lib")
-    endif()
-    if(EXISTS "${FTI_PATH}/include/fti.h")
-        set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
-    else()
-        message(FATAL_ERROR "could not find FTI header file in ${FTI_PATH}/include")
-    endif()
-    message("-- found fti (${FTI_LIBRARY})")
+
 endif()
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})

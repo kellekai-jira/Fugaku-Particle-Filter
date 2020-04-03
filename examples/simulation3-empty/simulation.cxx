@@ -87,12 +87,12 @@ int main(int argc, char * args[])
 
         nsteps = melissa_expose("variableX", state1.data(), nullptr);
         // printf("calculating from timestep %d\n",
-        //       melissa_get_current_timestamp());
+        //       melissa_get_current_step());
 
         if (nsteps > 0 && is_first_timestep)
         {
-            printf("First timestep to propagate: %d\n",
-                   melissa_get_current_timestamp());
+            printf("First time step to propagate: %d\n",
+                   melissa_get_current_step());
             is_first_timestep = false;
         }
 

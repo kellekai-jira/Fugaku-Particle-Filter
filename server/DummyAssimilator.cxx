@@ -8,8 +8,8 @@
 #include "DummyAssimilator.h"
 #include <algorithm>
 
-DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_) :
-    field(field_), total_steps(total_steps_)
+DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_, MpiManager & mpi_) :
+    field(field_), total_steps(total_steps_), mpi(mpi_)
 {
     nsteps = 1;
 
@@ -24,7 +24,7 @@ DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_) :
 
 }
 
-int DummyAssimilator::do_update_step( MpiManager & mpi ) {
+int DummyAssimilator::do_update_step(const int current_step) {
     L("Doing dummy update step...\n");
     MPI_Barrier(mpi.comm());
     int state_id = 0;
