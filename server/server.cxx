@@ -833,7 +833,7 @@ void handle_data_response() {
                                         reinterpret_cast
                                         <double*>(zmq_msg_data(
                                                       &data_msg)));
-            // checkpoint to disk 
+            // checkpoint to disk
 #ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
 #endif
@@ -1004,14 +1004,14 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
     {
 #ifdef WITH_FTI
         FT.recover();
-        FT.flushCP();
 #endif
         // get new analysis states from update step
         L("====> Update step %d/%d", current_step, TOTAL_STEPS);
         current_nsteps = assimilator->do_update_step( mpi );
-        
+
 #ifdef WITH_FTI
-	FT.finalizeCP();
+        FT.flushCP();  // TODO: put into one function
+        FT.finalizeCP();
 #endif
 //      }
 #ifdef REPORT_TIMING
@@ -1074,10 +1074,10 @@ int main(int argc, char * argv[])
 
     assert(TOTAL_STEPS > 1);
     assert(ENSEMBLE_SIZE > 0);
-    
+
     mpi.init();
 #ifdef WITH_FTI
-    FT.init( mpi, current_step ); 
+    FT.init( mpi, current_step );
 #endif
 
     comm_size = mpi.size();
@@ -1191,7 +1191,7 @@ int main(int argc, char * argv[])
                 assimilator = Assimilator::create(
                     ASSIMILATOR_TYPE, *field);
                 current_nsteps = assimilator->getNSteps();
-                
+
 #ifdef WITH_FTI
                 FT.protect_background( mpi, field );
 #endif
@@ -1294,7 +1294,7 @@ int main(int argc, char * argv[])
         zmq_close(configuration_socket);
     }
     zmq_ctx_destroy(context);
-    
+
 #ifdef WITH_FTI
     FT.finalize();
 #endif
