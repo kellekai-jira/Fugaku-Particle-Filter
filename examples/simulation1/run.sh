@@ -6,6 +6,10 @@ n_server=3
 n_simulation=3
 n_runners=4
 
+n_server=1
+n_simulation=2
+n_runners=1
+
 ensemble_size=5
 total_steps=1440
 
@@ -74,7 +78,6 @@ rm output.txt
 $MPIEXEC -n $n_server \
   -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
   $precommand $server_exe_path $total_steps $ensemble_size &
-
 sleep 1
 
 max_runner=`echo "$n_runners - 1" | bc`
@@ -85,7 +88,7 @@ do
   $MPIEXEC -n $n_simulation \
     -x MELISSA_SERVER_MASTER_NODE="tcp://localhost:4000" \
     -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    $precommand $sim_exe_path &
+    $precommand $sim_exe_path &>/dev/null &
 
 #LD_PRELOAD=/usr/lib/valgrind/libmpiwrap-amd64-linux.so $MPIEXEC -n 4 -x MELISSA_SIMU_ID=$i -x MELISSA_SERVER_MASTER_NODE="tcp://narrenkappe:4000" -x LD_LIBRARY_PATH=/home/friese/workspace/melissa-da/build_api:/home/friese/workspace/melissa/install/lib $precommand /home/friese/workspace/melissa-da/build_example-simulation/simulation1 &
 

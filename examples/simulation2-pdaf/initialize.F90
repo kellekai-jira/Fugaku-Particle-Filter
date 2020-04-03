@@ -101,7 +101,7 @@ SUBROUTINE initialize()
 
   DEALLOCATE(field)
 
-  CALL MELISSA_INIT_F(melissa_field_name, nx_p*ny, MPI_COMM_WORLD)
+  CALL MELISSA_INIT_F(melissa_field_name, nx_p*ny, 0, MPI_COMM_WORLD)
 
 
 END SUBROUTINE initialize

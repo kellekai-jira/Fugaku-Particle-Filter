@@ -10,3 +10,5 @@ output.txt
 *.mod
 *_ana.txt
 *_for.txt
+STATS/
+*.log

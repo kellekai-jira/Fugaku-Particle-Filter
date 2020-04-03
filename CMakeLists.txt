@@ -1,23 +1,10 @@
-project(melissa LANGUAGES CXX C Fortran)
+project(Melissa LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.2.2)
+enable_testing()
 
 find_package(MPI REQUIRED)
-# ZeroMQ #
+include(melissa/melissa-zmq.cmake)
 
-option(INSTALL_ZMQ OFF)
-if(INSTALL_ZMQ)
-  include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
-  ExternalProject_Add(ZeroMQ
-  URL https://github.com/zeromq/libzmq/releases/download/v4.3.1/zeromq-4.3.1.tar.gz
-  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/ZeroMQ
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}
-             -DCMAKE_INSTALL_LIBDIR:PATH=${CMAKE_INSTALL_PREFIX}/lib)
-  set(ZeroMQ_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
-  set(ZeroMQ_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}zmq${CMAKE_SHARED_LIBRARY_SUFFIX}" )
-  MESSAGE(STATUS "ZeroMQ will be installed")
-else(INSTALL_ZMQ)
-  find_package(ZeroMQ NO_MODULE REQUIRED)
-endif(INSTALL_ZMQ)
 
 # FTI #
 
@@ -59,7 +46,6 @@ if(WITH_FTI OR WITH_FTI_THREADS)
     endif()
     message("-- found fti (${FTI_LIBRARY})")
 endif()
-
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 
@@ -83,15 +69,23 @@ SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
 
 # need all these options (especially default integer for mkl)
 #SET(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
-SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+    SET(CMAKE_Fortran_FLAGS "-m64 -real-size 64")
+ELSE()
+    SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
+endif()
 
-SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O2 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
+SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none  -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter  -fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra")
 
 SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
 
 #SET(Fortran_MATH_LIBRARIES "-lmkl_gf_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
 
 #SET(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
+
+
+# Testing convenience:                                                      $0 in the -c environment, not a part of $@
+SET(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
 
 # Fault tolerance
 option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a bit of MPI communication" ON)
@@ -113,9 +107,13 @@ add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
 add_subdirectory(api)
-add_subdirectory(examples/simulation1)
-add_subdirectory(examples/simulation2-pdaf)
-add_subdirectory(examples/simulation3-empty)
+
+add_subdirectory(launcher)
+
+
+add_subdirectory(examples)
+
+find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
@@ -126,3 +124,17 @@ install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INST
                 GROUP_EXECUTE
                 WORLD_READ
                 WORLD_EXECUTE)
+
+include(CMakePackageConfigHelpers)
+
+set(MELISSA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaConfig.cmake")
+configure_package_config_file(${PROJECT_NAME}Config.cmake.in
+                              "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+                              INSTALL_DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+                                 VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
+                                 COMPATIBILITY AnyNewerVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+              DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
+

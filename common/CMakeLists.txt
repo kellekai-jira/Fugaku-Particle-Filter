@@ -2,9 +2,9 @@ file(GLOB
      ALL_COMMON
      RELATIVE
      ${CMAKE_CURRENT_SOURCE_DIR}
+     *.c
      *.cxx
      )
-
 
 add_library(melissa_common OBJECT ${ALL_COMMON})
 

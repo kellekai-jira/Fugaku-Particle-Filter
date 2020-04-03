@@ -9,16 +9,17 @@
 #define EMPTYASSIMILATOR_H_
 
 #include "Assimilator.h"
-#include "MpiManager.h"
 
 
 class EmptyAssimilator : public Assimilator
 {
 private:
-Field & field;
+    Field & field;
+    const int total_steps;
+    int step = 0;
 public:
-EmptyAssimilator(Field & field_);
-virtual int do_update_step( MpiManager & mpi );
+    EmptyAssimilator(Field & field_, const int total_steps);
+    virtual int do_update_step();
 };
 
 #endif /* EMPTYASSIMILATOR_H_ */

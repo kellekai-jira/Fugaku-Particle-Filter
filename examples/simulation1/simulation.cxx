@@ -8,23 +8,30 @@
 #include <iostream>
 #include <fstream>
 
-#include "../api/melissa_api.h"
+#include <melissa_api.h>
 
 #include <csignal>
 
 
 int GLOBAL_VECT_SIZE = 40;
-//const int GLOBAL_VECT_SIZE = 1000;
-//const int GLOBAL_VECT_SIZE = 1000*100*10;
-//const int GLOBAL_VECT_SIZE = 1000*1000*10;
+// const int GLOBAL_VECT_SIZE = 1000;
+// const int GLOBAL_VECT_SIZE = 1000*100*10;
+// const int GLOBAL_VECT_SIZE = 1000*1000*10;
+
+// Define this if you want to check if the statefullnes test can fail:
+// #define BE_STATEFUL // defined by cmake for the state ful simulation exec
 
 using namespace std;
 
 int main(int argc, char * args[])
 {
-    if (argc > 1) {
-      GLOBAL_VECT_SIZE = atoi(args[1]);
-      printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
+#ifdef BE_STATEFUL
+    vector<double> secret_state {3.0, 4.0, 5.0};
+#endif
+    if (argc > 1)
+    {
+        GLOBAL_VECT_SIZE = atoi(args[1]);
+        printf("Changed global vect size to %d\n", GLOBAL_VECT_SIZE);
     }
 
     int comm_size;
@@ -63,9 +70,18 @@ int main(int argc, char * args[])
         next_offset += counts[rank];
     }
 
+#ifdef USE_HIDDEN_STATE
     melissa_init("variableX",
                  local_vect_size,
+                 secret_state.size(),
+                 MPI_COMM_WORLD
+                 );
+#else
+    melissa_init("variableX",
+                 local_vect_size,
+                 0,
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+#endif
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0);
     printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
@@ -75,12 +91,20 @@ int main(int argc, char * args[])
     int nsteps = 1;
     do
     {
+#ifdef BE_STATEFUL
+        // cheange the secret test
+        secret_state.at(0)++;
+        secret_state.at(1)++;
+#endif
         for (int step = 0; step < nsteps; step++)
         {
             int i = 0;
             for (auto it = state1.begin(); it != state1.end(); it++)
             {
                 *it += offsets[comm_rank] + i;
+#ifdef BE_STATEFUL
+                *it += secret_state.at(0) + secret_state.at(1);
+#endif
 
                 i++;
             }
@@ -89,9 +113,14 @@ int main(int argc, char * args[])
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
         usleep(10000);
-        //usleep(1000000);
+        // usleep(1000000);
 
-        nsteps = melissa_expose("variableX", state1.data());
+#ifdef USE_HIDDEN_STATE
+        nsteps = melissa_expose("variableX", state1.data(),
+                                secret_state.data());
+#else
+        nsteps = melissa_expose("variableX", state1.data(), nullptr);
+#endif
 
         if (nsteps > 0 && is_first_timestep)
         {

@@ -1,9 +1,17 @@
 #!/bin/bash
 
 
+if [ -z "$SLURM_JOB_ID" ];
+then
+    echo 'I need to be started in a slurm allocation (use e.g. salloc)'
+    exit 1
+fi
+
+
 n_server=2
 n_simulation=3
 n_runners=2
+
 
 ensemble_size=9 # we need to use the same ensemble size as in the testcase!
 total_steps=18  # TODO: I think totalsteps is not equal max_timestamp...
@@ -76,9 +84,12 @@ killall xterm
 killall lorenz_96
 killall example_simulation
 
+srun bash -c 'killall simulation2-pdaf; killall melissa_server'
+sleep 1
+
 
 $MPIEXEC -n $n_server \
-  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &
+  $precommand $server_exe_path $total_steps $ensemble_size $assimilator_type &>ser.log &
 
 sleep 1
 
@@ -90,7 +101,7 @@ do
 #  sleep 0.3  # use this and more than 100 time steps if you want to check for the start of propagation != 1... (having model task runners that join later...)
   #echo start simu id $i
   $MPIEXEC -n $n_simulation \
-    $precommand $sim_exe_path &
+    $precommand $sim_exe_path &>sim.log &
 
 
   echo .

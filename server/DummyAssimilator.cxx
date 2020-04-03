@@ -1,5 +1,5 @@
 /*
- * DummyAssimilator.cpp
+ * DummyAssimilator.cxx
  *
  *  Created on: Aug 22, 2019
  *      Author: friese
@@ -8,8 +8,8 @@
 #include "DummyAssimilator.h"
 #include <algorithm>
 
-DummyAssimilator::DummyAssimilator(Field & field_) :
-    field(field_)
+DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_) :
+    field(field_), total_steps(total_steps_)
 {
     nsteps = 1;
 
@@ -42,5 +42,13 @@ int DummyAssimilator::do_update_step( MpiManager & mpi ) {
         state_id++;
     }
 
-    return getNSteps();
+    step++;
+    if (step >= total_steps)
+    {
+        return -1;
+    }
+    else
+    {
+        return getNSteps();
+    }
 }

@@ -4,13 +4,11 @@
 # this is the testcase to see if we scale very high???
 
 
-n_server=96
-n_simulation=96
+n_server=12
+n_simulation=48
 n_runners=1
 
-nodes_simulation=2
-
-ensemble_size=700
+ensemble_size=400
 ensemble_size=1
 total_steps=5
 total_steps=50
@@ -33,11 +31,15 @@ problem_size=1000
 problem_size=10000000
 # worked once... error seems not related to this...
 
+
+
+problem_size=$((4031700*3))
+
 # in s
 max_runner_timeout=120
 
 CORES_PER_SIMULATION_NODE=48
-CORES_PER_SERVER_NODE=4
+CORES_PER_SERVER_NODE=12
 
 ######################################################
 
@@ -66,6 +68,8 @@ then
   n_simulation=$5
   n_runners=$6
 
+  ## TODO: remove this line!
+  CORES_PER_SERVER_NODE=$((n_server/2))  # always use 2 nodes!
 
   echo testing with $n_server server procs and $n_runners times $n_simulation simulation nodes.
 
@@ -75,7 +79,7 @@ else
   # abort on error!
   set -e
   cd ../..
-  ./compile.sh
+  #./compile.sh
   cd -
   set +e
 
@@ -96,9 +100,6 @@ export MPIEXEC="srun"
 #--hint=nomultithread
 
 
-#get hostnames with this simple trick (assuming wir are in a job allocation ;)
-server_host_0=`srun -N 1 -n 1 hostname`
-export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
 rm $tmpfile
 
 bin_path="$MELISSA_DA_PATH/bin"
@@ -126,6 +127,11 @@ nodelist=`srun hostname | cut -d '.' -f 1`
 nodelist=`echo $nodelist | sed -e 's/ /,/g'`
 nodelist_pointer=1
 
+#get hostnames with this simple trick (assuming wir are in a job allocation ;)
+#server_host_0=`echo $nodelist | cut -d ',' -f 1`
+#export MELISSA_SERVER_MASTER_NODE="tcp://$server_host_0:4000"
+#echo masternodename: $MELISSA_SERVER_MASTER_NODE
+
 
 nodelist_server=`echo $nodelist | cut -d ',' -f${nodelist_pointer}-$((nodelist_pointer+nodes_server-1))`
 nodelist_pointer=$((nodelist_pointer+nodes_server))
@@ -145,12 +151,18 @@ export SCAN_ANALYZE_OPTS="--time-correct"
 #export SCOREP_ENABLE_TRACING=true
 #scalasca -analyze
 #scan
+tmpfile="masternodename.$RANDOM"
 $MPIEXEC -N $nodes_server -n $n_server --ntasks-per-node=$CORES_PER_SERVER_NODE --nodelist=$nodelist_server $precommand \
-  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout > server.log.all &
+  $precommand $server_exe_path $total_steps $ensemble_size 2 $max_runner_timeout $tmpfile &> server.log.all &
+
 
 precommand=""
 
-sleep 1
+sleep 10
+
+export MELISSA_SERVER_MASTER_NODE=`cat $tmpfile`
+echo masternodename: $MELISSA_SERVER_MASTER_NODE
+#rm $tmpfile
 
 export SCOREP_ENABLE_TRACING=false
 export SCOREP_ENABLE_PROFILING=false

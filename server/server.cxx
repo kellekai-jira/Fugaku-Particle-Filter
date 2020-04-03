@@ -8,6 +8,9 @@
 // TODO: heavely test fault tollerance with a good testcase.
 // TODO 3. check with real world sim and DA.
 // TODO: clean up L logs and D debug logs
+//
+// TODO: check for other erase bugs...(erasing from a container while iterating over
+// the same container)
 
 
 
@@ -34,6 +37,10 @@
 #include "messages.h"
 #include "Part.h"
 #include "utils.h"
+
+#include "melissa_utils.h"  // melissa_utils from melissa-sa for melissa_get_node_name
+#include "melissa_messages.h"
+
 #include "memory.h"
 #include "MpiManager.h"
 
@@ -44,14 +51,16 @@
 #include <set>
 
 #include "Assimilator.h"
+#include "CheckStatelessAssimilator.h"  // FIXME: needed?
 
-#include "Timing.h"
+#include "ServerTiming.h"
+
+#include "LauncherConnection.h"
 
 extern int ENSEMBLE_SIZE;
-extern int TOTAL_STEPS;  // refactor to total_steps as it is named in pdaf.
 
 int ENSEMBLE_SIZE = 5;
-int TOTAL_STEPS = 5;
+
 
 #ifdef WITH_FTI
 FTmodule FT;
@@ -59,6 +68,12 @@ FTmodule FT;
 MpiManager mpi;
 
 AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
+
+
+
+
+
+
 
 // in seconds:
 long long MAX_RUNNER_TIMEOUT = 5;
@@ -69,6 +84,8 @@ const int TAG_RANK_FINISHED = 44;
 const int TAG_ALL_FINISHED = 45;
 
 int highest_received_task_id = 0;
+
+unsigned int assimilation_cycles = 0;
 
 // only important on ranks != 0:
 int highest_sent_task_id = 0;
@@ -105,7 +122,7 @@ std::set<Task> killed;  // when a runner from this list connects we thus respond
 std::unique_ptr<Field> field(nullptr);
 
 #ifdef REPORT_TIMING
-std::unique_ptr<Timing> timing(nullptr);
+std::unique_ptr<ServerTiming> timing(nullptr);
 #endif
 
 void my_free(void * data, void * hint)
@@ -129,6 +146,7 @@ struct RunnerRankConnection
         zmq_msg_t empty_msg;
         zmq_msg_t header_msg;
         zmq_msg_t data_msg;
+        zmq_msg_t data_msg_hidden;
 
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
@@ -147,17 +165,20 @@ struct RunnerRankConnection
         zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
         // we do not know when it will really send. send is non blocking!
 
+        const Part & part = field->getPart(runner_rank);
         zmq_msg_init_data(&data_msg,
                           field->ensemble_members.at(
                               state_id).state_analysis.data() +
-                          field->getPart(
-                              runner_rank).local_offset_server,
-                          field->getPart(runner_rank).send_count *
+                          part.local_offset_server,
+                          part.send_count *
                           sizeof(double), NULL, NULL);
 
-        D("-> Server sending %lu bytes for state %d, timestamp=%d",
-          field->getPart(runner_rank).send_count *
+        trigger(START_PROPAGATE_STATE, state_id);
+        const Part & hidden_part = field->getPartHidden(runner_rank);
+        D("-> Server sending %lu + %lu hidden bytes for state %d, timestamp=%d",
+          part.send_count *
           sizeof(double),
+          hidden_part.send_count * sizeof(double),
           header[0], header[1]);
         D(
             "local server offset %lu, local runner offset %lu, sendcount=%lu",
@@ -165,8 +186,45 @@ struct RunnerRankConnection
             field->getPart(runner_rank).local_offset_runner,
             field->getPart(runner_rank).send_count);
         // print_vector(field->ensemble_members.at(state_id).state_analysis);
+        D("content=[%f,%f,%f,%f,%f...]",
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[0],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[1],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[2],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[3],
+          field->ensemble_members.at(
+              state_id).state_analysis.data()[4]);
 
-        zmq_msg_send(&data_msg, data_response_socket, 0);
+        int flag;
+        if (hidden_part.send_count > 0)
+        {
+            flag = ZMQ_SNDMORE;
+        }
+        else
+        {
+            flag = 0;
+        }
+        ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
+
+        if (flag == ZMQ_SNDMORE)
+        {
+            zmq_msg_init_data(&data_msg_hidden,
+                              field->ensemble_members.at(
+                                  state_id).state_hidden.data() +
+                              hidden_part.local_offset_server,
+                              hidden_part.send_count *
+                              sizeof(double), NULL, NULL);
+            double * tmp = field->ensemble_members.at(
+                state_id).state_hidden.data();
+            tmp += hidden_part.local_offset_server;
+            // D("Hidden values to send:");
+            // print_vector(std::vector<double>(tmp, tmp +
+            // hidden_part.send_count));
+            ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
+        }
 
         // close connection:
         // but do not free it. send is going to free it.
@@ -280,13 +338,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     static int highest_runner_id = 0;
     assert(zmq_msg_size(&msg) == sizeof(int));
 
-#ifdef REPORT_TIMING
-    if (comm_rank == 0)
-    {
-        timing->add_runner();
-    }
-#endif
-
+    trigger(ADD_RUNNER, buf[1]);
 
     D("Server registering Runner ID %d", buf[1]);
 
@@ -315,7 +367,6 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(phase == PHASE_INIT);              // we accept new fields only if in initialization phase.
     assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) +
            MPI_MAX_PROCESSOR_NAME * sizeof(char));
-    // TODO: does the following line really work?
     assert(field == nullptr);              // we accept only one field for now.
 
     int runner_comm_size = buf[1];
@@ -336,13 +387,26 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
     memcpy (field->local_vect_sizes_runner.data(), zmq_msg_data(&msg),
             runner_comm_size * sizeof(size_t));
+    zmq_msg_close(&msg);
+
+    // always await a hidden state
+    assert_more_zmq_messages(configuration_socket);
+    zmq_msg_init(&msg);
+    zmq_msg_recv(&msg, configuration_socket, 0);
+    assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
+    memcpy (field->local_vect_sizes_runner_hidden.data(), zmq_msg_data(&msg),
+            runner_comm_size * sizeof(size_t));
+
+
+    // msg is closed outside by caller...
+
+
     field->name = field_name;
 
     // ack
     zmq_msg_t msg_reply;
     zmq_msg_init(&msg_reply);
     zmq_msg_send(&msg_reply, configuration_socket, 0);
-
 }
 
 void answer_configuration_message(void * configuration_socket,
@@ -399,7 +463,11 @@ void broadcast_field_information_and_calculate_parts() {
               runner_comm_size,
               my_MPI_SIZE_T, 0, mpi.comm());                                                             // 3:local_vect_sizes_runner
 
-    field->calculate_parts(comm_size);
+    MPI_Bcast(field->local_vect_sizes_runner_hidden.data(),
+              runner_comm_size,
+              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 4:local_vect_sizes_runner_hidden
+
+    field->calculate_parts(comm_size);  // FIXME: find all MPI_COMM_SIZE and replace by mpi.comm() !
 
 }
 
@@ -430,6 +498,7 @@ bool try_launch_subtask(std::shared_ptr<SubTask> &sub_task) {
     if (found_runner->second->connected_runner_ranks.empty())
     {
         idle_runners.erase(found_runner);
+        trigger(STOP_IDLE_RUNNER, sub_task->runner_id);
     }
 
     return true;
@@ -462,7 +531,7 @@ void add_sub_tasks(NewTask &new_task) {
     for (auto it = csr.begin(); it != csr.end(); it++)
     {
         std::shared_ptr<SubTask> sub_task (new SubTask(new_task, *it));
-        L("Adding subtask for runner rank %d", *it);
+        D("Adding subtask for runner rank %d", *it);
 
         if (try_launch_subtask(sub_task))
         {
@@ -477,7 +546,7 @@ void add_sub_tasks(NewTask &new_task) {
 
 /// schedules a new task on a model task runner and tries to run it.
 static int task_id = 1; // low: aftrer each update step one could reset the task id and also the highest sent task id and so on to never get overflows!
-bool schedule_new_task(int runner_id)
+bool schedule_new_task(const int runner_id)
 {
     assert(comm_rank == 0);
     if (unscheduled_tasks.size() <= 0)
@@ -586,12 +655,6 @@ void end_all_runners()
 
 void init_new_timestamp()
 {
-#ifdef REPORT_TIMING
-    if (comm_rank == 0)
-    {
-        timing->start_iteration();
-    }
-#endif
     size_t connections =
         field->connected_runner_ranks.size();
     // init or finished....
@@ -607,6 +670,12 @@ void init_new_timestamp()
     task_id = 1;
 
     current_step += current_nsteps;
+
+    trigger(START_ITERATION, current_step);
+    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+    {
+        trigger(START_IDLE_RUNNER, it->first);
+    }
 
     assert(unscheduled_tasks.size() == 0);
 
@@ -650,9 +719,7 @@ void check_due_dates() {
 
         if (comm_rank == 0)
         {
-#ifdef REPORT_TIMING
-            timing->remove_runner();
-#endif
+            trigger(REMOVE_RUNNER, it->runner_id);
 
             // reschedule directly if possible
             if (idle_runners.size() > 0)
@@ -671,11 +738,12 @@ void check_due_dates() {
             L("Sending kill request to rank 0");
 
             int buf[2] = { it->state_id, it->runner_id};
-            MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-                      mpi.comm());
+            // bsend does not work...
+            // MPI_Bsend(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+            // mpi.comm());
             // if BSend does not find memory use the send version
-            //MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
-                      //mpi.comm());
+            MPI_Send(buf, 2, MPI_INT, 0, TAG_KILL_RUNNER,
+                     mpi.comm());
             L("Finished kill request to rank 0");
         }
     }
@@ -700,9 +768,7 @@ void check_kill_requests() {
         bool is_new = killed.emplace(t).second;
         if (is_new)
         {
-#ifdef REPORT_TIMING
-            timing->remove_runner();
-#endif
+            trigger(REMOVE_RUNNER, t.runner_id);
         }
         else
         {
@@ -726,9 +792,9 @@ void check_kill_requests() {
     }
 }
 
-void handle_data_response() {
+void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
     // TODO: move to send and receive function as on api side... maybe use zproto library?
-    zmq_msg_t identity_msg, empty_msg, header_msg, data_msg;
+    zmq_msg_t identity_msg, empty_msg, header_msg, data_msg, data_msg_hidden;
     zmq_msg_init(&identity_msg);
     zmq_msg_init(&empty_msg);
     zmq_msg_init(&header_msg);
@@ -802,12 +868,11 @@ void handle_data_response() {
         // good timestamp? There are 2 cases: timestamp 0 or good timestamp...
         assert (runner_timestamp == 0 || runner_timestamp ==
                 current_step);
-        // we always throw away timestamp 0 as we want to init the simulation! (TODO! we could also use it as ensemble member...)
 
 
         // Save state part in background_states.
         assert(field->name == field_name);
-        Part & part = field->getPart(runner_rank);
+        const Part & part = field->getPart(runner_rank);
         assert(zmq_msg_size(&data_msg) == part.send_count *
                sizeof(double));
         D(
@@ -824,23 +889,71 @@ void handle_data_response() {
                                                             &
                                                             data_msg))
           [0]);
+        D("values[1] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [1]);
+        D("values[2] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [2]);
+        D("values[3] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [3]);
+        D("values[4] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            &
+                                                            data_msg))
+          [4]);
+
+        const Part & hidden_part = field->getPartHidden(runner_rank);
+        double * values_hidden = nullptr;
+
+        if (hidden_part.send_count > 0)
+        {
+            assert_more_zmq_messages(data_response_socket);
+            zmq_msg_init(&data_msg_hidden);
+            zmq_msg_recv(&data_msg_hidden, data_response_socket, 0);
+            assert(zmq_msg_size(&data_msg_hidden) == hidden_part.send_count *
+                   sizeof(double));
+            values_hidden = reinterpret_cast<double*>(zmq_msg_data(
+                                                          &data_msg_hidden));
+            // D("hidden values received:");
+            // print_vector(std::vector<double>(values_hidden, values_hidden +
+            // hidden_part.send_count));
+        }
+
+
         if (runner_timestamp == current_step)
         {
+            trigger(STOP_PROPAGATE_STATE, runner_state_id);
             D("storing this timestamp!...");
             // zero copy is unfortunately for send only. so copy internally...
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
                                         reinterpret_cast
                                         <double*>(zmq_msg_data(
-                                                      &data_msg)));
-            // checkpoint to disk
+                                                      &data_msg)), hidden_part,
+                                        values_hidden);
 #ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
+            // FIXME: store hidden state here too!
 #endif
         }
-
-        // whcih atm can not even happen if more than one fields as they do there communication one after another.
-        // TODO: but what if we have multiple fields? multiple fields is a no go I think multiple fields would need also synchronism on the server side. he needs to update all the fields... as they are not independent from each other that does not work.
+        else if (runner_state_id == -1)
+        {
+            // we are getting the very first timestep here!
+            // Some assimilators depend on something like this.
+            // namely the CheckStateless assimilator
+            assimilator->on_init_state(runner_id, part, reinterpret_cast
+                                       <double*>(zmq_msg_data(
+                                                     &data_msg)), hidden_part,
+                                       values_hidden);
+        }
+        // otherwise we throw away timestamp 0 as we want to init the simulation!
+        // One could indeed try to generate ensemble members from the initial state but
+        // this is a too special case so we rely on other mechanics for initialization of
+        // an initial state.
 
 
         // Check if we can answer directly with new data... means starting of a new model task
@@ -855,7 +968,7 @@ void handle_data_response() {
 
         if (found != scheduled_sub_tasks.end())
         {
-            // found a new task. send back directly!
+            // Found a new task. Send back directly!
 
             D(
                 "send after receive! to runner rank %d on runner_id %d",
@@ -874,6 +987,12 @@ void handle_data_response() {
                                                     Runner>(
                                                     new Runner()))
                            .first->second;
+
+            if (runner_rank == 0)
+            {
+                trigger(START_IDLE_RUNNER, runner_id);
+            }
+
             runner->connected_runner_ranks.emplace(runner_rank,
                                                    csr);
             D("save connection runner_id %d, runner rank %d",
@@ -901,7 +1020,8 @@ void handle_data_response() {
 }
 
 // returns true if the whole assimilation (all time steps) finished
-bool check_finished(std::shared_ptr<Assimilator> assimilator) {
+bool check_finished(std::shared_ptr<Assimilator> assimilator)
+{
     // check if all data was received. If yes: start Update step to calculate next analysis state
 
     size_t connections =
@@ -932,11 +1052,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
 
         }
-#else
-        // May the compiler optimie out the following line:
-        finished_ranks = comm_size - 1;
-#endif
-
         finished = finished_ranks == comm_size-1 &&           // comm size without rank 0
                    unscheduled_tasks.size() == 0 &&
                    scheduled_sub_tasks.size() == 0 &&
@@ -944,11 +1059,12 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                    0 &&
                    finished_sub_tasks.size() == ENSEMBLE_SIZE *
                    connections;
-        // L("rank 0: D %d ", finished_ranks);
-#ifdef RUNNERS_MAY_CRASH
+
         if (finished)
         {
-            L("Sending tag all finished message for timestep %d to %d other server ranks", current_step, comm_size-1);
+            L(
+                "Sending tag all finished message for timestep %d to %d other server ranks",
+                current_step, comm_size-1);
             // tell everybody that everybody finished!
             for (int rank = 1; rank < comm_size; rank++)
             {
@@ -957,7 +1073,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
             }
         }
     }
-    else // this else only exists if RUNNERS_MAY_CRASH
+    else
     {
         // rank != 0:
         finished = false;
@@ -998,6 +1114,15 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
 
     }
+#else
+    // RUNNERS MAY NOT CRASH:
+    // if everythin finished and nothing to reschedule: all fine!
+    finished = unscheduled_tasks.size() == 0 &&
+               scheduled_sub_tasks.size() == 0 &&
+               running_sub_tasks.size() ==
+               0 &&
+               finished_sub_tasks.size() == ENSEMBLE_SIZE *
+               connections;
 #endif
 
     if (finished)
@@ -1006,22 +1131,26 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         FT.recover();
 #endif
         // get new analysis states from update step
-        L("====> Update step %d/%d", current_step, TOTAL_STEPS);
-        current_nsteps = assimilator->do_update_step( mpi );
+        L("====> Update step %d", current_step);
+        trigger(START_FILTER_UPDATE, current_step);
+        current_nsteps = assimilator->do_update_step();
+        trigger(STOP_FILTER_UPDATE, current_step);
 
 #ifdef WITH_FTI
+        // REM: we do not profile the time for checkpointing for now
         FT.flushCP();  // TODO: put into one function
         FT.finalizeCP();
 #endif
-//      }
-#ifdef REPORT_TIMING
-        if (comm_rank == 0)
-        {
-            timing->stop_iteration();
-        }
-#endif
 
-        if (current_nsteps == -1 || current_step >= TOTAL_STEPS)
+        assimilation_cycles++;  // FIXME: export this to fti, and give it to the assimilator! so it knows where to start!
+//      }
+        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+        {
+            trigger(STOP_IDLE_RUNNER, it->first);
+        }
+        trigger(STOP_ITERATION, current_step);
+
+        if (current_nsteps == -1)
         {
             end_all_runners();
             return true;
@@ -1032,31 +1161,39 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
         {
-            for (auto runner_it = idle_runners.begin(); runner_it !=
-                 idle_runners.end(); runner_it++)
+            // As in this loop we might erase some idle runners from the list we may not
+            // do a simple for loop.
+            while (!idle_runners.empty())
             {
-                L("Rescheduling after update step for timestep %d", current_step);
+                auto runner_it = idle_runners.begin();
+                // maybe it's easier to erase not the firstelement?
+                L("Rescheduling after update step for timestep %d",
+                  current_step);
                 schedule_new_task(runner_it->first);
             }
 
         }
 #ifdef WITH_FTI
-        FT.initCP( current_step );
+        FT.initCP( current_step );  // FIXME: should be assimilation_cycle?
 #endif
     }
 
     return false;
 }
 
-/// optional parameters [MAX_TIMESTAMP [ENSEMBLESIZE]]
+/// optional parameters [MAX_TIMESTAMP [ENSEMBLE_SIZE]]
 int main(int argc, char * argv[])
 {
     check_data_types();
 
+    assert(argc == 6);
+
+    int param_total_steps = 5;
+
     // Read in configuration from command line
     if (argc >= 2)
     {
-        TOTAL_STEPS = atoi(argv[1]);
+        param_total_steps = atoi(argv[1]);
     }
     if (argc >= 3)
     {
@@ -1070,9 +1207,10 @@ int main(int argc, char * argv[])
     {
         MAX_RUNNER_TIMEOUT = atoi(argv[4]);
     }
+    // Last argument must be the launcher host name!
+    // Or if not using the launcher the file where the server host name shall be stored to.
 
 
-    assert(TOTAL_STEPS > 1);
     assert(ENSEMBLE_SIZE > 0);
 
     mpi.init();
@@ -1083,15 +1221,18 @@ int main(int argc, char * argv[])
     comm_size = mpi.size();
     comm_rank = mpi.rank();
 
-    std::shared_ptr<Assimilator> assimilator;      // will be inited later when we know the field dimensions.
+    std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
+    std::shared_ptr<LauncherConnection> launcher;
 
     context = zmq_ctx_new ();
     int major, minor, patch;
     zmq_version (&major, &minor, &patch);
     D("Current 0MQ version is %d.%d.%d", major, minor, patch);
     D("**server rank = %d", comm_rank);
-    L("Start server for %d timesteps with %d ensemble members", TOTAL_STEPS,
-      ENSEMBLE_SIZE);
+    L("Start server with %d ensemble members", ENSEMBLE_SIZE);
+
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
 
     // Start sockets:
     void * configuration_socket = NULL;
@@ -1100,21 +1241,20 @@ int main(int argc, char * argv[])
         configuration_socket = zmq_socket(context, ZMQ_REP);
         const char * configuration_socket_addr = "tcp://*:4000";
         int rc = zmq_bind(configuration_socket,
-                          configuration_socket_addr);                                // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
+                          configuration_socket_addr);              // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
         L("Configuration socket listening on port %s",
           configuration_socket_addr);
         ZMQ_CHECK(rc);
         assert(rc == 0);
 
+        launcher = std::make_shared<LauncherConnection>(context, argv[argc-1]);
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
     char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
     sprintf(data_response_port_name, "tcp://*:%d", 5000+comm_rank);
-    zmq_bind(data_response_socket, data_response_port_name);
+    ZMQ_CHECK(zmq_bind(data_response_socket, data_response_port_name));
 
-    char hostname[MPI_MAX_PROCESSOR_NAME];
-    melissa_get_node_name(hostname, MPI_MAX_PROCESSOR_NAME);
     sprintf(data_response_port_name, "tcp://%s:%d", hostname, 5000+
             comm_rank);
 
@@ -1127,7 +1267,7 @@ int main(int argc, char * argv[])
     // Start Timing:
     if (comm_rank == 0)
     {
-        timing = std::make_unique<Timing>(TOTAL_STEPS);
+        timing = std::make_unique<ServerTiming>();
     }
 #endif
 
@@ -1136,40 +1276,53 @@ int main(int argc, char * argv[])
     int last_seconds_memory = 0;
 #endif
 
+
+    int items_to_poll = 1;
+    if (comm_rank == 0)
+    {
+        // poll configuration socket
+        items_to_poll += 2;
+    }
+
     // Server main loop:
     while (true)
     {
 #ifdef NDEBUG
         // usleep(1);
 #else
-        usleep(10);         // to chill down the processor! TODO remove when measuring!
+        usleep(10);     // to chill down the processor! TODO remove when measuring!
 #endif
         // Wait for requests
         /* Poll for events indefinitely */
         // REM: the poll item needs to be recreated all the time!
-        zmq_pollitem_t items [2] = {
-            {data_response_socket, 0, ZMQ_POLLIN, 0},
-            {configuration_socket, 0, ZMQ_POLLIN, 0}
-        };
+        zmq_pollitem_t items [items_to_poll];
+        items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
         if (comm_rank == 0)
         {
-            // Check for killed runners... (due date violation)
-            // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
-            ZMQ_CHECK(zmq_poll (items, 2, 0));
+            items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
+            items[2] = {launcher->getTextPuller(), 0, ZMQ_POLLIN, 0};
         }
-        else
-        {
-            // ZMQ_CHECK(zmq_poll (items, 1, -1));
-            // Check for new tasks to schedule and killed runners so do not block on polling (due date violation)...
-            ZMQ_CHECK(zmq_poll (items, 1, 0));
-        }
+
+
+        // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
+        ZMQ_CHECK(zmq_poll (items, items_to_poll, 0));
         /* Returned events will be stored in items[].revents */
 
         // answer requests
-        if (comm_rank == 0 && (items[1].revents & ZMQ_POLLIN))
+        if (comm_rank == 0 )
         {
-            answer_configuration_message(configuration_socket,
-                                         data_response_port_names);
+            if (items[1].revents & ZMQ_POLLIN)
+            {
+                answer_configuration_message(configuration_socket,
+                        data_response_port_names);
+            }
+
+            if (items[2].revents & ZMQ_POLLIN)
+            {
+                launcher->receiveText();
+            } else {
+                launcher->checkLauncherDueDate();
+            }
         }
 
         // coming from fresh init...
@@ -1189,7 +1342,7 @@ int main(int argc, char * argv[])
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
-                    ASSIMILATOR_TYPE, *field);
+                    ASSIMILATOR_TYPE, *field, param_total_steps);
                 current_nsteps = assimilator->getNSteps();
 
 #ifdef WITH_FTI
@@ -1203,18 +1356,18 @@ int main(int argc, char * argv[])
 
         if (phase == PHASE_SIMULATION)
         {
-// X     if simulation requests work see if work in list. if so launch it. if not save connection
-// X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
-// X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
-// X     check for due dates. if detected: black list (move to killed) runner + state. send state AND runner to rank0
-// X     if finished and did not send yet the highest task id send to rank 0 that we finished.
-// X     check for messages from rank 0 that we finished and if so start update
-//
-//       rank 0:
-// X     if runner request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this runner. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
-// X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
-// X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
-// X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
+            // X     if simulation requests work see if work in list. if so launch it. if not save connection
+            // X     if scheduling message from rank 0: try to run message. if the state was before scheduled on an other point move this to the killed....
+            // X     there are other states that will fail due to the due date too. for them an own kill message is sent and they are rescheduled.
+            // X     check for due dates. if detected: black list (move to killed) runner + state. send state AND runner to rank0
+            // X     if finished and did not send yet the highest task id send to rank 0 that we finished.
+            // X     check for messages from rank 0 that we finished and if so start update
+            //
+            //       rank 0:
+            // X     if runner request work see if work in list. if so: launch it. if not check if we have more work to do and schedule it on this runner. send this to all clients. this is blocking with ISend to be sure that it arrives and we do no reschedule before. this also guarantees the good order..
+            // X     at the same time check if some client reports a crash. if crash. put state to killed states(blacklist it) and reschedule task.
+            // X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
+            // X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
 
 #ifdef RUNNERS_MAY_CRASH
             // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
@@ -1234,28 +1387,28 @@ int main(int argc, char * argv[])
 
             if (items[0].revents & ZMQ_POLLIN)
             {
-                handle_data_response();
+                handle_data_response(assimilator);
                 // REM: We try to schedule new data after the server rank 0 gave new tasks and after receiving new data. It does not make sense to schedule at other times for the moment. if there is more fault tollerance this needs to be changed.
             }
 
             if (check_finished(assimilator))
             {
-                break;                  // all runners finished.
+                break;          // all runners finished.
             }
 
 
             /// REM: Tasks are either unscheduled, scheduled, running or finished.
             size_t connections =
                 field->connected_runner_ranks.size();
-//          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
-//                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
-//                  scheduled_sub_tasks.size(),
-//                  running_sub_tasks.size(),
-//                  finished_sub_tasks.size());
+            //          L("unscheduled sub tasks: %lu, scheduled sub tasks: %lu running sub tasks: %lu finished sub tasks: %lu",
+            //                  unscheduled_tasks.size() * connections,  // scale on amount of subtasks.
+            //                  scheduled_sub_tasks.size(),
+            //                  running_sub_tasks.size(),
+            //                  finished_sub_tasks.size());
 
             // all tasks must be somewhere. either finished, scheduled on a runner, running on a runner or unscheduled.
             assert(
-                unscheduled_tasks.size() * connections +                          // scale on amount of subtasks.
+                unscheduled_tasks.size() * connections +                      // scale on amount of subtasks.
                 scheduled_sub_tasks.size() +
                 running_sub_tasks.size() +
                 finished_sub_tasks.size() == connections *
@@ -1276,10 +1429,13 @@ int main(int argc, char * argv[])
 
     if (comm_rank == 0)
     {
-        L("Executed %d timesteps with %d ensemble members each, with a runner timeout of %lli seconds", TOTAL_STEPS,
-          ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
+        L(
+            "Executed %d assimilation cycles with %d ensemble members each, with a runner timeout of %lli seconds",
+            assimilation_cycles,
+            ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
 #ifdef REPORT_TIMING
-        timing->report(field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,field->globalVectSize());
+        timing->report(field->local_vect_sizes_runner.size(), comm_size,
+                       ENSEMBLE_SIZE,field->globalVectSize());
 #endif
     }
 
@@ -1288,6 +1444,12 @@ int main(int argc, char * argv[])
 
     // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
     // sleep(3);
+    if (comm_rank == 0)
+    {
+        // send stop message, close the launcher sockets before the context is destroyed!
+        launcher.reset();
+    }
+
     zmq_close(data_response_socket);
     if (comm_rank == 0)
     {

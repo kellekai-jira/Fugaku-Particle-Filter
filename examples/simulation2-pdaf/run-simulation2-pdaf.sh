@@ -26,6 +26,7 @@ function ctrl_c() {
 }
 
 #precommand="xterm_gdb"
+precommand=""
 #precommand="xterm_gdb valgrind --leak-check=yes"
 [ "$restart_from_checkpoint" != "1" ] && rm -rf output
 mkdir -p output
@@ -66,13 +67,13 @@ else
   echo '(patch-PDAF....)'
   echo compiling....
   set -e
-  cd ..
+  cd ../../..
   ./compile.sh
   cd -
   set +e
 fi
 
-source ../build/install/bin/melissa-da_set_env.sh
+source ../../../build/install/bin/melissa-da_set_env.sh
 
 
 sim_exe_path="$MELISSA_DA_PATH/bin/simulation2-pdaf"
@@ -108,3 +109,8 @@ done
 
 wait
 
+if [[ "$1" == "test" ]];
+then
+    ./test.sh
+    exit $?
+fi

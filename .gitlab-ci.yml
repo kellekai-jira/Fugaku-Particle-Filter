@@ -1,0 +1,44 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+  - build_deps
+  - build
+  - test
+
+build_deps:
+  stage: build_deps
+  tags:
+    - melissa-da
+  script:
+    # don't forget to cd backwards at the ends so the artifacts can be found
+    - "mkdir melissa/build && cd melissa/build && cmake .. && make install && cd ../.."
+  artifacts:
+    paths:
+      - melissa/install/
+
+build:
+  stage: build
+  tags:
+    - melissa-da
+  script:
+    # don't forget to cd backwards at the ends so the artifacts can be found
+    - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10 install && cd .."
+  artifacts:
+    paths:
+      # export further...
+      - melissa/install/
+      - build/
+  dependencies:
+    - build_deps
+
+test:
+  stage: test
+  tags:
+    - melissa-da
+  script:
+    - "cd build && ctest --verbose"
+  dependencies:
+    - build
+
+

@@ -5,12 +5,17 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const
                                    std::vector<size_t> &local_vect_sizes_runner)
 {
     size_t comm_size_runner = local_vect_sizes_runner.size();
-    std::vector <Part> parts;
+    std::vector <Part> parts(0);
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = 0;
     for (size_t i = 0; i < comm_size_runner; ++i)
     {
         global_vect_size += local_vect_sizes_runner[i];
+    }
+
+    if (global_vect_size == 0)
+    {
+        return parts;
     }
 
     for (int i = 0; i < comm_size_server; ++i)

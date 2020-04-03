@@ -57,19 +57,19 @@ SUBROUTINE integrate()
   stepping: DO WHILE (nsteps > 0)
      WRITE (*, *) 'integrating how many timesteps?', nsteps
      DO step = 1, nsteps
-		 IF (mype_world==0) WRITE (*,*) 'step', step
+         IF (mype_world==0) WRITE (*,*) 'step', step
 
-	! *** Time step: Shift field vertically ***
-		 DO j = 1, nx_p
-			store = field_p(ny, j)
+    ! *** Time step: Shift field vertically ***
+         DO j = 1, nx_p
+            store = field_p(ny, j)
 
-			DO i = ny-1,1,-1
-			   field_p(i+1, j) = field_p(i, j)
-			END DO
+            DO i = ny-1,1,-1
+               field_p(i+1, j) = field_p(i, j)
+            END DO
 
-			field_p(1, j) = store
+            field_p(1, j) = store
 
-		 END DO
+         END DO
      END DO
 
 

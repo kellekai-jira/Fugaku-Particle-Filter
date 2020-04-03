@@ -16,13 +16,15 @@ enum AssimilatorType
 {
     ASSIMILATOR_DUMMY = 0,
     ASSIMILATOR_PDAF = 1,
-    ASSIMILATOR_EMPTY = 2
+    ASSIMILATOR_EMPTY = 2,
+    ASSIMILATOR_CHECK_STATELESS = 3
 };
 
 class Assimilator
 {
 protected:
-int nsteps = -1;
+    int nsteps = -1;
+    // FIXME: probably need to add mpi manager here!
 public:
 // REM: the constructor must init the ensemble! (analysis states!)
 // called if every state was saved.
@@ -33,17 +35,27 @@ public:
 
 // returns how many steps must be performed by the model in the next iteration
 // returns -1 if it wants to quit.
-virtual int do_update_step( MpiManager & mpi ) = 0;
+    virtual int do_update_step() = 0;
+
+// executed when first state messages are received from the simulations.
+// normally such messages are discarded and a proper analysis state is sent back
+// see the CheckStatelessAssimilator to see how to use this function.
+    virtual void on_init_state(const int runner_id, const Part & part, const
+                               double * values, const Part & hidden_part,
+                               const double * values_hidden)
+    {
+    };
 
 
-int getNSteps() const {
-    return nsteps;
-};
+    int getNSteps() const {
+        return nsteps;
+    };
 
-virtual ~Assimilator() = default;
+    virtual ~Assimilator() = default;
 
-static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
-                                           Field & field);
+    static std::shared_ptr<Assimilator> create(AssimilatorType assimilator_type,
+                                               Field & field, const int
+                                               total_steps);
 };
 
 
