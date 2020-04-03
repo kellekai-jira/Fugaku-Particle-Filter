@@ -19,6 +19,7 @@ import sys
 import socket
 import time
 import subprocess
+from shutil import copyfile
 
 from launcher import melissa
 
@@ -56,6 +57,8 @@ def run_melissa_da_study(
         os.mkdir(WORKDIR)
 
     os.chdir(WORKDIR)
+    # FIXME: use  user config.fti
+    copyfile(melissa_da_path + "/share/melissa-da/config.fti", "config.fti")
 
     # The launch_server function to put in USER_FUNCTIONS['launch_server'].
     # It takes a Server object as argument, and must set its job_id attribute.
