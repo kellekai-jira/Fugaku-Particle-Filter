@@ -18,7 +18,8 @@ extern "C" {
 void cwrapper_init_user(const int * param_total_steps);
 void cwrapper_init_pdaf(const int * param_dim_state, const
                         int * param_dim_state_p, const
-                        int * param_ensemble_size);
+                        int * param_ensemble_size,
+                        const int * param_comm_world);
 void cwrapper_assimilate_pdaf();
 void cwrapper_PDAF_deallocate();
 

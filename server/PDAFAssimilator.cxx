@@ -32,7 +32,8 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
 
     const int local_vect_size_hidden = field.local_vect_size_hidden;
 
-    cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size);
+    const MPI_Fint comm_world = mpi.fortranComm();
+    cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world);
     cwrapper_init_user(&total_steps);
     nsteps = -1;
 

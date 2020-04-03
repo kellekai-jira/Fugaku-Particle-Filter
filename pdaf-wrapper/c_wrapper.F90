@@ -1,9 +1,23 @@
+module my_state_accessors
+use iso_c_binding
+implicit none
+save
+real(C_DOUBLE), POINTER :: distribute_state_to(:)
+real(C_DOUBLE), POINTER :: collect_state_from(:)
+integer :: current_step
+end module
+
+
 ! TODO: take the dummy model or maybe even others to init parallel!
-SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble_size) BIND(C,name='cwrapper_init_pdaf')
+SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble_size, &
+        param_comm_world) BIND(C,name='cwrapper_init_pdaf')
   USE iso_c_binding
 
   USE mod_assimilation, &
     ONLY: dim_state_p, dim_state, dim_ens, screen
+
+  USE mod_parallel_pdaf, &
+      ONLY: COMM_world
 
   USE my_state_accessors, &
       ONLY: current_step
@@ -12,8 +26,10 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
   INTEGER(kind=C_INT), intent(in) :: param_dim_state     ! Global state dimension
   INTEGER(kind=C_INT), intent(in) :: param_dim_state_p   ! Local state dimension
   INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
+  INTEGER(kind=C_INT), intent(in) :: param_comm_world    ! World communicator as given by the melissa_server
 
 
+  COMM_world = param_comm_world
 
   ! *** Define state dimension ***
   dim_state   = param_dim_state    ! Global state dimension
@@ -98,14 +114,6 @@ END SUBROUTINE
 
 
 
-module my_state_accessors
-use iso_c_binding
-implicit none
-save
-real(C_DOUBLE), POINTER :: distribute_state_to(:)
-real(C_DOUBLE), POINTER :: collect_state_from(:)
-integer :: current_step
-end module
 
 ! called by get_state
 SUBROUTINE my_distribute_state(dim_p, state_p)

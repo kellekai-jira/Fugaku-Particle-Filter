@@ -15,6 +15,8 @@ MODULE mod_parallel_model
 ! Later revisions - see svn log
 !
 ! !USES:
+USE mod_parallel_pdaf, &
+    ONLY: COMM_world
   IMPLICIT NONE
   SAVE
 
@@ -25,8 +27,8 @@ MODULE mod_parallel_model
   INTEGER :: COMM_model  ! MPI communicator for model tasks
   INTEGER :: mype_model  ! Number of PEs in COMM_model
   INTEGER :: npes_model  ! PE rank in COMM_model
-  INTEGER :: mype_world  ! Number of PEs in MPI_COMM_WORLD
-  INTEGER :: npes_world  ! PE rank in MPI_COMM_WORLD
+  INTEGER :: mype_world  ! Number of PEs in COMM_world
+  INTEGER :: npes_world  ! PE rank in COMM_world
   INTEGER :: MPIerr      ! Error flag for MPI
 !EOP
 
@@ -54,12 +56,12 @@ CONTAINS
 
     ! Reuse mpi inited by server
 
-    CALL MPI_Comm_Size(MPI_COMM_WORLD,npes_world,i)
-    CALL MPI_Comm_Rank(MPI_COMM_WORLD,mype_world,i)
+    CALL MPI_Comm_Size(COMM_world,npes_world,i)
+    CALL MPI_Comm_Rank(COMM_world,mype_world,i)
 
     ! Initialize model communicator, its size and the process rank
-    ! Here the same as for MPI_COMM_WORLD
-    Comm_model = MPI_COMM_WORLD   !pdaf will think there is one model. do w e really need this?....
+    ! Here the same as for COMM_world
+    Comm_model = COMM_world   !pdaf will think there is one model. do w e really need this?....
     npes_model = npes_world
     mype_model = mype_world
 
@@ -78,7 +80,7 @@ CONTAINS
 
     IMPLICIT NONE
 
-    CALL  MPI_Barrier(MPI_COMM_WORLD,MPIerr)
+    CALL  MPI_Barrier(COMM_world,MPIerr)
     ! Server will call MPI_Finalize
 
   END SUBROUTINE finalize_parallel
@@ -96,7 +98,7 @@ CONTAINS
 
     IMPLICIT NONE
 
-    CALL  MPI_Abort(MPI_COMM_WORLD, 1, MPIerr)
+    CALL  MPI_Abort(COMM_world, 1, MPIerr)
 
   END SUBROUTINE abort_parallel
 

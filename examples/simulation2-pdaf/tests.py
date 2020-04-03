@@ -14,3 +14,6 @@ run_melissa_da_study(
         show_simulation_log = True)
 
 exit(subprocess.call(["bash", "test.sh"]))
+
+
+# TODO: check against server crashes here. will it recover from the good timestamp?

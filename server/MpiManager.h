@@ -5,11 +5,11 @@
 #include <string>
 #include <map>
 
-class MpiManager 
+class MpiManager
 {
-    
+
     public:
-        
+
         MpiManager();
         void init();
         void register_comm( std::string, MPI_Comm & );
@@ -18,9 +18,11 @@ class MpiManager
         const int & size();
         const int & rank();
         void finalize();
-            
+
+        MPI_Fint fortranComm();
+
     private:
-   
+
         std::string m_comm_key;
         std::map<std::string,MPI_Comm> m_comms;
         int m_size;

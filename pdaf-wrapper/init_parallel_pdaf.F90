@@ -7,16 +7,16 @@
 SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 
 ! !DESCRIPTION:
-! Parallelization routine for a model with 
-! attached PDAF. The subroutine is called in 
-! the main program subsequently to the 
+! Parallelization routine for a model with
+! attached PDAF. The subroutine is called in
+! the main program subsequently to the
 ! initialization of MPI. It initializes
-! MPI communicators for the model tasks, filter 
+! MPI communicators for the model tasks, filter
 ! tasks and the coupling between model and
-! filter tasks. In addition some other variables 
+! filter tasks. In addition some other variables
 ! for the parallelization are initialized.
 ! The communicators and variables are handed
-! over to PDAF in the call to 
+! over to PDAF in the call to
 ! PDAF\_filter\_init.
 !
 ! 3 Communicators are generated:\\
@@ -27,32 +27,32 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 ! - COMM\_couple: Communicator for coupling
 !   between models and filter\\
 ! Other variables that have to be initialized are:\\
-! - filterpe - Logical: Does the PE execute the 
+! - filterpe - Logical: Does the PE execute the
 ! filter?\\
-! - my\_ensemble - Integer: The index of the PE's 
+! - my\_ensemble - Integer: The index of the PE's
 ! model task\\
-! - local\_npes\_model - Integer array holding 
+! - local\_npes\_model - Integer array holding
 ! numbers of PEs per model task
 !
 ! For COMM\_filter and COMM\_model also
-! the size of the communicators (npes\_filter and 
-! npes\_model) and the rank of each PE 
-! (mype\_filter, mype\_model) are initialized. 
-! These variables can be used in the model part 
+! the size of the communicators (npes\_filter and
+! npes\_model) and the rank of each PE
+! (mype\_filter, mype\_model) are initialized.
+! These variables can be used in the model part
 ! of the program, but are not handed over to PDAF.
 !
-! This variant is for a domain decomposed 
+! This variant is for a domain decomposed
 ! model.
 !
-! This is a template that is expected to work 
-! with many domain-decomposed models. However, 
-! it might be necessary to adapt the routine 
+! This is a template that is expected to work
+! with many domain-decomposed models. However,
+! it might be necessary to adapt the routine
 ! for a particular model. Inportant is that the
-! communicator COMM_model equals the communicator 
+! communicator COMM_model equals the communicator
 ! used in the model. If one plans to run the
-! ensemble forecast in parallel COMM_model cannot 
-! be MPI_COMM_WORLD! Thus, if the model uses 
-! MPI_COMM_WORLD it has to be replaced by an 
+! ensemble forecast in parallel COMM_model cannot
+! be MPI_COMM_WORLD! Thus, if the model uses
+! MPI_COMM_WORLD it has to be replaced by an
 ! alternative communicator named, e.g., COMM_model.
 !
 ! !REVISION HISTORY:
@@ -61,16 +61,16 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 !
 ! !USES:
   USE mod_parallel_model, &
-       ONLY: mype_world, npes_world, MPI_COMM_WORLD, mype_model, npes_model, &
+       ONLY: mype_world, npes_world, mype_model, npes_model, &
        COMM_model, MPIerr
   USE mod_parallel_pdaf, &
        ONLY: mype_filter, npes_filter, COMM_filter, filterpe, n_modeltasks, &
-       local_npes_model, task_id, COMM_couple, MPI_UNDEFINED
+       local_npes_model, task_id, COMM_couple, MPI_UNDEFINED, COMM_world
   USE parser, &
        ONLY: parse
 
-  IMPLICIT NONE    
-  
+  IMPLICIT NONE
+
 ! !ARGUMENTS:
   INTEGER, INTENT(inout) :: dim_ens ! Ensemble size or number of EOFs (only SEEK)
   ! Often dim_ens=0 when calling this routine, because the real ensemble size
@@ -92,7 +92,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   INTEGER :: mype_ens, npes_ens ! rank and size in COMM_ensemble
   INTEGER :: mype_couple, npes_couple ! Rank and size in COMM_couple
   INTEGER :: pe_index           ! Index of PE
-  INTEGER :: my_color, color_couple ! Variables for communicator-splitting 
+  INTEGER :: my_color, color_couple ! Variables for communicator-splitting
   LOGICAL :: iniflag            ! Flag whether MPI is initialized
   CHARACTER(len=32) :: handle   ! handle for command line parser
 
@@ -104,8 +104,8 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   END IF
 
   ! *** Initialize PE information on COMM_world ***
-  CALL MPI_Comm_size(MPI_COMM_WORLD, npes_world, MPIerr)
-  CALL MPI_Comm_rank(MPI_COMM_WORLD, mype_world, MPIerr)
+  CALL MPI_Comm_size(COMM_world, npes_world, MPIerr)
+  CALL MPI_Comm_rank(COMM_world, mype_world, MPIerr)
 
 
   ! *** Parse number of model tasks ***
@@ -141,7 +141,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   ! ***              COMM_ENSEMBLE                ***
   ! *** Generate communicator for ensemble runs   ***
   ! *** only used to generate model communicators ***
-  COMM_ensemble = MPI_COMM_WORLD
+  COMM_ensemble = COMM_world
 
   npes_ens = npes_world
   mype_ens = mype_world
@@ -156,7 +156,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   DO i = 1, (npes_world - n_modeltasks * local_npes_model(1))
      local_npes_model(i) = local_npes_model(i) + 1
   END DO
-  
+
 
   ! ***              COMM_MODEL               ***
   ! *** Generate communicators for model runs ***
@@ -175,7 +175,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 
   CALL MPI_Comm_split(COMM_ensemble, task_id, mype_ens, &
        COMM_model, MPIerr)
-  
+
   ! *** Re-initialize PE informations   ***
   ! *** according to model communicator ***
   CALL MPI_Comm_Size(COMM_model, npes_model, MPIerr)
@@ -203,7 +203,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
      my_color = MPI_UNDEFINED
   ENDIF
 
-  CALL MPI_Comm_split(MPI_COMM_WORLD, my_color, mype_world, &
+  CALL MPI_Comm_split(COMM_world, my_color, mype_world, &
        COMM_filter, MPIerr)
 
   ! *** Initialize PE informations         ***
@@ -221,7 +221,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 
   color_couple = mype_model + 1
 
-  CALL MPI_Comm_split(MPI_COMM_WORLD, color_couple, mype_world, &
+  CALL MPI_Comm_split(COMM_world, color_couple, mype_world, &
        COMM_couple, MPIerr)
 
   ! *** Initialize PE informations         ***
@@ -237,7 +237,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
              'rank', 'rank', 'task', 'rank', 'task', 'rank', 'T/F', &
              '----------------------------------------------------------'
      END IF
-     CALL MPI_Barrier(MPI_COMM_WORLD, MPIerr)
+     CALL MPI_Barrier(COMM_world, MPIerr)
      IF (task_id == 1) THEN
         WRITE (*, '(2x, i4, 4x, i4, 4x, i3, 4x, i3, 4x, i3, 4x, i3, 5x, l3)') &
              mype_world, mype_filter, task_id, mype_model, color_couple, &
@@ -247,7 +247,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
         WRITE (*,'(2x, i4, 12x, i3, 4x, i3, 4x, i3, 4x, i3, 5x, l3)') &
          mype_world, task_id, mype_model, color_couple, mype_couple, filterpe
      END IF
-     CALL MPI_Barrier(MPI_COMM_WORLD, MPIerr)
+     CALL MPI_Barrier(COMM_world, MPIerr)
 
      IF (mype_world == 0) WRITE (*, '(/a)') ''
 
@@ -258,8 +258,8 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 ! *** Initialize model equivalents to COMM_model, npes_model, and mype_model ***
 ! ******************************************************************************
 
-  ! If the names of the variables for COMM_model, npes_model, and 
-  ! mype_model are different in the numerical model, the 
+  ! If the names of the variables for COMM_model, npes_model, and
+  ! mype_model are different in the numerical model, the
   ! model-internal variables should be initialized at this point.
 
 

@@ -35,7 +35,7 @@ void MpiManager::set_comm( std::string key )
     assert( m_comms.count(key) > 0 && "invalid key for MPI communicator!");
 
     m_comm_key = key;
-    
+
     MPI_Comm_size( m_comms[m_comm_key], &m_size );
     MPI_Comm_rank( m_comms[m_comm_key], &m_rank );
 }
@@ -58,4 +58,10 @@ const int & MpiManager::rank()
 void MpiManager::finalize()
 {
     MPI_Finalize();
+}
+
+
+MPI_Fint MpiManager::fortranComm()
+{
+    return MPI_Comm_c2f(comm());
 }
