@@ -46,6 +46,8 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
   USE mod_parallel_pdaf, &
        ONLY: mype_filter, npes_filter, COMM_filter, MPI_DOUBLE_PRECISION, &
        MPIerr, MPIstatus
+  USE my_state_accessors, &
+      ONLY: current_step
 
   IMPLICIT NONE
 
@@ -268,11 +270,7 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
         WRITE (*, '(8x, a)') '--- write ensemble and state estimate'
 
         ! Set string for time step
-        IF (step>=0) THEN
-           WRITE (stepstr, '(i2.2)') step
-        ELSE
-           WRITE (stepstr, '(i2.2)') -step
-        END IF
+        WRITE (stepstr, '(i2.2)') current_step
 
         ALLOCATE(field(ny, nx))
 

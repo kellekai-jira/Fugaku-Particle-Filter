@@ -309,6 +309,7 @@ SUBROUTINE cwrapper_set_current_step(new_current_step) &
   INTEGER(C_INT) :: new_current_step
 
 
+  ! PDAF starts counting at 0, the assimilator starts at one. TODO: do the same counting in melissa and pdaf?
   current_step = new_current_step
 
 END SUBROUTINE

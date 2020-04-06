@@ -1136,6 +1136,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // get new analysis states from update step
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
+        // TODO: don't allow writing to background state for checkpointing and assimilator!
         current_nsteps = assimilator->do_update_step(current_step); // FIXME do time dependent update step!!, completely integrated?
         trigger(STOP_FILTER_UPDATE, current_step);
 
@@ -1342,12 +1343,12 @@ int main(int argc, char * argv[])
                 // low: if multi field: check fields! (see if the field names we got are the ones we wanted)
                 // propagate all fields to the other server clients on first message receive!
                 broadcast_field_information_and_calculate_parts();
-                init_new_timestamp();
 
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
                     ASSIMILATOR_TYPE, *field, param_total_steps, mpi);
                 current_nsteps = assimilator->getNSteps();
+                init_new_timestamp();  // init_new_timestep needs the latest timestep id from the assimilator!
 
 #ifdef WITH_FTI
                 FT.protect_background( mpi, field );

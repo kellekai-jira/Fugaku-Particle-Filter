@@ -29,6 +29,8 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
        ONLY: nx, ny, nx_p
   USE mod_parallel_pdaf, &
        ONLY: mype_filter
+  USE my_state_accessors, &
+      ONLY: current_step
 
   IMPLICIT NONE
 
@@ -66,10 +68,10 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   ! Read observation field form file
   ALLOCATE(obs_field(ny, nx))
 
-  IF (step<10) THEN
-     WRITE (stepstr, '(i1)') step
+  IF (current_step<10) THEN
+     WRITE (stepstr, '(i1)') current_step
   ELSE
-     WRITE (stepstr, '(i2)') step
+     WRITE (stepstr, '(i2)') current_step
   END IF
 
   call get_environment_variable( 'DATASET_PATH', dataset_path )

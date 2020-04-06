@@ -12,7 +12,7 @@
 #include "Field.h"
 #include "MpiManager.h"
 
-// FIXME: move all assimilators into
+// FIXME: move all assimilators into folder
 
 enum AssimilatorType
 {
@@ -26,7 +26,6 @@ class Assimilator
 {
 protected:
     int nsteps = -1;
-    // FIXME: probably need to add mpi manager here!
 public:
 // REM: the constructor must init the ensemble! (analysis states!)
 // called if every state was saved.

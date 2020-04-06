@@ -109,7 +109,7 @@ def run_melissa_da_study(
         return pid
 
     def launch_server(server):
-        precommand = 'xterm_gdb'
+        #precommand = 'xterm_gdb'
         precommand = ''
 
         # sometimes the server starts in a runner dir...

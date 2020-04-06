@@ -14,8 +14,8 @@ SUBROUTINE obs_op_pdaf(step, dim_p, dim_obs_p, state_p, m_state_p)
 ! It has to perform the operation of the
 ! observation operator acting on a state vector.
 ! For domain decomposition, the action is on the
-! PE-local sub-domain of the state and has to 
-! provide the observed sub-state for the PE-local 
+! PE-local sub-domain of the state and has to
+! provide the observed sub-state for the PE-local
 ! domain.
 !
 ! Implementation for the 2D online example
