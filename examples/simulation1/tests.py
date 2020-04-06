@@ -160,8 +160,8 @@ elif testcase == 'test-different-parallelism':
         for sip in range(1, MAX_SIMULATION_PROCS + 1):
             for mr in range(1, MAX_RUNNERS + 1):
                 cases.append((sep, sip, mr))
-    #server procs: 1, simulation procs: 3, model runners: 2
-    cases = [(1,3,2)]
+    #server procs: 1, simulation procs: 3, model runners: 2 -- this produces strange FTI errors
+    #cases = [(1,3,2)]
     for i, case in enumerate(cases):
         procs_server, procs_runner, n_runners = case
 

@@ -1146,9 +1146,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.finalizeCP();
 #endif
 
-        sleep(1);  // FIXME: remove this line!Artificially take longer to check how to recover from server crashes
         assimilation_cycles++;
-//      }
+
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
         {
             trigger(STOP_IDLE_RUNNER, it->first);
@@ -1191,9 +1190,10 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
-    assert(argc == 6);
+    assert(argc == 7);
 
     int param_total_steps = 5;
+    int server_slowdown_factor = 1;
 
     // Read in configuration from command line
     if (argc >= 2)
@@ -1211,6 +1211,11 @@ int main(int argc, char * argv[])
     if (argc >= 5)
     {
         MAX_RUNNER_TIMEOUT = atoi(argv[4]);
+    }
+    if (argc >= 6)
+    {
+        server_slowdown_factor = atoi(argv[5]); // will wait this time * 10 useconds every server mainloop...
+        D("using server slowdown factor of %d", server_slowdown_factor);
     }
     // Last argument must be the launcher host name!
     // Or if not using the launcher the file where the server host name shall be stored to.
@@ -1295,7 +1300,7 @@ int main(int argc, char * argv[])
 #ifdef NDEBUG
         // usleep(1);
 #else
-        usleep(10);     // to chill down the processor! TODO remove when measuring!
+        usleep(10*server_slowdown_factor);     // to chill down the processor! TODO remove when measuring!
 #endif
         // Wait for requests
         /* Poll for events indefinitely */

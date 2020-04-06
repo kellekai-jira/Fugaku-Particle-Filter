@@ -8,7 +8,7 @@ from melissa_da_study import *
 
 had_checkpoint = False
 
-def run():
+def run(server_slowdown_factor_=1):
     clean_old_stats()
     run_melissa_da_study(
             executable='simulation2-pdaf',
@@ -21,7 +21,8 @@ def run():
             n_runners=3,
             show_server_log = False,
             show_simulation_log = False,
-            config_fti_path='./config.fti')
+            config_fti_path='./config.fti',
+            server_slowdown_factor=server_slowdown_factor_)
 
 if sys.argv[1] == 'test-example-simulation2':
     run()
@@ -30,16 +31,16 @@ elif sys.argv[1] == 'test-crashing-server':
         def run(self):
             global had_checkpoint
             time.sleep(3)
+            print('Crashing a server...')
             killing_giraffe('melissa_server')
             had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
 
-            from shutil import copyfile
-            copyfile('config.fti', 'config.fti.0')
-            print('Crashing a server...')
+            # from shutil import copyfile
+            # copyfile('config.fti', 'config.fti.0')
 
     giraffe = KillerGiraffe()
     giraffe.start()
-    run()
+    run(10000)
 
     # Check if server was restarted:
     assert os.path.isfile("STATS/server.log.0")

@@ -51,7 +51,8 @@ def run_melissa_da_study(
         n_runners=1,
         show_server_log = True,
         show_simulation_log = True,
-        config_fti_path = melissa_da_path + "/share/melissa-da/config.fti"):
+        config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
+        server_slowdown_factor=1):  # the higher this number the slower the server. 0 is minimum...
 
     global started_runners
     started_runners = 0
@@ -257,7 +258,8 @@ def run_melissa_da_study(
     melissa_study.set_option('assimilation_total_steps', total_steps)
     melissa_study.set_option('assimilation_ensemble_size', ensemble_size)
     melissa_study.set_option('assimilation_assimilator_type', assimilator_type)  # ASSIMILATOR_DUMMY
-    melissa_study.set_option('assimilation_max_runner_timeout', 5)  # seconds, timeout checked frin tge server sude,
+    melissa_study.set_option('assimilation_max_runner_timeout', 5)  # seconds, timeout checked from the server side,
+    melissa_study.set_option('assimilation_server_slowdown_factor', server_slowdown_factor)
 
     melissa_study.set_option('server_cores', procs_server)  # overall cores for the server
     melissa_study.set_option('server_nodes', 1)  # using that many nodes  ... on  a well defined cluster the other can be guessed probably. TODO: make changeable. best in dependence of cluster cores per node constant...
