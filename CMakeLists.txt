@@ -8,9 +8,9 @@ include(melissa/melissa-zmq.cmake)
 
 # FTI #
 
-option(WITH_FTI OFF)
+option(WITH_FTI "FTI is needed for automatic recovery from melissa_server crashes" OFF)
 if (WITH_FTI)
-    option(WITH_FTI_THREADS OFF)
+    option(WITH_FTI_THREADS "Threads will perform server checkpoints in the background. Activation increases the performance when using FTI." OFF)
     option(INSTALL_FTI OFF)
     if(INSTALL_FTI)
         include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
@@ -39,10 +39,13 @@ if (WITH_FTI)
         find_package(Threads REQUIRED)
         link_libraries(${CMAKE_THREAD_LIBS_INIT})
     endif()
+    install(FILES config.fti
+            DESTINATION share/melissa-da)
+else()
+    SET(INSTALL_FTI OFF)
+
 endif()
 
-install(FILES config.fti
-        DESTINATION share/melissa-da)
 
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})

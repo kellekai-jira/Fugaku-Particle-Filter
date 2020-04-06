@@ -25,9 +25,12 @@ from launcher import melissa
 
 from utils import *
 
+import logging
+
 # These variables are only used in this file.
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
+melissa_with_fti = (os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE')
 
 # Assimilator types:
 ASSIMILATOR_DUMMY = 0
@@ -59,8 +62,10 @@ def run_melissa_da_study(
         os.mkdir(WORKDIR)
 
     os.chdir(WORKDIR)
-    # FIXME: use  user config.fti
-    copyfile(melissa_da_path + "/share/melissa-da/config.fti", "config.fti")
+
+    if melissa_with_fti:
+        # FIXME: use  user config.fti
+        copyfile(melissa_da_path + "/share/melissa-da/config.fti", "config.fti")
 
     # The launch_server function to put in USER_FUNCTIONS['launch_server'].
     # It takes a Server object as argument, and must set its job_id attribute.
@@ -117,6 +122,18 @@ def run_melissa_da_study(
         # TODO: why not using return?
         logfile = '' if show_server_log else 'server.log'
         server.job_id = cluster_launch(server.cores, server.nodes, cmd, '', logfile)
+
+    def restart_server(server):
+        if melissa_with_fti:
+            launch_server(server)
+        else:
+            # FIXME: gracefully shut down all runners!
+            logging.info("Server cannot be recovered as melissa-da was not compiled using WITH_FTI")
+            from launcher.simulation import FINISHED
+            with server.lock:
+                server.status = FINISHED
+                server.want_stop = True
+            logging.debug("Ending server now")
 
 
 
@@ -240,7 +257,7 @@ def run_melissa_da_study(
     melissa_study.server.launch(launch_server)
     melissa_study.check_job(check_job)
     melissa_study.simulation.check_job(check_job)
-    melissa_study.server.restart(launch_server)
+    melissa_study.server.restart(restart_server)
     melissa_study.check_scheduler_load(check_load)
     melissa_study.cancel_job(kill_job)
 
