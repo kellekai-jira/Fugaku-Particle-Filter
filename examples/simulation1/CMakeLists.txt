@@ -16,9 +16,6 @@ target_link_libraries(simulation1-hidden melissa_api)
 INSTALL(TARGETS simulation1-hidden RUNTIME DESTINATION bin)
 
 
-function(python_test test_name)
-    add_test(NAME ${test_name} COMMAND ${in_env} python3 ./tests.py ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endfunction()
 
 add_test(NAME "test-example-simulation1" COMMAND ${in_env} python3 ./script.py ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 

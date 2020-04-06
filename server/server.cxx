@@ -1136,7 +1136,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // get new analysis states from update step
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
-        current_nsteps = assimilator->do_update_step(current_step); // FIXME do time dependent update step!!
+        current_nsteps = assimilator->do_update_step(current_step); // FIXME do time dependent update step!!, completely integrated?
+        sleep(1);  // FIXME: remove this line!Artificially take longer to check how to recover from server crashes
         trigger(STOP_FILTER_UPDATE, current_step);
 
 #ifdef WITH_FTI

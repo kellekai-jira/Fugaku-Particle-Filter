@@ -22,3 +22,6 @@ INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
 add_test(NAME simulation2-pdaf
     COMMAND ${in_env} python3 ./tests.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+python_test("test-example-simulation2")
+python_test("test-crashing-server")

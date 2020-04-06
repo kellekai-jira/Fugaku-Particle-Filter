@@ -23,6 +23,8 @@ from shutil import copyfile
 
 from launcher import melissa
 
+from utils import *
+
 # These variables are only used in this file.
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
@@ -251,7 +253,8 @@ def run_melissa_da_study(
     sys.stdout.flush()
 
 
-def check_stateless(simulation_executable):
+def check_stateless(simulation_executable):  # TODO: do those guys without FTI maybe?
+    clean_old_stats()
     run_melissa_da_study(
         executable=simulation_executable,
         total_steps=3,
@@ -276,6 +279,7 @@ def check_stateless(simulation_executable):
 
 # exporting for import * :
 __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
+           'killing_giraffe', 'clean_old_stats',  # utils
            'ASSIMILATOR_CHECK_STATELESS',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',

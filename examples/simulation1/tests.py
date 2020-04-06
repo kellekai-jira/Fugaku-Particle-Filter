@@ -24,16 +24,6 @@ procs_server=1
 procs_runner=1
 n_runners=1
 
-def killing_giraffe(name):
-    p = subprocess.Popen(['ps', '-x'], stdout=subprocess.PIPE)
-    out, err = p.communicate()
-    pids = []
-    for line in out.splitlines():
-        if name in line.decode():
-            pids.append(int(line.split(None, 1)[0]))
-    assert len(pids) > 0
-    os.kill(random.choice(pids), signal.SIGKILL)
-
 def compare(reference_file):
     print('Compare with %s...' % reference_file)
     cmd = 'diff -s --side-by-side STATS/output.txt %s' % reference_file
@@ -84,6 +74,8 @@ def run():
           procs_runner,
           n_runners)
 
+    clean_old_stats()
+
     start = time.time()
     run_melissa_da_study(
             executable,
@@ -107,7 +99,7 @@ if testcase == 'test-crashing-runner':
     procs_runner = 2
     n_runners = 10
 
-    class Giraffe(Thread):
+    class KillerGiraffe(Thread):
         def run(self):
             time.sleep(2)
             print('Crashing a runner...')
@@ -119,7 +111,7 @@ if testcase == 'test-crashing-runner':
             print('Crashing a runner...')
             killing_giraffe('simulation1')
 
-    giraffe = Giraffe()
+    giraffe = KillerGiraffe()
     giraffe.start()
     run()
 
@@ -168,13 +160,12 @@ elif testcase == 'test-different-parallelism':
         for sip in range(1, MAX_SIMULATION_PROCS + 1):
             for mr in range(1, MAX_RUNNERS + 1):
                 cases.append((sep, sip, mr))
-
+    #server procs: 1, simulation procs: 3, model runners: 2
+    cases = [(1,3,2)]
     for i, case in enumerate(cases):
         procs_server, procs_runner, n_runners = case
 
         print(os.getcwd())
-        if os.path.isdir("STATS"):
-            shutil.rmtree("STATS")
 
         print("------------------------------------------------------------------------")
         print('step %d/%d' % (i+1, len(cases)))
