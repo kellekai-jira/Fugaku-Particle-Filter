@@ -39,11 +39,11 @@ if (WITH_FTI)
         find_package(Threads REQUIRED)
         link_libraries(${CMAKE_THREAD_LIBS_INIT})
     endif()
+endif()
 
 install(FILES config.fti
         DESTINATION share/melissa-da)
 
-endif()
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 
