@@ -124,6 +124,17 @@ def run_melissa_da_study(
         server.job_id = cluster_launch(server.cores, server.nodes, cmd, '', logfile)
 
     def restart_server(server):
+        if (not show_server_log) and os.path.isfile('server.log'):
+            # find new free server logfile name:
+            i = 0
+            def fn(i):
+                return 'server.log.%d'%i
+            while os.path.isfile(fn(i)):
+                i += 1
+            os.rename('server.log', fn(i))
+
+
+
         if melissa_with_fti:
             launch_server(server)
         else:

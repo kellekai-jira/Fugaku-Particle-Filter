@@ -1137,7 +1137,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
         current_nsteps = assimilator->do_update_step(current_step); // FIXME do time dependent update step!!, completely integrated?
-        sleep(1);  // FIXME: remove this line!Artificially take longer to check how to recover from server crashes
         trigger(STOP_FILTER_UPDATE, current_step);
 
 #ifdef WITH_FTI
@@ -1146,6 +1145,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.finalizeCP();
 #endif
 
+        sleep(1);  // FIXME: remove this line!Artificially take longer to check how to recover from server crashes
         assimilation_cycles++;
 //      }
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)

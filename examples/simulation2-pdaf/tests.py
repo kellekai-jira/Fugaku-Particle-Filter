@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from threading import Thread
@@ -16,21 +17,40 @@ def run():
             procs_server=3,
             procs_runner=2,
             n_runners=3,
-            show_server_log = True,
-            show_simulation_log = True)
+            show_server_log = False,
+            show_simulation_log = False)
 
 if sys.argv[1] == 'test-example-simulation2':
     run()
 elif sys.argv[1] == 'test-crashing-server':
+    had_checkpoint = False
     class KillerGiraffe(Thread):
         def run(self):
-            time.sleep(2)
+            time.sleep(3)
+            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+
+            from shutil import copyfile
+            copyfile('config.fti', 'config.fti.0')
             print('Crashing a server...')
             killing_giraffe('melissa_server')
 
     giraffe = KillerGiraffe()
     giraffe.start()
     run()
+
+    # Check if server was restarted:
+    assert os.path.isfile("STATS/server.log.0")
+    assert os.path.isfile("STATS/server.log")
+
+    # Check for FTI logs:  FIXME
+    #assert subprocess.call(["grep", "", "STATS/server.log.0"])
+    #assert subprocess.call(["grep", "", "STATS/server.log.0"])
+
+
+    print("Had checkpoint?", had_checkpoint)
+    assert had_checkpoint
+
+
 
 
 exit(subprocess.call(["bash", "test.sh"]))
