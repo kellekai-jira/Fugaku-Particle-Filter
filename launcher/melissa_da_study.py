@@ -50,7 +50,8 @@ def run_melissa_da_study(
         procs_runner=1,
         n_runners=1,
         show_server_log = True,
-        show_simulation_log = True):
+        show_simulation_log = True,
+        config_fti_path = melissa_da_path + "/share/melissa-da/config.fti"):
 
     global started_runners
     started_runners = 0
@@ -61,11 +62,11 @@ def run_melissa_da_study(
     if (not os.path.isdir(WORKDIR)):
         os.mkdir(WORKDIR)
 
+    if melissa_with_fti:
+        copyfile(config_fti_path, WORKDIR+"/config.fti")
+
     os.chdir(WORKDIR)
 
-    if melissa_with_fti:
-        # FIXME: use  user config.fti
-        copyfile(melissa_da_path + "/share/melissa-da/config.fti", "config.fti")
 
     # The launch_server function to put in USER_FUNCTIONS['launch_server'].
     # It takes a Server object as argument, and must set its job_id attribute.

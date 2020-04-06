@@ -6,6 +6,8 @@ import time
 from melissa_da_study import *
 
 
+had_checkpoint = False
+
 def run():
     clean_old_stats()
     run_melissa_da_study(
@@ -18,21 +20,22 @@ def run():
             procs_runner=2,
             n_runners=3,
             show_server_log = False,
-            show_simulation_log = False)
+            show_simulation_log = False,
+            config_fti_path='./config.fti')
 
 if sys.argv[1] == 'test-example-simulation2':
     run()
 elif sys.argv[1] == 'test-crashing-server':
-    had_checkpoint = False
     class KillerGiraffe(Thread):
         def run(self):
+            global had_checkpoint
             time.sleep(3)
+            killing_giraffe('melissa_server')
             had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
 
             from shutil import copyfile
             copyfile('config.fti', 'config.fti.0')
             print('Crashing a server...')
-            killing_giraffe('melissa_server')
 
     giraffe = KillerGiraffe()
     giraffe.start()
@@ -42,9 +45,9 @@ elif sys.argv[1] == 'test-crashing-server':
     assert os.path.isfile("STATS/server.log.0")
     assert os.path.isfile("STATS/server.log")
 
-    # Check for FTI logs:  FIXME
-    #assert subprocess.call(["grep", "", "STATS/server.log.0"])
-    #assert subprocess.call(["grep", "", "STATS/server.log.0"])
+    # Check for FTI logs:
+    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
+    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
 
 
     print("Had checkpoint?", had_checkpoint)
