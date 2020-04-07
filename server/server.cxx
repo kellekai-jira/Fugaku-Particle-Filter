@@ -1148,11 +1148,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 #endif
 
 
-        if (!launcher->checkLauncherDueDate()) {
+        if (comm_rank == 0 && !launcher->checkLauncherDueDate()) {
             // Launcher died! Wait for next update step and send back to all
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
             current_nsteps = -1;
+            exit(1);  // better to exit like this Otherwise many errors will come up as
+            // only rank 0 knows about the crashed launcher
         }
         assimilation_cycles++;
 
