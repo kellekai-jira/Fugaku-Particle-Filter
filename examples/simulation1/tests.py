@@ -82,13 +82,17 @@ def run(server_slowdown_factor_=1):
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
+def long_run():
+    global total_steps, ensemble_size, procs_server, procs_runner, n_runners
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 1
+    procs_runner = 2
+    n_runners = 2
+    run()
+
 testcase = sys.argv[1]
 if testcase == 'test-crashing-runner':
-    total_steps = 200
-    ensemble_size = 42
-    procs_server = 3
-    procs_runner = 2
-    n_runners = 10
 
     class KillerGiraffe(Thread):
         def run(self):
@@ -104,7 +108,7 @@ if testcase == 'test-crashing-runner':
 
     giraffe = KillerGiraffe()
     giraffe.start()
-    run()
+    long_run()
 
     # wait for giraffe to finish:
     giraffe.join()
@@ -131,11 +135,6 @@ if testcase == 'test-crashing-runner':
         print('Launcher even recovered some of the broken runners')
 
 elif testcase == 'test-crashing-server1':
-    total_steps = 200
-    ensemble_size = 4
-    procs_server = 1
-    procs_runner = 2
-    n_runners = 2
     class KillerGiraffe(Thread):
         def run(self):
             global had_checkpoint
@@ -150,7 +149,7 @@ elif testcase == 'test-crashing-server1':
 
     giraffe = KillerGiraffe()
     giraffe.start()
-    run(1)
+    long_run()
 
     # Check if server was restarted:
     assert os.path.isfile("STATS/server.log.0")
@@ -176,11 +175,13 @@ elif testcase == 'test-crashing-server1':
     shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
     subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
     # Generate reference
-    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > reference-crashing-server-sorted.txt"])
+    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
     compare('STATS/reference-crashing-server-sorted.txt')
 
 elif testcase == 'test-crashing-launcher':
+    subprocess.call(["bash", "-c", "python3 tests.py long-run"])
     assert False # unimplemented
+
 elif testcase == 'test-different-parallelism':
     MAX_SERVER_PROCS = 3
     MAX_SIMULATION_PROCS = 3
@@ -227,6 +228,10 @@ elif testcase == 'test-check-stateless':
     assert check_stateless('simulation1')
     assert check_stateless('simulation1-stateful') == False
     assert check_stateless('simulation1-hidden')
+
+elif testcase == 'long-run':
+    # To generate reference for KillerGiraffe tests and for crashing_launcher test
+    long_run()
 
 else:
     print('Error! does not know the testcase %s' % testcase)
