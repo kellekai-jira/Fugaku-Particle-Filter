@@ -7,6 +7,7 @@ from melissa_da_study import *
 
 
 had_checkpoint = False
+was_unfinished = False
 
 def run(server_slowdown_factor_=1):
     clean_old_stats()
@@ -29,14 +30,15 @@ if sys.argv[1] == 'test-example-simulation2':
 elif sys.argv[1] == 'test-crashing-server2':
     class KillerGiraffe(Thread):
         def run(self):
-            global had_checkpoint
-            time.sleep(3)
+            global had_checkpoint, was_unfinished
+            time.sleep(10)
             print('Crashing a server...')
             killing_giraffe('melissa_server')
             had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            was_unfinished = not os.path.isfile("state_step16_for.txt")
 
-            # from shutil import copyfile
-            # copyfile('config.fti', 'config.fti.0')
+            from shutil import copyfile
+            copyfile('config.fti', 'config.fti.0')
 
     giraffe = KillerGiraffe()
     giraffe.start()
@@ -53,6 +55,9 @@ elif sys.argv[1] == 'test-crashing-server2':
 
     print("Had checkpoint?", had_checkpoint)
     assert had_checkpoint
+
+    print("Was unfinished?", was_unfinished)
+    assert was_unfinished
 
 
 
