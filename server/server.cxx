@@ -1249,13 +1249,19 @@ int main(int argc, char * argv[])
     if (comm_rank == 0)
     {
         configuration_socket = zmq_socket(context, ZMQ_REP);
-        const char * configuration_socket_addr = "tcp://*:4000";
+        const char * configuration_socket_addr = "tcp://*:4000";      // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
         int rc = zmq_bind(configuration_socket,
-                          configuration_socket_addr);              // to be put into environment variable MELISSA_SERVER_MASTER_NODE on simulation start
+                          configuration_socket_addr);
+        if (rc != 0 && errno == 98) {
+            // Address already in use. Try once more...
+            sleep(1);
+            rc = zmq_bind(configuration_socket,
+                     configuration_socket_addr);
+        }
+
         L("Configuration socket listening on port %s",
           configuration_socket_addr);
         ZMQ_CHECK(rc);
-        assert(rc == 0);
 
         launcher = std::make_shared<LauncherConnection>(context, argv[argc-1]);
     }
