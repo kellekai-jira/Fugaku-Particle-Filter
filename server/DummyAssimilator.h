@@ -16,7 +16,6 @@ class DummyAssimilator : public Assimilator
 private:
     Field & field;
     const int total_steps;
-    int step = 0;
     MpiManager & mpi;
 public:
     DummyAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);

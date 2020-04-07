@@ -63,17 +63,7 @@ def get_timing_information():
     return get_csv_section('STATS/server.log', 'Timing information')
 
 
-def run():
-    print("Running arguments: ",
-          executable,
-          total_steps,
-          ensemble_size,
-          assimilator_type,
-          cluster_name,
-          procs_server,
-          procs_runner,
-          n_runners)
-
+def run(server_slowdown_factor_=1):
     clean_old_stats()
 
     start = time.time()
@@ -87,7 +77,8 @@ def run():
             procs_runner,
             n_runners,
             False,
-            False)
+            False,
+            server_slowdown_factor=server_slowdown_factor_)
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
@@ -139,8 +130,52 @@ if testcase == 'test-crashing-runner':
     if ti['max_runners'][199] > minimum:
         print('Launcher even recovered some of the broken runners')
 
-elif testcase == 'test-crashing-server':
-    assert False # unimplemented
+elif testcase == 'test-crashing-server1':
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 1
+    procs_runner = 2
+    n_runners = 2
+    class KillerGiraffe(Thread):
+        def run(self):
+            global had_checkpoint
+            time.sleep(2)
+            print('Crashing a server...')
+            killing_giraffe('melissa_server')
+            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            shutil.copyfile('output.txt', 'output.txt.0')
+
+            # from shutil import copyfile
+            # copyfile('config.fti', 'config.fti.0')
+
+    giraffe = KillerGiraffe()
+    giraffe.start()
+    run(1)
+
+    # Check if server was restarted:
+    assert os.path.isfile("STATS/server.log.0")
+    assert os.path.isfile("STATS/server.log")
+
+    # Check for FTI logs:
+    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
+    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+
+    # Check if file sizes are good
+    assert os.path.getsize('STATS/output.txt.0') > 5000  # bytes
+    assert os.path.getsize('STATS/output.txt') > 5000  # bytes
+
+
+    print("Had checkpoint?", had_checkpoint)
+    assert had_checkpoint
+
+    # Check_output
+    # join files and remove duplicate lines before compare!
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
+    subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
+    # Generate reference
+    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > reference-crashing-server-sorted.txt"])
+    compare('STATS/reference-crashing-server-sorted.txt')
+
 elif testcase == 'test-crashing-launcher':
     assert False # unimplemented
 elif testcase == 'test-different-parallelism':

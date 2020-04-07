@@ -42,8 +42,7 @@ int DummyAssimilator::do_update_step(const int current_step) {
         state_id++;
     }
 
-    step++;
-    if (step >= total_steps)
+    if (current_step >= total_steps)
     {
         return -1;
     }

@@ -28,8 +28,7 @@ int EmptyAssimilator::do_update_step(const int current_step) {
     L("Doing empty update step...\n");
     MPI_Barrier(mpi.comm());
 
-    step++;
-    if (step >= total_steps)
+    if (current_step >= total_steps)
     {
         return -1;
     }

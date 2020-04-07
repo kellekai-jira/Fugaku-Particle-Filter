@@ -26,7 +26,7 @@ def run(server_slowdown_factor_=1):
 
 if sys.argv[1] == 'test-example-simulation2':
     run()
-elif sys.argv[1] == 'test-crashing-server':
+elif sys.argv[1] == 'test-crashing-server2':
     class KillerGiraffe(Thread):
         def run(self):
             global had_checkpoint

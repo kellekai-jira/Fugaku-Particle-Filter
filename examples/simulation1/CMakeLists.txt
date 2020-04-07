@@ -25,3 +25,5 @@ python_test("test-different-parallelism")
 
 python_test("test-crashing-runner")
 
+python_test("test-crashing-server1")
+
