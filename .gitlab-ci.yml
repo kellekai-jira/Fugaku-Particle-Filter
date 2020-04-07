@@ -51,7 +51,7 @@ build_fti:
   script:
     - "mkdir build" # don't forget to cd backwards at the ends so the artifacts can be found
     - "cd build"  #- "cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON"  # TODO: check with threads...
-    - "cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -FTI_PATH/$HOME/FTI -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON" #TODO: preinstall FTI for faster testing (its in $HOME/FTI... extracted from another builds artifact)
+    - "cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -DFTI_PATH=$HOME/FTI -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON"
     - "make -j10 install"
     - "cd .."
   artifacts:
