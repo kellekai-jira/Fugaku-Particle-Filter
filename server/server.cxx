@@ -1261,6 +1261,8 @@ int main(int argc, char * argv[])
                           configuration_socket_addr);
         if (rc != 0 && errno == 98) {
             // Address already in use. Try once more...
+            L("Adress %s already in use. Retrying ONCE again to bind in 5s...",
+                    configuration_socket_addr);
             sleep(1);
             rc = zmq_bind(configuration_socket,
                      configuration_socket_addr);
