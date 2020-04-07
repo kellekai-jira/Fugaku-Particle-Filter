@@ -72,6 +72,7 @@ AssimilatorType ASSIMILATOR_TYPE=ASSIMILATOR_DUMMY;
 
 
 
+std::shared_ptr<LauncherConnection> launcher;
 
 
 
@@ -1146,6 +1147,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.finalizeCP();
 #endif
 
+
+        if (!launcher->checkLauncherDueDate()) {
+            // Launcher died! Wait for next update step and send back to all
+            // simulations to shut themselves down. This way we are sure to send
+            // to all and we can finish the current update step gracefully.
+            current_nsteps = -1;
+        }
         assimilation_cycles++;
 
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
@@ -1232,7 +1240,6 @@ int main(int argc, char * argv[])
     comm_rank = mpi.rank();
 
     std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
-    std::shared_ptr<LauncherConnection> launcher;
 
     context = zmq_ctx_new ();
     int major, minor, patch;
@@ -1336,8 +1343,14 @@ int main(int argc, char * argv[])
             if (items[2].revents & ZMQ_POLLIN)
             {
                 launcher->receiveText();
-            } else {
-                launcher->checkLauncherDueDate();
+            } else if (!launcher->checkLauncherDueDate()) {
+                // if we know no runners end here already!
+                // (There are probably none in the queue neither as there is no launcher...)
+                if (scheduled_sub_tasks.size() + running_sub_tasks.size() == 0)
+                {
+                    L("Error! There are no runners and also the Launcher does not respond. Ending the server now!");
+                    exit(1);
+                }
             }
         }
 
