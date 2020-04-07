@@ -176,7 +176,11 @@ struct RunnerRankConnection
                           part.send_count *
                           sizeof(double), NULL, NULL);
 
-        trigger(START_PROPAGATE_STATE, state_id);
+        if (runner_rank == 0)
+        {
+            trigger(START_PROPAGATE_STATE, state_id);
+        }
+
         const Part & hidden_part = field->getPartHidden(runner_rank);
         D("-> Server sending %lu + %lu hidden bytes for state %d, timestamp=%d",
           part.send_count *
@@ -291,7 +295,22 @@ struct Runner  // Server perspective of a Model task runner
 
 };
 
-std::map<int, std::shared_ptr<Runner> > idle_runners;
+std::map<int, std::shared_ptr<Runner> > idle_runners;  // might also contain half empty stuff
+
+std::map<int, std::shared_ptr<Runner> >::iterator get_completely_idle_runner()
+{
+    // finds a runner that is completely idle. Returns idle_runners.end() if none was
+    // found.
+    auto result = std::find_if(idle_runners.begin(),
+                                         idle_runners.end(),
+                                         [](
+                                             std::pair<int, std::shared_ptr<Runner>>
+                                             elem){
+                                          return elem.second->connected_runner_ranks.size() == field->connected_runner_ranks.size();
+
+                                          });
+    return result;
+}
 
 std::set<int> unscheduled_tasks;
 
@@ -501,6 +520,10 @@ bool try_launch_subtask(std::shared_ptr<SubTask> &sub_task) {
     if (found_runner->second->connected_runner_ranks.empty())
     {
         idle_runners.erase(found_runner);
+    }
+
+    if (sub_task->runner_rank == 0)
+    {
         trigger(STOP_IDLE_RUNNER, sub_task->runner_id);
     }
 
@@ -725,7 +748,7 @@ void check_due_dates() {
             trigger(REMOVE_RUNNER, it->runner_id);
 
             // reschedule directly if possible
-            if (idle_runners.size() > 0)
+            if (get_completely_idle_runner() != idle_runners.end())
             {
                 L(
                     "Rescheduling after due date violation detected by rank 0");
@@ -784,7 +807,7 @@ void check_kill_requests() {
         kill_task(t);
 
         // reschedule directly if possible
-        if (idle_runners.size() > 0)
+        if (get_completely_idle_runner() != idle_runners.end())
         {
             L(
                 "Rescheduling after due date violation detected by detector_rank %d",
@@ -929,7 +952,9 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 
         if (runner_timestamp == current_step)
         {
-            trigger(STOP_PROPAGATE_STATE, runner_state_id);
+            if (runner_rank == 0) {
+                trigger(STOP_PROPAGATE_STATE, runner_state_id);   // will trigger for runnerrank 0...
+            }
             D("storing this timestamp!...");
             // zero copy is unfortunately for send only. so copy internally...
             field->ensemble_members[runner_state_id].
@@ -1177,13 +1202,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         {
             // As in this loop we might erase some idle runners from the list we may not
             // do a simple for loop.
-            while (!idle_runners.empty())
+            auto runner_it = get_completely_idle_runner();
+            while (runner_it != idle_runners.end() && unscheduled_tasks.size() > 0)
             {
-                auto runner_it = idle_runners.begin();
-                // maybe it's easier to erase not the firstelement?
                 L("Rescheduling after update step for timestep %d",
                   current_step);
                 schedule_new_task(runner_it->first);
+                runner_it = get_completely_idle_runner();
             }
 
         }

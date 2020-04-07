@@ -49,10 +49,9 @@ build_fti:
   tags:
     - melissa-da
   script:
-    # don't forget to cd backwards at the ends so the artifacts can be found
-    - "mkdir build"
-    - "cd build"
-    - "cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=OFF"  # TODO: check with threads... TODO: preinstall FTI for faster testing
+    - "mkdir build" # don't forget to cd backwards at the ends so the artifacts can be found
+    - "cd build"  #- "cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON"  # TODO: check with threads...
+    - "cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -FTI_PATH/$HOME/FTI -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON" #TODO: preinstall FTI for faster testing (its in $HOME/FTI... extracted from another builds artifact)
     - "make -j10 install"
     - "cd .."
   artifacts:
@@ -68,6 +67,8 @@ test_fti:
   tags:
     - melissa-da
   script:
+    - "export LD_LIBRARY_PATH=$HOME/FTI:$LD_LIBRARY_PATH"  # TODO no idea if this works... but should!  The question is if bash executes the script... # For preinstalled FTI
+    - "env"
     - "cd build && ctest --verbose"
   dependencies:
     - build_fti

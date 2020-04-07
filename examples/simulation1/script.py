@@ -6,8 +6,8 @@ run_melissa_da_study(
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
         cluster_name='local',
-        procs_server=1,
-        procs_runner=1,
+        procs_server=2,
+        procs_runner=3,
         n_runners=1,
-        show_server_log = True,
-        show_simulation_log = True)
+        show_server_log = False,
+        show_simulation_log = False)

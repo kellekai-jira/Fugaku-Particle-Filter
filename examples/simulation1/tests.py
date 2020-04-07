@@ -83,31 +83,30 @@ def run(server_slowdown_factor_=1):
     print("This took %.3f seconds" % diff)
 
 def long_run():
-    global total_steps, ensemble_size, procs_server, procs_runner, n_runners
+    global total_steps, ensemble_size, procs_server, procs_runner
     total_steps = 200
     ensemble_size = 4
     procs_server = 1
     procs_runner = 2
-    n_runners = 2
     run()
 
 testcase = sys.argv[1]
 if testcase == 'test-crashing-runner':
-
     class KillerGiraffe(Thread):
         def run(self):
             time.sleep(2)
-            print('Crashing a runner...')
+            print('Crashing first runner...')
             killing_giraffe('simulation1')
             time.sleep(4)
-            print('Crashing a runner...')
+            print('Crashing second runner...')
             killing_giraffe('simulation1')
             time.sleep(4)
-            print('Crashing a runner...')
+            print('Crashing third runner...')
             killing_giraffe('simulation1')
 
     giraffe = KillerGiraffe()
     giraffe.start()
+    n_runners = 10
     long_run()
 
     # wait for giraffe to finish:
@@ -150,6 +149,7 @@ elif testcase == 'test-crashing-server1':
 
     giraffe = KillerGiraffe()
     giraffe.start()
+    n_runners = 2
     long_run()
 
     # Check if server was restarted:

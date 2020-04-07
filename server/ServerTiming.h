@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "TimingEvent.h"
 
+// REM: STOP/START_IDLE/PROPAGATE concerns always runner rank 0 for the serverside timing.
 
 // double get_walltime(const TimingEvent &a, const TimingEvent &b) {
 //// in milliseconds
