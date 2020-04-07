@@ -33,7 +33,8 @@ elif sys.argv[1] == 'test-crashing-server2':
             global had_checkpoint, was_unfinished
             time.sleep(10)
             print('Crashing a server...')
-            killing_giraffe('melissa_server')
+            #killing_giraffe('melissa_server')
+            subprocess.call(["killall", "melissa_server"])
             had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
             was_unfinished = not os.path.isfile("state_step16_for.txt")
 

@@ -140,7 +140,8 @@ elif testcase == 'test-crashing-server1':
             global had_checkpoint
             time.sleep(2)
             print('Crashing a server...')
-            killing_giraffe('melissa_server')
+            #killing_giraffe('melissa_server')
+            subprocess.call(["killall", "melissa_server"])
             had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
             shutil.copyfile('output.txt', 'output.txt.0')
 
