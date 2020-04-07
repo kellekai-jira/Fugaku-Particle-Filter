@@ -17,13 +17,44 @@ build_deps:
     paths:
       - melissa/install/
 
-build:
+ # FIXME: reactivate
+#build:
+  #stage: build
+  #tags:
+    #- melissa-da
+  #script:
+    ## don't forget to cd backwards at the ends so the artifacts can be found
+    #- "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10 install && cd .."
+  #artifacts:
+    #paths:
+      ## export further...
+      #- melissa/install/
+      #- build/
+  #dependencies:
+    #- build_deps
+
+
+#test:
+  #stage: test
+  #tags:
+    #- melissa-da
+  #script:
+    #- "cd build && ctest --verbose"
+  #dependencies:
+    #- build
+
+
+build_fti:
   stage: build
   tags:
     - melissa-da
   script:
     # don't forget to cd backwards at the ends so the artifacts can be found
-    - "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10 install && cd .."
+    - "mkdir build"
+    - "cd build"
+    - "cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=OFF"  # TODO: check with threads... TODO: preinstall FTI for faster testing
+    - "make -j10 install"
+    - "cd .."
   artifacts:
     paths:
       # export further...
@@ -32,13 +63,12 @@ build:
   dependencies:
     - build_deps
 
-test:
+test_fti:
   stage: test
   tags:
     - melissa-da
   script:
     - "cd build && ctest --verbose"
   dependencies:
-    - build
+    - build_fti
 
-      # Add another testcase where FTI is activated and where some FTI related stuff is tested!

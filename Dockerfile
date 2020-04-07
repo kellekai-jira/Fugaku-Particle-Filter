@@ -13,6 +13,7 @@ RUN apt-get install -y \
  git \
  autoconf \
  openmpi-bin libopenmpi-dev openmpi-common \
+ libhdf5-openmpi-dev \
  build-essential gcc g++ make cmake \
  python3 python3-numpy python3-pandas \
  libzmq5-dev pkg-config \
