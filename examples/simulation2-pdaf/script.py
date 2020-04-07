@@ -5,7 +5,7 @@ run_melissa_da_study(
         total_steps=18,
         ensemble_size=9,
         assimilator_type=ASSIMILATOR_PDAF,
-        cluster_name='local',
+        cluster=LocalCluster(),
         procs_server=3,
         procs_runner=2,
         n_runners=3,

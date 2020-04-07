@@ -19,7 +19,7 @@ executable='simulation1'
 total_steps=3
 ensemble_size=3
 assimilator_type=ASSIMILATOR_DUMMY
-cluster_name='local'
+cluster=LocalCluster()
 procs_server=1
 procs_runner=1
 n_runners=1
@@ -72,7 +72,7 @@ def run(server_slowdown_factor_=1):
             total_steps,
             ensemble_size,
             assimilator_type,
-            cluster_name,
+            LocalCluster(),
             procs_server,
             procs_runner,
             n_runners,

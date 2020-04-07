@@ -21,6 +21,8 @@ import time
 import subprocess
 from shutil import copyfile
 
+from cluster import *
+
 from launcher import melissa
 
 from utils import *
@@ -45,7 +47,7 @@ def run_melissa_da_study(
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
-        cluster_name='local',  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
+        cluster=LocalCluster(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
         procs_server=1,
         procs_runner=1,
         n_runners=1,
@@ -54,8 +56,12 @@ def run_melissa_da_study(
         config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
         server_slowdown_factor=1):  # the higher this number the slower the server. 0 is minimum...
 
+    walltime = 'xxxx01:00:00'  # TODO: make changeable...
+    assert isinstance(cluster, Cluster)
+
     global started_runners
     started_runners = 0
+
 
     old_cwd = os.getcwd()
     WORKDIR = old_cwd + '/STATS'
@@ -75,40 +81,6 @@ def run_melissa_da_study(
     # The server object provides two important attributes:
     #   path: the path to melissa_server executable
     #   cmd_opt: the options set by the launcher to pass to the server.
-
-
-    def cluster_launch(n_procs, n_nodes, cmd, melissa_server_master_node='', logfile=''):
-        # TODO: use annas template engine here instead of this function!
-        assert n_nodes == 1  # TODO: for the moment
-        lib_path = os.getenv('LD_LIBRARY_PATH')
-
-        # handle "". mpiexec -x implicitly adds the new library path to the existing one.
-        # "" would lead to :"path1:path2" which cannot be read.
-        if lib_path == '':
-            lib_path ='""'
-
-        if melissa_server_master_node == '':
-            melissa_server_master_node ='""'
-
-        run_cmd = '%s -n %d -x LD_LIBRARY_PATH=%s -x MELISSA_SERVER_MASTER_NODE=%s %s' % (
-                os.getenv('MPIEXEC'),
-                n_procs,
-                lib_path,
-                melissa_server_master_node,
-                cmd)
-
-        print("Launching %s" % run_cmd)
-        pid = 0
-
-        if logfile == '':
-            pid = subprocess.Popen(run_cmd.split()).pid
-        else:
-            with open(logfile, 'wb') as f:
-                pid = subprocess.Popen(run_cmd.split(), stdout=f).pid
-
-        print("Process id: %d" % pid)
-        return pid
-
     def launch_server(server):
         #precommand = 'xterm_gdb'
         precommand = ''
@@ -122,8 +94,9 @@ def run_melissa_da_study(
                 )
 
         # TODO: why not using return?
-        logfile = '' if show_server_log else 'server.log'
-        server.job_id = cluster_launch(server.cores, server.nodes, cmd, '', logfile)
+        logfile = '' if show_server_log else '%s/server.log' % WORKDIR
+        server.job_id = cluster.ScheduleJob('melissa_server',
+                walltime, server.cores, server.nodes, cmd, '', logfile)
 
     def restart_server(server):
         if (not show_server_log) and os.path.isfile('server.log'):
@@ -174,8 +147,8 @@ def run_melissa_da_study(
         melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
 
         print('Starting runner! REM: the simulation group id != runner id!')
-        logfile = '' if show_simulation_log else 'simulation-%03d.log' % group.group_id
-        group.job_id = cluster_launch(group.cores, group.nodes, cmd, melissa_server_master_node, logfile)
+        logfile = '' if show_simulation_log else '%s/simulation-%03d.log' % (WORKDIR, group.group_id)
+        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, melissa_server_master_node, logfile)
 
         os.chdir(WORKDIR)
 
@@ -187,28 +160,20 @@ def run_melissa_da_study(
         # 0: not runing  TODO: use macros!  TODO: what's the difference between not running and not running anymore?
         # 1: running
         # 2: not running anymore (finished or crashed)
-        state = 0
-        try:
-            subprocess.check_output(["ps", str(job.job_id)])
-            state = 1
-        except:
-            state = 2
         # we set the job_status attribute of the Job object. Group and Server objects inherite of Job.
-        #print('Checking for job_id %d: state: %d' % (job.job_id, state))
-        job.job_status = state
+        job.job_status = cluster.CheckJobState(job.job_id)
 
     def check_load():
         global started_runners
-        return started_runners < MAX_RUNNERS
+        return started_runners < MAX_RUNNERS and cluster.GetLoad() < 1.0
 
 
     def kill_job(job):
-        os.system('kill '+str(job.job_id))
+        cluster.KillJob(job.job_id)
 
 
 
 
-    assert(cluster_name == 'local')  # cannot handle others atm!
 
     # TODO: dirty: setting global variables. Use a class variable or sth like this...
 
@@ -291,7 +256,7 @@ def check_stateless(simulation_executable):  # TODO: do those guys without FTI m
         total_steps=3,
         ensemble_size=1,
         assimilator_type=ASSIMILATOR_CHECK_STATELESS,
-        cluster_name='local',
+        cluster=LocalCluster(),
         procs_server=1,
         procs_runner=1,
         n_runners=1,
@@ -311,7 +276,9 @@ def check_stateless(simulation_executable):  # TODO: do those guys without FTI m
 # exporting for import * :
 __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'killing_giraffe', 'clean_old_stats',  # utils
+           'LocalCluster',  # cluster
            'ASSIMILATOR_CHECK_STATELESS',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY']
+
