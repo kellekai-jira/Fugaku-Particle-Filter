@@ -2,6 +2,8 @@ from cluster import cluster
 import os
 import subprocess
 
+import logging
+
 class LocalCluster(cluster.Cluster):
 
     def __init__(self):
@@ -43,12 +45,12 @@ class LocalCluster(cluster.Cluster):
 
     def CheckJobState(self, job_id):
         state = 0
-        try:
-            subprocess.check_output(["ps", str(job.job_id)])
+        ret_code = subprocess.call(["ps", str(job_id)], stdout=subprocess.DEVNULL)
+        if ret_code == 0:
             state = 1
-        except:
+        else:
             state = 2
-        #print('Checking for job_id %d: state: %d' % (job_id, state))
+        #logging.debug('Checking for job_id %d: state: %d' % (job_id, state))
         return state
 
     def KillJob(self, job_id):

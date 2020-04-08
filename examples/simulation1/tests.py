@@ -15,6 +15,8 @@ import signal
 
 import random
 
+clean_old_stats()
+
 executable='simulation1'
 total_steps=3
 ensemble_size=3
@@ -64,7 +66,6 @@ def get_timing_information():
 
 
 def run(server_slowdown_factor_=1):
-    clean_old_stats()
 
     start = time.time()
     run_melissa_da_study(
@@ -82,14 +83,6 @@ def run(server_slowdown_factor_=1):
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
-def long_run():
-    global total_steps, ensemble_size, procs_server, procs_runner
-    total_steps = 200
-    ensemble_size = 4
-    procs_server = 1
-    procs_runner = 2
-    run()
-
 testcase = sys.argv[1]
 if testcase == 'test-crashing-runner':
     class KillerGiraffe(Thread):
@@ -106,8 +99,12 @@ if testcase == 'test-crashing-runner':
 
     giraffe = KillerGiraffe()
     giraffe.start()
+    total_steps = 200
+    ensemble_size = 42
+    procs_server = 3
+    procs_runner = 2
     n_runners = 10
-    long_run()
+    run()
 
     # wait for giraffe to finish:
     giraffe.join()
@@ -149,8 +146,13 @@ elif testcase == 'test-crashing-server1':
 
     giraffe = KillerGiraffe()
     giraffe.start()
+
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 1
+    procs_runner = 2
     n_runners = 2
-    long_run()
+    run()
 
     # Check if server was restarted:
     assert os.path.isfile("STATS/server.log.0")

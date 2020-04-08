@@ -5,12 +5,12 @@ from threading import Thread
 import time
 from melissa_da_study import *
 
+clean_old_stats()
 
 had_checkpoint = False
 was_unfinished = False
 
 def run(server_slowdown_factor_=1):
-    clean_old_stats()
     run_melissa_da_study(
             executable='simulation2-pdaf',
             total_steps=18,
