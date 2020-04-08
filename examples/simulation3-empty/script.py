@@ -1,7 +1,7 @@
 from melissa_da_study import *
 
 run_melissa_da_study(
-        executable='simulation3-empty',
+        runner_cmd='simulation3-empty',
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_EMPTY,

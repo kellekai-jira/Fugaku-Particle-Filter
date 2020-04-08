@@ -43,7 +43,7 @@ ASSIMILATOR_CHECK_STATELESS = 3
 started_runners = 0  # as Python seems to not support closurs this has to be global.
 
 def run_melissa_da_study(
-        executable='simulation1',
+        runner_cmd='simulation1',
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
@@ -56,7 +56,8 @@ def run_melissa_da_study(
         config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
         server_slowdown_factor=1,
         runner_timeout=5,
-        additional_server_env={}):  # the higher this number the slower the server. 0 is minimum...
+        additional_server_env={},
+        create_runner_dir=False):  # the higher this number the slower the server. 0 is minimum...
 
     walltime = 'xxxx01:00:00'  # TODO: make changeable...
     assert isinstance(cluster, Cluster)
@@ -148,13 +149,24 @@ def run_melissa_da_study(
 
         cmd = '%s %s' % (
                 precommand,
-                EXECUTABLE_WITH_PATH
+                RUNNER_CMD
                 )
 
         melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
 
         print('Starting runner! REM: the simulation group id != runner id!')
-        logfile = '' if show_simulation_log else '%s/simulation-%03d.log' % (WORKDIR, group.group_id)
+        logfile = ''
+        if not show_simulation_log:
+            def fn(i):
+                return '%s/runner-%03d.log' % (WORKDIR, i)
+            i = 0
+            while os.path.isfile(fn(i)):
+                i += 1
+            logfile = fn(i)
+            if create_runner_dir:
+                runner_dir = '%s/runner-%03d' % (WORKDIR, i)
+                os.mkdir(runner_dir)
+                os.chdir(runner_dir)
 
         additional_env = {
                 "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node
@@ -192,8 +204,9 @@ def run_melissa_da_study(
 
     # TODO: dirty: setting global variables. Use a class variable or sth like this...
 
-    EXECUTABLE_WITH_PATH = executable
-    EXECUTABLE = executable.split('/')[-1]
+    RUNNER_CMD = runner_cmd
+    # split away arguments and take only the last bit of the path.
+    EXECUTABLE = runner_cmd.split(' ')[0].split('/')[-1]
 
     MAX_RUNNERS = n_runners
     PROCS_RUNNER = procs_runner
@@ -265,10 +278,10 @@ def run_melissa_da_study(
     sys.stdout.flush()
 
 
-def check_stateless(simulation_executable):  # TODO: do those guys without FTI maybe?
+def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
     clean_old_stats()
     run_melissa_da_study(
-        executable=simulation_executable,
+        runner_cmd=runner_cmd,
         total_steps=3,
         ensemble_size=1,
         assimilator_type=ASSIMILATOR_CHECK_STATELESS,
@@ -283,7 +296,7 @@ def check_stateless(simulation_executable):  # TODO: do those guys without FTI m
         for line in f.readlines():
             if '**** Check Successful' in line:
                 print('Simulation %s seems stateless'
-                        % simulation_executable)
+                        % runner_cmd)
                 return True
 
     print('Simulation %s is stateful and thus cannot be used with melissa-da')

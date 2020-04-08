@@ -12,7 +12,7 @@ was_unfinished = False
 
 def run(server_slowdown_factor_=1):
     run_melissa_da_study(
-            executable='simulation2-pdaf',
+            runner_cmd='simulation2-pdaf',
             total_steps=18,
             ensemble_size=9,
             assimilator_type=ASSIMILATOR_PDAF,
