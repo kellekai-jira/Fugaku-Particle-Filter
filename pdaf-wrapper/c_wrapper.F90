@@ -37,7 +37,7 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
 
   dim_ens = param_ensemble_size
 
-  current_step = 0 ! TODO: or set to one?
+  current_step = 0
 
 
   ! Revise parallelization for ensemble assimilation

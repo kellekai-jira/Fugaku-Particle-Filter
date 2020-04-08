@@ -61,7 +61,7 @@ CONTAINS
 
     ! Initialize model communicator, its size and the process rank
     ! Here the same as for COMM_world
-    Comm_model = COMM_world   !pdaf will think there is one model. do w e really need this?....
+    COMM_model = COMM_world   !pdaf will think there is one model. do w e really need this?....
     npes_model = npes_world
     mype_model = mype_world
 
@@ -80,7 +80,7 @@ CONTAINS
 
     IMPLICIT NONE
 
-    CALL  MPI_Barrier(COMM_world,MPIerr)
+    CALL  MPI_Barrier(COMM_world, MPIerr)
     ! Server will call MPI_Finalize
 
   END SUBROUTINE finalize_parallel
