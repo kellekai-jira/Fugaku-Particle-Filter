@@ -57,7 +57,8 @@ def run_melissa_da_study(
         server_slowdown_factor=1,
         runner_timeout=5,
         additional_server_env={},
-        create_runner_dir=False):  # the higher this number the slower the server. 0 is minimum...
+        create_runner_dir=False,
+        precommand_server=''):  # the higher this number the slower the server. 0 is minimum...
 
     walltime = 'xxxx01:00:00'  # TODO: make changeable...
     assert isinstance(cluster, Cluster)
@@ -85,13 +86,11 @@ def run_melissa_da_study(
     #   path: the path to melissa_server executable
     #   cmd_opt: the options set by the launcher to pass to the server.
     def launch_server(server):
-        #precommand = 'xterm_gdb'
-        precommand = ''
 
         # sometimes the server starts in a runner dir...
 
         cmd = '%s %s/bin/melissa_server %s' % (
-                precommand,
+                precommand_server,
                 os.getenv('MELISSA_DA_PATH'),
                 server.cmd_opt
                 )
