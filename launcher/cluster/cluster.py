@@ -6,7 +6,7 @@ class Cluster:
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
-            melissa_server_master_node='', logfile=''):
+            additional_env={}, logfile=''):
         """Puts job into batch scheduler. Must return a job id (integer, > 0) that than is reused in
         CheckJobState, KillJob and so on to identify the job. Often this will just be the
         JobID returned by the Batch Scheduler.
@@ -18,7 +18,7 @@ class Cluster:
         n_procs {int}                      amount of processors over all nodes
         n_nodes {int}                      amount of nodes to run this job on
         cmd {str}                          command to run
-        melissa_server_master_node {str}   the content of this must be put in the job's environment variable MELISSA_SERVER_MASTER_NODE
+        additional_env {dict()}            dictionary with environment variables and their values as they should be set before the start.
         logfile {str}                      absolute path of where the logfile (mixed stdout AND stderr) should be stored. This is impmortant for some tests.
         """
         raise NotImplementedError

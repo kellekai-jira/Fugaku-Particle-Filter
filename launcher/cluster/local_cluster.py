@@ -11,24 +11,18 @@ class LocalCluster(cluster.Cluster):
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
-            melissa_server_master_node='', logfile=''):
+            additional_env, logfile):
         # TODO: use annas template engine here instead of this function!
         assert n_nodes == 1  # as we are local
-        lib_path = os.getenv('LD_LIBRARY_PATH')
 
-        # handle "". mpiexec -x implicitly adds the new library path to the existing one.
-        # "" would lead to :"path1:path2" which cannot be read.
-        if lib_path == '':
-            lib_path ='""'
+        additional_env_parameters = ''
+        for name, value in additional_env.items():
+            additional_env_parameters += ' -x %s=%s ' % (name, value)
 
-        if melissa_server_master_node == '':
-            melissa_server_master_node ='""'
-
-        run_cmd = '%s -n %d -x LD_LIBRARY_PATH=%s -x MELISSA_SERVER_MASTER_NODE=%s %s' % (
+        run_cmd = '%s -n %d %s %s' % (
                 os.getenv('MPIEXEC'),
                 n_procs,
-                lib_path,
-                melissa_server_master_node,
+                additional_env_parameters,
                 cmd)
 
         print("Launching %s" % run_cmd)

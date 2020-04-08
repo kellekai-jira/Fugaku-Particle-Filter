@@ -54,7 +54,9 @@ def run_melissa_da_study(
         show_server_log = True,
         show_simulation_log = True,
         config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
-        server_slowdown_factor=1):  # the higher this number the slower the server. 0 is minimum...
+        server_slowdown_factor=1,
+        runner_timeout=5,
+        additional_server_env={}):  # the higher this number the slower the server. 0 is minimum...
 
     walltime = 'xxxx01:00:00'  # TODO: make changeable...
     assert isinstance(cluster, Cluster)
@@ -93,10 +95,15 @@ def run_melissa_da_study(
                 server.cmd_opt
                 )
 
+        if not 'LD_LIBRARY_PATH' in additional_server_env:
+            lib_path = os.getenv('LD_LIBRARY_PATH')
+            if lib_path != '':
+                additional_server_env['LD_LIBRARY_PATH'] = lib_path
+
         # TODO: why not using return?
         logfile = '' if show_server_log else '%s/server.log' % WORKDIR
         server.job_id = cluster.ScheduleJob('melissa_server',
-                walltime, server.cores, server.nodes, cmd, '', logfile)
+                walltime, server.cores, server.nodes, cmd, additional_server_env, logfile)
 
     def restart_server(server):
         if (not show_server_log) and os.path.isfile('server.log'):
@@ -148,7 +155,15 @@ def run_melissa_da_study(
 
         print('Starting runner! REM: the simulation group id != runner id!')
         logfile = '' if show_simulation_log else '%s/simulation-%03d.log' % (WORKDIR, group.group_id)
-        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, melissa_server_master_node, logfile)
+
+        additional_env = {
+                "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node
+                }
+        lib_path = os.getenv('LD_LIBRARY_PATH')
+        if lib_path != '':
+            additional_env['LD_LIBRARY_PATH'] = lib_path
+
+        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_env, logfile)
 
         os.chdir(WORKDIR)
 
@@ -188,6 +203,7 @@ def run_melissa_da_study(
         os.system('killall gdb')
         os.system('killall xterm')
         os.system('killall mpiexec')
+        #os.system('killall python3')
         os.system('killall %s' % EXECUTABLE)
     cleanup()
 
@@ -223,7 +239,7 @@ def run_melissa_da_study(
     melissa_study.set_option('assimilation_total_steps', total_steps)
     melissa_study.set_option('assimilation_ensemble_size', ensemble_size)
     melissa_study.set_option('assimilation_assimilator_type', assimilator_type)  # ASSIMILATOR_DUMMY
-    melissa_study.set_option('assimilation_max_runner_timeout', 5)  # seconds, timeout checked from the server side,
+    melissa_study.set_option('assimilation_max_runner_timeout', runner_timeout)  # seconds, timeout checked from the server side,
     melissa_study.set_option('assimilation_server_slowdown_factor', server_slowdown_factor)
 
     melissa_study.set_option('server_cores', procs_server)  # overall cores for the server
