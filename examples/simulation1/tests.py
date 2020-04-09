@@ -165,8 +165,8 @@ elif testcase == 'test-crashing-server1':
     ref_size = os.path.getsize('reference-giraffe.txt')
     # Check if file sizes are good
     # Check that none of the files contains the full output
-    assert ref_size > os.path.getsize('STATS/output.txt.0') > 5000  # bytes
-    assert ref_size > os.path.getsize('STATS/output.txt') > 5000  # bytes
+    assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
+    assert ref_size > os.path.getsize('STATS/output.txt') > 1000  # bytes
 
 
 
