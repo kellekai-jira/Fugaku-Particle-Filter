@@ -41,9 +41,12 @@ if (WITH_FTI)
     endif()
     install(FILES config.fti
             DESTINATION share/melissa-da)
+    # set to TRUE so even if it was ON it's TRUE now. This is easier readable by others
+    # relying on the setenv script which exports this variable
+    set(WITH_FTI TRUE)
 else()
     SET(INSTALL_FTI OFF)
-
+    SET(WITH_FTI_THREADS OFF)
 endif()
 
 
