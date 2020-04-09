@@ -5,13 +5,8 @@ import subprocess
 import logging
 
 class LocalCluster(cluster.Cluster):
-
-    def __init__(self):
-        self.procs_per_node = -1
-
-
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
-            additional_env, logfile):
+            additional_env, logfile, is_server):
         # TODO: use annas template engine here instead of this function!
         assert n_nodes == 1  # as we are local
 
@@ -53,3 +48,11 @@ class LocalCluster(cluster.Cluster):
     def GetLoad(self):
         """number between 0 and 1"""
         return 0.5
+
+    def CleanUp(self, runner_executable):
+        os.system('killall melissa_server')
+        os.system('killall gdb')
+        os.system('killall xterm')
+        os.system('killall mpiexec')
+        #os.system('killall python3')
+        os.system('killall %s' % runner_executable)

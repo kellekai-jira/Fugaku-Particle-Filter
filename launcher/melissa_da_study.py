@@ -58,7 +58,9 @@ def run_melissa_da_study(
         runner_timeout=5,
         additional_server_env={},
         create_runner_dir=False,
-        precommand_server=''):  # the higher this number the slower the server. 0 is minimum...
+        precommand_server='',
+        nodes_server=1,
+        nodes_runner=1):  # the higher this number the slower the server. 0 is minimum...
 
     walltime = 'xxxx01:00:00'  # TODO: make changeable...
     assert isinstance(cluster, Cluster)
@@ -103,7 +105,7 @@ def run_melissa_da_study(
         # TODO: why not using return?
         logfile = '' if show_server_log else '%s/server.log' % WORKDIR
         server.job_id = cluster.ScheduleJob('melissa_server',
-                walltime, server.cores, server.nodes, cmd, additional_server_env, logfile)
+                walltime, server.cores, server.nodes, cmd, additional_server_env, logfile, is_server=True)
 
     def restart_server(server):
         if (not show_server_log) and os.path.isfile('server.log'):
@@ -174,7 +176,7 @@ def run_melissa_da_study(
         if lib_path != '':
             additional_env['LD_LIBRARY_PATH'] = lib_path
 
-        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_env, logfile)
+        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_env, logfile, is_server=False)
 
         os.chdir(WORKDIR)
 
@@ -210,14 +212,7 @@ def run_melissa_da_study(
     MAX_RUNNERS = n_runners
     PROCS_RUNNER = procs_runner
 
-    def cleanup():
-        os.system('killall melissa_server')
-        os.system('killall gdb')
-        os.system('killall xterm')
-        os.system('killall mpiexec')
-        #os.system('killall python3')
-        os.system('killall %s' % EXECUTABLE)
-    cleanup()
+    cluster.CleanUp(EXECUTABLE)
 
 
 
@@ -228,7 +223,7 @@ def run_melissa_da_study(
     import sys
 
     def signal_handler(sig, frame):
-        cleanup()
+        cluster.CleanUp()
 
         sys.exit(1)
 
@@ -255,10 +250,10 @@ def run_melissa_da_study(
     melissa_study.set_option('assimilation_server_slowdown_factor', server_slowdown_factor)
 
     melissa_study.set_option('server_cores', procs_server)  # overall cores for the server
-    melissa_study.set_option('server_nodes', 1)  # using that many nodes  ... on  a well defined cluster the other can be guessed probably. TODO: make changeable. best in dependence of cluster cores per node constant...
+    melissa_study.set_option('server_nodes', nodes_server)  # using that many nodes  ... on  a well defined cluster the other can be guessed probably. TODO: make changeable. best in dependence of cluster cores per node constant...
 
     melissa_study.set_option('simulation_cores', procs_runner)  # cores of one runner
-    melissa_study.set_option('simulation_nodes', 1)  # using that many nodes
+    melissa_study.set_option('simulation_nodes', nodes_runner)  # using that many nodes
 
     melissa_study.simulation.launch(launch_runner)
     melissa_study.server.launch(launch_server)

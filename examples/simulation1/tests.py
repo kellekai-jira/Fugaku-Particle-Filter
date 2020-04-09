@@ -181,6 +181,9 @@ elif testcase == 'test-crashing-server1':
     subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
     compare('STATS/reference-crashing-server-sorted.txt')
 
+
+    # TODO: check that not one file contains all the results already...
+
 elif testcase == 'test-crashing-launcher':
     subprocess.call(["bash", "-c", "python3 tests.py long-run"])
     assert False # unimplemented
