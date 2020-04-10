@@ -1,8 +1,11 @@
-from cluster import cluster
+#from cluster import cluster
+import cluster
 import os
 import subprocess
 
 import logging
+import time
+import re
 
 EMPTY = 0
 SERVER = 1
@@ -10,7 +13,7 @@ SIMULATION = 2
 
 class SlurmCluster(cluster.Cluster):
 
-    def __init__(self, account, partition, in_salloc):
+    def __init__(self, account, partition=None, in_salloc=os.getenv('SLURM_JOB_ID')):
         """
         Arguments:
 
@@ -25,7 +28,8 @@ class SlurmCluster(cluster.Cluster):
         self.in_salloc = in_salloc
 
         # REM: if using in_salloc and if a job quits nodes are not freed.
-        # So they cannot be subscribed again
+        # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
+        # see the git stash for some regex  parsing to get the node allocation...
 
         if self.in_salloc:
             self.node_occupation = {}
@@ -37,11 +41,11 @@ class SlurmCluster(cluster.Cluster):
 
     def set_nodes_to(self, kind, n_nodes):
         to_place = n_nodes
-        nodes = []
+        nodes = set()
         for k, v in self.node_occupation.items():
             if v == EMPTY:
                 self.node_occupation[k] = kind
-                nodes.append(k)
+                nodes.add(k)
 
             if to_place == 0:
                 break
@@ -63,38 +67,53 @@ class SlurmCluster(cluster.Cluster):
         if self.in_salloc:
             # Generate node_list
             if is_server:
-                node_list = self.set_nodes_to(SERVER, n_nodes)
+                nodes = self.set_nodes_to(SERVER, n_nodes)
             else:
-                node_list = self.set_nodes_to(SERVER, n_nodes)
+                nodes = self.set_nodes_to(SERVER, n_nodes)
+
+            n = []
+            for node in nodes:
+                n.append([node]*(n_procs//n_nodes))
+
+            node_list_param = '--nodelist=%s' % (','.join(n))
 
 
-            node_list_param = '--nodelist=%s' % node_list
 
-            partition_param = ''
-            if self.partition:
-                partition_param = '--partition=%s' % self.partition
+        partition_param = ''
+        if self.partition:
+            partition_param = '--partition=%s' % self.partition
 
-        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s' % (
+        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
-                int(n_procs/n_nodes),
+                n_procs//n_nodes,
                 node_list_param,
                 walltime,
                 self.account,
                 partition_param,
+                name,
                 cmd)
 
         print("Launching %s" % run_cmd)
-        pid = 0
 
         if logfile == '':
-            pid = subprocess.Popen(run_cmd.split()).pid
+            proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
         else:
             with open(logfile, 'wb') as f:
-                pid = subprocess.Popen(run_cmd.split(), stdout=f).pid
+                proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
 
-        print("Process id: %d" % pid)
-        return pid
+        print("Process id: %d" % proc.pid)
+        regex = re.compile('job ([0-9]+) queued')
+        while proc.poll() is None:
+            s = proc.stderr.read(64).decode()
+            res = regex.search(s)
+            if res:
+                return int(res.groups()[0])
+            time.sleep(0.05)
+
+
+
+
 
     def CheckJobState(self, job_id):
         state = 0
