@@ -9,7 +9,7 @@ export DATASET_PATH=@PDAF_PATH@/tutorial/inputs_online/
 export MELISSA_DA_PATH=@CMAKE_INSTALL_PREFIX@
 export MPIEXEC=@MPIEXEC_EXECUTABLE@
 
-export PYTHONPATH=@CMAKE_INSTALL_PREFIX@/share/melissa-da/python$PYTHONPATH
+export PYTHONPATH=@CMAKE_INSTALL_PREFIX@/share/melissa-da/python:$PYTHONPATH
 
 
 export MELISSA_DA_WITH_FTI=@WITH_FTI@
