@@ -13,7 +13,7 @@ SIMULATION = 2
 
 class SlurmCluster(cluster.Cluster):
 
-    def __init__(self, account, partition=None, in_salloc=os.getenv('SLURM_JOB_ID')):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None)):
         """
         Arguments:
 

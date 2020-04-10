@@ -60,9 +60,9 @@ def run_melissa_da_study(
         create_runner_dir=False,
         precommand_server='',
         nodes_server=1,
-        nodes_runner=1):  # the higher this number the slower the server. 0 is minimum...
+        nodes_runner=1,
+        walltime='xxxx01:00:00'):  # the higher this number the slower the server. 0 is minimum...
 
-    walltime = 'xxxx01:00:00'  # TODO: make changeable...
     assert isinstance(cluster, Cluster)
 
     global started_runners
@@ -299,7 +299,7 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
 # exporting for import * :
 __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'killing_giraffe', 'clean_old_stats',  # utils
-           'LocalCluster',  # cluster
+           'SlurmCluster', 'LocalCluster',  # cluster
            'ASSIMILATOR_CHECK_STATELESS',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
