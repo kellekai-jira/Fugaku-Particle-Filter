@@ -59,8 +59,8 @@ class SlurmCluster(cluster.Cluster):
             additional_env, logfile, is_server):
         # TODO: use annas template engine here instead of this function!
 
-        for name, value in additional_env.items():
-            os.environ[name] = value
+        for key, value in additional_env.items():
+            os.environ[key] = value
 
         node_list_param = ''
 
@@ -102,13 +102,15 @@ class SlurmCluster(cluster.Cluster):
             with open(logfile, 'wb') as f:
                 proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
 
-        print("Process id: %d" % proc.pid)
+        #print("Process id: %d" % proc.pid)
         regex = re.compile('job ([0-9]+) queued')
         while proc.poll() is None:
             s = proc.stderr.read(64).decode()
             res = regex.search(s)
             if res:
-                return int(res.groups()[0])
+                job_id = int(res.groups()[0])
+                print("job_id: ", job_id)
+                return job_id
             time.sleep(0.05)
 
 
@@ -123,6 +125,8 @@ class SlurmCluster(cluster.Cluster):
                               universal_newlines=True)
         out, err = proc.communicate()
 
+        #print('Check job state output(%d): ' % job_id, out)
+
         def in_out(keywords):
             for kw in keywords:
                 if kw in out:
@@ -135,7 +139,6 @@ class SlurmCluster(cluster.Cluster):
         elif in_out(["CONFIGURING", "RUNNING"]):
             return 1
         else:
-            print("job seems to be not pending/running!")
             return 2
 
     def KillJob(self, job_id):
