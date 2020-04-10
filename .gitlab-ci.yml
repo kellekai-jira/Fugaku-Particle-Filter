@@ -1,6 +1,6 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-
+  
 stages:
   - build_deps
   - build
@@ -72,4 +72,5 @@ test_fti:
     - "cd build && ctest --verbose"
   dependencies:
     - build_fti
-
+  after_script:
+    - killall simulation1 simulation1-hidden simulation1-stateful simulation2-pdaf simulation3-empty melissa_server python3
