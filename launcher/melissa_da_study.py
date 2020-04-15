@@ -61,7 +61,8 @@ def run_melissa_da_study(
         precommand_server='',
         nodes_server=1,
         nodes_runner=1,
-        walltime='xxxx01:00:00'):  # the higher this number the slower the server. 0 is minimum...
+        walltime='xxxx01:00:00',
+        with_fault_tolerance=True):  # the higher this number the slower the server. 0 is minimum...
 
     assert isinstance(cluster, Cluster)
 
@@ -223,7 +224,7 @@ def run_melissa_da_study(
     import sys
 
     def signal_handler(sig, frame):
-        cluster.CleanUp()
+        cluster.CleanUp(EXECUTABLE)
 
         sys.exit(1)
 
@@ -254,6 +255,9 @@ def run_melissa_da_study(
 
     melissa_study.set_option('simulation_cores', procs_runner)  # cores of one runner
     melissa_study.set_option('simulation_nodes', nodes_runner)  # using that many nodes
+
+
+    melissa_study.set_option('disable_fault_tolerance', not with_fault_tolerance)
 
     melissa_study.simulation.launch(launch_runner)
     melissa_study.server.launch(launch_server)
