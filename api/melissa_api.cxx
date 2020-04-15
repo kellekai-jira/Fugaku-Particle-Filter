@@ -708,6 +708,17 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
     D("Destroying zmq context");
     zmq_ctx_destroy(context);
 
+#ifdef REPORT_TIMING
+#ifdef REPORT_TIMING_ALL_RANKS
+    const std::array<EventTypeTranslation, 2> event_type_translations = {{
+        {START_ITERATION, STOP_ITERATION, "Iteration"},
+        {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+    }};
+    std::string fn = "melissa_runner" + std::to_string(runner_id);
+    timing->write_region_csv(event_type_translations, fn.c_str(), comm_rank);
+#endif
+#endif
+
     if (no_mpi)
     {
         // if without mpi we need to finalize mpi properly as it was only created in this context.

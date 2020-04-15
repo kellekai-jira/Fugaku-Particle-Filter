@@ -94,12 +94,13 @@ def run_melissa_da_study(
 
         # sometimes the server starts in a runner dir...
 
-        cmd = '%s %s/bin/melissa_server %s %d' % (
+        cmd = '%s %s/bin/melissa_server %s' % (
                 precommand_server,
                 os.getenv('MELISSA_DA_PATH'),
-                server.cmd_opt,
-                start_time  # this time is used as relative date for reported timings...
+                server.cmd_opt
                 )
+
+        additional_server_env['MELISSA_TIMING_NULL'] = str(start_time)
 
         if not 'LD_LIBRARY_PATH' in additional_server_env:
             lib_path = os.getenv('LD_LIBRARY_PATH')
@@ -174,7 +175,8 @@ def run_melissa_da_study(
                 os.chdir(runner_dir)
 
         additional_env = {
-                "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node
+                "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
+                "MELISSA_TIMING_NULL": str(start_time)
                 }
         lib_path = os.getenv('LD_LIBRARY_PATH')
         if lib_path != '':

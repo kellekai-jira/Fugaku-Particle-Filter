@@ -1225,7 +1225,7 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
-    assert(argc == 8);
+    assert(argc == 7);
 
     int param_total_steps = 5;
     int server_slowdown_factor = 1;
@@ -1253,7 +1253,6 @@ int main(int argc, char * argv[])
         D("using server slowdown factor of %d", server_slowdown_factor);
     }
     // 7th argument must be the launcher host name!
-    // 8th argument must be the ms since epoch on this machine used for the timing...
 
 
     assert(ENSEMBLE_SIZE > 0);
@@ -1321,7 +1320,7 @@ int main(int argc, char * argv[])
     if (comm_rank == 0)
 #endif
     {
-        timing = std::make_unique<ServerTiming>(atoll(argv[7]));
+        timing = std::make_unique<ServerTiming>();
     }
 #endif
 
@@ -1513,7 +1512,13 @@ int main(int argc, char * argv[])
 
 #ifdef REPORT_TIMING
 #ifdef REPORT_TIMING_ALL_RANKS
-    timing->write_region_csv(comm_rank);
+    const std::array<EventTypeTranslation, 4> event_type_translations = {{
+        {START_ITERATION, STOP_ITERATION, "Iteration"},
+        {START_FILTER_UPDATE, STOP_FILTER_UPDATE, "Filter Update"},
+        {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+        {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "State propagation"}
+    }};
+    timing->write_region_csv(event_type_translations, "melissa_server", comm_rank);
 #endif
 #endif
 
