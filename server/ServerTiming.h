@@ -1,9 +1,11 @@
 #include <list>
-#include <chrono>  // TODO:  use clock instead??!
+#include <chrono>
 #include <iostream>
 #include <numeric>
 #include <map>
 #include <utility>
+#include <fstream>
+#include <iomanip>
 
 #include "utils.h"
 #include "TimingEvent.h"
@@ -20,6 +22,12 @@ const int warmup = 30;
 class ServerTiming : public Timing
 {
 private:
+    std::chrono::high_resolution_clock::time_point null_time;
+
+    double to_millis(const TimePoint &lhs) {
+
+        return std::chrono::duration<double, std::milli>(lhs - null_time).count();
+    }
 
     void calculate_runners(int *runners, int *min_runners, int *max_runners) {
         if (*runners < *min_runners || *min_runners == -1)
@@ -33,7 +41,14 @@ private:
         }
     }
 
+
 public:
+    ServerTiming(long long milliseconds_since_epoch) : Timing(),
+    null_time(std::chrono::milliseconds(milliseconds_since_epoch))
+
+    {
+    }
+
     void report(const int cores_simulation, const int cores_server, const int
                 ensemble_members, const size_t state_size) {
 
@@ -208,7 +223,6 @@ public:
 
 
 
-
         std::cout << cores_simulation << ',';
         std::cout << number_runners_max << ',';
         std::cout << cores_server << ',';
@@ -224,6 +238,87 @@ public:
         std::cout <<
             "------------------- End Run information -------------------" <<
             std::endl;
+    }
+
+
+    void write_region_csv(int rank) {
+        std::ofstream outfile ("trace_melissa_server." + std::to_string(rank) + ".csv");
+
+        outfile << "rank,start_time,end_time,event,event_parameter" << std::endl;
+
+        std::list<TimingEvent*> open_events;
+        const std::array<int, 4> opening_event_types = {
+                START_ITERATION,
+                START_FILTER_UPDATE,
+                START_IDLE_RUNNER,
+                START_PROPAGATE_STATE
+        };
+        struct ClosingRegion
+        {
+            int type;
+            const char * name;
+        };
+        const std::array<ClosingRegion, 4> closing_regions = {{
+            {STOP_ITERATION, "Iteration"},
+            {STOP_FILTER_UPDATE, "Filter Update"},
+            {STOP_IDLE_RUNNER, "Runner idle"},
+            {STOP_PROPAGATE_STATE, "State propagation"}
+        }};
+
+        for (auto it = events.begin(); it != events.end(); ++it)
+        {
+            // Opening event: push on stack
+            bool goto_next_event = false;
+            for (auto i = opening_event_types.begin(); i != opening_event_types.end(); ++i)
+            {
+                if (it->type == *i)
+                {
+                    open_events.push_back( &(*it) );
+                    goto_next_event = true;
+                    break;
+                }
+            }
+
+            if (goto_next_event)
+            {
+                continue;
+            }
+
+            // Closing event: pop from stack, write event into csv...
+            for (auto cr = closing_regions.begin(); cr != closing_regions.end(); ++cr)
+            {
+                if (it->type == cr->type)
+                {
+                    // find last corresponding open event...
+                    for (auto oevt = open_events.rbegin(); oevt != open_events.rend(); ++oevt)
+                    {
+                        if ((*oevt)->type == it->type-1 && (*oevt)->parameter == it->parameter)
+                        {
+                            outfile << rank
+                                << ',' << std::fixed << std::setw( 11 ) << std::setprecision( 6 ) << to_millis((*oevt)->time)
+                                << ',' << std::fixed << std::setw( 11 ) << std::setprecision( 6 ) << to_millis(it->time)
+                                << ',' << cr->name
+                                << ',' << it->parameter
+                                << std::endl;
+
+                            // remove from stack:
+                            open_events.erase( --(oevt.base()) );  // hope this reverse operator works
+
+                            goto_next_event = true;
+                            break;
+                        }
+                    }
+                    //assert(goto_next_event);
+                    if (!goto_next_event) {
+                        D("Did not find enter region event for %d %d at %f ms", it->type,
+                                it->parameter, to_millis(it->time));
+                    }
+                    break;
+                }
+            }
+        }
+
+        outfile.close();
     }
 
 };

@@ -29,6 +29,8 @@ from utils import *
 
 import logging
 
+start_time = int(time.time()*1000)  # in milliseconds
+
 # These variables are only used in this file.
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
@@ -92,10 +94,11 @@ def run_melissa_da_study(
 
         # sometimes the server starts in a runner dir...
 
-        cmd = '%s %s/bin/melissa_server %s' % (
+        cmd = '%s %s/bin/melissa_server %s %d' % (
                 precommand_server,
                 os.getenv('MELISSA_DA_PATH'),
-                server.cmd_opt
+                server.cmd_opt,
+                start_time  # this time is used as relative date for reported timings...
                 )
 
         if not 'LD_LIBRARY_PATH' in additional_server_env:

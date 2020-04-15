@@ -9,7 +9,8 @@ then
 if [ "$MELISSA_PROFILING" == "" ];
 then
     cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
-     -DWITH_FTI_THREADS=ON
+     -DWITH_FTI_THREADS=ON \
+     -DREPORT_TIMING_ALL_RANKS=ON
 else
     F90="wrapper-f90.sh"
     CC="wrapper-cc.sh"

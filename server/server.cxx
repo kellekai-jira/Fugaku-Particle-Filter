@@ -1225,7 +1225,7 @@ int main(int argc, char * argv[])
 {
     check_data_types();
 
-    assert(argc == 7);
+    assert(argc == 8);
 
     int param_total_steps = 5;
     int server_slowdown_factor = 1;
@@ -1252,8 +1252,8 @@ int main(int argc, char * argv[])
         server_slowdown_factor = atoi(argv[5]); // will wait this time * 10 useconds every server mainloop...
         D("using server slowdown factor of %d", server_slowdown_factor);
     }
-    // Last argument must be the launcher host name!
-    // Or if not using the launcher the file where the server host name shall be stored to.
+    // 7th argument must be the launcher host name!
+    // 8th argument must be the ms since epoch on this machine used for the timing...
 
 
     assert(ENSEMBLE_SIZE > 0);
@@ -1299,7 +1299,7 @@ int main(int argc, char * argv[])
           configuration_socket_addr);
         ZMQ_CHECK(rc);
 
-        launcher = std::make_shared<LauncherConnection>(context, argv[argc-1]);
+        launcher = std::make_shared<LauncherConnection>(context, argv[6]);
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
@@ -1317,9 +1317,11 @@ int main(int argc, char * argv[])
 
 #ifdef REPORT_TIMING
     // Start Timing:
+#ifndef REPORT_TIMING_ALL_RANKS
     if (comm_rank == 0)
+#endif
     {
-        timing = std::make_unique<ServerTiming>();
+        timing = std::make_unique<ServerTiming>(atoll(argv[7]));
     }
 #endif
 
@@ -1497,6 +1499,7 @@ int main(int argc, char * argv[])
 #endif
     }
 
+
     D("Ending Server.");
     // TODO: check if we need to delete some more stuff!
 
@@ -1507,6 +1510,12 @@ int main(int argc, char * argv[])
         // send stop message, close the launcher sockets before the context is destroyed!
         launcher.reset();
     }
+
+#ifdef REPORT_TIMING
+#ifdef REPORT_TIMING_ALL_RANKS
+    timing->write_region_csv(comm_rank);
+#endif
+#endif
 
     zmq_close(data_response_socket);
     if (comm_rank == 0)

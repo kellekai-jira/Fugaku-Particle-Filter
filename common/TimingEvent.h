@@ -5,7 +5,7 @@
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
 enum TimingEventType
-{
+{  // REM: Start and stop events must always be corresponding in this enum
     ADD_RUNNER                  = 0,  // parameter = runner_id
     REMOVE_RUNNER               = 1,  // parameter = runner_id
     START_ITERATION             = 2,  // parameter = timestep
@@ -19,25 +19,32 @@ enum TimingEventType
 };
 
 #ifdef REPORT_TIMING
-#ifndef NDEBUG
-#define trigger(type, param) if (comm_rank == 0) { timing->trigger_event(type, \
-                                                                         param); \
-                                                   auto now = \
-                                                       std::chrono:: \
-                                                       high_resolution_clock:: \
-                                                       now(); double \
-                                                       xxxxt = \
-                                                       std::chrono::duration< \
-                                                           double, std::milli>( \
-                                                           now.time_since_epoch()) \
-                                                       . \
-                                                       count(); D( \
-                                                       "Trigger event %d with parameter %d at %f ms", \
-                                                       type, param, xxxxt); }
+
+#ifdef REPORT_TIMING_ALL_RANKS
+#define TIMED_RANK comm_rank
 #else
-#define trigger(type, param) if (comm_rank == 0) timing->trigger_event(type, \
-                                                                       param)
+#define TIMED_RANK 0
 #endif
+
+//#ifdef NDEBUG
+#define trigger(type, param) if (comm_rank == TIMED_RANK) timing->trigger_event(type, \
+                                                                       param)
+//#else
+//#define trigger(type, param) if (comm_rank == TIMED_RANK) { timing->trigger_event(type, \
+                                                                         //param); \
+                                                   //auto now = \
+                                                       //std::chrono:: \
+                                                       //high_resolution_clock:: \
+                                                       //now(); double \
+                                                       //xxxxt = \
+                                                       //std::chrono::duration< \
+                                                           //double, std::milli>( \
+                                                           //now.time_since_epoch()) \
+                                                       //. \
+                                                       //count(); D( \
+                                                       //"Trigger event %d with parameter %d at %f ms", \
+                                                       //type, param, xxxxt); }
+//#endif NDEBUG
 #else
 #define trigger(type, param)
 #endif
@@ -71,7 +78,7 @@ struct TimingEvent
 class Timing
 {
 public:
-    std::list<TimingEvent> events;
+    std::list<TimingEvent> events;  // a big vector should be more performant!
     void trigger_event(TimingEventType type, const int parameter)
     {
         events.push_back(TimingEvent(type, parameter));
