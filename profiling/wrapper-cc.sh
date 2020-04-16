@@ -1,2 +1,3 @@
 #!/bin/bash
-wrapper.sh cc $@
+wrapper.sh gcc $@
+#wrapper.sh mpicc $@

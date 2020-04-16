@@ -1,13 +1,14 @@
 #https://www.dkrz.de/up/services/code-tuning/collect-performance-data/score-p
 
 SCOREP_FILE_NAMES_BEGIN # This is a comment
-  INCLUDE *
   #EXCLUDE */*
   #INCLUDE */melissa-da/server/*
 SCOREP_FILE_NAMES_END
 
 SCOREP_REGION_NAMES_BEGIN # This is a comment
-  INCLUDE *
+  EXCLUDE *
+  INCLUDE main
+  INCLUDE printf
   #EXCLUDE */*
   #INCLUDE */melissa-da/server/*
 SCOREP_REGION_NAMES_END

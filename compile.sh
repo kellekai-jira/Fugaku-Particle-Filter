@@ -15,6 +15,11 @@ else
     F90="wrapper-f90.sh"
     CC="wrapper-cc.sh"
     CXX="wrapper-cxx.sh"
+
+    #F90=scorep-gfortran
+    #CC=scorep-gcc
+    #CXX=scorep-g++
+    #make SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--user" SCOREP_WRAPPER_COMPILER_FLAGS="-g –O2"
     cd ..
     export PATH="$PWD/profiling:$PATH"
     cd build

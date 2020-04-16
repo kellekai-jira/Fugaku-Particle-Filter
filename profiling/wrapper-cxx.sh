@@ -1,2 +1,3 @@
 #!/bin/bash
-wrapper.sh cxx $@
+wrapper.sh g++ $@
+#wrapper.sh mpicxx $@

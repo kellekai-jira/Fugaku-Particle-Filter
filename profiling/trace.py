@@ -98,7 +98,7 @@ run_melissa_da_study(
 
             "SCOREP_EXPERIMENT_DIRECTORY": "melissa_server_scorep",
 
-            "SCOREP_FILTERING_FILE": "%s/workspace/melissa-da/profiling/filter_scorep" % os.getenv('HOME'),
+            #"SCOREP_FILTERING_FILE": "%s/workspace/melissa-da/profiling/filter_scorep" % os.getenv('HOME'),
             #"SCOREP_TRACING_CONVERT_CALLING_CONTEXT_EVENTS" : "true"  # .. nice enter, leave events, even after unwinding
 #
             },
