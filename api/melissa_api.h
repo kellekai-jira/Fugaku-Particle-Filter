@@ -22,6 +22,17 @@ void melissa_init(const char *field_name,
                   MPI_Comm comm_
                   );       // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 
+
+// index map: a list of all the indicies in the order as transimitted as values in melissa_expose
+// this is needed by some assimilators that use the function domainIdx() and domainIdx_hidden()
+void melissa_init_with_index_map(const char *field_name,
+                  const int local_vect_size,
+                  const int local_hidden_vect_size,
+                  MPI_Comm comm_,
+                  const int local_index_map[],
+                  const int local_index_map_hidden[]
+                  );
+
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
                          const int  *local_vect_size,

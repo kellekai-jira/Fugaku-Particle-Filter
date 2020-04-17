@@ -487,9 +487,11 @@ struct ConfigurationConnection
 
     // TODO: high water mark and so on?
     void register_field(const char * field_name, size_t local_vect_sizes[],
-                        size_t local_hidden_vect_sizes[])
+                        size_t local_hidden_vect_sizes[], std::vector<int>& global_index_map,
+                        std::vector<int>& global_index_map_hidden)
     {
         zmq_msg_t msg_header, msg_local_vect_sizes, msg_local_hidden_vect_sizes,
+                  msg_index_map, msg_index_map_hidden,
                   msg_reply;
         zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) +
                           MPI_MAX_PROCESSOR_NAME * sizeof(char) );
@@ -507,7 +509,15 @@ struct ConfigurationConnection
 
         zmq_msg_init_data(&msg_local_hidden_vect_sizes, local_hidden_vect_sizes,
                           getCommSize() * sizeof(size_t), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_local_hidden_vect_sizes, socket, 0));
+        ZMQ_CHECK(zmq_msg_send(&msg_local_hidden_vect_sizes, socket, ZMQ_SNDMORE));
+
+        zmq_msg_init_data(&msg_index_map, global_index_map.data(),
+                          global_index_map.size() * sizeof(int), NULL, NULL);
+        ZMQ_CHECK(zmq_msg_send(&msg_index_map, socket, ZMQ_SNDMORE));
+
+        zmq_msg_init_data(&msg_index_map_hidden, global_index_map_hidden.data(),
+                          global_index_map_hidden.size() * sizeof(int), NULL, NULL);
+        ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
 
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
@@ -583,6 +593,18 @@ void melissa_init(const char *field_name,
                   const int local_hidden_vect_size,
                   MPI_Comm comm_)
 {
+    melissa_init_with_index_map(field_name, local_vect_size, local_hidden_vect_size,
+            comm_, nullptr, nullptr);
+}
+
+void melissa_init_with_index_map(const char *field_name,
+                  const int local_vect_size,
+                  const int local_hidden_vect_size,
+                  MPI_Comm comm_,
+                  const int local_index_map[],
+                  const int local_index_map_hidden[]
+                  )
+{
     // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
 
     bool register_field = first_melissa_init(comm_);
@@ -608,11 +630,45 @@ void melissa_init(const char *field_name,
 
     D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
 
+    std::vector<int> global_index_map;
+    std::vector<int> global_index_map_hidden;
+    if (comm_rank == 0)
+    {
+        global_index_map.resize(sum_vec(local_vect_sizes));
+        global_index_map_hidden.resize(sum_vec(local_hidden_vect_sizes));
+    }
+
+    if (local_index_map == nullptr)
+    {
+        int i = 0;
+        for (auto &e: global_index_map) {
+            e = i++;
+        }
+    }
+    else
+    {
+        MPI_Gather(local_index_map, local_vect_size, MPI_INT,
+               global_index_map.data(), global_index_map.size(), MPI_INT,
+               0, comm_);
+    }
+    if (local_index_map_hidden == nullptr)
+    {
+        int i = 0;
+        for (auto &e: global_index_map_hidden) {
+            e = i++;
+        }
+    }
+    else
+    {
+        MPI_Gather(local_index_map_hidden, local_vect_size, MPI_INT,
+               global_index_map_hidden.data(), global_index_map_hidden.size(), MPI_INT,
+               0, comm_);
+    }
     if (register_field)
     {
         // Tell the server which kind of data he has to expect
         ccon->register_field(field_name, local_vect_sizes.data(),
-                             local_hidden_vect_sizes.data());
+                             local_hidden_vect_sizes.data(), global_index_map, global_index_map_hidden);
     }
 
 

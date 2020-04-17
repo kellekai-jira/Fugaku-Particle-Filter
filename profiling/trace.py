@@ -60,7 +60,7 @@ class LocalClusterTracing(LocalCluster):
 
 
     def KillJob(self, job_id):
-        time.sleep(4)
+        #time.sleep(4)
         # don't kill server job at the end to write full scorep files...
         #os.system('kill '+str(job_id))
         if not self.server_pid or job_id != self.server_pid:
@@ -72,35 +72,39 @@ class LocalClusterTracing(LocalCluster):
             time.sleep(1)
 
 
-clean_old_stats()
+def run():
+    clean_old_stats()
 
-run_melissa_da_study(
-        runner_cmd='simulation1-stateful',
-        total_steps=3,
-        ensemble_size=3,
-        assimilator_type=ASSIMILATOR_DUMMY,
-        cluster=LocalClusterTracing(),
-        #cluster=LocalCluster(),
-        procs_server=2,
-        procs_runner=3,
-        n_runners=1,
-        show_server_log = False,
-        show_simulation_log = False,
-        additional_server_env={
-            "SCOREP_ENABLE_PROFILING": "true",  # switch on scorep
-            #"SCOREP_TOTAL_MEMORY": "42M",
-            "SCOREP_ENABLE_TRACING": "true",  # switch on tracing!
-            "SCAN_ANALYZE_OPTS": "--time-correct",
+    run_melissa_da_study(
+            runner_cmd='simulation1-stateful',
+            total_steps=3,
+            ensemble_size=3,
+            assimilator_type=ASSIMILATOR_DUMMY,
+            cluster=LocalClusterTracing(),
+            #cluster=LocalCluster(),
+            procs_server=2,
+            procs_runner=3,
+            n_runners=1,
+            show_server_log = False,
+            show_simulation_log = False,
+            additional_server_env={
+                "SCOREP_ENABLE_PROFILING": "true",  # switch on scorep
+                #"SCOREP_TOTAL_MEMORY": "42M",
+                "SCOREP_ENABLE_TRACING": "true",  # switch on tracing!
+                "SCAN_ANALYZE_OPTS": "--time-correct",
 
-            #"SCOREP_ENABLE_UNWINDING":"true",  # otherwise it will not get user functions
+                #"SCOREP_ENABLE_UNWINDING":"true",  # otherwise it will not get user functions
 
-            #"SCOREP_SAMPLING_EVENTS":"perf_cycles@2000000",
+                #"SCOREP_SAMPLING_EVENTS":"perf_cycles@2000000",
 
-            "SCOREP_EXPERIMENT_DIRECTORY": "melissa_server_scorep",
+                "SCOREP_EXPERIMENT_DIRECTORY": "melissa_server_scorep",
 
-            #"SCOREP_FILTERING_FILE": "%s/workspace/melissa-da/profiling/filter_scorep" % os.getenv('HOME'),
-            #"SCOREP_TRACING_CONVERT_CALLING_CONTEXT_EVENTS" : "true"  # .. nice enter, leave events, even after unwinding
+                #"SCOREP_FILTERING_FILE": "%s/workspace/melissa-da/profiling/filter_scorep" % os.getenv('HOME'),
+                #"SCOREP_TRACING_CONVERT_CALLING_CONTEXT_EVENTS" : "true"  # .. nice enter, leave events, even after unwinding
 #
-            },
-            with_fault_tolerance = False
-        )
+                },
+                with_fault_tolerance = False
+            )
+
+if __name__ == "__main__":
+    run()

@@ -39,6 +39,11 @@ struct Field
     const Part & getPartHidden(int simu_rank) const;
 
     size_t globalVectSize();
+    size_t globalVectSizeHidden();
+
+    std::vector<int> local_index_map;
+    std::vector<int> local_index_map_hidden;
+
 };
 
 #endif /* FIELD_H_ */

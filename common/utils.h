@@ -79,6 +79,17 @@ inline void print_vector (const std::vector<T> &vec)
     printf("]\n");
 }
 
+/// sums over a vector
+template <class T>
+T sum_vec(const std::vector<T> &vec) {
+    T res = 0;
+    for (auto &it : vec) {
+        res += it;
+    }
+    return res;
+}
+
+
 // inline Functions:
 inline void assert_more_zmq_messages(void * socket)
 {

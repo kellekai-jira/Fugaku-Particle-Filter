@@ -55,6 +55,10 @@ void Field::calculate_parts(int server_comm_size)
     }
 
     assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too big. (there are more server ranks than field elements. this makes not much sense!
+
+    local_index_map.resize(local_vect_size);
+    local_index_map_hidden.resize(local_vect_size_hidden);
+
     D("Calculated parts");
 }
 
@@ -97,11 +101,9 @@ const Part & Field::getPartHidden(int simu_rank) const
 }
 
 size_t Field::globalVectSize() {
-    size_t res = 0;
-    for (auto it = local_vect_sizes_runner.begin(); it !=
-         local_vect_sizes_runner.end(); ++it)
-    {
-        res += *it;
-    }
-    return res;
+    return sum_vec(local_vect_sizes_runner);
+}
+
+size_t Field::globalVectSizeHidden() {
+    return sum_vec(local_vect_sizes_runner_hidden);
 }

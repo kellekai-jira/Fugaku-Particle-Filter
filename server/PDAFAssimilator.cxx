@@ -44,7 +44,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     //const int current_step = 0; not needed, we init at 0 already...
     //cwrapper_set_current_step(&current_step);
     getAllEnsembleMembers();
-    printf("+++++++[%d] hidden state size: %d\n", comm_rank, local_vect_size_hidden);
+    printf("[%d] hidden state size: %d\n", comm_rank, local_vect_size_hidden);
     if (local_vect_size_hidden > 0)
     {
         for (int member_id = 0; member_id <

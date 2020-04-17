@@ -1,23 +1,9 @@
 #include "Part.h"
+#include "utils.h"
 
-
-std::vector<Part> calculate_n_to_m(const int comm_size_server, const
-                                   std::vector<size_t> &local_vect_sizes_runner)
-{
-    size_t comm_size_runner = local_vect_sizes_runner.size();
-    std::vector <Part> parts(0);
-    size_t local_vect_sizes_server[comm_size_server];
-    size_t global_vect_size = 0;
-    for (size_t i = 0; i < comm_size_runner; ++i)
-    {
-        global_vect_size += local_vect_sizes_runner[i];
-    }
-
-    if (global_vect_size == 0)
-    {
-        return parts;
-    }
-
+void calculate_local_vect_sizes_server(const int comm_size_server, const
+                                   size_t global_vect_size,
+                                   size_t * local_vect_sizes_server) {
     for (int i = 0; i < comm_size_server; ++i)
     {
         // every server rank gets the same amount
@@ -34,6 +20,24 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const
             local_vect_sizes_server[i]++;
         }
     }
+}
+
+std::vector<Part> calculate_n_to_m(const int comm_size_server, const
+                                   std::vector<size_t> &local_vect_sizes_runner)
+{
+    std::vector <Part> parts(0);
+    size_t local_vect_sizes_server[comm_size_server];
+    size_t global_vect_size = 0;
+    global_vect_size = sum_vec(local_vect_sizes_runner);
+
+    if (global_vect_size == 0)
+    {
+        return parts;
+    }
+
+    calculate_local_vect_sizes_server(comm_size_server, global_vect_size,
+            local_vect_sizes_server);
+
 
     parts.push_back({0, 0, 0, 0, 0});
     size_t index_in_runner = 0;

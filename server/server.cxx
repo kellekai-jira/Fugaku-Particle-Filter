@@ -383,6 +383,9 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
 
 }
 
+std::vector<int> global_index_map;
+std::vector<int> global_index_map_hidden;
+
 void register_field(zmq_msg_t &msg, const int * buf,
                     void * configuration_socket)
 {
@@ -418,7 +421,28 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
     memcpy (field->local_vect_sizes_runner_hidden.data(), zmq_msg_data(&msg),
             runner_comm_size * sizeof(size_t));
+    zmq_msg_close(&msg);
 
+
+    // always await global_index_map now
+    global_index_map.resize(sum_vec(field->local_vect_sizes_runner));
+    assert_more_zmq_messages(configuration_socket);
+    zmq_msg_init(&msg);
+    zmq_msg_recv(&msg, configuration_socket, 0);
+    assert(zmq_msg_size(&msg) == global_index_map.size() * sizeof(int));
+    memcpy (global_index_map.data(), zmq_msg_data(&msg),
+            global_index_map.size() * sizeof(int));
+    zmq_msg_close(&msg);
+
+    global_index_map_hidden.resize(sum_vec(field->local_vect_sizes_runner_hidden));
+    assert_more_zmq_messages(configuration_socket);
+    zmq_msg_init(&msg);
+    zmq_msg_recv(&msg, configuration_socket, 0);
+    assert(zmq_msg_size(&msg) == global_index_map_hidden.size() * sizeof(int));
+    memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
+            global_index_map_hidden.size() * sizeof(int));
+
+    // scatter index map is done in broadcast field info
 
     // msg is closed outside by caller...
 
@@ -490,6 +514,39 @@ void broadcast_field_information_and_calculate_parts() {
               my_MPI_SIZE_T, 0, mpi.comm());                                                             // 4:local_vect_sizes_runner_hidden
 
     field->calculate_parts(comm_size);
+
+    // 5 and 6: Scatter the field transform (index_maps)
+    size_t local_vect_sizes_server[comm_size];
+    calculate_local_vect_sizes_server(comm_size, field->globalVectSize(),
+            local_vect_sizes_server);
+    std::vector<int> scounts(comm_size);
+    // transform size_t to mpi's int
+    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts.begin());
+    std::vector<int> displs (comm_size);
+    int last_displ = 0;
+    for (size_t i = 0; i < scounts.size(); ++i)
+    {
+        displs[i] = last_displ;
+        last_displ += scounts[i];
+    }
+
+    MPI_Scatterv( global_index_map.data(), scounts.data(), displs.data(), MPI_INT,
+            field->local_index_map.data(), field->local_vect_size, MPI_INT,
+            0, mpi.comm());
+
+    calculate_local_vect_sizes_server(comm_size, field->globalVectSizeHidden(),
+            local_vect_sizes_server);
+    // transform size_t to mpi's int
+    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts.begin());
+    last_displ = 0;
+    for (size_t i = 0; i < scounts.size(); ++i)
+    {
+        displs[i] = last_displ;
+        last_displ += scounts[i];
+    }
+    MPI_Scatterv( global_index_map_hidden.data(), scounts.data(), displs.data(), MPI_INT,
+            field->local_index_map_hidden.data(), field->local_vect_size_hidden, MPI_INT,
+            0, mpi.comm());
 
 }
 
