@@ -1,18 +1,19 @@
 # Melissa-DA
-Melissa for data assimilation - this is quite different from the vanilla Melissa as
-simulations request work from the server instead of just pushing their Output to the server
+Melissa for data assimilation - this is quite different from the vanilla Melissa 
+as the server requests the propagation of every single timestep.
 
 
 At the moment the code is in a rather living state with many parts being under heavy
 development. Many parts of dead code and unnecessary comments are still in there.
 
-Feel free to create Refactoring merge requests ;)
+Feel free to create refactoring merge requests ;)
 
 
 
 
 ## Install
-- install dependencies (see `Dockerfile` for a more up to date list) on ubuntu this can be done like this:
+- install dependencies (see `Dockerfile` for a more up to date list). 
+  On ubuntu this can be done like this:
 ```
  apt install gfortran \
  git \
@@ -24,7 +25,10 @@ Feel free to create Refactoring merge requests ;)
  libblas-dev liblapack-dev
 ```
 
-- download PDAF-D V1.15 (you need to give your mail on their website to get a download link)
+- download PDAF-D V1.15
+  (you need to give your mail on their 
+  [website](http://pdaf.awi.de/download/index.php?id=ab341070863ac82737b9e4613c72f997)
+  to get a download link)
 
 ```
 tar -xvf PDAF-D_V1.15.tar.gz
@@ -38,21 +42,23 @@ cd <where you want to clone melissa-da>
 git clone git@gitlab.inria.fr:melissa/melissa-da.git
 ```
 
-- after cloninng this repo do not forget to do
+- after cloninng this repo do not forget to do (If you get some access violation 
+  because you cannot download melissa, ask 
+  `sebastian [dot] friedemann [at] indria [dot] fr` for permissions)
 ```
 git submodule update --recursive --init
 ```
 
-- compile and install it (see `compile.sh` and `.gitlab-ci.yml` for more information on that)
+- compile and install it (see `compile.sh` and `.gitlab-ci.yml` for more information)
 ```
 mkdir build
 cd build
     cmake .. -DPDAF_PATH=$PDAF_PATH -DCMAKE_INSTALL_PREFIX=install
 make install
 ```
-this will install it into build/install which is rather convenient for testing and more
+- this will install it into build/install which is rather convenient for dev3elopment and testing
 
-- If you get some dependency problems as some paths are not found. Go to `build/` and fix them using `ccmake ..`
+- if you get some dependency problems as some paths are not found. Go to `build/` and fix them using `ccmake ..`
 
 ## Run an example
 ```
