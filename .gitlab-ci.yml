@@ -1,6 +1,6 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  
+
 stages:
   - build_deps
   - build
@@ -16,6 +16,9 @@ build_deps:
   artifacts:
     paths:
       - melissa/install/
+  except:
+    changes:
+      - "*.md"
 
  # FIXME: reactivate
 #build:
@@ -61,6 +64,9 @@ build_fti:
       - build/
   dependencies:
     - build_deps
+  except:
+    changes:
+      - "*.md"
 
 test_fti:
   stage: test
@@ -74,3 +80,6 @@ test_fti:
     - build_fti
   after_script:
     - killall simulation1 simulation1-hidden simulation1-stateful simulation2-pdaf simulation3-empty melissa_server python3
+  except:
+    changes:
+      - "*.md"
