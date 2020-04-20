@@ -15,6 +15,16 @@ target_compile_definitions(simulation1-hidden PRIVATE -DUSE_HIDDEN_STATE -DBE_ST
 target_link_libraries(simulation1-hidden melissa_api)
 INSTALL(TARGETS simulation1-hidden RUNTIME DESTINATION bin)
 
+add_executable(simulation1-hidden-index-map simulation.cxx)
+target_compile_definitions(simulation1-hidden-index-map PRIVATE -DWITH_INDEX_MAP -DUSE_HIDDEN_STATE -DBE_STATEFUL)
+target_link_libraries(simulation1-hidden-index-map melissa_api)
+INSTALL(TARGETS simulation1-hidden-index-map RUNTIME DESTINATION bin)
+
+add_executable(simulation1-index-map simulation.cxx)
+target_compile_definitions(simulation1-index-map PRIVATE -DWITH_INDEX_MAP)
+target_link_libraries(simulation1-index-map melissa_api)
+INSTALL(TARGETS simulation1-index-map RUNTIME DESTINATION bin)
+
 
 
 add_test(NAME "test-example-simulation1" COMMAND ${in_env} python3 ./script.py ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -27,3 +37,6 @@ python_test("test-crashing-runner")
 
 python_test("test-crashing-server1")
 
+python_test("test-index-map")
+
+python_test("test-index-map-hidden")

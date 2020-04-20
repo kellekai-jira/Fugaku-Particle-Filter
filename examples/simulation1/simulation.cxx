@@ -69,12 +69,80 @@ int main(int argc, char * args[])
 
         next_offset += counts[rank];
     }
+    vector<double> state1(local_vect_size);
+
+#ifdef WITH_INDEX_MAP
+    std::vector<int> local_index_map(state1.size());
+    int last_entry = 0;
+    int entry = 1;
+    int new_entry;
+    // calculate entries left of this rank:
+    for (int i = 0; i < GLOBAL_VECT_SIZE/comm_size * comm_rank; i++) {
+        new_entry = last_entry + entry;
+        last_entry = entry;
+        entry = new_entry;
+    }
+
+    // now fill vector elements:
+    for (auto &it : local_index_map) {
+        new_entry = last_entry + entry;
+        last_entry = entry;
+        entry = new_entry;
+        it = new_entry;
+        printf("index map entry: %d\n", it);
+    }
+
+
+
 
 #ifdef USE_HIDDEN_STATE
+    std::vector<int> local_index_map_hidden(secret_state.size());
+    last_entry = 0;
+    entry = 1;
+    for (int i = 0; i < secret_state.size()/comm_size * comm_rank; i++) {
+        new_entry = last_entry + entry;
+        last_entry = entry;
+        entry = new_entry;
+    }
+
+    // now fill vector elements:
+    for (auto &it : local_index_map_hidden) {
+        new_entry = last_entry + entry;
+        last_entry = entry;
+        entry = new_entry;
+        it = new_entry;
+        printf("hidden index map entry: %d\n", it);
+    }
+
+#endif
+
+
+#endif
+
+#ifdef USE_HIDDEN_STATE
+#ifdef WITH_INDEX_MAP
+    melissa_init_with_index_map("variableX",
+                 local_vect_size,
+                 secret_state.size(),
+                 MPI_COMM_WORLD,
+                 local_index_map.data(),
+                 local_index_map_hidden.data()
+                 );
+#else
     melissa_init("variableX",
                  local_vect_size,
                  secret_state.size(),
                  MPI_COMM_WORLD
+                 );
+#endif
+#else
+#ifdef WITH_INDEX_MAP
+    melissa_init_with_index_map("variableX",
+                 local_vect_size,
+                 0,
+                 MPI_COMM_WORLD,
+                 local_index_map.data(),
+                 nullptr
                  );
 #else
     melissa_init("variableX",
@@ -82,7 +150,8 @@ int main(int argc, char * args[])
                  0,
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 #endif
-    vector<double> state1(local_vect_size);
+#endif
+
     fill(state1.begin(), state1.end(), 0);
     printf("offset %d on rank %d \n", offsets[comm_rank], comm_rank);
 

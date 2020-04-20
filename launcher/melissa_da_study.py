@@ -41,6 +41,7 @@ ASSIMILATOR_DUMMY = 0
 ASSIMILATOR_PDAF = 1
 ASSIMILATOR_EMPTY = 2
 ASSIMILATOR_CHECK_STATELESS = 3
+ASSIMILATOR_PRINT_INDEX_MAP = 4
 
 started_runners = 0  # as Python seems to not support closurs this has to be global.
 
@@ -312,5 +313,6 @@ __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'ASSIMILATOR_CHECK_STATELESS',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
-           'ASSIMILATOR_DUMMY']
+           'ASSIMILATOR_DUMMY',
+           'ASSIMILATOR_PRINT_INDEX_MAP']
 

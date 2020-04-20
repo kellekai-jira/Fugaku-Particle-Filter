@@ -519,6 +519,9 @@ struct ConfigurationConnection
                           global_index_map_hidden.size() * sizeof(int), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
 
+        D("global index map vector sent:");
+        print_vector(global_index_map);
+
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
         // ack
@@ -545,6 +548,9 @@ bool first_melissa_init(MPI_Comm comm_)
 
     // activate logging:
     comm_rank = getCommRank();
+
+    // for convenience
+    comm_size = getCommSize();
 
 #ifdef REPORT_TIMING
     // Start Timing:
@@ -647,9 +653,18 @@ void melissa_init_with_index_map(const char *field_name,
     }
     else
     {
-        MPI_Gather(local_index_map, local_vect_size, MPI_INT,
-               global_index_map.data(), global_index_map.size(), MPI_INT,
-               0, comm_);
+        int displs[comm_size];
+        int last_displ = 0;
+        int rcounts [comm_size];
+        // move to int...
+        std::copy(local_vect_sizes.begin(), local_vect_sizes.end(), rcounts);
+        for (int i=0; i<comm_size; ++i) {
+            displs[i] = last_displ;
+            last_displ += local_vect_sizes[i];
+        }
+
+        MPI_Gatherv( local_index_map, local_vect_size, MPI_INT,
+                global_index_map.data(), rcounts, displs, MPI_INT, 0, comm_);
     }
     if (local_index_map_hidden == nullptr)
     {
@@ -660,9 +675,18 @@ void melissa_init_with_index_map(const char *field_name,
     }
     else
     {
-        MPI_Gather(local_index_map_hidden, local_vect_size, MPI_INT,
-               global_index_map_hidden.data(), global_index_map_hidden.size(), MPI_INT,
-               0, comm_);
+        int displs[comm_size];
+        int last_displ = 0;
+        int rcounts [comm_size];
+        // move to int...
+        std::copy(local_hidden_vect_sizes.begin(), local_hidden_vect_sizes.end(), rcounts);
+        for (int i=0; i<comm_size; ++i) {
+            displs[i] = last_displ;
+            last_displ += local_hidden_vect_sizes[i];
+        }
+
+        MPI_Gatherv( local_index_map_hidden, local_hidden_vect_size, MPI_INT,
+                global_index_map_hidden.data(), rcounts, displs, MPI_INT, 0, comm_);
     }
     if (register_field)
     {

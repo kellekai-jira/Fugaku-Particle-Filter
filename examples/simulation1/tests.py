@@ -26,12 +26,11 @@ procs_server=1
 procs_runner=1
 n_runners=1
 
-def compare(reference_file):
-    print('Compare with %s...' % reference_file)
-    cmd = 'diff -s --side-by-side STATS/output.txt %s' % reference_file
-    ret = subprocess.call(cmd.split())
+def compare(reference_file, output_file="STATS/output.txt"):
+    print('Compare %s with %s...' % (output_file, reference_file))
+    ret = subprocess.call(['diff', '-s', '--side-by-side', output_file, reference_file])
     if ret != 0:
-        print("failed! Wrong output.txt generated!")
+        print("failed! Wrong %s generated!" % output_file)
         exit(ret)
 
 def get_csv_section(filename, section_name):
@@ -80,8 +79,36 @@ def run(server_slowdown_factor_=1):
             False,
             False,
             server_slowdown_factor=server_slowdown_factor_)
+            #precommand_server='xterm_gdb')
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
+
+def test_index_map(executable_):
+    global executable, procs_server, procs_runner, n_runners, total_steps
+    global assimilator_type
+
+    executable = executable_
+
+    total_steps = 1
+    assimilator_type = ASSIMILATOR_PRINT_INDEX_MAP
+
+
+    procs_server = 2
+    procs_runner = 3
+    n_runners = 2
+    clean_old_stats()
+    run()
+    shutil.copyfile('STATS/index-map.csv', './reference-index-map.csv')
+    n_runners = 1
+    procs_server = 5
+    procs_runner = 2
+    run()
+
+
+    compare("STATS/index-map.csv", './reference-index-map.csv')
+
+
+
 
 testcase = sys.argv[1]
 if testcase == 'test-crashing-runner':
@@ -235,9 +262,18 @@ elif testcase == 'test-check-stateless':
     assert check_stateless('simulation1-stateful') == False
     assert check_stateless('simulation1-hidden')
 
+elif testcase == 'test-index-map':
+    test_index_map('simulation1-index-map')
+elif testcase == 'test-index-map-hidden':
+    test_index_map('simulation1-hidden-index-map')
+elif testcase == 'test-empty-index-map':
+# TODO: testcase to test if standard index map is 012345.....
+    pass
+
 elif testcase == 'long-run':
     # To generate reference for KillerGiraffe tests and for crashing_launcher test
     long_run()
+
 
 else:
     print('Error! does not know the testcase %s' % testcase)
