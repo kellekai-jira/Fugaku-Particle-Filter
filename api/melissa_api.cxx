@@ -603,6 +603,34 @@ void melissa_init(const char *field_name,
             comm_, nullptr, nullptr);
 }
 
+void gather_global_index_map(const size_t local_vect_size, const int local_index_map[],
+        std::vector<int> &global_index_map, const size_t local_vect_sizes[],
+        MPI_Comm comm)
+{
+    if (local_index_map == nullptr)
+    {
+        int i = 0;
+        for (auto &e: global_index_map) {
+            e = i++;
+        }
+    }
+    else
+    {
+        int displs[comm_size];
+        int last_displ = 0;
+        int rcounts [comm_size];
+        // move to int...
+        std::copy(local_vect_sizes, local_vect_sizes+comm_size, rcounts);
+        for (int i=0; i<comm_size; ++i) {
+            displs[i] = last_displ;
+            last_displ += local_vect_sizes[i];
+        }
+
+        MPI_Gatherv( local_index_map, local_vect_size, MPI_INT,
+                global_index_map.data(), rcounts, displs, MPI_INT, 0, comm);
+    }
+}
+
 void melissa_init_with_index_map(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
@@ -644,50 +672,18 @@ void melissa_init_with_index_map(const char *field_name,
         global_index_map_hidden.resize(sum_vec(local_hidden_vect_sizes));
     }
 
-    if (local_index_map == nullptr)
-    {
-        int i = 0;
-        for (auto &e: global_index_map) {
-            e = i++;
-        }
-    }
-    else
-    {
-        int displs[comm_size];
-        int last_displ = 0;
-        int rcounts [comm_size];
-        // move to int...
-        std::copy(local_vect_sizes.begin(), local_vect_sizes.end(), rcounts);
-        for (int i=0; i<comm_size; ++i) {
-            displs[i] = last_displ;
-            last_displ += local_vect_sizes[i];
-        }
+    gather_global_index_map(local_vect_size, local_index_map,
+        global_index_map, local_vect_sizes.data(),
+        comm_);
+    printf("%d got the following index map:");
+    std::vector<int> tmp(local_vect_size);
+    std::copy(local_index_map, local_index_map+local_vect_size, tmp.begin());
+    print_vector(tmp);
 
-        MPI_Gatherv( local_index_map, local_vect_size, MPI_INT,
-                global_index_map.data(), rcounts, displs, MPI_INT, 0, comm_);
-    }
-    if (local_index_map_hidden == nullptr)
-    {
-        int i = 0;
-        for (auto &e: global_index_map_hidden) {
-            e = i++;
-        }
-    }
-    else
-    {
-        int displs[comm_size];
-        int last_displ = 0;
-        int rcounts [comm_size];
-        // move to int...
-        std::copy(local_hidden_vect_sizes.begin(), local_hidden_vect_sizes.end(), rcounts);
-        for (int i=0; i<comm_size; ++i) {
-            displs[i] = last_displ;
-            last_displ += local_hidden_vect_sizes[i];
-        }
+    gather_global_index_map(local_hidden_vect_size, local_index_map_hidden,
+        global_index_map_hidden, local_hidden_vect_sizes.data(),
+        comm_);
 
-        MPI_Gatherv( local_index_map_hidden, local_hidden_vect_size, MPI_INT,
-                global_index_map_hidden.data(), rcounts, displs, MPI_INT, 0, comm_);
-    }
     if (register_field)
     {
         // Tell the server which kind of data he has to expect

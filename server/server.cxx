@@ -480,6 +480,27 @@ void answer_configuration_message(void * configuration_socket,
     zmq_msg_close(&msg);
 }
 
+void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int global_index_map_data[], int local_index_map_data[])
+{
+    size_t local_vect_sizes_server[comm_size];
+    calculate_local_vect_sizes_server(comm_size, global_vect_size,
+            local_vect_sizes_server);
+    int scounts[comm_size];
+    // transform size_t to mpi's int
+    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts);
+    int displs [comm_size];
+    int last_displ = 0;
+    for (int i = 0; i < comm_size; ++i)
+    {
+        displs[i] = last_displ;
+        last_displ += scounts[i];
+    }
+
+    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_INT,
+            local_index_map_data, local_vect_size, MPI_INT,
+            0, mpi.comm());
+}
+
 void broadcast_field_information_and_calculate_parts() {
     char field_name[MPI_MAX_PROCESSOR_NAME];
     int runner_comm_size;      // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
@@ -516,38 +537,17 @@ void broadcast_field_information_and_calculate_parts() {
     field->calculate_parts(comm_size);
 
     // 5 and 6: Scatter the field transform (index_maps)
-    size_t local_vect_sizes_server[comm_size];
-    calculate_local_vect_sizes_server(comm_size, field->globalVectSize(),
-            local_vect_sizes_server);
-    std::vector<int> scounts(comm_size);
-    // transform size_t to mpi's int
-    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts.begin());
-    std::vector<int> displs (comm_size);
-    int last_displ = 0;
-    for (size_t i = 0; i < scounts.size(); ++i)
-    {
-        displs[i] = last_displ;
-        last_displ += scounts[i];
-    }
+    scatter_index_map(field->globalVectSize(), field->local_vect_size,
+            global_index_map.data(), field->local_index_map.data());
 
-    MPI_Scatterv( global_index_map.data(), scounts.data(), displs.data(), MPI_INT,
-            field->local_index_map.data(), field->local_vect_size, MPI_INT,
-            0, mpi.comm());
+    printf("rank %d index map:", comm_rank);
+    print_vector(field->local_index_map);
 
-    calculate_local_vect_sizes_server(comm_size, field->globalVectSizeHidden(),
-            local_vect_sizes_server);
-    // transform size_t to mpi's int
-    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts.begin());
-    last_displ = 0;
-    for (size_t i = 0; i < scounts.size(); ++i)
-    {
-        displs[i] = last_displ;
-        last_displ += scounts[i];
-    }
-    MPI_Scatterv( global_index_map_hidden.data(), scounts.data(), displs.data(), MPI_INT,
-            field->local_index_map_hidden.data(), field->local_vect_size_hidden, MPI_INT,
-            0, mpi.comm());
+    scatter_index_map(field->globalVectSizeHidden(), field->local_vect_size_hidden,
+            global_index_map_hidden.data(), field->local_index_map_hidden.data());
 
+    printf("rank %d hidden index map:", comm_rank);
+    print_vector(field->local_index_map_hidden);
 }
 
 /// returns true if could send the sub_task on a connection.

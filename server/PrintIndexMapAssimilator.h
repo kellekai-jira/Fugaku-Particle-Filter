@@ -17,6 +17,8 @@ private:
     Field & field;
     const int total_steps;
     MpiManager & mpi;
+    void gather_and_print(std::ofstream &os, size_t global_vect_size,
+        size_t local_vect_size, const int local_index_map_data[], bool print_it);
 public:
     PrintIndexMapAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);
     virtual int do_update_step(const int current_step);

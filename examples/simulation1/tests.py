@@ -78,14 +78,18 @@ def run(server_slowdown_factor_=1):
             n_runners,
             False,
             False,
-            server_slowdown_factor=server_slowdown_factor_)
-            #precommand_server='xterm_gdb')
+            server_slowdown_factor=server_slowdown_factor_,
+            precommand_server='xterm_gdb')
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
 def test_index_map(executable_):
     global executable, procs_server, procs_runner, n_runners, total_steps
     global assimilator_type
+
+    ref_file = './reference-index-map.csv'
+    if os.path.isfile(ref_file):
+        os.remove(ref_file)
 
     executable = executable_
 
@@ -98,7 +102,7 @@ def test_index_map(executable_):
     n_runners = 2
     clean_old_stats()
     run()
-    shutil.copyfile('STATS/index-map.csv', './reference-index-map.csv')
+    shutil.copyfile('STATS/index-map.csv', ref_file)
     n_runners = 1
     procs_server = 5
     procs_runner = 2

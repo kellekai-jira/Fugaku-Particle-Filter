@@ -77,7 +77,7 @@ int main(int argc, char * args[])
     int entry = 1;
     int new_entry;
     // calculate entries left of this rank:
-    for (int i = 0; i < GLOBAL_VECT_SIZE/comm_size * comm_rank; i++) {
+    for (int i = 0; i < offsets[comm_rank]; i++) {
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
@@ -99,7 +99,7 @@ int main(int argc, char * args[])
     std::vector<int> local_index_map_hidden(secret_state.size());
     last_entry = 0;
     entry = 1;
-    for (int i = 0; i < secret_state.size()/comm_size * comm_rank; i++) {
+    for (int i = 0; i < offsets[comm_rank]; i++) {
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
