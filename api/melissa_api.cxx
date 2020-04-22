@@ -616,12 +616,12 @@ void gather_global_index_map(const size_t local_vect_size, const int local_index
     }
     else
     {
-        int displs[comm_size];
+        int displs[getCommSize()];
         int last_displ = 0;
-        int rcounts [comm_size];
+        int rcounts [getCommSize()];
         // move to int...
-        std::copy(local_vect_sizes, local_vect_sizes+comm_size, rcounts);
-        for (int i=0; i<comm_size; ++i) {
+        std::copy(local_vect_sizes, local_vect_sizes+getCommSize(), rcounts);
+        for (int i=0; i<getCommSize(); ++i) {
             displs[i] = last_displ;
             last_displ += local_vect_sizes[i];
         }

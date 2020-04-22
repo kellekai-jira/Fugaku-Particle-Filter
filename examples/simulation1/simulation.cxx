@@ -89,7 +89,6 @@ int main(int argc, char * args[])
         last_entry = entry;
         entry = new_entry;
         it = new_entry;
-        printf("index map entry: %d\n", it);
     }
 
 
@@ -99,7 +98,7 @@ int main(int argc, char * args[])
     std::vector<int> local_index_map_hidden(secret_state.size());
     last_entry = 0;
     entry = 1;
-    for (int i = 0; i < offsets[comm_rank]; i++) {
+    for (int i = 0; i < comm_rank * secret_state.size(); i++) {
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
@@ -111,7 +110,6 @@ int main(int argc, char * args[])
         last_entry = entry;
         entry = new_entry;
         it = new_entry;
-        printf("hidden index map entry: %d\n", it);
     }
 
 #endif

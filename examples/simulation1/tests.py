@@ -79,7 +79,8 @@ def run(server_slowdown_factor_=1):
             False,
             False,
             server_slowdown_factor=server_slowdown_factor_,
-            precommand_server='')
+            precommand_server='',
+            with_fault_tolerance=True)
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
@@ -104,7 +105,7 @@ def test_index_map(executable_):
     run()
     shutil.copyfile('STATS/index-map.csv', ref_file)
     n_runners = 1
-    procs_server = 5
+    procs_server = 3
     procs_runner = 2
     run()
 
@@ -268,10 +269,21 @@ elif testcase == 'test-check-stateless':
 
 elif testcase == 'test-index-map':
     test_index_map('simulation1-index-map')
-elif testcase == 'test-index-map-hidden':
-    test_index_map('simulation1-hidden-index-map')
+elif testcase == 'test-hidden-index-map':
+    executable = "simulation1-hidden-index-map"
+
+    clean_old_stats()
+    total_steps = 1
+    assimilator_type = ASSIMILATOR_PRINT_INDEX_MAP
+
+
+    procs_server = 2
+    procs_runner = 3
+    n_runners = 2
+    run()
+    compare("STATS/index-map.csv", './reference-hidden-index-map.csv')
 elif testcase == 'test-empty-index-map':
-    test_index_map('xterm_gdb simulation1')
+    test_index_map('simulation1')
     compare("STATS/index-map.csv", './reference-empty-index-map.csv')
 elif testcase == 'test-empty-hidden-index-map':
     executable = "simulation1-hidden"

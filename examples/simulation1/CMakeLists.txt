@@ -39,4 +39,8 @@ python_test("test-crashing-server1")
 
 python_test("test-index-map")
 
-python_test("test-index-map-hidden")
+python_test("test-hidden-index-map")
+
+python_test("test-empty-index-map")
+
+python_test("test-empty-hidden-index-map")
