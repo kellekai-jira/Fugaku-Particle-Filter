@@ -103,11 +103,13 @@ def test_index_map(executable_):
     n_runners = 2
     clean_old_stats()
     run()
+    os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     shutil.copyfile('STATS/index-map.csv', ref_file)
     n_runners = 1
     procs_server = 3
     procs_runner = 2
     run()
+    os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
 
 
     compare("STATS/index-map.csv", './reference-index-map.csv')
@@ -281,6 +283,7 @@ elif testcase == 'test-hidden-index-map':
     procs_runner = 3
     n_runners = 2
     run()
+    os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     compare("STATS/index-map.csv", './reference-hidden-index-map.csv')
 elif testcase == 'test-empty-index-map':
     test_index_map('simulation1')
@@ -296,6 +299,7 @@ elif testcase == 'test-empty-hidden-index-map':
     n_runners = 1
     clean_old_stats()
     run()
+    os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     compare("STATS/index-map.csv", './reference-empty-hidden-index-map.csv')
 
 elif testcase == 'long-run':

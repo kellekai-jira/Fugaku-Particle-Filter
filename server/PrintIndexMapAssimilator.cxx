@@ -12,10 +12,46 @@
 
 #include "utils.h"
 
-PrintIndexMapAssimilator::PrintIndexMapAssimilator(Field & field_, const int total_steps_, MpiManager & mpi_) :
-    field(field_), total_steps(total_steps_), mpi(mpi_)
+
+void PrintIndexMapAssimilator::index_map_to_file()
 {
-    nsteps = 1;
+    D("Gathered file");
+
+    std::ofstream myfile;
+
+    bool print_it = mpi.rank() == 0;
+
+    if (print_it)
+    {
+        D("Writing file");
+        // Rewrite file every update step...
+        myfile.open ("index-map.csv", std::ios::trunc);
+
+        myfile << "index_map" << std::endl;
+
+    }
+
+    gather_and_print(myfile, field.globalVectSize(),
+            field.local_vect_size, field.local_index_map.data(), print_it);
+
+    if (print_it)
+    {
+        myfile.close();
+        myfile.open ("index-map-hidden.csv", std::ios::trunc);
+        myfile << "index_map_hiddden" << std::endl;
+    }
+    gather_and_print(myfile, field.globalVectSizeHidden(),
+            field.local_vect_size_hidden, field.local_index_map_hidden.data(), print_it);
+
+    if (print_it)
+    {
+        myfile.close();
+    }
+}
+
+PrintIndexMapAssimilator::PrintIndexMapAssimilator(Field & field_, const int total_steps_, MpiManager & mpi_) :
+    field(field_), mpi(mpi_)
+{
 
     // otherwise release mode will make problems!
     for (auto ens_it = field.ensemble_members.begin(); ens_it !=
@@ -26,6 +62,9 @@ PrintIndexMapAssimilator::PrintIndexMapAssimilator(Field & field_, const int tot
                   ens_it->state_analysis.end(), 0.0);
     }
 
+    index_map_to_file();
+
+    nsteps = 1;
 }
 
 void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os, size_t global_vect_size,
@@ -63,47 +102,6 @@ int PrintIndexMapAssimilator::do_update_step(const int current_step) {
     MPI_Barrier(mpi.comm());
 
 
-
-
-    D("Gathered file");
-
-    std::ofstream myfile;
-
-    bool print_it = mpi.rank() == 0;
-
-    if (print_it)
-    {
-        D("Writing file");
-        // Rewrite file every update step...
-        myfile.open ("index-map.csv", std::ios::trunc);
-
-        myfile << "index_map" << std::endl;
-
-    }
-
-    print_vector(field.local_index_map);
-    print_vector(field.local_index_map_hidden);
-    gather_and_print(myfile, field.globalVectSize(),
-            field.local_vect_size, field.local_index_map.data(), print_it);
-
-    if (print_it)
-    {
-        myfile << "index_map_hiddden" << std::endl;
-    }
-    gather_and_print(myfile, field.globalVectSizeHidden(),
-            field.local_vect_size_hidden, field.local_index_map_hidden.data(), print_it);
-
-    if (print_it)
-    {
-        myfile.close();
-    }
-
-    if (current_step >= total_steps)
-    {
-        return -1;
-    }
-    else
-    {
-        return getNSteps();
-    }
+    // Do not really assimilate...
+    return -1;
 }
