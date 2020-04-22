@@ -79,7 +79,7 @@ def run(server_slowdown_factor_=1):
             False,
             False,
             server_slowdown_factor=server_slowdown_factor_,
-            precommand_server='xterm_gdb')
+            precommand_server='')
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
@@ -271,8 +271,20 @@ elif testcase == 'test-index-map':
 elif testcase == 'test-index-map-hidden':
     test_index_map('simulation1-hidden-index-map')
 elif testcase == 'test-empty-index-map':
-# TODO: testcase to test if standard index map is 012345.....
-    pass
+    test_index_map('xterm_gdb simulation1')
+    compare("STATS/index-map.csv", './reference-empty-index-map.csv')
+elif testcase == 'test-empty-hidden-index-map':
+    executable = "simulation1-hidden"
+
+    total_steps = 1
+    assimilator_type = ASSIMILATOR_PRINT_INDEX_MAP
+
+    procs_server = 3
+    procs_runner = 2
+    n_runners = 1
+    clean_old_stats()
+    run()
+    compare("STATS/index-map.csv", './reference-empty-hidden-index-map.csv')
 
 elif testcase == 'long-run':
     # To generate reference for KillerGiraffe tests and for crashing_launcher test

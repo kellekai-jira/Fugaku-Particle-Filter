@@ -675,10 +675,6 @@ void melissa_init_with_index_map(const char *field_name,
     gather_global_index_map(local_vect_size, local_index_map,
         global_index_map, local_vect_sizes.data(),
         comm_);
-    printf("%d got the following index map:");
-    std::vector<int> tmp(local_vect_size);
-    std::copy(local_index_map, local_index_map+local_vect_size, tmp.begin());
-    print_vector(tmp);
 
     gather_global_index_map(local_hidden_vect_size, local_index_map_hidden,
         global_index_map_hidden, local_hidden_vect_sizes.data(),
