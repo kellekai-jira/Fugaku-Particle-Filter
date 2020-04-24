@@ -30,14 +30,14 @@ dim_index_map_hidden, param_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
   INTEGER(kind=C_INT), intent(in) :: param_dim_state_p   ! Local state dimension
   INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
   INTEGER(kind=C_INT), intent(in) :: param_comm_world    ! World communicator as given by the melissa_server
-  INTEGER(kind=C_INT), INTENT(in), VALUE :: dim_index_map                   ! PE-local state dimension
-  TYPE(C_PTR), intent(in) :: param_index_map
-  INTEGER(kind=C_INT), INTENT(in), VALUE :: dim_index_map_hidden                   ! PE-local state dimension
-  TYPE(C_PTR), intent(in) :: param_index_map_hidden
+  INTEGER(kind=C_INT), INTENT(in) :: dim_index_map                   ! PE-local state dimension
+  TYPE(C_PTR), INTENT(in), VALUE :: param_index_map
+  INTEGER(kind=C_INT), INTENT(in) :: dim_index_map_hidden                   ! PE-local state dimension
+  TYPE(C_PTR), INTENT(in), VALUE :: param_index_map_hidden
 
   print *, "Initing index_map s", dim_index_map, dim_index_map_hidden
   CALL C_F_POINTER( param_index_map, index_map,[dim_index_map])
-  CALL C_F_POINTER( param_index_map, index_map_hidden,[dim_index_map_hidden])
+  CALL C_F_POINTER( param_index_map_hidden, index_map_hidden,[dim_index_map_hidden])
 
   COMM_world = param_comm_world
 

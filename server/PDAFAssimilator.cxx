@@ -32,7 +32,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     const int ensemble_size = field.ensemble_members.size();
 
     const MPI_Fint comm_world = mpi.fortranComm();
-    D("indexmap 10th element from server: %d", field.local_index_map.at(10));
+
     cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world,
             &local_vect_size, field.local_index_map.data(),
             &local_vect_size_hidden, field.local_index_map_hidden.data());

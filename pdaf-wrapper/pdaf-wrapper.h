@@ -22,9 +22,9 @@ void cwrapper_init_pdaf(const int * param_dim_state,
         const int * param_ensemble_size,
         const int * param_comm_world,
         const int * dim_index_map,
-        const int * param_index_map,
+        const int param_index_map[],
         const int * dim_index_map_hidden,
-        const int * param_index_map_hidden);
+        const int param_index_map_hidden[]);
 
 void cwrapper_assimilate_pdaf();
 void cwrapper_PDAF_deallocate();
