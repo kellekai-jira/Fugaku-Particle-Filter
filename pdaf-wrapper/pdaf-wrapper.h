@@ -21,19 +21,19 @@ void cwrapper_init_pdaf(const int * param_dim_state,
         const int * param_dim_state_p,
         const int * param_ensemble_size,
         const int * param_comm_world,
-        const int * param_index_map,
         const int * dim_index_map,
-        const int * param_index_map_hidden,
-        const int * dim_index_map_hidden);
+        const int * param_index_map,
+        const int * dim_index_map_hidden,
+        const int * param_index_map_hidden);
 
 void cwrapper_assimilate_pdaf();
 void cwrapper_PDAF_deallocate();
 
 // old, TODO: remove, also remove from f90 file.
 int cwrapper_PDAF_get_state(int * doexit, const int * dim_state_analysis,
-                            double * state_analysis[], int * status);
+                            double state_analysis[], int * status);
 void cwrapper_PDAF_put_state(const int * dim_state_background, const
-                             double * state_background[], int * status);
+                             double state_background[], int * status);
 
 void cwrapper_set_current_step(const int * new_current_step);
 

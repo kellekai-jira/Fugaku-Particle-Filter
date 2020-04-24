@@ -12,8 +12,8 @@ end module
 
 ! TODO: take the dummy model or maybe even others to init parallel!
 SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble_size, &
-        param_comm_world, param_index_map, dim_index_map, &
-param_index_map_hidden, dim_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
+        param_comm_world, dim_index_map, param_index_map, &
+dim_index_map_hidden, param_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
   USE iso_c_binding
 
   USE mod_assimilation, &
@@ -30,10 +30,10 @@ param_index_map_hidden, dim_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
   INTEGER(kind=C_INT), intent(in) :: param_dim_state_p   ! Local state dimension
   INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
   INTEGER(kind=C_INT), intent(in) :: param_comm_world    ! World communicator as given by the melissa_server
+  INTEGER(kind=C_INT), INTENT(in), VALUE :: dim_index_map                   ! PE-local state dimension
   TYPE(C_PTR), intent(in) :: param_index_map
-  INTEGER, INTENT(in) :: dim_index_map                   ! PE-local state dimension
+  INTEGER(kind=C_INT), INTENT(in), VALUE :: dim_index_map_hidden                   ! PE-local state dimension
   TYPE(C_PTR), intent(in) :: param_index_map_hidden
-  INTEGER, INTENT(in) :: dim_index_map_hidden                   ! PE-local state dimension
 
   print *, "Initing index_map s", dim_index_map, dim_index_map_hidden
   CALL C_F_POINTER( param_index_map, index_map,[dim_index_map])
@@ -194,7 +194,7 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 ! Arguments:
   INTEGER(C_INT), intent(out) :: doexit
   INTEGER(C_INT), intent(in) :: dim_state_analysis
-  TYPE(C_PTR) :: state_analysis
+  TYPE(C_PTR), VALUE :: state_analysis
   INTEGER(C_INT), intent(out) :: status
 
   INTEGER(C_INT) :: cwrapper_PDAF_get_state
@@ -260,7 +260,7 @@ SUBROUTINE cwrapper_PDAF_put_state(dim_state_background, state_background, statu
 
 ! Arguments
   INTEGER(C_INT) :: dim_state_background
-  TYPE(C_PTR) :: state_background
+  TYPE(C_PTR), VALUE :: state_background
   INTEGER(C_INT), intent(out) :: status
 
   ! External subroutines

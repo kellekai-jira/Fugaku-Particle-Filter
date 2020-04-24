@@ -32,9 +32,10 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     const int ensemble_size = field.ensemble_members.size();
 
     const MPI_Fint comm_world = mpi.fortranComm();
+    D("indexmap 10th element from server: %d", field.local_index_map.at(10));
     cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world,
-            field.local_index_map.data(), &local_vect_size,
-            field.local_index_map_hidden.data(), &local_vect_size_hidden);
+            &local_vect_size, field.local_index_map.data(),
+            &local_vect_size_hidden, field.local_index_map_hidden.data());
     cwrapper_init_user(&total_steps);
     nsteps = -1;
 
@@ -77,7 +78,7 @@ void PDAFAssimilator::getAllEnsembleMembers()
 
         double * data = eit->state_analysis.data();
         // int nnsteps =
-        int nnsteps = cwrapper_PDAF_get_state(&doexit, &local_vect_size, &data,
+        int nnsteps = cwrapper_PDAF_get_state(&doexit, &local_vect_size, data,
                                               &status);
         assert(nsteps == nnsteps || nsteps == -1);          // every get state should give the same nsteps!
         nsteps = nnsteps;
@@ -118,7 +119,7 @@ int PDAFAssimilator::do_update_step(const int current_step)
     {
 
         const double * data = eit->state_background.data();
-        cwrapper_PDAF_put_state(&local_vect_size, &data, &status);
+        cwrapper_PDAF_put_state(&local_vect_size, data, &status);
 
         if (status != 0)
         {
