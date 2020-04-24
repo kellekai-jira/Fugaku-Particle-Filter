@@ -28,12 +28,13 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     // convert to fortran
     const int global_vect_size = field.globalVectSize();
     const int local_vect_size = field.local_vect_size;  // transform to int
+    const int local_vect_size_hidden = field.local_vect_size_hidden;  // transform to int
     const int ensemble_size = field.ensemble_members.size();
 
-    const int local_vect_size_hidden = field.local_vect_size_hidden;
-
     const MPI_Fint comm_world = mpi.fortranComm();
-    cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world);
+    cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world,
+            field.local_index_map.data(), &local_vect_size,
+            field.local_index_map_hidden.data(), &local_vect_size_hidden);
     cwrapper_init_user(&total_steps);
     nsteps = -1;
 

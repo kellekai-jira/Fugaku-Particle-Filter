@@ -519,9 +519,6 @@ struct ConfigurationConnection
                           global_index_map_hidden.size() * sizeof(int), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
 
-        D("global index map vector sent:");
-        print_vector(global_index_map);
-
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
         // ack

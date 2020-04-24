@@ -540,14 +540,14 @@ void broadcast_field_information_and_calculate_parts() {
     scatter_index_map(field->globalVectSize(), field->local_vect_size,
             global_index_map.data(), field->local_index_map.data());
 
-    printf("rank %d index map:", comm_rank);
-    print_vector(field->local_index_map);
+    //printf("rank %d index map:", comm_rank);
+    //print_vector(field->local_index_map);
 
     scatter_index_map(field->globalVectSizeHidden(), field->local_vect_size_hidden,
             global_index_map_hidden.data(), field->local_index_map_hidden.data());
 
-    printf("rank %d hidden index map:", comm_rank);
-    print_vector(field->local_index_map_hidden);
+    //printf("rank %d hidden index map:", comm_rank);
+    //print_vector(field->local_index_map_hidden);
 }
 
 /// returns true if could send the sub_task on a connection.

@@ -4,13 +4,16 @@ implicit none
 save
 real(C_DOUBLE), POINTER :: distribute_state_to(:)
 real(C_DOUBLE), POINTER :: collect_state_from(:)
+integer(C_INT), POINTER :: index_map(:)
+integer(C_INT), POINTER :: index_map_hidden(:)
 integer :: current_step
 end module
 
 
 ! TODO: take the dummy model or maybe even others to init parallel!
 SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble_size, &
-        param_comm_world) BIND(C,name='cwrapper_init_pdaf')
+        param_comm_world, param_index_map, dim_index_map, &
+param_index_map_hidden, dim_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
   USE iso_c_binding
 
   USE mod_assimilation, &
@@ -20,14 +23,21 @@ SUBROUTINE cwrapper_init_pdaf(param_dim_state, param_dim_state_p, param_ensemble
       ONLY: COMM_world
 
   USE my_state_accessors, &
-      ONLY: current_step
+      ONLY: current_step, index_map, index_map_hidden
   IMPLICIT NONE
 
   INTEGER(kind=C_INT), intent(in) :: param_dim_state     ! Global state dimension
   INTEGER(kind=C_INT), intent(in) :: param_dim_state_p   ! Local state dimension
   INTEGER(kind=C_INT), intent(in) :: param_ensemble_size ! Ensemble size
   INTEGER(kind=C_INT), intent(in) :: param_comm_world    ! World communicator as given by the melissa_server
+  TYPE(C_PTR), intent(in) :: param_index_map
+  INTEGER, INTENT(in) :: dim_index_map                   ! PE-local state dimension
+  TYPE(C_PTR), intent(in) :: param_index_map_hidden
+  INTEGER, INTENT(in) :: dim_index_map_hidden                   ! PE-local state dimension
 
+  print *, "Initing index_map s", dim_index_map, dim_index_map_hidden
+  CALL C_F_POINTER( param_index_map, index_map,[dim_index_map])
+  CALL C_F_POINTER( param_index_map, index_map_hidden,[dim_index_map_hidden])
 
   COMM_world = param_comm_world
 
@@ -58,11 +68,17 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
     ONLY: total_steps, nx, ny, nx_p
 
   USE mod_parallel_model, &
-    ONLY: npes_model, abort_parallel
+    ONLY: abort_parallel, npes_model
+
+
 
   IMPLICIT NONE
 
   INTEGER(kind=C_INT), intent(in) :: param_total_steps     ! total steps
+
+
+
+
   total_steps = param_total_steps
 
 
