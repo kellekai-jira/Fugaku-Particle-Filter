@@ -57,7 +57,7 @@ def run_melissa_da_study(
         show_server_log = True,
         show_simulation_log = True,
         config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
-        server_slowdown_factor=1,
+        server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
         runner_timeout=5,
         additional_server_env={},
         create_runner_dir=False,
@@ -65,7 +65,8 @@ def run_melissa_da_study(
         nodes_server=1,
         nodes_runner=1,
         walltime='xxxx01:00:00',
-        with_fault_tolerance=True):  # the higher this number the slower the server. 0 is minimum...
+        with_fault_tolerance=True,
+        prepare_runner_dir=None):    # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
 
     assert isinstance(cluster, Cluster)
 
@@ -174,6 +175,9 @@ def run_melissa_da_study(
                 runner_dir = '%s/runner-%03d' % (WORKDIR, i)
                 os.mkdir(runner_dir)
                 os.chdir(runner_dir)
+
+            if prepare_runner_dir is not None:
+                prepare_runner_dir()
 
         additional_env = {
                 "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
