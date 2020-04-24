@@ -38,7 +38,7 @@ void PrintIndexMapAssimilator::index_map_to_file()
     {
         myfile.close();
         myfile.open ("index-map-hidden.csv", std::ios::trunc);
-        myfile << "index_map_hiddden" << std::endl;
+        myfile << "index_map_hidden" << std::endl;
     }
     gather_and_print(myfile, field.globalVectSizeHidden(),
             field.local_vect_size_hidden, field.local_index_map_hidden.data(), print_it);
