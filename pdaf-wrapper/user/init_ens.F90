@@ -28,11 +28,11 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 !
 ! !USES:
   USE mod_model, &
-       ONLY: nx, ny, nx_p
+       ONLY: nx, ny, nx_p, init_nxy
   USE mod_parallel_model, &
        ONLY: mype_model
   USE mod_parallel_pdaf, &
-       ONLY: mype_filter
+       ONLY: mype_filter, npes_filter
 
   IMPLICIT NONE
 
@@ -56,6 +56,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
   REAL, ALLOCATABLE :: field(:,:)     ! global model field
   CHARACTER(len=2) :: ensstr          ! String for ensemble member
   CHARACTER(len=256) :: dataset_path     ! pdaf path, load from environment variable
+  CHARACTER(len=256) :: init_type     ! init type.... if RANDOM, will init random  ensemble...
 
 
 ! **********************
@@ -70,7 +71,6 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
   END IF
 
   ! allocate memory for temporary fields
-  ALLOCATE(field(ny, nx))
 
 
 ! ********************************
@@ -78,40 +78,67 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 ! ********************************
 
   call get_environment_variable( 'DATASET_PATH', dataset_path )
-  DO member = 1, dim_ens
-     WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
-     OPEN(11, &
-       file = TRIM(dataset_path)//'/ens_'// &
-       TRIM(ensstr)//'.txt', status='old')
-     write(*,*) 'load from ', ensstr
-
-     ! Read global field
-     DO i = 1, ny
-        READ (11, *) field(i, :)
-     END DO
-
-     ! Initialize process-local part of ensemble
-     DO j = 1, nx_p
-        ens_p(1 + (j-1)*ny : j*ny, member) = field(1:ny, nx_p*mype_model + j)
-     END DO
-        write (*, *) 'initing member nx_p, ny, member', nx_p, ny, member
-         write(*,*) '--------- 5 cells init ens: -----------'
-         do j=1, 5
-         write (*,*) ens_p(j,member)
-         end do
-         write(*,*) '--------- end init ens state: -----------'
+  call get_environment_variable( 'INIT_TYPE', init_type )
+  call init_nxy(npes_filter)
+  if (init_type == "RANDOM") then
+      !init from random
+      DO member = 1, dim_ens
+         WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
+         OPEN(11, &
+           file = TRIM(dataset_path)//'/ens_'// &
+           TRIM(ensstr)//'.txt', status='old')
+         write(*,*) 'load from ', ensstr
 
 
+         ! Initialize process-local part of ensemble
+         DO j = 0, ny-1
+            DO i = 1, nx_p
+                ens_p(j*nx_p+i, member) = 1.0
+            END DO
+         END DO
+      END DO
+  else
+      if (nx /= 36 .or. ny /= 18) then
+          print *, 'Error! set INIT_TYPE=RANDOM to init the ensemble for this domain size'
+          call exit(1)
+      end if
 
-     CLOSE(11)
+      ALLOCATE(field(ny, nx))
+      DO member = 1, dim_ens
+         WRITE (ensstr, '(i1)') member ! todo what if dim_ens > 9?
+         OPEN(11, &
+           file = TRIM(dataset_path)//'/ens_'// &
+           TRIM(ensstr)//'.txt', status='old')
+         write(*,*) 'load from ', ensstr
 
-  END DO
+         ! Read global field
+         DO i = 1, ny
+            READ (11, *) field(i, :)
+         END DO
+
+         ! Initialize process-local part of ensemble
+         DO j = 1, nx_p
+            ens_p(1 + (j-1)*ny : j*ny, member) = field(1:ny, nx_p*mype_model + j)
+         END DO
+         !write (*, *) 'initing member nx_p, ny, member', nx_p, ny, member
+         !write(*,*) '--------- 5 cells init ens: -----------'
+         !do j=1, 5
+             !write (*,*) ens_p(j,member)
+         !end do
+         !write(*,*) '--------- end init ens state: -----------'
 
 
-! ****************
-! *** clean up ***
-! ****************
 
-  DEALLOCATE(field)
+         CLOSE(11)
+
+      END DO
+
+
+    ! ****************
+    ! *** clean up ***
+    ! ****************
+
+      DEALLOCATE(field)
+  end if
 
 END SUBROUTINE init_ens

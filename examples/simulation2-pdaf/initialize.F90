@@ -19,7 +19,7 @@ SUBROUTINE initialize()
 !
 ! !USES:
   USE mod_model, &
-       ONLY: nx, ny, nx_p, field_p, melissa_field_name
+       ONLY: nx, ny, nx_p, field_p, melissa_field_name, init_nxy
   USE mod_parallel_model, &
        ONLY: mype_world, mype_model, npes_model, abort_parallel, MPI_COMM_WORLD
 
@@ -41,31 +41,18 @@ SUBROUTINE initialize()
 
 
 
+
 ! **********************
 ! *** INITIALIZATION ***
 ! **********************
 
+  call init_nxy(npes_model)
 ! *** Model specifications ***
-  nx = 36          ! Extent of grid in x-direction
-  ny = 18          ! Extent of grid in y-direction
 
 ! *** Screen output ***
   IF (mype_world == 0) THEN
      WRITE (*, '(1x, a)') 'INITIALIZE PARALLELIZED 2D TUTORIAL MODEL'
      WRITE (*, '(10x,a,i4,1x,a1,1x,i4)') 'Grid size:', nx, 'x', ny
-  END IF
-
-! *** Initialize size of local nx for parallelization ***
-  IF (npes_model==1 .OR. npes_model==2 .OR. npes_model==3 .OR. npes_model==4 .OR. &
-       npes_model==6 .OR.npes_model==9) THEN
-     ! Split x-diection in chunks of equal size
-     nx_p = nx / npes_model
-  ELSE
-     WRITE (*,*) 'ERROR: Invalid number of processes'
-     CALL abort_parallel()
-  END IF
-
-  IF (mype_world == 0) THEN
      WRITE (*, '(/2x, a, i3, a)') &
           '-- Domain decomposition over', npes_model, ' PEs'
      WRITE (*, '(2x,a,i3,a,i3)') &
@@ -80,26 +67,39 @@ SUBROUTINE initialize()
 ! *** Read initial field from file ***
 ! ************************************
 
-  ALLOCATE(field(ny, nx))
 
-  ! Read global model field
-  call get_environment_variable( 'DATASET_PATH', dataset_path )
-  OPEN(11, file = TRIM(dataset_path)//'/true_initial.txt', status='old')
+  if (nx == 36 .and. ny == 18) then
+      ALLOCATE(field(ny, nx))
+      ! Read global model field
+      call get_environment_variable( 'DATASET_PATH', dataset_path )
+      OPEN(11, file = TRIM(dataset_path)//'/true_initial.txt', status='old')
 
-  DO i = 1, ny
-     READ (11, *) field(i, :)
-  END DO
+      DO i = 1, ny
+         READ (11, *) field(i, :)
+      END DO
 
-  CLOSE(11)
+      CLOSE(11)
 
-  ! Initialize local part of model field
-  DO j = 1, nx_p
-     DO i = 1, ny
-        field_p(i,j) = field(i, nx_p*mype_model + j)
-     END DO
-  END DO
+      ! Initialize local part of model field
+      DO j = 1, nx_p
+         DO i = 1, ny
+            field_p(i,j) = field(i, nx_p*mype_model + j)
+         END DO
+      END DO
 
-  DEALLOCATE(field)
+      DEALLOCATE(field)
+  else
+      DO j = 1, nx_p
+         DO i = 1, ny
+            field_p(i,j) = 1.0
+            if (i == nx/2) then
+                field_p(i,j) = 1.1
+            end if
+         END DO
+      END DO
+
+
+  end if
 
   CALL MELISSA_INIT_F(melissa_field_name, nx_p*ny, 0, MPI_COMM_WORLD)
 

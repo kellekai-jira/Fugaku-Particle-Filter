@@ -45,6 +45,12 @@ ASSIMILATOR_PRINT_INDEX_MAP = 4
 
 started_runners = 0  # as Python seems to not support closurs this has to be global.
 
+def join_dicts(out, b):
+    for k, v in b.items():
+        #assert k not in out
+        out[k] = v
+    return out
+
 def run_melissa_da_study(
         runner_cmd='simulation1',
         total_steps=3,
@@ -66,8 +72,10 @@ def run_melissa_da_study(
         nodes_runner=1,
         walltime='xxxx01:00:00',
         with_fault_tolerance=True,
-        prepare_runner_dir=None):    # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
+        prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
+        additional_env={}):
 
+    print ( additional_server_env )
     assert isinstance(cluster, Cluster)
 
     global started_runners
@@ -84,7 +92,6 @@ def run_melissa_da_study(
         copyfile(config_fti_path, WORKDIR+"/config.fti")
 
     os.chdir(WORKDIR)
-
 
     # The launch_server function to put in USER_FUNCTIONS['launch_server'].
     # It takes a Server object as argument, and must set its job_id attribute.
@@ -109,10 +116,14 @@ def run_melissa_da_study(
             if lib_path != '':
                 additional_server_env['LD_LIBRARY_PATH'] = lib_path
 
-        # TODO: why not using return?
+        join_dicts(additional_server_env, additional_env)
+
         logfile = '' if show_server_log else '%s/server.log' % WORKDIR
+
+        # TODO: why not using return?
         server.job_id = cluster.ScheduleJob('melissa_server',
                 walltime, server.cores, server.nodes, cmd, additional_server_env, logfile, is_server=True)
+
 
     def restart_server(server):
         if (not show_server_log) and os.path.isfile('server.log'):
@@ -179,15 +190,17 @@ def run_melissa_da_study(
             if prepare_runner_dir is not None:
                 prepare_runner_dir()
 
-        additional_env = {
+        additional_runner_env = {
                 "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
                 "MELISSA_TIMING_NULL": str(start_time)
                 }
         lib_path = os.getenv('LD_LIBRARY_PATH')
         if lib_path != '':
-            additional_env['LD_LIBRARY_PATH'] = lib_path
+            additional_runner_env['LD_LIBRARY_PATH'] = lib_path
 
-        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_env, logfile, is_server=False)
+        join_dicts(additional_runner_env, additional_env)
+
+        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_runner_env, logfile, is_server=False)
 
         os.chdir(WORKDIR)
 
