@@ -48,6 +48,8 @@ SUBROUTINE init_pdaf()
   INTEGER :: doexit, steps     ! Not used in this implementation
   REAL    :: timenow           ! Not used in this implementation
 
+  CHARACTER(len=255) :: filter_name
+
   ! External subroutines
   EXTERNAL :: init_ens         ! Ensemble initialization
 
@@ -70,7 +72,12 @@ SUBROUTINE init_pdaf()
 
 ! *** Filter specific variables
 ! TODO: implement the others! this has to be done on multiple places
-  filtertype = 6    ! Type of filter
+  filtertype = 6
+  CALL get_environment_variable("PDAF_FILTER_NAME", filter_name)
+  if (filter_name == "EnKF") then
+      filtertype = 2
+  end if
+  !filtertype = 6    ! Type of filter
                     !   (1) SEIK
                     !   (2) EnKF
                     !   (3) LSEIK
@@ -162,6 +169,7 @@ SUBROUTINE init_pdaf()
 ! *** and real number parameters are initialized.   ***
 ! *** Subsequently, PDAF_init is called.            ***
 ! *****************************************************
+
 
   whichinit: IF (filtertype == 2) THEN
      ! *** EnKF with Monte Carlo init ***
