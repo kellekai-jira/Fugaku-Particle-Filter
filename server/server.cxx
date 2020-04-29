@@ -1560,7 +1560,7 @@ int main(int argc, char * argv[])
     // TODO: check if we need to delete some more stuff!
 
     // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
-    // sleep(3);
+    //sleep(3);
     if (comm_rank == 0)
     {
         // send stop message, close the launcher sockets before the context is destroyed!

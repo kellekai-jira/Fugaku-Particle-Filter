@@ -339,9 +339,9 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
            END DO
 
            CLOSE(11)
+           DEALLOCATE(field)
         end if
 
-        DEALLOCATE(field)
      END IF mype0c
 
      DEALLOCATE(ens, state)

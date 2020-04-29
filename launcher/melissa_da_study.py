@@ -75,7 +75,6 @@ def run_melissa_da_study(
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
         additional_env={}):
 
-    print ( additional_server_env )
     assert isinstance(cluster, Cluster)
 
     global started_runners

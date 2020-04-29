@@ -51,3 +51,4 @@ for i in range (1,10):
         except:
             print("Could not find runner%d's log. Probably it was not started before the study ended" % runner)
 
+    break

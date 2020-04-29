@@ -91,7 +91,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   else
     do j = 1, ny
       do i = 1, nx
-        if (rand() > 0.5) then
+        if (modulo(i, 2) == 0) then
           obs_field(j,i) = 0.9*rand()-0.45
         else
           obs_field(j,i) = -1000.0
