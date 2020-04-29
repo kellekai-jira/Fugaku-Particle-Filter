@@ -36,6 +36,10 @@ SUBROUTINE init_dim_obs_f_pdaf(step, dim_obs_f)
   USE my_state_accessors, &
       ONLY: current_step
 
+#ifdef __INTEL_COMPILER
+  USE ifport
+#endif
+
   IMPLICIT NONE
 
 ! !ARGUMENTS:

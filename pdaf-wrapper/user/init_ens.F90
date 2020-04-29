@@ -34,6 +34,10 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
   USE mod_parallel_pdaf, &
        ONLY: mype_filter, npes_filter
 
+#ifdef __INTEL_COMPILER
+  USE ifport
+#endif
+
   IMPLICIT NONE
 
 ! !ARGUMENTS:

@@ -13,6 +13,10 @@ SIMULATION = 2
 
 class SlurmCluster(cluster.Cluster):
 
+    def check_walltime(wt):
+        p = re.compile("\d\d?:\d\d?:\d\d?");
+        assert p.match(wt)  # no valid slurm walltime
+
     def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None)):
         """
         Arguments:
@@ -57,6 +61,7 @@ class SlurmCluster(cluster.Cluster):
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
             additional_env, logfile, is_server):
+        SlurmCluster.check_walltime(walltime)
         # TODO: use annas template engine here instead of this function!
 
         for key, value in additional_env.items():

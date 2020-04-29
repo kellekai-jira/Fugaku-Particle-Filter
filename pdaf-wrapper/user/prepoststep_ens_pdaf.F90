@@ -264,30 +264,32 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
         END DO
 
 
-        ! *** Now write analysis ensemble ***
+        if (nx == 36 .and. ny == 18) then
+            ! *** Now write analysis ensemble ***
 
-        WRITE (*, '(8x, a)') '--- write ensemble and state estimate'
+            WRITE (*, '(8x, a)') '--- write ensemble and state estimate'
 
-        ! Set string for time step
-        WRITE (stepstr, '(i2.2)') current_step
+            ! Set string for time step
+            WRITE (stepstr, '(i2.2)') current_step
 
-        ALLOCATE(field(ny, nx))
+            ALLOCATE(field(ny, nx))
 
-        DO member = 1, dim_ens
-           DO j = 1, nx
-              field(1:ny, j) = ens(1 + (j-1)*ny : j*ny, member)
-           END DO
+            DO member = 1, dim_ens
+               DO j = 1, nx
+                  field(1:ny, j) = ens(1 + (j-1)*ny : j*ny, member)
+               END DO
 
-           WRITE (ensstr, '(i2.2)') member
+               WRITE (ensstr, '(i2.2)') member
 
-           OPEN(11, file = 'ens_'//TRIM(ensstr)//'_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
+               OPEN(11, file = 'ens_'//TRIM(ensstr)//'_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
 
-           DO i = 1, ny
-              WRITE (11, *) field(i, :)
-           END DO
+               DO i = 1, ny
+                  WRITE (11, *) field(i, :)
+               END DO
 
-           CLOSE(11)
-        END DO
+               CLOSE(11)
+            END DO
+         end if
 
      END IF mype0b
 
@@ -325,17 +327,19 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
 
         ! *** Now write analysis state estimate ***
 
-        DO j = 1, nx
-           field(1:ny, j) = state(1 + (j-1)*ny : j*ny)
-        END DO
+        if (nx == 36 .and. ny == 18) then
+           DO j = 1, nx
+              field(1:ny, j) = state(1 + (j-1)*ny : j*ny)
+           END DO
 
-        OPEN(11, file = 'state_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
+           OPEN(11, file = 'state_step'//TRIM(stepstr)//'_'//TRIM(anastr)//'.txt', status = 'replace')
 
-        DO i = 1, ny
-           WRITE (11, *) field(i, :)
-        END DO
+           DO i = 1, ny
+              WRITE (11, *) field(i, :)
+           END DO
 
-        CLOSE(11)
+           CLOSE(11)
+        end if
 
         DEALLOCATE(field)
      END IF mype0c
