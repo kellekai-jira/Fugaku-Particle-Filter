@@ -47,15 +47,13 @@ use iso_c_binding
 
           call get_environment_variable("NX", NX_str)
           call get_environment_variable("NY", NY_str)
-          nx = 36          ! Extent of grid in x-direction
-          ny = 18          ! Extent of grid in y-direction
 
           call str_to_int(NX_Str, nx, status)
-          if (status == 0) then
+          if (status /= 0) then
               nx = 36
           end if
           call str_to_int(NY_Str, ny, status)
-          if (status == 0) then
+          if (status /= 0) then
               ny = 18
           end if
 

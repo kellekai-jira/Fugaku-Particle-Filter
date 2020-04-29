@@ -21,9 +21,6 @@ PDAFAssimilator::~PDAFAssimilator() {
 PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManager & mpi_)
     : field(field_), mpi(mpi_) {
 
-    // TODO: not really a changeable parameter yet. maybe the best would be to pass all parameters the pdaf style so we can reuse their parsing functions?
-    assert (field.ensemble_members.size() <= 9);
-
     // we transmit only one third to pdaf
     // convert to fortran
     const int global_vect_size = field.globalVectSize();

@@ -68,20 +68,33 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   ! Read observation field form file
   ALLOCATE(obs_field(ny, nx))
 
-  IF (current_step<10) THEN
-     WRITE (stepstr, '(i1)') current_step
-  ELSE
-     WRITE (stepstr, '(i2)') current_step
-  END IF
+  print *, "NXY:", nx,ny
+  if (nx == 36 .and. ny == 18) then
+     IF (current_step<10) THEN
+        WRITE (stepstr, '(i1)') current_step
+     ELSE
+        WRITE (stepstr, '(i2)') current_step
+     END IF
 
-  call get_environment_variable( 'DATASET_PATH', dataset_path )
-  OPEN (12, &
-    file=TRIM(dataset_path)//'/obs_step'// &
-    TRIM(stepstr)//'.txt', status='old')
-  DO i = 1, ny
-     READ (12, *) obs_field(i, :)
-  END DO
-  CLOSE (12)
+     call get_environment_variable( 'DATASET_PATH', dataset_path )
+     OPEN (12, &
+       file=TRIM(dataset_path)//'/obs_step'// &
+       TRIM(stepstr)//'.txt', status='old')
+     DO i = 1, ny
+        READ (12, *) obs_field(i, :)
+     END DO
+     CLOSE (12)
+  else
+    do j = 1, ny
+      do i = 1, nx
+        if (rand() > 0.5) then
+          obs_field(j,i) = 0.9*rand()-0.45
+        else
+          obs_field(j,i) = -1000.0
+        end if
+      end do
+    end do
+  end if
 
   ! Count observations
   cnt0 = 0

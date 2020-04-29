@@ -20,7 +20,10 @@ dim_index_map_hidden, param_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
     ONLY: dim_state_p, dim_state, dim_ens, screen
 
   USE mod_parallel_pdaf, &
-      ONLY: COMM_world
+      ONLY: COMM_world, npes_filter
+
+  USE mod_model, &
+      ONLY: init_nxy
 
   USE my_state_accessors, &
       ONLY: current_step, index_map, index_map_hidden
@@ -57,6 +60,7 @@ dim_index_map_hidden, param_index_map_hidden) BIND(C,name='cwrapper_init_pdaf')
   CALL init_parallel_pdaf(0, screen)
 
 
+  call init_nxy(npes_filter)
 
   ! TODO: also init parallel
 END SUBROUTINE
@@ -90,6 +94,9 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 ! TODO: dim_state and the other things that require initialize must be parameters!,  see used variables in initialize.f90
   ! Initialize PDAF  ! TODO: dirty to call this here but init_pdaf depends on init_ens and init ens needs nx, ny and nx_p....
   CALL init_pdaf()
+
+  ! deterministic repeatable experiments
+  call srand(42)
 
 END SUBROUTINE
 
@@ -134,11 +141,11 @@ SUBROUTINE my_distribute_state(dim_p, state_p)
   integer :: i
 
 
-  write(*,*) '--------- 5 cells distributing state: -----------'
-  do i=1, 5
-        write (*,*) state_p(i)
-  end do
-  write(*,*) '--------- end distributing state: -----------'
+  !write(*,*) '--------- 5 cells distributing state: -----------'
+  !do i=1, 5
+        !write (*,*) state_p(i)
+  !end do
+  !write(*,*) '--------- end distributing state: -----------'
 
   distribute_state_to(:) = state_p(:)
 
@@ -161,11 +168,11 @@ SUBROUTINE my_collect_state(dim_p, state_p)
 
 
   state_p(:) = collect_state_from(:)
-  write(*,*) '--------- 5 cells collect_from state: -----------'
-  do i=1, 5
-        write (*,*) state_p(i)
-  end do
-  write(*,*) '--------- end collect state: -----------'
+  !write(*,*) '--------- 5 cells collect_from state: -----------'
+  !do i=1, 5
+        !write (*,*) state_p(i)
+  !end do
+  !write(*,*) '--------- end collect state: -----------'
 
 END SUBROUTINE my_collect_state
 
