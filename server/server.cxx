@@ -968,26 +968,26 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
           part.local_offset_server, part.send_count);
 
 
-        D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
-                                                            &
-                                                            data_msg))
-          [0]);
-        D("values[1] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
-                                                            &
-                                                            data_msg))
-          [1]);
-        D("values[2] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
-                                                            &
-                                                            data_msg))
-          [2]);
-        D("values[3] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
-                                                            &
-                                                            data_msg))
-          [3]);
-        D("values[4] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
-                                                            &
-                                                            data_msg))
-          [4]);
+        //D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            //&
+                                                            //data_msg))
+          //[0]);
+        //D("values[1] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            //&
+                                                            //data_msg))
+          //[1]);
+        //D("values[2] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            //&
+                                                            //data_msg))
+          //[2]);
+        //D("values[3] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            //&
+                                                            //data_msg))
+          //[3]);
+        //D("values[4] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+                                                            //&
+                                                            //data_msg))
+          //[4]);
 
         const Part & hidden_part = field->getPartHidden(runner_rank);
         double * values_hidden = nullptr;

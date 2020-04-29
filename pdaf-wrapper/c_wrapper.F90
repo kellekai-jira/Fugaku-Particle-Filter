@@ -223,10 +223,6 @@ FUNCTION cwrapper_PDAF_get_state(doexit, dim_state_analysis, state_analysis, sta
 ! local variables
   INTEGER :: nsteps    ! Number of time steps to be performed in current forecast
   REAL :: timenow      ! Current model time
-  !REAL :: time         ! Model time  TODO: needed?
-
-
-  Print *, "get state!"
 
   CALL C_F_POINTER( state_analysis, distribute_state_to,[dim_state_analysis])
   ! TODO: parameters depend on filtertype
@@ -285,9 +281,6 @@ SUBROUTINE cwrapper_PDAF_put_state(dim_state_background, state_background, statu
 
    ! EnKF:
    EXTERNAL :: add_obs_error_pdaf, init_obscovar_pdaf
-
-  Print *, "put state!"
-
 
   !collect_state_from => state_background
   CALL C_F_POINTER( state_background, collect_state_from,[dim_state_background])
