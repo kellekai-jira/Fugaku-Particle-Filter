@@ -63,17 +63,17 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
 ! *** Initialize observation dimension ***
 ! ****************************************
 
-  ! Determine offset in state vector for this process
-  off_p = 0
-  DO i= 1, mype_filter
-     off_p = off_p + nx_p*ny
-  END DO
-
-  ! Read observation field form file
-  ALLOCATE(obs_field(ny, nx))
-
-  print *, "NXY:", nx,ny
+  !print *, "NXY:", nx,ny
   if (nx == 36 .and. ny == 18) then
+     ! Determine offset in state vector for this process
+     off_p = 0
+     DO i= 1, mype_filter
+        off_p = off_p + nx_p*ny
+     END DO
+
+     ! Read observation field form file
+     ALLOCATE(obs_field(ny, nx))
+
      IF (current_step<10) THEN
         WRITE (stepstr, '(i1)') current_step
      ELSE
@@ -88,60 +88,64 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
         READ (12, *) obs_field(i, :)
      END DO
      CLOSE (12)
+
+     ! Count observations
+     cnt0 = 0
+     cnt_p = 0
+     DO j = 1, nx
+        DO i= 1, ny
+           cnt0 = cnt0 + 1
+           IF (cnt0 > off_p .AND. cnt0 <= off_p + nx_p*ny) THEN
+              IF (obs_field(i,j) > -999.0) cnt_p = cnt_p + 1
+           END IF
+        END DO
+     END DO
+
+     ! Set number of observations
+     dim_obs_p = cnt_p
+     if (dim_obs_p .le. 0) then
+         print *, "rank", mype_filter, "has dim_obs_p of", dim_obs_p
+     end if
+
+     ! Initialize vector of observations and index array
+     IF (ALLOCATED(obs_index_p)) DEALLOCATE(obs_index_p)
+     IF (ALLOCATED(obs_p)) DEALLOCATE(obs_p)
+     ALLOCATE(obs_index_p(dim_obs_p))
+     ALLOCATE(obs_p(dim_obs_p))
+
+     cnt0 = 0
+     cnt_p = 0
+     cnt0_p = 0
+     DO j = 1, nx
+        DO i= 1, ny
+           cnt0 = cnt0 + 1
+           IF (cnt0 > off_p .AND. cnt0 <= off_p + nx_p*ny) THEN
+              cnt0_p = cnt0_p + 1
+              IF (obs_field(i,j) > -999.0) THEN
+                 cnt_p = cnt_p + 1
+                 obs_index_p(cnt_p) = cnt0_p
+                 obs_p(cnt_p) = obs_field(i, j)
+              END IF
+           END IF
+        END DO
+     END DO
+     ! *** Clean up ***
+
+     DEALLOCATE(obs_field)
   else
-    do j = 1, ny
-      do i = 1, nx
-        if (modulo(i, 2) == 0) then
-          obs_field(j,i) = 0.9*rand()-0.45
-        else
-          obs_field(j,i) = -1000.0
-        end if
-      end do
-    end do
+     ! give two to each....
+     dim_obs_p = 2
+     IF (ALLOCATED(obs_index_p)) DEALLOCATE(obs_index_p)
+     IF (ALLOCATED(obs_p)) DEALLOCATE(obs_p)
+     ALLOCATE(obs_index_p(dim_obs_p))
+     ALLOCATE(obs_p(dim_obs_p))
+    obs_p(1)= 0.9*rand()-0.45
+    obs_p(2)= 0.9*rand()-0.45
+    obs_index_p(1) = 1
+    obs_index_p(2) = 2
   end if
 
-  ! Count observations
-  cnt0 = 0
-  cnt_p = 0
-  DO j = 1, nx
-     DO i= 1, ny
-        cnt0 = cnt0 + 1
-        IF (cnt0 > off_p .AND. cnt0 <= off_p + nx_p*ny) THEN
-           IF (obs_field(i,j) > -999.0) cnt_p = cnt_p + 1
-        END IF
-     END DO
-  END DO
 
-  ! Set number of observations
-  dim_obs_p = cnt_p
-
-  ! Initialize vector of observations and index array
-  IF (ALLOCATED(obs_index_p)) DEALLOCATE(obs_index_p)
-  IF (ALLOCATED(obs_p)) DEALLOCATE(obs_p)
-  ALLOCATE(obs_index_p(dim_obs_p))
-  ALLOCATE(obs_p(dim_obs_p))
-
-  cnt0 = 0
-  cnt_p = 0
-  cnt0_p = 0
-  DO j = 1, nx
-     DO i= 1, ny
-        cnt0 = cnt0 + 1
-        IF (cnt0 > off_p .AND. cnt0 <= off_p + nx_p*ny) THEN
-           cnt0_p = cnt0_p + 1
-           IF (obs_field(i,j) > -999.0) THEN
-              cnt_p = cnt_p + 1
-              obs_index_p(cnt_p) = cnt0_p
-              obs_p(cnt_p) = obs_field(i, j)
-           END IF
-        END IF
-     END DO
-  END DO
-
-
-! *** Clean up ***
-
-  DEALLOCATE(obs_field)
 
 END SUBROUTINE init_dim_obs_pdaf
 
