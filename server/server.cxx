@@ -239,7 +239,7 @@ struct RunnerRankConnection
     }
 
     // TODO: clean up error messages in the case of ending runners on the api side...
-    void end(const int end_flag=END_RUNNER) {
+    void stop(const int end_flag=END_RUNNER) {
         // some connection_identities will be 0 if some runner ranks are connected to another server rank at the moment.
         if (connection_identity == NULL)
             return;
@@ -279,18 +279,18 @@ struct Runner  // Server perspective of a Model task runner
     // model task runner ranks
     std::map<int, RunnerRankConnection> connected_runner_ranks;
 
-    void end(int end_flag) {
+    void stop(int end_flag) {
         for (auto cs = connected_runner_ranks.begin(); cs !=
              connected_runner_ranks.end(); cs++)
         {
-            D("xxx end connected runer rank...");
-            cs->second.end(end_flag);
+            D("xxx end connected runner rank...");
+            cs->second.stop(end_flag);
         }
     }
 
     ~Runner() {
         // try to kill remaining runners if there are still some.
-        end(KILL_RUNNER);
+        stop(KILL_RUNNER);
     }
 
 };
@@ -732,7 +732,7 @@ void end_all_runners()
     for (auto runner_it = idle_runners.begin(); runner_it !=
          idle_runners.end(); runner_it++)
     {
-        runner_it->second->end(END_RUNNER);
+        runner_it->second->stop(END_RUNNER);
     }
 }
 
@@ -932,7 +932,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         L(
             "Ending Model Task Runner killed by timeout violation runner=%d",
             runner_id);
-        csr.end(KILL_RUNNER);
+        csr.stop(KILL_RUNNER);
     }
     else
     {
@@ -1234,6 +1234,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
             // Launcher died! Wait for next update step and send back to all
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
+            L("ERROR: Launcher did not answer. Due date violation. Crashing Server now.");
             current_nsteps = -1;
             exit(1);  // better to exit like this Otherwise many errors will come up as
             // only rank 0 knows about the crashed launcher
@@ -1248,6 +1249,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
         if (current_nsteps == -1)
         {
+            D("The assimilator decided to end now.");
             end_all_runners();
             return true;
         }
