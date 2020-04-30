@@ -76,12 +76,16 @@ SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
 IF(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
     SET(CMAKE_Fortran_FLAGS "-m64 -real-size 64")
     SET(COMPILER_DEPENDENT_FORTRAN_FLAGS "")
+    # for nice traces:
+    SET(CMAKE_C_FLAGS_DEBUG "-g -rdynamic -traceback")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback")
+    SET(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback")
 ELSE()
     SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
     SET(COMPILER_DEPENDENT_FORTRAN_FLAGS "-fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter")
 endif()
 
-SET(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none ${COMPILER_DEPENDENT_FORTRAN_FLAGS} ")
+SET(CMAKE_Fortran_FLAGS_DEBUG "-rdynamic ${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none ${COMPILER_DEPENDENT_FORTRAN_FLAGS} ")
 
 SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
 

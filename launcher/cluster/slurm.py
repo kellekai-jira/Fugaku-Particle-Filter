@@ -88,7 +88,12 @@ class SlurmCluster(cluster.Cluster):
         if self.partition:
             partition_param = '--partition=%s' % self.partition
 
-        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s --job-name=%s %s' % (
+        output_param = ''
+        if logfile != '':
+            output_param = '--output=%s' % logfile
+
+
+        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
                 n_procs//n_nodes,
@@ -96,16 +101,17 @@ class SlurmCluster(cluster.Cluster):
                 walltime,
                 self.account,
                 partition_param,
+                output_param,
                 name,
                 cmd)
 
         print("Launching %s" % run_cmd)
 
-        if logfile == '':
-            proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
-        else:
-            with open(logfile, 'wb') as f:
-                proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
+        # if logfile == '':
+        proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
+        # else:
+            # with open(logfile, 'wb') as f:
+                # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
 
         #print("Process id: %d" % proc.pid)
         regex = re.compile('job ([0-9]+) queued')
