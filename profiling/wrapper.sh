@@ -1,5 +1,6 @@
 #!/bin/bash
-if echo $PWD | grep "api" || echo $PWD | grep pdaf-wrapper || echo $PWD | grep PDAF ;
+#if echo $PWD | grep "api" || echo $PWD | grep pdaf-wrapper || echo $PWD | grep PDAF ;
+if echo $PWD | grep "api"  || echo $PWD | grep PDAF ;
 then
     echo ${1} ${@:2}
     ${1} ${@:2}

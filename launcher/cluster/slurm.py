@@ -30,6 +30,7 @@ class SlurmCluster(cluster.Cluster):
         self.account = account
         self.partition = partition
         self.in_salloc = in_salloc
+        self.started_jobs = []
 
         # REM: if using in_salloc and if a job quits nodes are not freed.
         # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
@@ -37,6 +38,9 @@ class SlurmCluster(cluster.Cluster):
 
         if self.in_salloc:
             self.node_occupation = {}
+            # alternative: compare to https://docs.ray.io/en/latest/deploying-on-slurm.html
+            # to get the node names...
+
             out = subprocess.check_output(['srun', 'hostname'])
             for line in out.readlines():
                 hostname = line.split('.')[0]
@@ -121,6 +125,7 @@ class SlurmCluster(cluster.Cluster):
             if res:
                 job_id = int(res.groups()[0])
                 print("job_id: ", job_id)
+                self.started_jobs.append(job_id)
                 return job_id
             time.sleep(0.05)
 
@@ -164,3 +169,6 @@ class SlurmCluster(cluster.Cluster):
         if self.in_salloc:
             subprocess.call(['srun', 'bash', '-c', 'killall %s; killall melissa_server' %
                 runner_executable])
+            # REM: the following is not done to gracefully end serverjobs.... (and finish e.g. their trace writing...) TODO: but do something like this on ctrl c :
+        # for to_cancel in self.started_jobs:
+            # subprocess.call(['scancel', str(to_cancel)])
