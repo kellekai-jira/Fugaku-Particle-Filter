@@ -5,3 +5,7 @@ export MELISSA_PROFILING=TRUE
 cd profiling
 ```
 ... and execute either `python3 trace.py` or python3 `tests_slurm.py`
+
+
+seems like prepost step takes long....
+shorten it..

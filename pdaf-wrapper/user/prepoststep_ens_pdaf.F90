@@ -89,7 +89,6 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
   REAL, ALLOCATABLE :: state(:)       ! global state vector
   REAL,ALLOCATABLE :: ens_p_tmp(:,:)  ! Temporary ensemble for some PE-domain
 
-
 ! **********************
 ! *** INITIALIZATION ***
 ! **********************
@@ -136,6 +135,15 @@ SUBROUTINE prepoststep_ens_pdaf(step, dim_p, dim_ens, dim_ens_p, dim_obs_p, &
      END DO
   END DO
   state_p(:) = invdim_ens * state_p(:)
+
+  if (nx /= 36 .or. ny /= 18) then
+      ! it turns out that we do not need to do this stuff for now and it is the
+      ! reason for the longest wait time in bigger runs...
+      ! FIXME: honestly: I do not understand why the upper lines need to happen
+      ! as we are not using SEIK... But as they have it in terrsysmp too its
+      ! ok...
+      return
+  end if
 
   ! *** Compute sampled variances ***
   variance_p(:) = 0.0

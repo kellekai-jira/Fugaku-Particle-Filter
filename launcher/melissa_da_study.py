@@ -73,7 +73,7 @@ def run_melissa_da_study(
         walltime='xxxx01:00:00',
         with_fault_tolerance=True,
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
-        additional_env={}):
+        additional_env={}):   # FIXME: load first additiona env variables and then overwrite by additional_Server env and so on...
 
     assert isinstance(cluster, Cluster)
 
