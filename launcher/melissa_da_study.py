@@ -73,7 +73,7 @@ def run_melissa_da_study(
         walltime='xxxx01:00:00',
         with_fault_tolerance=True,
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
-        additional_env={}):   # FIXME: load first additiona env variables and then overwrite by additional_Server env and so on...
+        additional_env={}):
 
     assert isinstance(cluster, Cluster)
 
@@ -108,20 +108,21 @@ def run_melissa_da_study(
                 server.cmd_opt
                 )
 
-        additional_server_env['MELISSA_TIMING_NULL'] = str(start_time)
+        envs = additional_env.copy()
+        envs['MELISSA_TIMING_NULL'] = str(start_time)
+        join_dicts(envs, additional_server_env)
 
-        if not 'LD_LIBRARY_PATH' in additional_server_env:
+        if not 'LD_LIBRARY_PATH' in envs:
             lib_path = os.getenv('LD_LIBRARY_PATH')
             if lib_path != '':
-                additional_server_env['LD_LIBRARY_PATH'] = lib_path
+                envs['LD_LIBRARY_PATH'] = lib_path
 
-        join_dicts(additional_server_env, additional_env)
 
         logfile = '' if show_server_log else '%s/server.log' % WORKDIR
 
         # TODO: why not using return?
         server.job_id = cluster.ScheduleJob('melissa_server',
-                walltime, server.cores, server.nodes, cmd, additional_server_env, logfile, is_server=True)
+                walltime, server.cores, server.nodes, cmd, envs, logfile, is_server=True)
 
 
     def restart_server(server):
@@ -175,14 +176,9 @@ def run_melissa_da_study(
         print('Starting runner! REM: the simulation group id != runner id!')
         logfile = ''
         if not show_simulation_log:
-            def fn(i):
-                return '%s/runner-%03d.log' % (WORKDIR, i)
-            i = 0
-            while os.path.isfile(fn(i)):
-                i += 1
-            logfile = fn(i)
+            logfile = '%s/runner-%03d.log' % (WORKDIR, launch_runner.next_runner_id)
             if create_runner_dir:
-                runner_dir = '%s/runner-%03d' % (WORKDIR, i)
+                runner_dir = '%s/runner-%03d' % (WORKDIR, launch_runner.next_runner_id)
                 os.mkdir(runner_dir)
                 os.chdir(runner_dir)
 
@@ -197,14 +193,19 @@ def run_melissa_da_study(
         if lib_path != '':
             additional_runner_env['LD_LIBRARY_PATH'] = lib_path
 
-        join_dicts(additional_runner_env, additional_env)
+        envs = additional_env.copy()
+        join_dicts(envs, additional_runner_env)
 
-        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, additional_runner_env, logfile, is_server=False)
+        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, envs, logfile, is_server=False)
 
         os.chdir(WORKDIR)
 
         global started_runners
         started_runners += 1
+
+        launch_runner.next_runner_id += 1
+
+    launch_runner.next_runner_id = 0
 
     def check_job(job):
         # Check the job state:
