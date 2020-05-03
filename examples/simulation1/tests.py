@@ -33,39 +33,16 @@ def compare(reference_file, output_file="STATS/output.txt"):
         print("failed! Wrong %s generated!" % output_file)
         exit(ret)
 
-def get_csv_section(filename, section_name):
-    with open(filename, 'r') as f:
-        in_section = False
-        csv = ''
-        for line in f.readlines():
-            if ('End ' + section_name) in line:
-                return pd.read_csv(StringIO(csv))
-            if in_section:
-                csv += line
-            if section_name in line:
-                in_section = True
-        if (in_section):
-            print('Error Did not find section "End %s" marker in %s' %
-                    (section_name, filename))
-        else:
-            print('Error Did not find section "%s" marker in %s' %
-                    (section_name, filename))
-
-
-    assert False  # section begin or section end not found
-
-
 
 def get_run_information():
-    return get_csv_section('STATS/server.log', 'Run information')
+    return pd.read_csv('STATS/server.run-information.csv')
 
 
 def get_timing_information():
-    return get_csv_section('STATS/server.log', 'Timing information')
+    return pd.read_csv('STATS/server.timing-information.csv')
 
 
 def run(server_slowdown_factor_=1):
-
     start = time.time()
     run_melissa_da_study(
             executable,
@@ -252,6 +229,8 @@ elif testcase == 'test-different-parallelism':
             % (procs_server, procs_runner, n_runners))
 
 
+        if os.path.isfile('STATS/server.run-information.csv'):
+            os.remove('STATS/server.run-information.csv')
         run()
 
         # runner 0 does the output.

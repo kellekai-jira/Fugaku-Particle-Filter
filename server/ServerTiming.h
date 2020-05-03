@@ -4,6 +4,7 @@
 #include <numeric>
 #include <map>
 #include <utility>
+#include <fstream>
 
 #include "utils.h"
 #include "TimingEvent.h"
@@ -40,11 +41,15 @@ public:
 
         print_events();
 
+        std::ofstream os("server.timing-information.csv", std::ofstream::app);
+        assert (os.is_open());
+
+
         std::cout <<
             "------------------- Timing information(csv): -------------------"
                   <<
             std::endl;
-        std::cout <<
+        os <<
             "iteration,walltime (ms),walltime filter update (ms),max job walltime (ms),min_runners,max_runners,accumulated runner idle time,corresponding pdaf state per runner runner idle time,pdaf slack/melissa-da slack"
                   << std::endl;
         TimePoint *iteration_start = nullptr;
@@ -157,16 +162,16 @@ public:
                        min_runners);
 
                 double wt = diff_to_millis(it->time, *iteration_start);
-                std::cout << iterations << ',';
-                std::cout << wt << ',';
-                std::cout << filter_update_walltime << ',';
-                std::cout << job_max_wt << ',';
-                std::cout << min_runners << ',';
-                std::cout << max_runners << ',';
-                std::cout << accumulated_idle_time << ',';
-                std::cout << corresponding_idle_time << ',';
-                std::cout << corresponding_idle_time/accumulated_idle_time;
-                std::cout << std::endl;
+                os << iterations << ',';
+                os << wt << ',';
+                os << filter_update_walltime << ',';
+                os << job_max_wt << ',';
+                os << min_runners << ',';
+                os << max_runners << ',';
+                os << accumulated_idle_time << ',';
+                os << corresponding_idle_time << ',';
+                os << corresponding_idle_time/accumulated_idle_time;
+                os << std::endl;
 
                 // calculate some stats for later too:
                 if (iterations >= warmup)
@@ -191,11 +196,15 @@ public:
             "------------------- End Timing information -------------------" <<
             std::endl;
 
+        os.close();
+
 
         std::cout <<
             "------------------- Run information(csv): -------------------" <<
             std::endl;
-        std::cout <<
+        std::ofstream osr("server.run-information.csv", std::ofstream::app);
+        assert (osr.is_open());
+        osr <<
             "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means"
                   << std::endl;
         if (iterations - warmup < 10)    // have at least 10 iterations for stats
@@ -208,20 +217,21 @@ public:
 
 
 
-        std::cout << cores_simulation << ',';
-        std::cout << number_runners_max << ',';
-        std::cout << cores_server << ',';
-        std::cout << mean_runtime << ',';
-        std::cout << ensemble_members << ',';
-        std::cout << state_size << ',';
-        std::cout << iterations << ',';
-        std::cout << 8*state_size*ensemble_members*2.0/mean_runtime*1000/1024/
+        osr << cores_simulation << ',';
+        osr << number_runners_max << ',';
+        osr << cores_server << ',';
+        osr << mean_runtime << ',';
+        osr << ensemble_members << ',';
+        osr << state_size << ',';
+        osr << iterations << ',';
+        osr << 8*state_size*ensemble_members*2.0/mean_runtime*1000/1024/
             1024 <<
             ',';
-        std::cout << (iterations-warmup);
-        std::cout << std::endl;
+        osr << (iterations-warmup);
+        osr << std::endl;
         std::cout <<
             "------------------- End Run information -------------------" <<
             std::endl;
+        osr.close();
     }
 };

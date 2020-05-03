@@ -11,6 +11,7 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
 enum TimingEventType
 {
+    // REM: ADD_RUNNER has no closing event....
     ADD_RUNNER                  = 0,  // parameter = runner_id
     REMOVE_RUNNER               = 1,  // parameter = runner_id
     START_ITERATION             = 2,  // parameter = timestep

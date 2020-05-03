@@ -4,6 +4,7 @@
 #include <numeric>
 #include <map>
 #include <utility>
+#include <fstream>
 
 #include "utils.h"
 #include "TimingEvent.h"
@@ -17,16 +18,20 @@
 class ApiTiming : public Timing
 {
 public:
-    void report(const int cores_simulation, const size_t state_size) {
+    void report(const int cores_simulation, const size_t state_size, const int runner_id) {
 
         print_events();
 
+        char fname[256];
+        sprintf(fname, "runner-%03d.timing-information.csv", runner_id);
+        std::ofstream os(fname, std::ofstream::app);
+        assert (os.is_open());
 
         std::cout <<
             "------------------- Timing information(csv): -------------------"
                   <<
             std::endl;
-        std::cout <<
+        os <<
             "iteration,timesteps,compute walltime (ms),idle walltime (ms),idle + compute walltime(ms)"
                   << std::endl;
         TimePoint *iteration_start = nullptr;
@@ -65,12 +70,12 @@ public:
             }
             case STOP_ITERATION: {
                 double wt = diff_to_millis(it->time, *iteration_start);
-                std::cout << iterations << ',';
-                std::cout << last_propagated_steps << ',';
-                std::cout << wt << ',';
-                std::cout << last_idle_time << ',';
-                std::cout << (last_idle_time + wt);
-                std::cout << std::endl;
+                os << iterations << ',';
+                os << last_propagated_steps << ',';
+                os << wt << ',';
+                os << last_idle_time << ',';
+                os << (last_idle_time + wt);
+                os << std::endl;
 
                 // calculate some stats for later too:
                 sum_runtime += last_idle_time + wt;
@@ -97,10 +102,13 @@ public:
             std::endl;
 
 
+        sprintf(fname, "runner-%03d.run-information.csv", runner_id);
+        std::ofstream osr(fname, std::ofstream::app);
+        assert (osr.is_open());
         std::cout <<
             "------------------- Run information(csv): -------------------" <<
             std::endl;
-        std::cout <<
+        osr <<
             "cores simulation,runtime per iteration (idle + compute) mean (ms),runtime per iteration (compute) mean (ms), runtime per iteration (idle) mean (ms),local state size,mean (idle + compute) bandwidth of this core (MB/s),iterations used for means,iterations (propagated states),timesteps"
                   << std::endl;
         if (iterations < 10)    // have at least 10 iterations for stats
@@ -119,20 +127,21 @@ public:
 
 
 
-        std::cout << cores_simulation << ',';
-        std::cout << mean_runtime << ',';
-        std::cout << mean_runtime_iteration << ',';
-        std::cout << mean_runtime_idle << ',';
-        std::cout << state_size << ',';
-        std::cout << 8.0*state_size*iterations*2.0/sum_runtime*1000.0/1024.0/
+        osr << cores_simulation << ',';
+        osr << mean_runtime << ',';
+        osr << mean_runtime_iteration << ',';
+        osr << mean_runtime_idle << ',';
+        osr << state_size << ',';
+        osr << 8.0*state_size*iterations*2.0/sum_runtime*1000.0/1024.0/
             1024.0 << ',';
-        std::cout << (sum_runtime == 0.0 ? 0 : iterations) << ',';
-        std::cout << iterations << ',';
-        std::cout << sum_propagated_steps;
-        std::cout << std::endl;
+        osr << (sum_runtime == 0.0 ? 0 : iterations) << ',';
+        osr << iterations << ',';
+        osr << sum_propagated_steps;
+        osr << std::endl;
         std::cout <<
             "------------------- End Run information -------------------" <<
             std::endl;
+        osr.close();
     }
 
 };

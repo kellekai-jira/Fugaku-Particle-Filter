@@ -737,16 +737,6 @@ int melissa_expose(const char *field_name, double *values,
     {
         trigger(START_ITERATION, nsteps);
     }
-    else
-    {
-#ifdef REPORT_TIMING
-        if (comm_rank == 0)
-        {
-            timing->report(getCommSize(), field.local_vect_size +
-                           field.local_hidden_vect_size);
-        }
-#endif
-    }
 
     // TODO: this will block other fields!
 
@@ -778,6 +768,11 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
     zmq_ctx_destroy(context);
 
 #ifdef REPORT_TIMING
+    if (comm_rank == 0)
+    {
+        timing->report(getCommSize(), field.local_vect_size +
+                field.local_hidden_vect_size, runner_id);
+    }
 #ifdef REPORT_TIMING_ALL_RANKS
     const std::array<EventTypeTranslation, 2> event_type_translations = {{
         {START_ITERATION, STOP_ITERATION, "Iteration"},
