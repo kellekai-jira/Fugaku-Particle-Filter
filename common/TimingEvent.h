@@ -103,20 +103,20 @@ public:
     {
         events.push_back(TimingEvent(type, parameter));
     }
-    void print_events() {
-        std::cout << "------------ Timing Event List (csv) ------------" <<
+    void print_events(const char * base_filename, const int rank) {
+        std::cout << "------------ Writing Timing Event List (csv) ------------" <<
             std::endl;
-        std::cout << "time first event (ms),event,parameter" << std::endl;
-        const TimePoint &start=events.begin()->time;
+        std::ofstream outfile ( "timing-events." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
+
+        outfile << "time first event (ms),event,parameter" << std::endl;
         for (auto it = events.begin(); it != events.end(); it++)
         {
-            double t = diff_to_millis(it->time, start);
-            std::cout << t << ',';
-            std::cout << it->type << ',';
-            std::cout << it->parameter << std::endl;
+            double t = to_millis(it->time);
+            outfile << t << ',';
+            outfile << it->type << ',';
+            outfile << it->parameter << std::endl;
         }
-        std::cout << "------------ End Timing Event List (csv) ------------" <<
-            std::endl;
+        outfile.close();
     }
 
     Timing() :

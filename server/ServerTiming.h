@@ -39,14 +39,14 @@ public:
                 ensemble_members, const size_t state_size) {
 
 
-        print_events();
+        print_events("server", comm_rank);
 
         std::ofstream os("server.timing-information.csv", std::ofstream::app);
         assert (os.is_open());
 
 
         std::cout <<
-            "------------------- Timing information(csv): -------------------"
+            "------------------- Writing Timing information(csv): -------------------"
                   <<
             std::endl;
         os <<
@@ -192,15 +192,12 @@ public:
             }
             }
         }
-        std::cout <<
-            "------------------- End Timing information -------------------" <<
-            std::endl;
 
         os.close();
 
 
         std::cout <<
-            "------------------- Run information(csv): -------------------" <<
+            "------------------- Writing Run information(csv): -------------------" <<
             std::endl;
         std::ofstream osr("server.run-information.csv", std::ofstream::app);
         assert (osr.is_open());
@@ -229,9 +226,6 @@ public:
             ',';
         osr << (iterations-warmup);
         osr << std::endl;
-        std::cout <<
-            "------------------- End Run information -------------------" <<
-            std::endl;
         osr.close();
     }
 };

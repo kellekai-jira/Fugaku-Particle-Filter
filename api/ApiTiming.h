@@ -20,15 +20,16 @@ class ApiTiming : public Timing
 public:
     void report(const int cores_simulation, const size_t state_size, const int runner_id) {
 
-        print_events();
-
         char fname[256];
+        sprintf(fname, "runner-%03d", runner_id);
+        print_events(fname, comm_rank);
+
         sprintf(fname, "runner-%03d.timing-information.csv", runner_id);
         std::ofstream os(fname, std::ofstream::app);
         assert (os.is_open());
 
         std::cout <<
-            "------------------- Timing information(csv): -------------------"
+            "------------------- Writing Timing information(csv): -------------------"
                   <<
             std::endl;
         os <<
@@ -97,16 +98,13 @@ public:
             }
             }
         }
-        std::cout <<
-            "------------------- End Timing information -------------------" <<
-            std::endl;
 
 
         sprintf(fname, "runner-%03d.run-information.csv", runner_id);
         std::ofstream osr(fname, std::ofstream::app);
         assert (osr.is_open());
         std::cout <<
-            "------------------- Run information(csv): -------------------" <<
+            "------------------- Writing Run information(csv): -------------------" <<
             std::endl;
         osr <<
             "cores simulation,runtime per iteration (idle + compute) mean (ms),runtime per iteration (compute) mean (ms), runtime per iteration (idle) mean (ms),local state size,mean (idle + compute) bandwidth of this core (MB/s),iterations used for means,iterations (propagated states),timesteps"
@@ -138,9 +136,6 @@ public:
         osr << iterations << ',';
         osr << sum_propagated_steps;
         osr << std::endl;
-        std::cout <<
-            "------------------- End Run information -------------------" <<
-            std::endl;
         osr.close();
     }
 
