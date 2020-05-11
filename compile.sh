@@ -32,7 +32,14 @@ fi
 else
     if [ "$MELISSA_PROFILING" == "" ];
     then
-        cmake .. -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort -DCMAKE_C_COMPILER=icc
+        echo here
+        cmake .. \
+          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DCMAKE_CXX_COMPILER=mpicxx \
+          -DCMAKE_Fortran_COMPILER=mpif90 \
+          -DCMAKE_C_COMPILER=mpicc
     else
         cd ..
         export PATH="$PWD/profiling:$PATH"
