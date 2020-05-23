@@ -10,12 +10,17 @@ class LocalCluster(cluster.Cluster):
         # TODO: use annas template engine here instead of this function!
         assert n_nodes == 1  # as we are local
 
+        mpiexec = os.getenv('MPIEXEC')
+
         additional_env_parameters = ''
         for name, value in additional_env.items():
-            additional_env_parameters += ' -x %s=%s ' % (name, value)
+            if 'mpirun' in mpiexec:
+                additional_env_parameters += ' -x %s=%s ' % (name, value)
+            else:
+                additional_env_parameters += ' -genv %s %s ' % (name, value)
 
         run_cmd = '%s -n %d %s %s' % (
-                os.getenv('MPIEXEC'),
+                mpiexec,
                 n_procs,
                 additional_env_parameters,
                 cmd)
