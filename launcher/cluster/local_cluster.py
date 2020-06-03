@@ -5,22 +5,33 @@ import subprocess
 import logging
 
 class LocalCluster(cluster.Cluster):
+    def __init__(self):
+        # figure out some stuff on mpiexec....
+        # REM: this is executed twice. First to generate the standard argument and then
+        # again if it is used. Maybe it would be a good idea to check for the command
+        # line argument of environment variables on install instead?
+        self.env_variable_pattern = ' -x %s=%s '
+        self.mpiexec = os.getenv('MPIEXEC')
+
+        cmd = "%s -n 1 %s echo Welcome" % (self.mpiexec, self.env_variable_pattern % ("A", "42"))
+        r = subprocess.run(cmd.split())
+        if r.returncode != 0:
+            print("Executing %s returned not 0. Assuming MPICH launcher."  % cmd)
+            # assume mpich:
+            self.env_variable_pattern = ' -genv %s %s '
+
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
             additional_env, logfile, is_server):
         # TODO: use annas template engine here instead of this function!
         assert n_nodes == 1  # as we are local
 
-        mpiexec = os.getenv('MPIEXEC')
 
         additional_env_parameters = ''
         for name, value in additional_env.items():
-            if 'mpirun' in mpiexec:
-                additional_env_parameters += ' -x %s=%s ' % (name, value)
-            else:
-                additional_env_parameters += ' -genv %s %s ' % (name, value)
+            additional_env_parameters += self.env_variable_pattern % (name, value)
 
         run_cmd = '%s -n %d %s %s' % (
-                mpiexec,
+                self.mpiexec,
                 n_procs,
                 additional_env_parameters,
                 cmd)
@@ -58,6 +69,6 @@ class LocalCluster(cluster.Cluster):
         os.system('killall melissa_server')
         os.system('killall gdb')
         os.system('killall xterm')
-        os.system('killall mpiexec')
+        os.system('killall %s' % self.mpiexec)
         #os.system('killall python3')
         os.system('killall %s' % runner_executable)
