@@ -182,7 +182,7 @@ struct RunnerRankConnection
         }
 
         const Part & hidden_part = field->getPartHidden(runner_rank);
-        D("-> Server sending %lu + %lu hidden bytes for state %d, timestamp=%d",
+        D("-> Server sending %lu + %lu hidden bytes for state %d, timestep=%d",
           part.send_count *
           sizeof(double),
           hidden_part.send_count * sizeof(double),
@@ -736,7 +736,7 @@ void end_all_runners()
     }
 }
 
-void init_new_timestamp()
+void init_new_timestep()
 {
     size_t connections =
         field->connected_runner_ranks.size();
@@ -907,7 +907,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
     int runner_id = header_buf[0];
     int runner_rank = header_buf[1];
     int runner_state_id = header_buf[2];      // = ensemble_member_id;
-    int runner_timestamp = header_buf[3];
+    int runner_timestep = header_buf[3];
     char field_name[MPI_MAX_PROCESSOR_NAME];
     strcpy(field_name, reinterpret_cast<char*>(&header_buf[4]));
 
@@ -936,20 +936,20 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
     }
     else
     {
-        assert(runner_timestamp == 0 || running_sub_task !=
+        assert(runner_timestep == 0 || running_sub_task !=
                running_sub_tasks.end());
 
         // This is necessary if a task was finished on rank 0. then it crashes on another rank. so rank 0 needs to undo this!
         if (running_sub_task != running_sub_tasks.end())
         {
-            // only if we are not in timestamp  0:
+            // only if we are not in timestep  0:
             finished_sub_tasks.push_back(*running_sub_task);
 
             running_sub_tasks.remove(*running_sub_task);
         }
 
-        // good timestamp? There are 2 cases: timestamp 0 or good timestamp...
-        assert (runner_timestamp == 0 || runner_timestamp ==
+        // good timestep? There are 2 cases: timestep 0 or good timestep...
+        assert (runner_timestep == 0 || runner_timestep ==
                 current_step);
 
 
@@ -959,11 +959,11 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         assert(zmq_msg_size(&data_msg) == part.send_count *
                sizeof(double));
         D(
-            "<- Server received %lu/%lu bytes of %s from runner id %d, runner rank %d, state id %d, timestamp=%d",
+            "<- Server received %lu/%lu bytes of %s from runner id %d, runner rank %d, state id %d, timestep=%d",
             zmq_msg_size(&data_msg), part.send_count *
             sizeof(double),
             field_name, runner_id, runner_rank, runner_state_id,
-            runner_timestamp);
+            runner_timestep);
         D("local server offset %lu, sendcount=%lu",
           part.local_offset_server, part.send_count);
 
@@ -1007,12 +1007,12 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         }
 
 
-        if (runner_timestamp == current_step)
+        if (runner_timestep == current_step)
         {
             if (runner_rank == 0) {
                 trigger(STOP_PROPAGATE_STATE, runner_state_id);   // will trigger for runnerrank 0...
             }
-            D("storing this timestamp!...");
+            D("storing this timestep!...");
             // zero copy is unfortunately for send only. so copy internally...
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
@@ -1035,7 +1035,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                      &data_msg)), hidden_part,
                                        values_hidden);
         }
-        // otherwise we throw away timestamp 0 as we want to init the simulation!
+        // otherwise we throw away timestep 0 as we want to init the simulation!
         // One could indeed try to generate ensemble members from the initial state but
         // this is a too special case so we rely on other mechanics for initialization of
         // an initial state.
@@ -1254,7 +1254,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
             return true;
         }
 
-        init_new_timestamp();
+        init_new_timestep();
 
         // After update step: rank 0 loops over all runner_id's sending them a new state vector part they have to propagate.
         if (comm_rank == 0)
@@ -1461,7 +1461,7 @@ int main(int argc, char * argv[])
                 assimilator = Assimilator::create(
                     ASSIMILATOR_TYPE, *field, param_total_steps, mpi);
                 current_nsteps = assimilator->getNSteps();
-                init_new_timestamp();  // init_new_timestep needs the latest timestep id from the assimilator!
+                init_new_timestep();  // init_new_timestep needs the latest timestep id from the assimilator!
 
 #ifdef WITH_FTI
                 FT.protect_background( mpi, field );
