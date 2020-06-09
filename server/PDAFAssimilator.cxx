@@ -44,6 +44,8 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     //cwrapper_set_current_step(&current_step);
     getAllEnsembleMembers();
     printf("[%d] hidden state size: %d\n", comm_rank, local_vect_size_hidden);
+
+    TimePoint start = std::chrono::high_resolution_clock::now();
     if (local_vect_size_hidden > 0)
     {
         for (int member_id = 0; member_id <
@@ -60,6 +62,9 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
             cwrapper_init_ens_hidden(&local_vect_size_hidden, &ensemble_size, &member_id, hidden_state_p);
         }
     }
+
+    TimePoint now = std::chrono::high_resolution_clock::now();
+    printf("[%d] hidden state init took: %f ms\n", comm_rank, diff_to_millis(now, start));;
 }
 
 void PDAFAssimilator::getAllEnsembleMembers()

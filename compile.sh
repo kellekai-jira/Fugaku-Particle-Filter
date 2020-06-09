@@ -34,11 +34,11 @@ then
 	# jean zay:
         cmake .. \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_INSTALL_PREFIX=install 
+          -DCMAKE_INSTALL_PREFIX=install
 else
     if [ "$MELISSA_PROFILING" == "" ];
     then
-        echo here
+        echo here, juwels...
         cmake .. \
           -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
           -DCMAKE_BUILD_TYPE=Release \

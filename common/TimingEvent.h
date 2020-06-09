@@ -7,7 +7,6 @@
 
 #include "utils.h"
 
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
 enum TimingEventType
 {
@@ -56,9 +55,6 @@ enum TimingEventType
 #endif
 
 
-double diff_to_millis(const TimePoint &lhs, const TimePoint &rhs) {
-    return std::chrono::duration<double, std::milli>(lhs-rhs).count();
-}
 
 struct TimingEvent
 {

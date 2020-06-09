@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <chrono>
 
 
 inline void print_stack_trace() {
@@ -125,6 +126,13 @@ inline void assert_no_more_zmq_messages(void * socket)
     size_t more_size = sizeof (more);
     zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
     assert(more == 0);
+}
+
+
+// timing:
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+inline double diff_to_millis(const TimePoint &lhs, const TimePoint &rhs) {
+    return std::chrono::duration<double, std::milli>(lhs-rhs).count();
 }
 
 // Globals:
