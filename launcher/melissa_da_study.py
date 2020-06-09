@@ -327,7 +327,7 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
 # exporting for import * :
 __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'killing_giraffe', 'clean_old_stats',  # utils
-           'SlurmCluster', 'LocalCluster',  # cluster
+           'SlurmCluster', 'LocalCluster', 'SlurmJuwelsCluster',  # cluster
            'ASSIMILATOR_CHECK_STATELESS',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
