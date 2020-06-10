@@ -42,9 +42,10 @@ class SlurmCluster(cluster.Cluster):
             # to get the node names...
 
             out = subprocess.check_output(['srun', 'hostname'])
-            for line in out.readlines():
-                hostname = line.split('.')[0]
-                self.node_occupation[hostname] = EMPTY
+            for line in out.split(b'\n'):
+                if line != b'':
+                    hostname = (line.split(b'.')[0]).decode("utf-8")
+                    self.node_occupation[hostname] = EMPTY
 
 
     def set_nodes_to(self, kind, n_nodes):
@@ -54,12 +55,13 @@ class SlurmCluster(cluster.Cluster):
             if v == EMPTY:
                 self.node_occupation[k] = kind
                 nodes.add(k)
+                to_place -= 1
 
             if to_place == 0:
                 break
-        assert to_place == 0
+        assert to_place == 0  # otherwise did not found enough nodes in reservation...
 
-        return ','.join(nodes)
+        return list(nodes)
 
 
 
@@ -78,13 +80,14 @@ class SlurmCluster(cluster.Cluster):
             if is_server:
                 nodes = self.set_nodes_to(SERVER, n_nodes)
             else:
-                nodes = self.set_nodes_to(SERVER, n_nodes)
+                nodes = self.set_nodes_to(SIMULATION, n_nodes)
 
-            n = []
-            for node in nodes:
-                n.append([node]*(n_procs//n_nodes))
+            #n = []
+            # for node in nodes:
+                # n += [node]*(n_procs//n_nodes)
 
-            node_list_param = '--nodelist=%s' % (','.join(n))
+            #node_list_param = '--nodelist=%s' % (','.join(n))
+            node_list_param = '--nodelist=%s' % ','.join(nodes)
 
 
 
@@ -97,7 +100,7 @@ class SlurmCluster(cluster.Cluster):
             output_param = '--output=%s' % logfile
 
 
-        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
+        run_cmd = 'srun --verbose -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
                 n_procs//n_nodes,
@@ -118,14 +121,16 @@ class SlurmCluster(cluster.Cluster):
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
 
         #print("Process id: %d" % proc.pid)
-        regex = re.compile('job ([0-9]+) queued')
+        regex = re.compile('srun: launching ([0-9.]+) on')
+
         while proc.poll() is None:
-            s = proc.stderr.read(64).decode()
+            s = proc.stderr.read(128).decode()
+            #print(s)
             res = regex.search(s)
             if res:
-                job_id = int(res.groups()[0])
-                print("job_id: ", job_id)
+                job_id = res.groups()[0]
                 self.started_jobs.append(job_id)
+                print('extracted jobid:', job_id)
                 return job_id
             time.sleep(0.05)
 
@@ -135,7 +140,10 @@ class SlurmCluster(cluster.Cluster):
 
     def CheckJobState(self, job_id):
         state = 0
-        proc = subprocess.Popen(["squeue", "-o %T", "--job=%d" % job_id],
+        # for a strange reason this cannot handle jobsteps (jobid 1234.45)
+        # Thus the killing mechanism failes at the end for such things after a successful
+        # run
+        proc = subprocess.Popen(["squeue", "-o %T", "--job=%s" % job_id],
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
                               universal_newlines=True)
@@ -158,7 +166,8 @@ class SlurmCluster(cluster.Cluster):
             return 2
 
     def KillJob(self, job_id):
-        subprocess.call(['scancel', str(job_id)])
+        print("scancel", job_id)
+        subprocess.call(['scancel', job_id])
 
     def GetLoad(self):
         """number between 0 and 1"""

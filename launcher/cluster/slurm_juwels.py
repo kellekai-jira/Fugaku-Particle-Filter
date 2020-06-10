@@ -42,9 +42,10 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             # to get the node names...
 
             out = subprocess.check_output(['srun', 'hostname'])
-            for line in out.readlines():
-                hostname = line.split('.')[0]
-                self.node_occupation[hostname] = EMPTY
+            for line in out.split(b'\n'):
+                if line != b'':
+                    hostname = (line.split(b'.')[0]).decode("utf-8")
+                    self.node_occupation[hostname] = EMPTY
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
@@ -65,13 +66,14 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             if is_server:
                 nodes = self.set_nodes_to(SERVER, n_nodes)
             else:
-                nodes = self.set_nodes_to(SERVER, n_nodes)
+                nodes = self.set_nodes_to(SIMULATION, n_nodes)
 
-            n = []
-            for node in nodes:
-                n.append([node]*(n_procs//n_nodes))
+            #n = []
+            # for node in nodes:
+                # n += [node]*(n_procs//n_nodes)
 
-            node_list_param = '--nodelist=%s' % (','.join(n))
+            #node_list_param = '--nodelist=%s' % (','.join(n))
+            node_list_param = '--nodelist=%s' % ','.join(nodes)
 
 
 
@@ -89,7 +91,7 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             output_param = '--output=%s' % logfile
 
 
-        run_cmd = 'srun -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
+        run_cmd = 'srun --verbose -N %d -n %d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
                 n_procs//n_nodes,
@@ -110,14 +112,15 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
 
         #print("Process id: %d" % proc.pid)
-        regex = re.compile('job ([0-9]+) queued')
+        regex = re.compile('srun: launching ([0-9.]+) on')
+
         while proc.poll() is None:
-            s = proc.stderr.read(64).decode()
-            print(s)  # for debugging.... maybe print stdout too?
+            s = proc.stderr.read(128).decode()
+            #print(s)
             res = regex.search(s)
             if res:
-                job_id = int(res.groups()[0])
-                print("job_id: ", job_id)
+                job_id = res.groups()[0]
                 self.started_jobs.append(job_id)
+                print('extracted jobid:', job_id)
                 return job_id
             time.sleep(0.05)
