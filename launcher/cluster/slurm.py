@@ -116,6 +116,10 @@ class SlurmCluster(cluster.Cluster):
 
         # if logfile == '':
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
+
+        if self.in_salloc:
+            print("in salloc, using pid:", proc.pid)
+            return proc.pid
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
@@ -140,6 +144,15 @@ class SlurmCluster(cluster.Cluster):
 
     def CheckJobState(self, job_id):
         state = 0
+        if self.in_salloc:
+            ret_code = subprocess.call(["ps", str(job_id)], stdout=subprocess.DEVNULL)
+            if ret_code == 0:
+                state = 1
+            else:
+                state = 2
+            #logging.debug('Checking for job_id %d: state: %d' % (job_id, state))
+            return state
+
         # for a strange reason this cannot handle jobsteps (jobid 1234.45)
         # Thus the killing mechanism failes at the end for such things after a successful
         # run
@@ -166,6 +179,10 @@ class SlurmCluster(cluster.Cluster):
             return 2
 
     def KillJob(self, job_id):
+        if self.in_salloc:
+            os.system('kill '+str(job_id))
+            return
+
         print("scancel", job_id)
         subprocess.call(['scancel', job_id])
 

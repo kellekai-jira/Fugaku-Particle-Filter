@@ -37,6 +37,7 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
         # see the git stash for some regex  parsing to get the node allocation...
 
         if self.in_salloc:
+            assert partition == None  # Partition must not be defined if in salloc!, at least on juwels
             self.node_occupation = {}
             # alternative: compare to https://docs.ray.io/en/latest/deploying-on-slurm.html
             # to get the node names...
@@ -107,6 +108,10 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
 
         # if logfile == '':
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
+
+        if self.in_salloc:
+            print("In Salloc, using pid:", proc.pid)
+            return proc.pid
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
