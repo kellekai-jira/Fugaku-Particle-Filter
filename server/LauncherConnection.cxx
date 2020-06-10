@@ -52,6 +52,7 @@ LauncherConnection::LauncherConnection(void * context, std::string launcher_host
 
     // Send the first message
     send_message_server_name(hostname, comm_rank, text_pusher, 0);
+    D("Successful connected to launcher");
 }
 
 LauncherConnection::~LauncherConnection()

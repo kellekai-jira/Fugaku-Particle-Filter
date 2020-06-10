@@ -64,6 +64,10 @@ link_libraries(${MPI_LIBRARIES})
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
 
 
+#set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
 # for compatibility with pdaf makefile....
 
 
@@ -78,7 +82,7 @@ IF(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
     SET(COMPILER_DEPENDENT_FORTRAN_FLAGS "")
     # for nice traces:
     SET(CMAKE_C_FLAGS_DEBUG "-g -rdynamic -traceback")
-    SET(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback")
+    SET(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback -std=c++14")
     SET(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback")
 ELSE()
     SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")

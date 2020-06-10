@@ -1,6 +1,7 @@
 #ifndef PART_H_
 #define PART_H_
 #include <vector>
+#include <cstring>  // for size_t on intel compilers
 
 struct Part
 {
