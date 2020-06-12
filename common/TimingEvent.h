@@ -20,7 +20,8 @@ enum TimingEventType
     START_IDLE_RUNNER           = 6,  // parameter = runner_id
     STOP_IDLE_RUNNER            = 7,  // parameter = runner_id
     START_PROPAGATE_STATE       = 8,  // parameter = state_id
-    STOP_PROPAGATE_STATE        = 9,  // parameter = state_id
+    STOP_PROPAGATE_STATE        = 9,  // parameter = state_id,
+    NSTEPS                      = 10, // parameter = nsteps, only used by runner so far
 };
 
 #ifdef REPORT_TIMING

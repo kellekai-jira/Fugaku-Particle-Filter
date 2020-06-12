@@ -33,10 +33,13 @@ public:
                   <<
             std::endl;
         os <<
-            "iteration,timesteps,compute walltime (ms),idle walltime (ms),idle + compute walltime(ms)"
+            "iteration,runner id,assimilation cycle,state id,timesteps,compute walltime (ms),idle walltime (ms),idle + compute walltime(ms)"
                   << std::endl;
-        TimePoint *iteration_start = nullptr;
+        TimePoint *propagation_start = nullptr;
         TimePoint *idle_start = nullptr;
+
+        int current_step = -2;
+        int current_state = -2;
         int iterations = 0;
 
         double sum_runtime = 0.0;
@@ -52,26 +55,45 @@ public:
         {
             switch (it->type)
             {
+            case START_ITERATION: {
+                current_step = it->parameter;
+                break;
+            }
+            case STOP_ITERATION: {
+                break;
+            }
+            case NSTEPS: {
+                last_propagated_steps = it->parameter;
+                break;
+            }
+
+
             case START_IDLE_RUNNER: {
                 last_idle_time = 0.0;
                 idle_start = &it->time;
+                assert(runner_id == it->parameter);
                 break;
             }
             case STOP_IDLE_RUNNER: {
                 assert(last_idle_time == 0.0);  // called twice stop?
+                assert(runner_id == it->parameter);
                 last_idle_time = diff_to_millis(it->time, *idle_start);
                 break;
             }
 
 
-            case START_ITERATION: {
-                iteration_start = &it->time;
-                last_propagated_steps = it->parameter;
+            case START_PROPAGATE_STATE: {
+                propagation_start = &it->time;
+                current_state = it->parameter;
                 break;
             }
-            case STOP_ITERATION: {
-                double wt = diff_to_millis(it->time, *iteration_start);
+            case STOP_PROPAGATE_STATE: {
+                assert(it->parameter == current_state);
+                double wt = diff_to_millis(it->time, *propagation_start);
                 os << iterations << ',';
+                os << runner_id << ',';
+                os << current_step << ',';
+                os << current_state << ',';
                 os << last_propagated_steps << ',';
                 os << wt << ',';
                 os << last_idle_time << ',';
@@ -92,7 +114,7 @@ public:
             default:
             {
                 L(
-                    "ERROR: Wrong timing event found! this should never ever happen!");
+                    "ERROR: Wrong timing event (%d) found! this should never ever happen!", it->type);
                 exit(1);
                 break;
             }
@@ -107,7 +129,7 @@ public:
             "------------------- Writing Run information(csv): -------------------" <<
             std::endl;
         osr <<
-            "cores simulation,runtime per iteration (idle + compute) mean (ms),runtime per iteration (compute) mean (ms), runtime per iteration (idle) mean (ms),local state size,mean (idle + compute) bandwidth of this core (MB/s),iterations used for means,iterations (propagated states),timesteps"
+            "runner id,cores simulation,runtime per iteration (idle + compute) mean (ms),runtime per iteration (compute) mean (ms), runtime per iteration (idle) mean (ms),local state size,mean (idle + compute) bandwidth of this core (MB/s),iterations used for means,iterations (propagated states),timesteps"
                   << std::endl;
         if (iterations < 10)    // have at least 10 iterations for stats
         {   // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!
@@ -125,6 +147,7 @@ public:
 
 
 
+        osr << runner_id << ',';
         osr << cores_simulation << ',';
         osr << mean_runtime << ',';
         osr << mean_runtime_iteration << ',';

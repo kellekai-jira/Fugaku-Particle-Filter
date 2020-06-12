@@ -34,6 +34,9 @@ int getRunnerId() {
     return runner_id;
 }
 
+
+int last_step = -2;
+
 #ifdef REPORT_TIMING
 std::unique_ptr<ApiTiming> timing(nullptr);
 #endif
@@ -557,7 +560,7 @@ bool first_melissa_init(MPI_Comm comm_)
     {
         timing = std::make_unique<ApiTiming>();
     }
-    trigger(START_ITERATION, 1);
+    trigger(START_ITERATION, last_step);
 #endif
 
     bool register_field = false;
@@ -689,6 +692,8 @@ void melissa_init_with_index_map(const char *field_name,
     // Calculate to which server ports the local part of the field will connect
     field.initConnections(local_vect_sizes, local_hidden_vect_sizes);
 
+    trigger(START_PROPAGATE_STATE, field.current_state_id);
+
 
 }
 bool no_mpi = false;
@@ -708,8 +713,8 @@ void melissa_init_no_mpi(const char *field_name,
 int melissa_expose(const char *field_name, double *values,
                    double *hidden_values)
 {
-    trigger(STOP_ITERATION, -1);
-    trigger(START_IDLE_RUNNER, -1);
+    trigger(STOP_PROPAGATE_STATE, field.current_state_id);
+    trigger(START_IDLE_RUNNER, getRunnerId());
     assert(phase != PHASE_FINAL);
     if (phase == PHASE_INIT)
     {
@@ -731,11 +736,17 @@ int melissa_expose(const char *field_name, double *values,
 
     // and request new data
     int nsteps = field.getState(values, hidden_values);
-    trigger(STOP_IDLE_RUNNER, -1);
+    trigger(STOP_IDLE_RUNNER, getRunnerId());
 
     if (nsteps > 0)
     {
-        trigger(START_ITERATION, nsteps);
+        if (last_step != field.current_step) {
+            trigger(STOP_ITERATION, last_step);
+            last_step = field.current_step;
+            trigger(START_ITERATION, field.current_step);
+        }
+        trigger(START_PROPAGATE_STATE, field.current_state_id);
+        trigger(NSTEPS, nsteps);
     }
 
     // TODO: this will block other fields!
@@ -776,6 +787,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
 #ifdef REPORT_TIMING_ALL_RANKS
     const std::array<EventTypeTranslation, 2> event_type_translations = {{
         {START_ITERATION, STOP_ITERATION, "Iteration"},
+        {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
         {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
     }};
     std::string fn = "melissa_runner" + std::to_string(runner_id);
