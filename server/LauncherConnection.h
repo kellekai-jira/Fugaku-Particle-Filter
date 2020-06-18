@@ -33,7 +33,7 @@ public:
     void receiveText();
 
     bool checkLauncherDueDate();
-    void ping_launcher();
+    void ping();
 };
 
 #endif /* LAUNCHERCONNECTION_H_ */

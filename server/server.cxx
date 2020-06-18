@@ -1441,6 +1441,8 @@ int main(int argc, char * argv[])
                     exit(1);
                 }
             }
+
+            launcher->ping();
         }
 
         // coming from fresh init...

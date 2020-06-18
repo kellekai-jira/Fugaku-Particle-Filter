@@ -52,6 +52,7 @@ LauncherConnection::LauncherConnection(void * context, std::string launcher_host
 
     // Send the first message
     send_message_server_name(hostname, comm_rank, text_pusher, 0);
+    updateLauncherNextMessageDate();
     D("Successful connected to launcher");
 }
 
@@ -101,11 +102,12 @@ void LauncherConnection::updateLauncherNextMessageDate()
     next_message_date_to_launcher = time(NULL) + LAUNCHER_PING_INTERVAL * 1000;
 }
 
-void LauncherConnection::ping_launcher()
+void LauncherConnection::ping()
 {
     if (time(NULL) > next_message_date_to_launcher)
     {
         send_message_hello(text_pusher, 0);
+        updateLauncherNextMessageDate();
     }
 }
 
