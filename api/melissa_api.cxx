@@ -785,7 +785,7 @@ void melissa_finalize()  // TODO: when using more serverranks, wait until an end
                 field.local_hidden_vect_size, runner_id);
     }
 #ifdef REPORT_TIMING_ALL_RANKS
-    const std::array<EventTypeTranslation, 2> event_type_translations = {{
+    const std::array<EventTypeTranslation, 3> event_type_translations = {{
         {START_ITERATION, STOP_ITERATION, "Iteration"},
         {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
         {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
