@@ -227,7 +227,7 @@ elif testcase == 'test-crashing-server3-stateless':
     assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
     assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
 
-    ref_size = os.path.getsize('reference-giraffe.txt')
+    ref_size = os.path.getsize('reference-giraffe-hidden.txt')
     # Check if file sizes are good
     # Check that none of the files contains the full output
     assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
