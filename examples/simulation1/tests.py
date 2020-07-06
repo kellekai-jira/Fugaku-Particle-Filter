@@ -194,6 +194,61 @@ elif testcase == 'test-crashing-server1':
 
 
     # TODO: check that not one file contains all the results already...
+elif testcase == 'test-crashing-server3-stateless':
+    class KillerGiraffe(Thread):
+        def run(self):
+            global had_checkpoint
+            time.sleep(2)
+            print('Crashing a server...')
+            #killing_giraffe('melissa_server')
+            subprocess.call(["killall", "melissa_server"])
+            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            shutil.copyfile('output.txt', 'output.txt.0')
+
+            # from shutil import copyfile
+            # copyfile('config.fti', 'config.fti.0')
+
+    giraffe = KillerGiraffe()
+    giraffe.start()
+
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 1
+    procs_runner = 2
+    n_runners = 2
+    executable = "simulation1-hidden"
+    run()
+
+    # Check if server was restarted:
+    assert os.path.isfile("STATS/server.log.0")
+    assert os.path.isfile("STATS/server.log")
+
+    # Check for FTI logs:
+    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
+    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+
+    ref_size = os.path.getsize('reference-giraffe.txt')
+    # Check if file sizes are good
+    # Check that none of the files contains the full output
+    assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
+    assert ref_size > os.path.getsize('STATS/output.txt') > 1000  # bytes
+
+
+
+    print("Had checkpoint?", had_checkpoint)
+    assert had_checkpoint
+
+    # Check_output
+    # join files and remove duplicate lines before compare!
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
+    subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
+    # Generate reference
+    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
+    compare('STATS/reference-crashing-server-sorted.txt')
+
+
+    # TODO: check that not one file contains all the results already...
+
 
 elif testcase == 'test-crashing-launcher':
     subprocess.call(["bash", "-c", "python3 tests.py long-run"])
