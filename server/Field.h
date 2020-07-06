@@ -14,6 +14,24 @@
 
 #include "utils.h"
 
+/**
+ * About model state from a Melissa-DA perspective:
+ *
+ * simulation state = static state + moving state
+ * moving state = hidden state + assimimlated state
+ * if you want to restore a simulatoin you need to restore its state (in memory)
+ * - static state: are things that do not change between members
+ *   (like mesh distribution...)
+ * - moving state: parts that need to be moved when mitigating one member from one
+ *   runner to another thus it is saved by the server
+ * - assimilated state: part that is concerned by the assimilation and thus changed
+ *   during the assimilation update step
+ * - hidden state: part of the moving state that is not changed by the assimilation but
+ *   need to be stored by the server so it stores the full moving state.
+ *
+ * Nomenclatur is under discussion and thus may change in future.
+ */
+
 struct Field
 {
     std::string name;
