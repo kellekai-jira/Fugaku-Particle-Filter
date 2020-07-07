@@ -1021,8 +1021,10 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                                       &data_msg)), hidden_part,
                                         values_hidden);
 #ifdef WITH_FTI
-            FT.store_subset( field, runner_state_id, runner_rank );
-            // FIXME: store hidden state here too!
+            FT.store_subset( field, runner_state_id, runner_rank, FT_BACKGROUND );
+            if (hidden_part.send_count > 0) {
+                FT.store_subset( field, runner_state_id, runner_rank, FT_HIDDEN );
+            }
 #endif
         }
         else if (runner_state_id == -1)
@@ -1466,7 +1468,7 @@ int main(int argc, char * argv[])
                 init_new_timestep();  // init_new_timestep needs the latest timestep id from the assimilator!
 
 #ifdef WITH_FTI
-                FT.protect_background( mpi, field );
+                FT.protect_states( mpi, field );
 #endif
                 D("Change Phase");
                 phase = PHASE_SIMULATION;
