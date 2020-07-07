@@ -56,7 +56,7 @@ else
         CC="wrapper-icc.sh"
         CXX="wrapper-icpc.sh"
         cmake .. \
-            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_INSTALL_PREFIX=install \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_C_COMPILER="$CC" \
