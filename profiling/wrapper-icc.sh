@@ -1,3 +1,3 @@
 #!/bin/bash
-wrapper.sh icc $@
-#wrapper.sh mpicc $@
+#wrapper.sh icc $@
+wrapper.sh mpicc $@
