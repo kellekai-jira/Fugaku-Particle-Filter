@@ -3,10 +3,15 @@
 #include "FTmodule.h"
 #include <algorithm>
 #include "MpiManager.h"
+#include "Part.h"
 
 void FTmodule::init( MpiManager & mpi, int & epoch_counter )
 {
+    m_id_var = 0;
+    m_id_dataset = 0;
+    m_protected = false;
     m_checkpointing = false;
+    m_has_hidden = true;
     id_check.clear();
     FTI_Init( FTI_CONFIG, mpi.comm() );
 #ifdef WITH_FTI_THREADS
@@ -20,77 +25,152 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     mpi.set_comm( "fti_comm" );
 #endif
     // protect global variables and set id_offset for subset ids
-    hsize_t dim = 1;
-    hsize_t offset = 0;
-    hsize_t count = 1;
-    FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
-    FTI_Protect( m_id_offset, &epoch_counter, 1, FTI_INTG );
-    FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset );
-    m_id_offset++;
+    FTIT_hsize_t dim = 1;
+    FTIT_hsize_t offset = 0;
+    FTIT_hsize_t count = 1;
+    FTI_DefineGlobalDataset( 0, 1, &dim, "epoch_counter", NULL, FTI_INTG );
+    FTI_Protect( 0, &epoch_counter, 1, FTI_INTG );
+    FTI_AddSubset( 0, 1, &offset, &count, 0 );
+    m_id_var++;
+    m_id_dataset++;
     m_restart = static_cast<bool>(FTI_Status());
-    m_protected = false;
+}
+
+void FTmodule::protect_states( MpiManager & mpi, std::unique_ptr<Field> & field )
+{
+    protect_background( mpi, field );
+    protect_hidden( mpi, field );
 }
 
 void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & field )
 {
+    // initialize some vars
+    int myRank = mpi.rank();
     int comm_size_server = mpi.size();
-    int comm_size_runner = field->local_vect_sizes_runner.size();
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = field->globalVectSize();
-    for (int i = 0; i < comm_size_server; ++i)
-    {
-        // every server rank gets the same amount
-        local_vect_sizes_server[i] = global_vect_size /
-            comm_size_server;
-
-        // let n be the rest of this division
-        // the first n server ranks get one more to split the rest fair up...
-        size_t n_rest = global_vect_size - size_t(global_vect_size /
-                comm_size_server) *
-            comm_size_server;
-        if (size_t(i) < n_rest)
-        {
-            local_vect_sizes_server[i]++;
-        }
-    }
-    int myRank = mpi.rank();
-    int dataset_rank = 1;
-    hsize_t state_dim = field->globalVectSize();
-    int dataset_id = 0 + m_id_offset; // equals state_id
-    int subset_id = 0 + m_id_offset;
-    int N_e = field->ensemble_members.size();
-    hsize_t offset_base = 0;
+    FTIT_hsize_t state_dim = static_cast<FTIT_hsize_t>(global_vect_size);
+    int dataset_id = m_id_dataset; // init with current dataset id-counter
+    
+    calculate_local_vect_sizes_server(comm_size_server, global_vect_size, local_vect_sizes_server);
+    
+    // determine offset in file for current dataset
+    FTIT_hsize_t offset_base = 0;
     for(int i=0; i<myRank; i++) { offset_base+=local_vect_sizes_server[i]; }
+    
     for(auto it_ens=field->ensemble_members.begin(); it_ens!=field->ensemble_members.end(); it_ens++) {
-        size_t count_tot = 0;
-        hsize_t offset = offset_base;
+        
+        FTIT_hsize_t offset = offset_base;
+        
+        // dataset name '<fieldname>_background_<stateid>'
         std::string dataset_name(field->name);
-        dataset_name += "_" + std::to_string( dataset_id-m_id_offset );
-        FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        dataset_name += "_background_" + std::to_string( dataset_id-m_id_dataset );
+        
+        FTI_DefineGlobalDataset( dataset_id, 1, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        
+        // iterate over all parts for own server_rank
         std::vector<Part>::iterator it_part = field->parts.begin();
         while( (it_part = std::find_if( it_part, field->parts.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts.end() ){
-            offset += static_cast<hsize_t>(it_part->local_offset_server);
-            hsize_t count = static_cast<hsize_t>(it_part->send_count);
+            
+            // protect part
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
-            FTI_Protect( subset_id, ptr, it_part->send_count, FTI_DBLE );
-            count_tot += count;
-            FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id );
+            FTI_Protect( m_id_var, ptr, it_part->send_count, FTI_DBLE );
+            
+            // add part to global dataset
+            offset += static_cast<FTIT_hsize_t>(it_part->local_offset_server);
+            FTIT_hsize_t count = static_cast<FTIT_hsize_t>(it_part->send_count);
+            FTI_AddSubset( m_id_var, 1, &offset, &count, dataset_id );
+           
+            // store subset id in keymap
             std::string subset_name(dataset_name);
+            // subset name '<fieldname>_background_<stateid>_<runner_rank>'
             subset_name += "_" + std::to_string( it_part->rank_runner );
-            id_map[subset_name] = subset_id;
-            subset_id++;
+            id_map[subset_name] = m_id_var;
+            
+            m_id_var++;
             it_part++;
+        
         }
+        
         dataset_id++;
+    
     }
+    
+    m_id_dataset += dataset_id;
     m_protected = true;
 }
 
-void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank )
+void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field )
 {
+    // initialize some vars
+    int myRank = mpi.rank();
+    int comm_size_server = mpi.size();
+    size_t local_vect_sizes_server[comm_size_server];
+    size_t global_vect_size = field->globalVectSizeHidden();
+    FTIT_hsize_t state_dim = static_cast<FTIT_hsize_t>(global_vect_size);
+    int dataset_id = m_id_dataset; // init with current dataset id-counter
+    
+    calculate_local_vect_sizes_server(comm_size_server, global_vect_size, local_vect_sizes_server);
+    
+    // hidden states can be smaller than server_comm -> have no hidden state parts
+    if( local_vect_sizes_server[myRank] == 0 ) {
+        m_has_hidden = false;
+        return;
+    }
+    
+    // determine offset in file for current dataset
+    FTIT_hsize_t offset_base = 0;
+    for(int i=0; i<myRank; i++) { offset_base+=local_vect_sizes_server[i]; }
+    
+    for(auto it_ens=field->ensemble_members.begin(); it_ens!=field->ensemble_members.end(); it_ens++) {
+        
+        FTIT_hsize_t offset = offset_base;
+        
+        // dataset name '<fieldname>_hidden_<stateid>'
+        std::string dataset_name(field->name);
+        dataset_name += "_hidden_" + std::to_string( dataset_id-m_id_dataset );
+        
+        FTI_DefineGlobalDataset( dataset_id, 1, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        
+        // iterate over all parts for own server_rank
+        std::vector<Part>::iterator it_part = field->parts_hidden.begin();
+        while( (it_part = std::find_if( it_part, field->parts_hidden.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts_hidden.end() ){
+            
+            // protect part
+            void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
+            FTI_Protect( m_id_var, ptr, it_part->send_count, FTI_DBLE );
+            
+            // add part to global dataset
+            offset += static_cast<FTIT_hsize_t>(it_part->local_offset_server);
+            FTIT_hsize_t count = static_cast<FTIT_hsize_t>(it_part->send_count);
+            FTI_AddSubset( m_id_var, 1, &offset, &count, dataset_id );
+           
+            // store subset id in keymap
+            std::string subset_name(dataset_name);
+            // subset name '<fieldname>_hidden_<stateid>_<runner_rank>'
+            subset_name += "_" + std::to_string( it_part->rank_runner );
+            id_map[subset_name] = m_id_var;
+            
+            m_id_var++;
+            it_part++;
+        
+        }
+        
+        dataset_id++;
+    
+    }
+    
+    m_id_dataset += dataset_id;
+    m_protected = true;
+}
+
+void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank, FTtype type )
+{
+
     if( m_checkpointing ) {
-        std::string key(field->name);
-        key += "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank );
+
+        std::string key( field->name + "_" + m_FTtype[type] + "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank ));
+        
         if( id_check.find(key) == id_check.end() ) {
 #ifdef WITH_FTI_THREADS
             FTsched.submit( FTI_AddVarICP, id_map[key] );
@@ -99,7 +179,9 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
 #endif
             id_check.insert(key);
         }
+    
     }
+
 }
 
 void FTmodule::initCP( int epoch )
@@ -107,11 +189,9 @@ void FTmodule::initCP( int epoch )
     if( !m_checkpointing ) {
         id_check.clear();
         m_checkpointing = true;
-        //FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
-        FTI_InitICP( epoch, 4, 1 );
-        for(int id=0; id<m_id_offset; id++) {
-            FTI_AddVarICP( id );
-        }
+        FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
+        // add epoch counter 
+        FTI_AddVarICP( 0 );
     }
 }
 
