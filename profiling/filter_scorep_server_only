@@ -21,8 +21,7 @@ SCOREP_REGION_NAMES_BEGIN # This is a comment
   INCLUDE Assimilator::do_update_step
   EXCLUDE Assimilator::getNSteps
   EXCLUDE PDAFAssimilator::getNSteps
-
-
+  EXCLUDE _sti*
   #EXCLUDE *
   #INCLUDE main
   #INCLUDE printf
