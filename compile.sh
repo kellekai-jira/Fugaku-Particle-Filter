@@ -36,25 +36,36 @@ then
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_INSTALL_PREFIX=install
 else
+    # juwels...
     if [ "$MELISSA_PROFILING" == "" ];
     then
         echo here, juwels...
         cmake .. \
-          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX=install \
           -DCMAKE_CXX_COMPILER=mpicxx \
           -DCMAKE_Fortran_COMPILER=mpif90 \
-          -DCMAKE_C_COMPILER=mpicc
+          -DCMAKE_C_COMPILER=mpicc \
+          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
     else
+        echo here, juwels with profiling...
         cd ..
         export PATH="$PWD/profiling:$PATH"
         cd build
         F90="wrapper-ifort.sh"
         CC="wrapper-icc.sh"
         CXX="wrapper-icpc.sh"
-        cmake .. -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
-            -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_C_COMPILER="$CC" -DCMAKE_Fortran_COMPILER="$F90"
+        cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_INSTALL_PREFIX=install \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_Fortran_COMPILER="$F90" \
+            -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
+            -DCMAKE_CXX_COMPILER_WORKS=1 \
+            -DCMAKE_C_COMPILER_WORKS=1 \
+            -DCMAKE_Fortran_COMPILER_WORKS=1
+        # cmake on speed^ don't do slow compiler checking over and over again :P
 
     fi
 #cmake .. -DZeroMQ_DIR=$HOME/workspace/zmq/melissa-da/build/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_COMPILER=$HOME/workspace/melissa-da/scalasca_cxx -DCMAKE_Fortran_COMPILER=$HOME/workspace/melissa-da/scalasca_f90
