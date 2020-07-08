@@ -243,7 +243,7 @@ elif testcase == 'test-crashing-server3-stateless':
     shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
     subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
     # Generate reference
-    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
+    subprocess.call(["bash", "-c", "sort reference-giraffe-hidden.txt > STATS/reference-crashing-server-sorted.txt"])
     compare('STATS/reference-crashing-server-sorted.txt')
 
 
