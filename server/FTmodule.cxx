@@ -137,7 +137,7 @@ void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field 
         while( (it_part = std::find_if( it_part, field->parts_hidden.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts_hidden.end() ){
             
             // protect part
-            void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
+            void* ptr = it_ens->state_hidden.data() + it_part->local_offset_server;
             FTI_Protect( m_id_var, ptr, it_part->send_count, FTI_DBLE );
             
             // add part to global dataset
@@ -220,7 +220,9 @@ void FTmodule::finalizeCP( void )
 
 void FTmodule::recover( void )
 {
+    D("[DEBUG] restart:%d, protected:%d", m_restart, m_protected);
     if( m_restart && m_protected ) {
+        D("[DEBUG] is executed")
         FTI_Recover();
         m_restart = false;
     }
