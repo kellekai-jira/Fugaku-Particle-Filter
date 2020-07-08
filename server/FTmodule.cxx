@@ -25,9 +25,9 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     mpi.set_comm( "fti_comm" );
 #endif
     // protect global variables and set id_offset for subset ids
-    FTIT_hsize_t dim = 1;
-    FTIT_hsize_t offset = 0;
-    FTIT_hsize_t count = 1;
+    hsize_t dim = 1;
+    hsize_t offset = 0;
+    hsize_t count = 1;
     FTI_DefineGlobalDataset( 0, 1, &dim, "epoch_counter", NULL, FTI_INTG );
     FTI_Protect( 0, &epoch_counter, 1, FTI_INTG );
     FTI_AddSubset( 0, 1, &offset, &count, 0 );
@@ -49,18 +49,18 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
     int comm_size_server = mpi.size();
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = field->globalVectSize();
-    FTIT_hsize_t state_dim = static_cast<FTIT_hsize_t>(global_vect_size);
+    hsize_t state_dim = static_cast<hsize_t>(global_vect_size);
     int dataset_id = m_id_dataset; // init with current dataset id-counter
     
     calculate_local_vect_sizes_server(comm_size_server, global_vect_size, local_vect_sizes_server);
     
     // determine offset in file for current dataset
-    FTIT_hsize_t offset_base = 0;
+    hsize_t offset_base = 0;
     for(int i=0; i<myRank; i++) { offset_base+=local_vect_sizes_server[i]; }
     
     for(auto it_ens=field->ensemble_members.begin(); it_ens!=field->ensemble_members.end(); it_ens++) {
         
-        FTIT_hsize_t offset = offset_base;
+        hsize_t offset = offset_base;
         
         // dataset name '<fieldname>_background_<stateid>'
         std::string dataset_name(field->name);
@@ -77,8 +77,8 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
             FTI_Protect( m_id_var, ptr, it_part->send_count, FTI_DBLE );
             
             // add part to global dataset
-            offset += static_cast<FTIT_hsize_t>(it_part->local_offset_server);
-            FTIT_hsize_t count = static_cast<FTIT_hsize_t>(it_part->send_count);
+            offset += static_cast<hsize_t>(it_part->local_offset_server);
+            hsize_t count = static_cast<hsize_t>(it_part->send_count);
             FTI_AddSubset( m_id_var, 1, &offset, &count, dataset_id );
            
             // store subset id in keymap
@@ -107,7 +107,7 @@ void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field 
     int comm_size_server = mpi.size();
     size_t local_vect_sizes_server[comm_size_server];
     size_t global_vect_size = field->globalVectSizeHidden();
-    FTIT_hsize_t state_dim = static_cast<FTIT_hsize_t>(global_vect_size);
+    hsize_t state_dim = static_cast<hsize_t>(global_vect_size);
     int dataset_id = m_id_dataset; // init with current dataset id-counter
     
     calculate_local_vect_sizes_server(comm_size_server, global_vect_size, local_vect_sizes_server);
@@ -119,12 +119,12 @@ void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field 
     }
     
     // determine offset in file for current dataset
-    FTIT_hsize_t offset_base = 0;
+    hsize_t offset_base = 0;
     for(int i=0; i<myRank; i++) { offset_base+=local_vect_sizes_server[i]; }
     
     for(auto it_ens=field->ensemble_members.begin(); it_ens!=field->ensemble_members.end(); it_ens++) {
         
-        FTIT_hsize_t offset = offset_base;
+        hsize_t offset = offset_base;
         
         // dataset name '<fieldname>_hidden_<stateid>'
         std::string dataset_name(field->name);
@@ -141,8 +141,8 @@ void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field 
             FTI_Protect( m_id_var, ptr, it_part->send_count, FTI_DBLE );
             
             // add part to global dataset
-            offset += static_cast<FTIT_hsize_t>(it_part->local_offset_server);
-            FTIT_hsize_t count = static_cast<FTIT_hsize_t>(it_part->send_count);
+            offset += static_cast<hsize_t>(it_part->local_offset_server);
+            hsize_t count = static_cast<hsize_t>(it_part->send_count);
             FTI_AddSubset( m_id_var, 1, &offset, &count, dataset_id );
            
             // store subset id in keymap
