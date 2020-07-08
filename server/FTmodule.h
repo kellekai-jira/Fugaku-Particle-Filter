@@ -4,6 +4,7 @@
 #define FTI_CONFIG "config.fti"
 
 #include <fti.h>
+#include <hdf5.h>
 #include "Field.h"
 #include <map>
 #include <memory>

@@ -189,8 +189,8 @@ void FTmodule::initCP( int epoch )
     if( !m_checkpointing ) {
         id_check.clear();
         m_checkpointing = true;
-        //FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
-        FTI_InitICP( epoch, 4, 1 );
+        FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
+        //FTI_InitICP( epoch, 4, 1 );
         // add epoch counter 
         FTI_AddVarICP( 0 );
     }
