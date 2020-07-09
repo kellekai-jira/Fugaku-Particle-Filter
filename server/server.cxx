@@ -1419,7 +1419,7 @@ int main(int argc, char * argv[])
         // REM: the poll item needs to be recreated all the time!
 
 
-        SCOREP_USER_REGION_BEGIN( zmq_poll_region_handle, "zmq_poll",SCOREP_USER_REGION_TYPE_COMMON )
+        SCOREP_USER_REGION_BEGIN( zmq_poll_region_handle, "zmq_poll", SCOREP_USER_REGION_TYPE_COMMON )
         zmq_pollitem_t items [items_to_poll];
         items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
         if (comm_rank == 0)
