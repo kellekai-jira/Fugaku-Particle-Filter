@@ -107,6 +107,7 @@ option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a
 # Profiling options:
 option(REPORT_TIMING "Will collect and report timing and bandwidth information on the server side at the end" ON)
 option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) every 5s and log them to stdout" OFF)
+option(REPORT_WORKLOAD "Will print every second to stdout how many cycles server (rank 0) did in the last second" ON)
 option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_server.RANK.csv filel" OFF)
 
 configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)
