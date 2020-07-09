@@ -147,17 +147,16 @@ elif testcase == 'test-crashing-server1':
             global had_checkpoint
             time.sleep(2)
             print('Crashing a server...')
-            #killing_giraffe('melissa_server')
             subprocess.call(["killall", "melissa_server"])
-            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "server.log"]) == 0)
+            subprocess.call(["bash","../set_val.sh","failure","3","config.fti"])
+            subprocess.call(["bash","../set_val.sh","h5_single_file_dir",os.getcwd()+"/Global","config.fti"])
             shutil.copyfile('output.txt', 'output.txt.0')
-
-            # from shutil import copyfile
-            # copyfile('config.fti', 'config.fti.0')
 
     giraffe = KillerGiraffe()
     giraffe.start()
 
+    subprocess.call(["find","."])
     total_steps = 200
     ensemble_size = 4
     procs_server = 1
@@ -171,7 +170,7 @@ elif testcase == 'test-crashing-server1':
 
     # Check for FTI logs:
     assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
-    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+    assert subprocess.call(["grep", "VPR recovery successfull", "STATS/server.log"]) == 0
 
     ref_size = os.path.getsize('reference-giraffe.txt')
     # Check if file sizes are good
@@ -202,7 +201,10 @@ elif testcase == 'test-crashing-server3-stateless':
             print('Crashing a server...')
             #killing_giraffe('melissa_server')
             subprocess.call(["killall", "melissa_server"])
-            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "server.log"]) == 0)
+            subprocess.call(["bash","../set_val.sh","failure","3","config.fti"])
+            subprocess.call(["bash","../set_val.sh","h5_single_file_dir",os.getcwd()+"/Global","config.fti"])
+            subprocess.call(["ls","Global"])
             shutil.copyfile('output.txt', 'output.txt.0')
 
             # from shutil import copyfile
@@ -225,7 +227,7 @@ elif testcase == 'test-crashing-server3-stateless':
 
     # Check for FTI logs:
     assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
-    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+    assert subprocess.call(["grep", "VPR recovery successfull", "STATS/server.log"]) == 0
 
     ref_size = os.path.getsize('reference-giraffe-hidden.txt')
     # Check if file sizes are good

@@ -35,7 +35,9 @@ elif sys.argv[1] == 'test-crashing-server2':
             print('Crashing a server...')
             #killing_giraffe('melissa_server')
             subprocess.call(["killall", "melissa_server"])
-            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
+            had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "server.log"]) == 0)
+            subprocess.call(["bash","../set_val.sh","failure","3","config.fti"])
+            subprocess.call(["bash","../set_val.sh","h5_single_file_dir",os.getcwd()+"/Global","config.fti"])
             was_unfinished = not os.path.isfile("state_step16_for.txt")
 
             from shutil import copyfile
@@ -51,7 +53,7 @@ elif sys.argv[1] == 'test-crashing-server2':
 
     # Check for FTI logs:
     assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
-    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+    assert subprocess.call(["grep", "VPR recovery successfull", "STATS/server.log"]) == 0
 
 
     print("Had checkpoint?", had_checkpoint)

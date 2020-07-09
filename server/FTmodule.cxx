@@ -40,6 +40,7 @@ void FTmodule::protect_states( MpiManager & mpi, std::unique_ptr<Field> & field 
 {
     protect_background( mpi, field );
     protect_hidden( mpi, field );
+    m_protected = true;
 }
 
 void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & field )
@@ -97,7 +98,6 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
     }
     
     m_id_dataset += dataset_id;
-    m_protected = true;
 }
 
 void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field )
@@ -161,7 +161,6 @@ void FTmodule::protect_hidden( MpiManager & mpi, std::unique_ptr<Field> & field 
     }
     
     m_id_dataset += dataset_id;
-    m_protected = true;
 }
 
 void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int runner_rank, FTtype type )
@@ -189,8 +188,8 @@ void FTmodule::initCP( int epoch )
     if( !m_checkpointing ) {
         id_check.clear();
         m_checkpointing = true;
-        //FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
-        FTI_InitICP( epoch, 4, 1 );
+        FTI_InitICP( epoch, FTI_L4_H5_SINGLE, 1 );
+        //FTI_InitICP( epoch, 4, 1 );
         // add epoch counter 
         FTI_AddVarICP( 0 );
     }

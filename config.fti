@@ -24,7 +24,7 @@ dcp_block_size                 = 16384
 verbosity                      = 2
 h5_single_file_enable          = 1
 h5_single_file_keep            = 1
-
+h5_single_file_dir             = ./Global
 
 [restart]
 failure                        = 0

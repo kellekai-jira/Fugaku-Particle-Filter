@@ -1109,7 +1109,6 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 // returns true if the whole assimilation (all time steps) finished
 bool check_finished(std::shared_ptr<Assimilator> assimilator)
 {
-    D("ARRIVE HERE");
     // check if all data was received. If yes: start Update step to calculate next analysis state
 
     size_t connections =
