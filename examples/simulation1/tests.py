@@ -163,7 +163,6 @@ elif testcase == 'test-crashing-server1':
     giraffe = KillerGiraffe()
     giraffe.start()
 
-    subprocess.call(["find","."])
     total_steps = 200
     ensemble_size = 4
     procs_server = 1

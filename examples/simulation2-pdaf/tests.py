@@ -14,7 +14,6 @@ melissa_da_path = os.getenv('MELISSA_DA_PATH')
 config_fti_lib = melissa_da_path + "/share/melissa-da/config.fti"
 
 procs_server=3
-procs_runner=2
 
 had_checkpoint = False
 was_unfinished = False
@@ -27,7 +26,7 @@ def run(server_slowdown_factor_=1, config_fti=config_fti_lib):
             assimilator_type=ASSIMILATOR_PDAF,
             cluster=LocalCluster(),
             procs_server=procs_server,
-            procs_runner=procs_runner,
+            procs_runner=2,
             n_runners=3,
             show_server_log = False,
             show_simulation_log = False,

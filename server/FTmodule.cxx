@@ -219,9 +219,7 @@ void FTmodule::finalizeCP( void )
 
 void FTmodule::recover( void )
 {
-    D("[DEBUG] restart:%d, protected:%d", m_restart, m_protected);
     if( m_restart && m_protected ) {
-        D("[DEBUG] is executed")
         FTI_Recover();
         m_restart = false;
     }
