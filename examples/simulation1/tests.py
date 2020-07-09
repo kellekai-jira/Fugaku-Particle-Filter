@@ -10,12 +10,18 @@ from io import StringIO
 import time
 from threading import Thread
 
+from multiprocessing import Process
+
 import subprocess
 import signal
 
 import random
 
 clean_old_stats()
+
+melissa_da_path = os.getenv('MELISSA_DA_PATH')
+
+config_fti_lib = melissa_da_path + "/share/melissa-da/config.fti"
 
 executable='simulation1'
 total_steps=3
@@ -42,7 +48,7 @@ def get_timing_information():
     return pd.read_csv('STATS/server.timing-information.csv')
 
 
-def run(server_slowdown_factor_=1):
+def run(server_slowdown_factor_=1, config_fti=config_fti_lib):
     start = time.time()
     run_melissa_da_study(
             executable,
@@ -57,7 +63,8 @@ def run(server_slowdown_factor_=1):
             False,
             server_slowdown_factor=server_slowdown_factor_,
             precommand_server='',
-            with_fault_tolerance=True)
+            with_fault_tolerance=True,
+            config_fti_path=config_fti)
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
@@ -191,6 +198,59 @@ elif testcase == 'test-crashing-server1':
     subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
     compare('STATS/reference-crashing-server-sorted.txt')
 
+elif testcase == 'test-crashing-server1-elastic':
+
+    config_fti_tmp = os.getcwd() + "/config.fti"
+    shutil.copyfile(config_fti_lib, config_fti_tmp)
+
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 2
+    procs_runner = 2
+    n_runners = 2
+
+    keywords = {'config_fti': config_fti_tmp}
+    pFail = Process(target=run, kwargs=keywords)
+    pFail.start()
+
+    time.sleep(3)
+    print('Crashing a server...')
+    pFail.terminate()
+
+    had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
+    subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
+    subprocess.call(["bash","set_val.sh","h5_single_file_dir",os.getcwd()+"/STATS/Global",config_fti_tmp])
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.0')
+
+    procs_server = 1
+
+    keywords = {'config_fti': config_fti_tmp}
+    pFinalize = Process(target=run, kwargs=keywords)
+    pFinalize.start()
+    pFinalize.join()
+
+    os.remove(config_fti_tmp)
+
+    # Check for FTI logs:
+    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log"]) == 0
+    assert subprocess.call(["grep", "VPR recovery successfull", "STATS/server.log"]) == 0
+
+    ref_size = os.path.getsize('reference-giraffe.txt')
+    # Check if file sizes are good
+    # Check that none of the files contains the full output
+    assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
+    assert ref_size > os.path.getsize('STATS/output.txt') > 1000  # bytes
+
+    print("Had checkpoint?", had_checkpoint)
+    assert had_checkpoint
+
+    # Check_output
+    # join files and remove duplicate lines before compare!
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
+    subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
+    # Generate reference
+    subprocess.call(["bash", "-c", "sort reference-giraffe.txt > STATS/reference-crashing-server-sorted.txt"])
+    compare('STATS/reference-crashing-server-sorted.txt')
 
     # TODO: check that not one file contains all the results already...
 elif testcase == 'test-crashing-server3-stateless':
@@ -235,8 +295,6 @@ elif testcase == 'test-crashing-server3-stateless':
     assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
     assert ref_size > os.path.getsize('STATS/output.txt') > 1000  # bytes
 
-
-
     print("Had checkpoint?", had_checkpoint)
     assert had_checkpoint
 
@@ -248,9 +306,62 @@ elif testcase == 'test-crashing-server3-stateless':
     subprocess.call(["bash", "-c", "sort reference-giraffe-hidden.txt > STATS/reference-crashing-server-sorted.txt"])
     compare('STATS/reference-crashing-server-sorted.txt')
 
-
     # TODO: check that not one file contains all the results already...
 
+elif testcase == 'test-crashing-server3-stateless-elastic':
+
+    config_fti_tmp = os.getcwd() + "/config.fti"
+    shutil.copyfile(config_fti_lib, config_fti_tmp)
+
+    total_steps = 200
+    ensemble_size = 4
+    procs_server = 2
+    procs_runner = 2
+    n_runners = 2
+    executable = "simulation1-hidden"
+
+    keywords = {'config_fti': config_fti_tmp}
+    pFail = Process(target=run, kwargs=keywords)
+    pFail.start()
+
+    time.sleep(3)
+    print('Crashing a server...')
+    pFail.terminate()
+
+    had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
+    subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
+    subprocess.call(["bash","set_val.sh","h5_single_file_dir",os.getcwd()+"/STATS/Global",config_fti_tmp])
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.0')
+
+    procs_server = 1
+
+    keywords = {'config_fti': config_fti_tmp}
+    pFinalize = Process(target=run, kwargs=keywords)
+    pFinalize.start()
+    pFinalize.join()
+
+    os.remove(config_fti_tmp)
+
+    # Check for FTI logs:
+    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log"]) == 0
+    assert subprocess.call(["grep", "VPR recovery successfull", "STATS/server.log"]) == 0
+
+    ref_size = os.path.getsize('reference-giraffe-hidden.txt')
+    # Check if file sizes are good
+    # Check that none of the files contains the full output
+    assert ref_size > os.path.getsize('STATS/output.txt.0') > 309  # bytes
+    assert ref_size > os.path.getsize('STATS/output.txt') > 1000  # bytes
+
+    print("Had checkpoint?", had_checkpoint)
+    assert had_checkpoint
+
+    # Check_output
+    # join files and remove duplicate lines before compare!
+    shutil.copyfile('STATS/output.txt', 'STATS/output.txt.1')
+    subprocess.call(["bash", "-c", "cat STATS/output.txt.0 STATS/output.txt.1 | sort | uniq > STATS/output.txt"])
+    # Generate reference
+    subprocess.call(["bash", "-c", "sort reference-giraffe-hidden.txt > STATS/reference-crashing-server-sorted.txt"])
+    compare('STATS/reference-crashing-server-sorted.txt')
 
 elif testcase == 'test-crashing-launcher':
     subprocess.call(["bash", "-c", "python3 tests.py long-run"])

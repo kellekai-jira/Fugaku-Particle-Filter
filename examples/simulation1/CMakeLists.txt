@@ -37,6 +37,8 @@ python_test("test-crashing-runner")
 
 python_test("test-crashing-server1")
 
+python_test("test-crashing-server1-elastic")
+
 python_test("test-index-map")
 
 python_test("test-hidden-index-map")
@@ -46,3 +48,5 @@ python_test("test-empty-index-map")
 python_test("test-empty-hidden-index-map")
 
 python_test("test-crashing-server3-stateless")
+
+python_test("test-crashing-server3-stateless-elastic")

@@ -25,3 +25,4 @@ add_test(NAME simulation2-pdaf
 
 python_test("test-example-simulation2")
 python_test("test-crashing-server2")
+python_test("test-crashing-server2-elastic")
