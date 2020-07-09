@@ -1391,6 +1391,13 @@ int main(int argc, char * argv[])
 #endif
 
 
+#ifdef REPORT_WORKLOAD
+    // for memory benchmarking:
+    int last_seconds_workload = 0;
+    int cycles = 0;
+#endif
+
+
     int items_to_poll = 1;
     if (comm_rank == 0)
     {
@@ -1537,13 +1544,27 @@ int main(int argc, char * argv[])
                 ENSEMBLE_SIZE);
         }
 
-#ifdef REPORT_MEMORY
+#if defined(REPORT_MEMORY) || defined(REPORT_WORKLOAD)
         int seconds = static_cast<int>(time (NULL));
+#endif
+
+#ifdef REPORT_MEMORY
 
         if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
         {
             MemoryReportValue();
             last_seconds_memory = seconds;
+        }
+#endif
+
+#ifdef REPORT_WORKLOAD
+        cycles ++;
+
+        if (comm_rank == 0 && (seconds - 1 > last_seconds_workload))
+        {
+            L("Cycles last second: %d", cycles);
+            last_seconds_workload = seconds;
+            cycles = 0;
         }
 #endif
 
