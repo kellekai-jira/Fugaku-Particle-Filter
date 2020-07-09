@@ -67,6 +67,8 @@ else
             #-DCMAKE_Fortran_COMPILER_WORKS=1
         # cmake on speed^ don't do slow compiler checking over and over again :P
 
+        make install -j 20 && cd ../profiling && ./trick-melissa-api.sh && exit 0
+
     fi
 #cmake .. -DZeroMQ_DIR=$HOME/workspace/zmq/melissa-da/build/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_COMPILER=$HOME/workspace/melissa-da/scalasca_cxx -DCMAKE_Fortran_COMPILER=$HOME/workspace/melissa-da/scalasca_f90
 fi

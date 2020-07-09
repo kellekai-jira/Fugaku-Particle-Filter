@@ -17,6 +17,7 @@ SCOREP_REGION_NAMES_BEGIN # This is a comment
   EXCLUDE pdaf_*
   INCLUDE pdaf_put_state_*
   INCLUDE pdaf_get_stat*
+  INCLUDE *zmq_poll*
   INCLUDE PDAFAssimilator::do_update_step
   INCLUDE Assimilator::do_update_step
   EXCLUDE Assimilator::getNSteps

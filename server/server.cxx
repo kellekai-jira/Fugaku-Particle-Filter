@@ -57,6 +57,15 @@
 
 #include "LauncherConnection.h"
 
+
+#if 1
+#include <scorep/SCOREP_User.h>
+#else
+#define SCOREP_USER_REGION_DEFINE(...)
+#define SCOREP_USER_REGION_BEGIN(...)
+#define SCOREP_USER_REGION_END(...)
+#endif
+
 extern int ENSEMBLE_SIZE;
 
 int ENSEMBLE_SIZE = 5;
@@ -1113,9 +1122,20 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         field->connected_runner_ranks.size();
 
     bool finished;
+    // would this rank finish?
+    bool would_finish = unscheduled_tasks.size() == 0 &&
+                        scheduled_sub_tasks.size() == 0 &&
+                        running_sub_tasks.size() == 0 &&
+                        finished_sub_tasks.size() == ENSEMBLE_SIZE *
+                        connections;
+    if (!would_finish)
+    {
+        return false;
+    }
 #ifdef RUNNERS_MAY_CRASH   // This needs refactoring I guess
     if (comm_rank == 0)  // this if only exists if RUNNERS_MAY_CRASH
     {
+        // I would finish. So now lets probe the others
         // try to know if somebody else finished
         for (int rank = 1; rank < comm_size; rank++)
         {
@@ -1135,15 +1155,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
                     finished_ranks++;
                 }
             }
-
         }
-        finished = finished_ranks == comm_size-1 &&           // comm size without rank 0
-                   unscheduled_tasks.size() == 0 &&
-                   scheduled_sub_tasks.size() == 0 &&
-                   running_sub_tasks.size() ==
-                   0 &&
-                   finished_sub_tasks.size() == ENSEMBLE_SIZE *
-                   connections;
+        // comm size without rank 0 ... the others would finish too...
+        finished = would_finish && finished_ranks == comm_size-1;
 
         if (finished)
         {
@@ -1165,49 +1179,34 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 
         // REM: we need to synchronize when we finish as otherwise processes are waiting in the mpi barrier to do the update step while still some ensemble members need to be repeated due to failing runner.
 
-        // would this rank finish?
-        bool would_finish = unscheduled_tasks.size() == 0 &&
-                            scheduled_sub_tasks.size() == 0 &&
-                            running_sub_tasks.size() ==
-                            0 &&
-                            finished_sub_tasks.size() == ENSEMBLE_SIZE *
-                            connections;
 
-        if (would_finish)
+        if (highest_sent_task_id < highest_received_task_id)
         {
-            if (highest_sent_task_id < highest_received_task_id)
-            {
-                // only send once when we finished a new task that was received later.  REM: using Bsend as faster as buffere, buffering not necessary here...
+            // only send once when we finished a new task that was received later.  REM: using Bsend as faster as buffere, buffering not necessary here...
 
-                MPI_Send(&highest_received_task_id, 1, MPI_INT,
-                         0, TAG_RANK_FINISHED, mpi.comm());
-                highest_sent_task_id = highest_received_task_id;                  // do not send again..
-            }
+            MPI_Send(&highest_received_task_id, 1, MPI_INT,
+                     0, TAG_RANK_FINISHED, mpi.comm());
+            highest_sent_task_id = highest_received_task_id;                  // do not send again..
+        }
 
-            // now wait for rank 0 to tell us that we can finish.
-            int received;
-            MPI_Iprobe(0, TAG_ALL_FINISHED, mpi.comm(),
-                       &received, MPI_STATUS_IGNORE);
-            if (received)
-            {
-                L("receiving tag all finished message");
-                MPI_Recv(nullptr, 0, MPI_BYTE, 0,
-                         TAG_ALL_FINISHED, mpi.comm(),
-                         MPI_STATUS_IGNORE);
-                finished = true;
-            }
+        // now wait for rank 0 to tell us that we can finish.
+        int received;
+        MPI_Iprobe(0, TAG_ALL_FINISHED, mpi.comm(),
+                   &received, MPI_STATUS_IGNORE);
+        if (received)
+        {
+            L("receiving tag all finished message");
+            MPI_Recv(nullptr, 0, MPI_BYTE, 0,
+                     TAG_ALL_FINISHED, mpi.comm(),
+                     MPI_STATUS_IGNORE);
+            finished = true;
         }
 
     }
 #else
     // RUNNERS MAY NOT CRASH:
-    // if everythin finished and nothing to reschedule: all fine!
-    finished = unscheduled_tasks.size() == 0 &&
-               scheduled_sub_tasks.size() == 0 &&
-               running_sub_tasks.size() ==
-               0 &&
-               finished_sub_tasks.size() == ENSEMBLE_SIZE *
-               connections;
+    // if everything finished and nothing to reschedule: all fine!
+    finished = would_finish;
 #endif
 
     if (finished)
@@ -1395,6 +1394,8 @@ int main(int argc, char * argv[])
     int cycles = 0;
 #endif
 
+    int last_seconds_checks = 0;
+
 
     int items_to_poll = 1;
     if (comm_rank == 0)
@@ -1402,6 +1403,8 @@ int main(int argc, char * argv[])
         // poll configuration socket
         items_to_poll += 2;
     }
+
+    SCOREP_USER_REGION_DEFINE( zmq_poll_region_handle )
 
     // Server main loop:
     while (true)
@@ -1414,6 +1417,9 @@ int main(int argc, char * argv[])
         // Wait for requests
         /* Poll for events indefinitely */
         // REM: the poll item needs to be recreated all the time!
+
+
+        SCOREP_USER_REGION_BEGIN( zmq_poll_region_handle, "zmq_poll",SCOREP_USER_REGION_TYPE_COMMON )
         zmq_pollitem_t items [items_to_poll];
         items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
         if (comm_rank == 0)
@@ -1426,6 +1432,7 @@ int main(int argc, char * argv[])
         // poll the fastest possible to be not in concurrence with the mpi probe calls... (theoretically we could set this time to -1 if using only one core for the server.)
         ZMQ_CHECK(zmq_poll (items, items_to_poll, 0));
         /* Returned events will be stored in items[].revents */
+        SCOREP_USER_REGION_END( zmq_poll_region_handle )
 
         // answer requests
         if (comm_rank == 0 )
@@ -1481,6 +1488,8 @@ int main(int argc, char * argv[])
             }
         }
 
+        int seconds = static_cast<int>(time (NULL));
+
         if (phase == PHASE_SIMULATION)
         {
             // X     if simulation requests work see if work in list. if so launch it. if not save connection
@@ -1496,15 +1505,37 @@ int main(int argc, char * argv[])
             // X     check for due dates. if detected: black list runner and state id. and do the same as if I had a kill message from rank 0: reschedule the state
             // X     if finished and all finished messages were received, (finished ranks == comm ranks) send to all runners that we finished  and start update
 
-#ifdef RUNNERS_MAY_CRASH
-            // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
-            check_due_dates();
 
+#ifdef REPORT_WORKLOAD
             if (comm_rank == 0)
             {
-                check_kill_requests();
+                cycles ++;
             }
 #endif
+
+            if (last_seconds_checks < seconds)
+            {
+                last_seconds_checks = seconds;
+
+#ifdef RUNNERS_MAY_CRASH
+                // Checking only every second as this is the resolution of timeouts...
+                // check if we have to kill some jobs as they did not respond. This can Send a kill request to rank 0
+                check_due_dates();
+
+                if (comm_rank == 0)
+                {
+                    check_kill_requests();
+                }
+#endif
+
+#ifdef REPORT_WORKLOAD
+                if (comm_rank == 0)
+                {
+                    L("Cycles last second: %d", cycles);
+                    cycles = 0;
+                }
+#endif
+            }
 
             if (comm_rank != 0)
             {
@@ -1542,9 +1573,6 @@ int main(int argc, char * argv[])
                 ENSEMBLE_SIZE);
         }
 
-#if defined(REPORT_MEMORY) || defined(REPORT_WORKLOAD)
-        int seconds = static_cast<int>(time (NULL));
-#endif
 
 #ifdef REPORT_MEMORY
 
@@ -1552,17 +1580,6 @@ int main(int argc, char * argv[])
         {
             MemoryReportValue();
             last_seconds_memory = seconds;
-        }
-#endif
-
-#ifdef REPORT_WORKLOAD
-        cycles ++;
-
-        if (comm_rank == 0 && (seconds - 1 > last_seconds_workload))
-        {
-            L("Cycles last second: %d", cycles);
-            last_seconds_workload = seconds;
-            cycles = 0;
         }
 #endif
 

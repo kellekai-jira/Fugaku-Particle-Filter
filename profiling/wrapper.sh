@@ -5,6 +5,8 @@ then
     echo ${1} ${@:2}
     ${1} ${@:2}
 else
-    scorep --compiler ${1}  "${@:2}"
+    #scorep --compiler ${1}  "${@:2}"
+    scorep --user --compiler ${1}  "${@:2}"
+    #scorep --libwrap=zmq --user --compiler ${1}  "${@:2}"
     #scorep --compiler --instrument-filter="$HOME/workspace/melissa-da/profiling/filter_scorep"  ${1}  "${@:2}"
 fi
