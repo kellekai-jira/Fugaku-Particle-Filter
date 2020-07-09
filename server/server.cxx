@@ -1109,6 +1109,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 // returns true if the whole assimilation (all time steps) finished
 bool check_finished(std::shared_ptr<Assimilator> assimilator)
 {
+    D("ARRIVE HERE");
     // check if all data was received. If yes: start Update step to calculate next analysis state
 
     size_t connections =
@@ -1216,9 +1217,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
     {
 #ifdef WITH_FTI
         // FIXME: shortcut to here if recovering (do not do first background state calculation!)
-        D("Hidden before recover: %f", field->ensemble_members.at(0).state_hidden.at(1));
         FT.recover();
-        D("Hidden after recover: %f", field->ensemble_members.at(0).state_hidden.at(1));
 #endif
         // get new analysis states from update step
         L("====> Update step %d", current_step);
