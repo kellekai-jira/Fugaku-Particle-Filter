@@ -214,9 +214,12 @@ elif testcase == 'test-crashing-server1-elastic':
 
     time.sleep(2)
     print('Crashing a server...')
+    subprocess.call(["killall", "melissa_server"])
+    time.sleep(0.5)
+    print('Crashing the whole study to restart with a different server size')
     pFail.terminate()
 
-    time.sleep(3)
+    time.sleep(0.5)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
@@ -326,7 +329,12 @@ elif testcase == 'test-crashing-server3-stateless-elastic':
 
     time.sleep(2)
     print('Crashing a server...')
+    subprocess.call(["killall", "melissa_server"])
+    time.sleep(0.5)
+    print('Crashing the whole study to restart with a different server size')
     pFail.terminate()
+
+    time.sleep(0.5)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])

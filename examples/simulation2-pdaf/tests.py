@@ -87,9 +87,12 @@ elif sys.argv[1] == 'test-crashing-server2-elastic':
 
     time.sleep(3)
     print('Crashing a server...')
+    subprocess.call(["killall", "melissa_server"])
+    time.sleep(0.5)
+    print('Crashing the whole study to restart with a different server size')
     pFail.terminate()
 
-    time.sleep(3)
+    time.sleep(0.5)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     was_unfinished = not os.path.isfile("state_step16_for.txt")
