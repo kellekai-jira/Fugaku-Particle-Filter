@@ -216,6 +216,8 @@ elif testcase == 'test-crashing-server1-elastic':
     print('Crashing a server...')
     pFail.terminate()
 
+    time.sleep(3)
+
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
     subprocess.call(["bash","set_val.sh","h5_single_file_dir",os.getcwd()+"/STATS/Global",config_fti_tmp])

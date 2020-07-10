@@ -40,7 +40,7 @@ elif sys.argv[1] == 'test-crashing-server2':
     class KillerGiraffe(Thread):
         def run(self):
             global had_checkpoint, was_unfinished
-            time.sleep(6)
+            time.sleep(3)
             print('Crashing a server...')
             #killing_giraffe('melissa_server')
             subprocess.call(["killall", "melissa_server"])
@@ -85,9 +85,11 @@ elif sys.argv[1] == 'test-crashing-server2-elastic':
     pFail = Process(target=run, kwargs=keywords)
     pFail.start()
 
-    time.sleep(6)
+    time.sleep(3)
     print('Crashing a server...')
     pFail.terminate()
+
+    time.sleep(3)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     was_unfinished = not os.path.isfile("state_step16_for.txt")
