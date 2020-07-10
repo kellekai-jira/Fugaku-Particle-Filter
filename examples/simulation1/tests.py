@@ -212,7 +212,7 @@ elif testcase == 'test-crashing-server1-elastic':
     pFail = Process(target=run, kwargs=keywords)
     pFail.start()
 
-    time.sleep(3)
+    time.sleep(2)
     print('Crashing a server...')
     pFail.terminate()
 
@@ -323,7 +323,7 @@ elif testcase == 'test-crashing-server3-stateless-elastic':
     pFail = Process(target=run, kwargs=keywords)
     pFail.start()
 
-    time.sleep(3)
+    time.sleep(2)
     print('Crashing a server...')
     pFail.terminate()
 
