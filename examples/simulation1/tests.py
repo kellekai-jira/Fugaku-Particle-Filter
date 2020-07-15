@@ -212,9 +212,14 @@ elif testcase == 'test-crashing-server1-elastic':
     pFail = Process(target=run, kwargs=keywords)
     pFail.start()
 
-    time.sleep(3)
+    time.sleep(2)
     print('Crashing a server...')
+    subprocess.call(["killall", "melissa_server"])
+    time.sleep(0.5)
+    print('Crashing the whole study to restart with a different server size')
     pFail.terminate()
+
+    time.sleep(0.5)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
@@ -263,7 +268,6 @@ elif testcase == 'test-crashing-server3-stateless':
             had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "server.log"]) == 0)
             subprocess.call(["bash","../set_val.sh","failure","3","config.fti"])
             subprocess.call(["bash","../set_val.sh","h5_single_file_dir",os.getcwd()+"/Global","config.fti"])
-            subprocess.call(["ls","Global"])
             shutil.copyfile('output.txt', 'output.txt.0')
 
             # from shutil import copyfile
@@ -323,9 +327,14 @@ elif testcase == 'test-crashing-server3-stateless-elastic':
     pFail = Process(target=run, kwargs=keywords)
     pFail.start()
 
-    time.sleep(3)
+    time.sleep(2)
     print('Crashing a server...')
+    subprocess.call(["killall", "melissa_server"])
+    time.sleep(0.5)
+    print('Crashing the whole study to restart with a different server size')
     pFail.terminate()
+
+    time.sleep(0.5)
 
     had_checkpoint = (subprocess.call(["grep", "Variate Processor Recovery File", "STATS/server.log"]) == 0)
     subprocess.call(["bash","set_val.sh","failure","3",config_fti_tmp])
