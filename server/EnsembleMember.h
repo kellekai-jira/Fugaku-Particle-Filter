@@ -17,7 +17,6 @@ class EnsembleMember
 public:
     std::vector<double> state_analysis;
     std::vector<double> state_background;
-
     std::vector<double> state_hidden;
 
     void set_local_vect_size(const int local_vect_size, const int

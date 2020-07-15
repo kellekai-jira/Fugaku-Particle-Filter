@@ -1475,7 +1475,8 @@ int main(int argc, char * argv[])
                 init_new_timestep();  // init_new_timestep needs the latest timestep id from the assimilator!
 
 #ifdef WITH_FTI
-                FT.protect_states( mpi, field );
+                FT.protect_state( mpi, field, FT_BACKGROUND );
+                FT.protect_state( mpi, field, FT_HIDDEN );
 #endif
                 D("Change Phase");
                 phase = PHASE_SIMULATION;
