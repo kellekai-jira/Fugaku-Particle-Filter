@@ -40,7 +40,7 @@ def run():
     print("Starting with %d runners and %d server nodes" % (RUNNERNODES, SERVERNODES))
     run_melissa_da_study(
             runner_cmd='simulation2-pdaf',  # will be executed in stats/runnner00x/. As pf writes output in the directory where the input file lies we need to copy it to our current directory
-            total_steps=6,
+            total_steps=35,
             ensemble_size=1024,
             assimilator_type=ASSIMILATOR_PDAF,
             cluster=SlurmJuwelsCluster('prcoe03'),
@@ -51,7 +51,7 @@ def run():
             show_server_log = False,
             show_simulation_log = False,
             runner_timeout = 800,
-            create_runner_dir = True,
+            create_runner_dir = False,
             precommand_server=precommand,
             prepare_runner_dir=prepare_runner_dir,
             walltime='00:30:00',
