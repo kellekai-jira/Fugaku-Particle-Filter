@@ -58,7 +58,10 @@
 #include "LauncherConnection.h"
 
 
-#if 1
+// Activate this include manually before build if you need score-p  user regions for
+// polling. At the same time you will need to use the scorep wrappers for compilation.
+// see compile.sh and profiling/ for more information
+#if 0
 #include <scorep/SCOREP_User.h>
 #else
 #define SCOREP_USER_REGION_DEFINE(...)
