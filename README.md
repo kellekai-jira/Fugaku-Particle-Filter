@@ -1,5 +1,5 @@
 # Melissa-DA
-Melissa for data assimilation - this is quite different from the vanilla Melissa 
+Melissa for data assimilation - this is quite different from the vanilla Melissa
 as the server requests the propagation of every single timestep.
 
 
@@ -12,7 +12,7 @@ Feel free to create refactoring merge requests ;)
 
 
 ## Install
-- install dependencies (see `Dockerfile` for a more up to date list). 
+- install dependencies (see `Dockerfile` for a more up to date list).
   On ubuntu this can be done like this:
 ```
  apt install gfortran \
@@ -26,7 +26,7 @@ Feel free to create refactoring merge requests ;)
 ```
 
 - download PDAF-D V1.15
-  (you need to give your mail on their 
+  (you need to give your mail on their
   [website](http://pdaf.awi.de/download/index.php?id=ab341070863ac82737b9e4613c72f997)
   to get a download link)
 
@@ -36,15 +36,14 @@ cd PDAF-D_V1.15
 export PDAF_PATH=$PWD
 ```
 
-- Clone the repo and install it
+- clone Melissa-DA (To get access ask
+  `sebastian [dot] friedemann [at] indria [dot] fr` for permissions):
 ```
 cd <where you want to clone melissa-da>
 git clone git@gitlab.inria.fr:melissa/melissa-da.git
 ```
 
-- after cloninng this repo do not forget to do (If you get some access violation 
-  because you cannot download melissa, ask 
-  `sebastian [dot] friedemann [at] indria [dot] fr` for permissions)
+- after cloning do not forget to init the submodules:
 ```
 git submodule update --recursive --init
 ```
@@ -53,10 +52,10 @@ git submodule update --recursive --init
 ```
 mkdir build
 cd build
-    cmake .. -DPDAF_PATH=$PDAF_PATH -DCMAKE_INSTALL_PREFIX=install
+cmake .. -DPDAF_PATH=$PDAF_PATH -DCMAKE_INSTALL_PREFIX=install
 make install
 ```
-- this will install it into build/install which is rather convenient for dev3elopment and testing
+- this will install it into build/install which is rather convenient for development and testing
 
 - if you get some dependency problems as some paths are not found. Go to `build/` and fix them using `ccmake ..`
 
@@ -75,21 +74,27 @@ ctest
 
 
 ## Install with FTI
-To enable server checkpointing which is needed by some testcases install hdf5
+To enable server checkpointing which is needed by some test cases install hdf5
 (`apt install libhdf5-openmpi-dev`)
 (checkpoints are stored in hdf5 file format) and use the following cmake line:
 ```
-    cmake .. -DPDAF_PATH=$PDAF_PATH -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
-     -DWITH_FTI_THREADS=ON
+cmake .. -DPDAF_PATH=$PDAF_PATH -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
+         -DWITH_FTI_THREADS=ON
 ```
 `HDF5_ROOT` needs to be specified as cmake does not find the parallel hdf5 version if
 working with ubuntu bionic
+
+## Credits
+- for Launcher-Server-Client communictaion we depend on [libzmq](wiki.zeromq.org/)
+- data assimilation can be powerd using [PDAF](http://pdaf.awi.de/trac/wiki)
+- Server checkpointing depends on [FTI](https://github.com/leobago/fti)
+- large scale experiments use the [repex scripts](https://gitlab.inria.fr/sfriedem/repex)
 
 
 ## TODO
 - Handle Timing for parflow...
 - better interface to zerocopy add structured data.
-- void pointer to add hidden state variables, statevariables important to restart a timestep but which are not assimilated.
+- void pointer to add hidden state variables, state variables important to restart a timestep but which are not assimilated.
 - refactor global variables in server.cxx. Do we really need ENSEMBLE_SIZE for example?
 - in code todos
 
@@ -111,6 +116,6 @@ The biggest part is written in C++ as:
 
 ...
 
-## But
-  - launcher interface and the api base as well as many devops things are common between
+### But
+  - launcher interface and the api base as well as many dev-ops things are common between
   the different melissa version
