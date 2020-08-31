@@ -70,6 +70,6 @@ HOME = os.getenv("HOME")
 en = 'profiling-server-update-step'
 repex.run(
         EXPERIMENT_NAME=en,
-        INPUT_FILES=[],
+        INPUT_FILES=[HOME+'workspace/melissa-da/build/CMakeCache.txt', HOME+'workspace/melissa-da/melissa/build/CMakeCache.txt'],
         GIT_REPOS=[HOME+'/workspace/melissa-da'],
         experiment_function=run)
