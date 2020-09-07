@@ -98,7 +98,7 @@ testcase = sys.argv[1]
 if testcase == 'test-crashing-runner':
     class KillerGiraffe(Thread):
         def run(self):
-            time.sleep(2)
+            time.sleep(6)  # TODO: instead of waiting 10 s check if enough simulation 1 processes are up e.g.
             print('Crashing first runner...')
             killing_giraffe('simulation1')
             time.sleep(4)
@@ -145,7 +145,7 @@ elif testcase == 'test-crashing-server1':
     class KillerGiraffe(Thread):
         def run(self):
             global had_checkpoint
-            time.sleep(2)
+            time.sleep(6)
             print('Crashing a server...')
             #killing_giraffe('melissa_server')
             subprocess.call(["killall", "melissa_server"])
