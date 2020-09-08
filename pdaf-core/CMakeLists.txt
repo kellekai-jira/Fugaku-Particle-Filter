@@ -1,27 +1,46 @@
-#project(pdaf LANGUAGES Fortran)
-#cmake_minimum_required(VERSION 3.2.2)
+project(pdaf LANGUAGES Fortran)
+cmake_minimum_required(VERSION 3.2.2)
 find_package(MPI REQUIRED)
 
 
+# try to determine PDAF version
+file(
+    STRINGS ${PDAF_PATH}/src/PDAF-D_print_version.F90 raw_pdaf_version
+    REGEX "Version [0-9]+[.][0-9]+[.][0-9]+"
+)
 
-include_directories(SYSTEM ${MPI_Fortran_INCLUDE_PATH})
-
-add_definitions(${MPI_Fortran_COMPILE_FLAGS})
-
-link_libraries(${MPI_Fortran_LIBRARIES})
-
-
-
-file(GLOB
-  ALL_PDAF
-    ${PDAF_PATH}/src/*.F90
-     )
-
-add_library(pdaf STATIC ${ALL_PDAF})
-target_compile_options(pdaf BEFORE PUBLIC -fPIC)
+if(NOT raw_pdaf_version)
+    message(WARNING "Cannot determine PDAF version")
+else()
+    string(REGEX MATCH "[0-9]+[.][0-9]+[.][0-9]+" PDAF_VERSION ${raw_pdaf_version})
+endif()
 
 
-#target_link_libraries(pdaf gfortran lapack blas m)
-target_link_libraries(pdaf gfortran ${Fortran_MATH_LIBRARIES} m)
+# Build libpdaf
+file(GLOB PDAF_SOURCES ${PDAF_PATH}/src/*.F90)
+add_library(pdaf SHARED ${PDAF_SOURCES})
 
-install(TARGETS pdaf ARCHIVE DESTINATION lib)
+if(PDAF_VERSION)
+    set_target_properties(pdaf PROPERTIES SOVERSION ${PDAF_VERSION})
+endif()
+
+
+# PDAF contains a lot of functions and Melissa does not need all of them.
+# We let the linker determine which ones are needed. To do this, one must
+# * move every function into its own ELF (see below) section,
+# * give all functions hidden visibility by default,
+# * given default visibility to all functions called by Melissa, and
+# * instruct the linker to perform garbage collection.
+#
+# The visibility is handled by the version script.
+# The linker flags are specific to GNU ld. For comparison, on OS X it suffices
+# to pass the flag `-dead_strip` to the linker.
+#
+# ELF (Executable and Linkable Format) is a standard file format for executable
+# files, shared libraries, and object files on Linux systems.
+target_compile_options(pdaf PRIVATE -ffunction-sections)
+target_link_libraries(pdaf PRIVATE -Wl,--gc-sections)
+target_link_libraries(pdaf PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libpdaf.ld)
+
+
+install(TARGETS pdaf LIBRARY DESTINATION lib)
