@@ -48,6 +48,16 @@ git clone git@gitlab.inria.fr:melissa/melissa-da.git
 git submodule update --recursive --init
 ```
 
+- install melissa:
+```
+cd melissa
+mkdir build
+cd build
+cmake ..
+make install
+cd ../..
+```
+
 - compile and install it (see `compile.sh` and `.gitlab-ci.yml` for more information)
 ```
 mkdir build
