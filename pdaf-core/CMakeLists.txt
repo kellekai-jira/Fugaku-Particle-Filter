@@ -1,9 +1,27 @@
+# Copyright 2019, 2020 Inria (https://www.inria.fr/)
+
 project(pdaf LANGUAGES Fortran)
 cmake_minimum_required(VERSION 3.2.2)
+
+
+SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15
+    CACHE PATH "Path to PDAF source code"
+)
+
 
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(MPI REQUIRED)
+
+
+# check if we were really given the path to the PDAF source code
+if(NOT IS_DIRECTORY ${PDAF_PATH})
+    message(FATAL_ERROR "PDAF root ${PDAF_PATH} is not a directory")
+endif()
+
+if(NOT EXISTS ${PDAF_PATH}/src/PDAF-D_print_version.F90)
+    message(FATAL_ERROR "Cannot locate `PDAF-D_print_version.F90` in PDAF root directory")
+endif()
 
 
 # try to determine PDAF version
