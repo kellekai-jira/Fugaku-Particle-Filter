@@ -1,5 +1,8 @@
 project(pdaf LANGUAGES Fortran)
 cmake_minimum_required(VERSION 3.2.2)
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
 find_package(MPI REQUIRED)
 
 
@@ -23,6 +26,19 @@ add_library(pdaf SHARED ${PDAF_SOURCES})
 if(PDAF_VERSION)
     set_target_properties(pdaf PROPERTIES SOVERSION ${PDAF_VERSION})
 endif()
+
+target_include_directories(
+    pdaf PRIVATE
+    ${BLAS_INCLUDE_DIRS}
+    ${MPI_Fortran_INCLUDE_PATH}
+)
+
+target_link_libraries(
+    pdaf PRIVATE
+    ${BLAS_LINKER_FLAGS} ${BLAS_LIBRARIES}
+    ${LAPACK_LINKER_FLAGS} ${LAPACK_LIBRARIES}
+    ${MPI_Fortran_LINK_FLAGS} ${MPI_Fortran_LIBRARIES}
+)
 
 
 # PDAF contains a lot of functions and Melissa does not need all of them.
