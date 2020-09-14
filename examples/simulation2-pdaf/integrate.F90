@@ -19,9 +19,9 @@ SUBROUTINE integrate()
 !
 ! !USES:
   USE mod_model, &
-       ONLY: nx, ny, nx_p, field_p, melissa_field_name
+       ONLY: ny, nx_p, field_p, melissa_field_name
   USE mod_parallel_model, &
-       ONLY: mype_world, MPI_DOUBLE_PRECISION, MPIErr, COMM_model
+       ONLY: mype_world, COMM_model
 
   USE iso_c_binding
 
@@ -39,7 +39,6 @@ SUBROUTINE integrate()
   INTEGER :: step, i, j, counter        ! Counters
   CHARACTER(len=2) :: stepstr  ! String for time step
   REAL :: store                ! Store single field element
-  REAL, ALLOCATABLE :: field(:,:) ! GLobal model field
 
   REAL(kind=C_DOUBLE) :: field_double(nx_p * ny)
 

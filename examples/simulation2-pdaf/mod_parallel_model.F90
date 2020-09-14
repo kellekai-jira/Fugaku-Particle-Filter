@@ -6,7 +6,7 @@ MODULE mod_parallel_model
 
 ! !DESCRIPTION:
 ! This modules provides variables for the MPI parallelization
-! of the tutorial model to be shared between model-related routines. 
+! of the tutorial model to be shared between model-related routines.
 !
 ! In addition, methods to initialize and finalize MPI are provided.
 !
@@ -16,7 +16,7 @@ MODULE mod_parallel_model
 !
 ! !USES:
   IMPLICIT NONE
-  SAVE 
+  SAVE
 
   INCLUDE 'mpif.h'
 
@@ -29,7 +29,7 @@ MODULE mod_parallel_model
   INTEGER :: npes_world  ! PE rank in MPI_COMM_WORLD
   INTEGER :: MPIerr      ! Error flag for MPI
 !EOP
-  
+
 CONTAINS
 !-------------------------------------------------------------------------------
 !BOP
@@ -44,14 +44,14 @@ CONTAINS
 ! (npes\_world) and the rank of a PE (mype\_world).
 ! The model is executed within the scope of the
 ! communicator Comm_model. It is also initialized
-! here together with its size (npes\_model) and 
+! here together with its size (npes\_model) and
 ! the rank of a PE (mype\_model) within Comm_model.
 !EOP
 
     IMPLICIT NONE
 
     INTEGER :: i
-  
+
     CALL MPI_INIT(i);
     CALL MPI_Comm_Size(MPI_COMM_WORLD,npes_world,i)
     CALL MPI_Comm_Rank(MPI_COMM_WORLD,mype_world,i)
@@ -61,7 +61,7 @@ CONTAINS
     Comm_model = MPI_COMM_WORLD
     npes_model = npes_world
     mype_model = mype_world
-   
+
   END SUBROUTINE init_parallel
 !-------------------------------------------------------------------------------
 !BOP
@@ -76,7 +76,7 @@ CONTAINS
 !EOP
 
     IMPLICIT NONE
-    
+
     CALL  MPI_Barrier(MPI_COMM_WORLD,MPIerr)
     CALL  MPI_Finalize(MPIerr)
 
@@ -94,7 +94,7 @@ CONTAINS
 !EOP
 
     IMPLICIT NONE
-    
+
     CALL  MPI_Abort(MPI_COMM_WORLD, 1, MPIerr)
 
   END SUBROUTINE abort_parallel

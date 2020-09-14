@@ -80,7 +80,7 @@ void LauncherConnection::receiveText()
     zmq_msg_t msg;
     zmq_msg_init (&msg);
     zmq_msg_recv (&msg, text_puller, 0);
-    D("Launcher message recieved %s", zmq_msg_data (&msg));
+    D("Launcher message recieved %s", static_cast<char *>(zmq_msg_data (&msg)));
     updateLauncherDueDate();
     // ATM We do not care what the launcher sends us. We only check if it is still alive
     //process_launcher_message(zmq_msg_data (&msg), server_ptr);

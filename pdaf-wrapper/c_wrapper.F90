@@ -69,11 +69,7 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   USE iso_c_binding
 
   USE mod_model, &
-    ONLY: total_steps, nx, ny, nx_p
-
-  USE mod_parallel_model, &
-    ONLY: abort_parallel, npes_model
-
+    ONLY: total_steps
 
 
   IMPLICIT NONE
@@ -138,7 +134,7 @@ SUBROUTINE my_distribute_state(dim_p, state_p)
   INTEGER, INTENT(in) :: dim_p           ! local state dimension
   REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
-  integer :: i
+  !integer :: i
 
 
   !write(*,*) '--------- 5 cells distributing state: -----------'
@@ -164,7 +160,7 @@ SUBROUTINE my_collect_state(dim_p, state_p)
   REAL, INTENT(inout) :: state_p(dim_p)  ! local State vector
 
 
-  integer :: i
+  !integer :: i
 
 
   state_p(:) = collect_state_from(:)
@@ -243,8 +239,6 @@ SUBROUTINE cwrapper_PDAF_put_state(dim_state_background, state_background, statu
   USE my_state_accessors, &
        ONLY: collect_state_from
 
-  USE mod_parallel_model, &     ! Parallelization variables
-       ONLY: mype_world, abort_parallel
   USE mod_assimilation, &      ! Variables for assimilation
        ONLY: filtertype
 
