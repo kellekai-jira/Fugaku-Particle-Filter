@@ -2,12 +2,18 @@ project(Melissa LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.2.2)
 enable_testing()
 
-find_package(MPI REQUIRED)
-include(melissa/melissa-zmq.cmake)
+# For intel compilers necessary:
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
+#set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# MPI #
+find_package(MPI REQUIRED)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+add_definitions(${MPI_C_COMPILE_FLAGS})
+link_libraries(${MPI_LIBRARIES})
 
 # FTI #
-
 option(WITH_FTI "FTI is needed for automatic recovery from melissa_server crashes" OFF)
 if (WITH_FTI)
     option(WITH_FTI_THREADS "Threads will perform server checkpoints in the background. Activation increases the performance when using FTI." OFF)
@@ -23,7 +29,7 @@ if (WITH_FTI)
             CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1
             -DHDF5_ROOT=${HDF5_ROOT}
             -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
-        MESSAGE(STATUS "FTI will be installed")
+        message(STATUS "FTI will be installed")
         set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
         set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")
         set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
@@ -45,27 +51,24 @@ if (WITH_FTI)
     # relying on the setenv script which exports this variable
     set(WITH_FTI TRUE)
 else()
-    SET(INSTALL_FTI OFF)
-    SET(WITH_FTI_THREADS OFF)
+    set(INSTALL_FTI OFF)
+    set(WITH_FTI_THREADS OFF)
 endif()
 
-
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-add_definitions(${MPI_C_COMPILE_FLAGS})
-
-include_directories(BEFORE ${CMAKE_SOURCE_DIR}/common)
-include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
-
+# ZeroMQ #
+# TODO: uncomment the following 2 lines and remove the include(melissa/melissa-zmq.cmake
+#       to depend on the latest melissa version and its ZMQ version...
+#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
+#include(BuildZeroMQ)
+include(melissa/melissa-zmq.cmake)
+find_package(ZeroMQ REQUIRED)
 include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
-link_libraries(${MPI_LIBRARIES})
-
-# For intel compilers necessary:
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
 
 
-#set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Melissa submodule #
+find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
+
 
 
 # for compatibility with pdaf makefile....
@@ -73,33 +76,31 @@ SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
 
 find_package(LAPACK REQUIRED)
 find_package(BLAS REQUIRED)
-SET(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
+set(Fortran_MATH_LIBRARIES "${BLAS_LIBRARIES};${LAPACK_LIBRARIES}")
 
 # need all these options (especially default integer for mkl)
-#SET(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
+#set(CMAKE_Fortran_FLAGS "-fdefault-integer-8 -fdefault-real-8 -m64")
 IF(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
-    SET(CMAKE_Fortran_FLAGS "-m64 -real-size 64")
-    SET(COMPILER_DEPENDENT_FORTRAN_FLAGS "")
+    set(CMAKE_Fortran_FLAGS "-m64 -real-size 64")
+    set(COMPILER_DEPENDENT_FORTRAN_FLAGS "")
     # for nice traces:
-    SET(CMAKE_C_FLAGS_DEBUG "-g -rdynamic -traceback")
-    SET(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback -std=c++14")
-    SET(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback")
+    set(CMAKE_C_FLAGS_DEBUG "-g -rdynamic -traceback")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback -std=c++14")
+    set(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback")
 ELSE()
-    SET(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
-    SET(COMPILER_DEPENDENT_FORTRAN_FLAGS "-fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter")
+    set(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
+    set(COMPILER_DEPENDENT_FORTRAN_FLAGS "-fwhole-file  -fcheck=all  -pedantic  -fbacktrace -Wextra -Wall  -Wline-truncation  -Wcharacter-truncation  -Wsurprising  -Waliasing  -Wimplicit-interface  -Wunused-parameter")
 endif()
 
-SET(CMAKE_Fortran_FLAGS_DEBUG "-rdynamic ${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none ${COMPILER_DEPENDENT_FORTRAN_FLAGS} ")
+set(CMAKE_Fortran_FLAGS_DEBUG "-rdynamic ${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none ${COMPILER_DEPENDENT_FORTRAN_FLAGS} ")
 
-SET(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
+set(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
 
-#SET(Fortran_MATH_LIBRARIES "-lmkl_gf_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
+#set(Fortran_MATH_LIBRARIES "-lmkl_gf_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
 
-#SET(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
+#set(Fortran_MATH_LIBRARIES ${BLAS_LIBARAIES})
 
 
-# Testing convenience:                                                      $0 in the -c environment, not a part of $@
-SET(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
 
 # Fault tolerance
 option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a bit of MPI communication" ON)
@@ -110,15 +111,23 @@ option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) e
 option(REPORT_WORKLOAD "Will print every second to stdout how many cycles server (rank 0) did in the last second" ON)
 option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_server.RANK.csv filel" OFF)
 
+# Testing convenience:                                                      $0 in the -c environment, not a part of $@
+set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
+
+
+
+# Start doing stuff actually...
 configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)
+
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/common)
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
 include_directories ("${PROJECT_BINARY_DIR}/include")
 
-
 # pdaf-core is not in the f2008 standard
-#SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f95")
+#set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f95")
 add_subdirectory(pdaf-core)
+#set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f2008")
 
-#SET(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f2008")
 add_subdirectory(common)
 add_subdirectory(pdaf-wrapper)
 add_subdirectory(server)
@@ -129,7 +138,6 @@ add_subdirectory(launcher)
 
 add_subdirectory(examples)
 
-find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
@@ -143,7 +151,7 @@ install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INST
 
 include(CMakePackageConfigHelpers)
 
-# TODO: rename the package to melissa-da!
+# TODO: rename the package to melissa-da see issue melissa-da#5 !
 set(MELISSA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaConfig.cmake")
 configure_package_config_file(${PROJECT_NAME}Config.cmake.in
                               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
@@ -151,6 +159,7 @@ configure_package_config_file(${PROJECT_NAME}Config.cmake.in
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
                                  VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
                                  COMPATIBILITY AnyNewerVersion)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
               DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
