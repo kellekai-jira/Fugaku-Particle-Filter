@@ -1,1 +1,0 @@
-../simulation3-empty/run.sh
