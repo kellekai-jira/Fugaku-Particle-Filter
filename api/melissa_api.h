@@ -14,17 +14,21 @@
 extern "C" {
 #endif
 
-/// to init the hidden state if existent. Don't call if you do not need a hidden state
-// hidden state size is in doubles!!
+/// Every rank that contains some model state information and thus shall communicate with
+/// the Melissa-DA server as must call this function once during init.
+/// local_vect_size and local_hidden_vect_Size are in doubles.
+/// local_hidden_vect_size may be 0.
+// TODO: check if local_vect_size may be 0 too (it might be thinkable that some ranks have
+//       no assimilated but only hidden state)
 void melissa_init(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
                   MPI_Comm comm_
-                  );       // TODO do some crazy shit (dummy mpi implementation?) if we compile without mpi.
+                  );
 
 
-// index map: a list of all the indicies in the order as transimitted as values in melissa_expose
-// this is needed by some assimilators that use the function domainIdx() and domainIdx_hidden()
+/// index map: a list of all the indicies in the order as transimitted as values in melissa_expos/
+/// this is needed by some assimilators that use the function domainIdx() and domainIdx_hidden()
 void melissa_init_with_index_map(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
@@ -44,22 +48,27 @@ void melissa_init_f(const char *field_name,
                     MPI_Fint   *comm_fortran);
 
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
-// IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!
-/// returns false if simulation should end now.
+/// IMPORTANT: NEVER call melissa_expose twice without an mpi barrier in between!
+/// Exposes data to melissa
+/// returns 0 if simulation should end now.
+/// otherwise returns nsteps, the number of timesteps that need to be simulated.
 int melissa_expose(const char *field_name, double *values,
                    double *hidden_values);
 
-/// wrapper needed for the FORTRAN interface when using no hidden state as nullptr
-/// transfer between FORTRAN and C is not trivial
+/// wrapper needed for the Fortran interface when using no hidden state as nullptr
+/// transfer between Fortran and C is not trivial
 int melissa_expose_f(const char *field_name, double *values)
 {
     return melissa_expose(field_name, values, NULL);
 }
 
-/// For debug reasons it sometimes is practical to have the melissa current state id outside of melissa.
+/// For debug reasons it sometimes is useful to have the melissa current state id
+/// outside of melissa.
 /// returns -1 if no state is currently calculated.
 int melissa_get_current_state_id();
 
+/// Get the current step that is shall be propagated. Step counting is as performed by
+/// the Melissa-DA server.
 int melissa_get_current_step();
 
 

@@ -538,7 +538,7 @@ struct ConfigurationConnection
 };
 ConfigurationConnection *ccon = NULL;
 
-/// returns true if needs field to be registered this can only happen on comm_rank 0
+/// returns true if needs field to be registered on the server. This can only happen on comm_rank 0
 bool first_melissa_init(MPI_Comm comm_)
 {
     check_data_types();
@@ -644,7 +644,6 @@ void melissa_init_with_index_map(const char *field_name,
     bool register_field = first_melissa_init(comm_);
 
     // create field
-    // newField.current_state_id = getSimuId(); // We are beginning like this...
     field.name = field_name;
     field.current_state_id = -1;     // We are beginning like this...
     field.current_step = 0;
@@ -708,8 +707,6 @@ void melissa_init_no_mpi(const char *field_name,
 }
 
 
-/// returns 0 if simulation should end now.
-/// otherwise returns nsteps, the number of timesteps that need to be simulated.
 int melissa_expose(const char *field_name, double *values,
                    double *hidden_values)
 {

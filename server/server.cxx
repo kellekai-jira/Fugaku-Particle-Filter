@@ -51,7 +51,6 @@
 #include <set>
 
 #include "Assimilator.h"
-//#include "CheckStatelessAssimilator.h"  // FIXME: needed?
 
 #include "ServerTiming.h"
 
@@ -109,8 +108,11 @@ void * data_response_socket;
 
 unsigned int assimilation_cycles = 0;  // only used for logging stats at the end.
 
-// will be counted as announced by chosen assimilator. Will also b checkpointed to restart...
+/// Will be counted as announced by chosen assimilator. This does not forcibly correspond
+/// to any time counting as done in the runner code
+/// Will also be checkpointed to restart...
 int current_step = 0;  // will effectively start at 1.
+
 int current_nsteps = 1;  // this is important if there are less model task runners than ensemble members. for every model task runner at the beginning an ensemble state will be generated.
 
 int get_due_date() {
@@ -379,7 +381,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     zmq_msg_t msg_reply1, msg_reply2;
     zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
 
-    // At the moment we request field regustration from runner id 0. TODO! be fault tollerant during server init too? - acutally we do not want to. faults during init may make it crashing...
+    // At the moment we request field registration from runner id 0. TODO! be fault tollerant during server init too? - actually we do not want to. faults during init may make it crashing...
     int request_register_field =  highest_runner_id == 0 ? 1 : 0;
 
     int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
@@ -617,7 +619,7 @@ void kill_task(Task t) {
 }
 
 /// adds a subtask for each runner rank.
-// either add subtasts to list of scheduled subtasks or runs them directly adding them to running sub tasks.
+// either add subtasks to list of scheduled subtasks or runs them directly adding them to running sub tasks.
 void add_sub_tasks(NewTask &new_task) {
     int ret = unscheduled_tasks.erase(new_task.state_id);
     assert(ret == 1);
@@ -1281,7 +1283,13 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
     return false;
 }
 
-/// optional parameters [MAX_TIMESTAMP [ENSEMBLE_SIZE]]
+/// Call:
+///
+/// melissa_server <total steps> <ensemble size> <assimilator type id> \
+///     <max runner timeout in s> <server slowdown factor> <launcher host name>
+///
+/// The Server slowdown factor is only taken into account for debug builds. It is useful
+/// to slowdown the CPU usage while e.g. in a GDB session.
 int main(int argc, char * argv[])
 {
     check_data_types();
@@ -1348,7 +1356,7 @@ int main(int argc, char * argv[])
                           configuration_socket_addr);
         if (rc != 0 && errno == 98) {
             // Address already in use. Try once more...
-            L("Adress %s already in use. Retrying ONCE again to bind in 5s...",
+            L("Address %s already in use. Retrying ONCE again to bind in 5s...",
                     configuration_socket_addr);
             sleep(1);
             rc = zmq_bind(configuration_socket,
@@ -1604,8 +1612,6 @@ int main(int argc, char * argv[])
     D("Ending Server.");
     // TODO: check if we need to delete some more stuff!
 
-    // wait 3 seconds to finish sending... actually NOT necessary... if you need this there is probably soething else broken...
-    //sleep(3);
     if (comm_rank == 0)
     {
         // send stop message, close the launcher sockets before the context is destroyed!
