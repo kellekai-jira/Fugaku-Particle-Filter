@@ -94,7 +94,6 @@ endif()
 
 set(CMAKE_Fortran_FLAGS_DEBUG "-rdynamic ${CMAKE_Fortran_FLAGS_DEBUG} -fbounds-check -O0 -fimplicit-none ${COMPILER_DEPENDENT_FORTRAN_FLAGS} ")
 
-set(PDAF_PATH $ENV{HOME}/workspace/PDAF-D_V1.15 CACHE PATH "Path to PDAF")
 
 #set(Fortran_MATH_LIBRARIES "-lmkl_gf_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
 
