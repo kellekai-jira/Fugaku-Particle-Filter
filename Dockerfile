@@ -2,7 +2,7 @@
 # at the same time.
 
 FROM registry.hub.docker.com/gitlab/gitlab-runner
-RUN apt-get -qq update
+RUN apt-get  update --fix-missing
 
 
 # install dependencies:
@@ -17,7 +17,7 @@ RUN apt-get install -y \
  build-essential gcc g++ make cmake \
  python3 python3-numpy python3-pandas \
  libzmq5-dev pkg-config \
- libblas-dev liblapack-dev
+ libblas-dev liblapack-dev libssl-dev
 
 # Pandas seems to be a huge dependency... maybe we can get rid of it?
 
@@ -43,7 +43,11 @@ VOLUME /home/docker/.gitlab-runner
 WORKDIR /home/docker
 
 # install FTI:
-RUN cd && git clone https://github.com/leobago/fti.git && cd FTI && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/FTI -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1 && make install  # lets hope that it automatically finds HDF5... not sure though
+RUN cd && git clone https://github.com/leobago/fti.git --depth 1 && \
+    cd fti && mkdir build && cd build && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/FTI \
+    -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DENABLE_TESTS=0 \
+    -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1 && make install
 
 
 WARNING: this docker file might be outdated. Especially the FTI support was not tested for a while...
