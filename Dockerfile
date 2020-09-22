@@ -42,5 +42,11 @@ ENV OMPI_MCA_btl "^vader"
 VOLUME /home/docker/.gitlab-runner
 WORKDIR /home/docker
 
+# install FTI:
+RUN cd && git clone https://github.com/leobago/fti.git && cd FTI && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/FTI -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1 && make install  # lets hope that it automatically finds HDF5... not sure though
+
+
+WARNING: this docker file might be outdated. Especially the FTI support was not tested for a while...
+
 
 WARNING: don't forget to copy PDAF-D_V1.15 in /docker/workspace !!
