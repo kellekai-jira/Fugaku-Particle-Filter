@@ -22,6 +22,7 @@ enum TimingEventType
     START_PROPAGATE_STATE       = 8,  // parameter = state_id
     STOP_PROPAGATE_STATE        = 9,  // parameter = state_id,
     NSTEPS                      = 10, // parameter = nsteps, only used by runner so far
+    INIT                        = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
 };
 
 #ifdef REPORT_TIMING
@@ -103,6 +104,14 @@ public:
     void print_events(const char * base_filename, const int rank) {
         std::cout << "------------ Writing Timing Event List (csv) ------------" <<
             std::endl;
+
+        std::ofstream nullfile( "nulltime." + std::string(base_filename) + "." + std::to_string(rank) + ".csv" );
+
+        nullfile << "null time (ms)" << std::endl;
+        nullfile << getenv("MELISSA_TIMING_NULL") << std::endl;
+        nullfile.close();
+
+
         std::ofstream outfile ( "timing-events." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
 
         outfile << "time first event (ms),event,parameter" << std::endl;
@@ -117,8 +126,20 @@ public:
     }
 
     Timing() :
+        // Time since epoch in ms. Set from the launcher.
         null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
     {
+
+        this->trigger_event(INIT, 0); // == trigger(INIT, 0)
+        const auto p1 = std::chrono::system_clock::now();
+        const unsigned long long ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(
+                p1.time_since_epoch()).count();
+
+
+        L("Init timing at %llu ms since epoch", ms_since_epoch);
+
+        L("Null time   at %llu ms since epoch (timing-events csv are relative to this)", atoll(getenv("MELISSA_TIMING_NULL")));
+
     }
 
     template<std::size_t SIZE>

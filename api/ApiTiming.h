@@ -111,6 +111,9 @@ public:
 
                 break;
             }
+            case INIT: {
+                break;
+            }
             default:
             {
                 L(
