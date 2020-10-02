@@ -45,15 +45,15 @@ class SlurmCluster(cluster.Cluster):
             for line in out.split(b'\n'):
                 if line != b'':
                     hostname = (line.split(b'.')[0]).decode("utf-8")
-                    self.node_occupation[hostname] = EMPTY
+                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': -1}
 
 
     def set_nodes_to(self, kind, n_nodes):
         to_place = n_nodes
         nodes = set()
         for k, v in self.node_occupation.items():
-            if v == EMPTY:
-                self.node_occupation[k] = kind
+            if v['kind'] == EMPTY:
+                self.node_occupation[k]['kind'] = kind
                 nodes.add(k)
                 to_place -= 1
 
@@ -118,8 +118,11 @@ class SlurmCluster(cluster.Cluster):
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
 
         if self.in_salloc:
-            print("in salloc, using pid:", proc.pid)
-            return proc.pid
+            job_id = proc.pid
+            for node in nodes:
+                self.node_occupation[node]['job_id'] = job_id
+            print("in salloc, using pid:", job_id)
+            return job_id
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
@@ -150,6 +153,12 @@ class SlurmCluster(cluster.Cluster):
                 state = 1
             else:
                 state = 2
+                for k, v in self.node_occupation.items():
+                    if v['job_id'] == job_id:
+                        self.node_occupation[k]['job_id'] = -1
+                        self.node_occupation[k]['kind'] = EMPTY
+
+
             #logging.debug('Checking for job_id %d: state: %d' % (job_id, state))
             return state
 
