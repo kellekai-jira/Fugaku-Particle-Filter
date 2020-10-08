@@ -36,7 +36,8 @@ private:
 
 public:
     void report(const int cores_simulation, const int cores_server, const int
-                ensemble_members, const size_t state_size) {
+                ensemble_members, const size_t assimilated_state_size, const size_t
+                hidden_state_size) {
 
 
         print_events("server", comm_rank);
@@ -202,7 +203,7 @@ public:
         std::ofstream osr("server.run-information.csv", std::ofstream::app);
         assert (osr.is_open());
         osr <<
-            "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,state size,iterations,mean bandwidth (MB/s),iterations used for means"
+            "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,assimilated state size(#doubles),hidden state size(#doubles),iterations,mean bandwidth assimilated (MiB/s),iterations used for means"
                   << std::endl;
         if (iterations - warmup < 10)    // have at least 10 iterations for stats
         {   // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!
@@ -219,9 +220,10 @@ public:
         osr << cores_server << ',';
         osr << mean_runtime << ',';
         osr << ensemble_members << ',';
-        osr << state_size << ',';
+        osr << assimilated_state_size << ',';
+        osr << hidden_state_size << ',';
         osr << iterations << ',';
-        osr << 8*state_size*ensemble_members*2.0/mean_runtime*1000/1024/
+        osr << 8*assimilated_state_size*ensemble_members*2.0/mean_runtime*1000/1024/
             1024 <<
             ',';
         osr << (iterations-warmup);

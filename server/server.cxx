@@ -1604,7 +1604,8 @@ int main(int argc, char * argv[])
             ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
 #ifdef REPORT_TIMING
         timing->report(field->local_vect_sizes_runner.size(), comm_size,
-                       ENSEMBLE_SIZE,field->globalVectSize());
+                       ENSEMBLE_SIZE, field->globalVectSize(),
+                       field->globalVectSizeHidden());
 #endif
     }
 

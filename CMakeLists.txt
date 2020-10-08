@@ -1,5 +1,5 @@
 project(Melissa LANGUAGES CXX Fortran C)
-cmake_minimum_required(VERSION 3.2.2)
+cmake_minimum_required(VERSION 3.10.2)
 enable_testing()
 
 # For intel compilers necessary:
