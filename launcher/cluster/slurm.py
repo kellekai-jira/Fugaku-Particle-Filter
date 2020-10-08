@@ -6,6 +6,7 @@ import subprocess
 import logging
 import time
 import re
+import copy
 
 EMPTY = 0
 SERVER = 1
@@ -17,13 +18,14 @@ class SlurmCluster(cluster.Cluster):
         p = re.compile("\d\d?:\d\d?:\d\d?");
         assert p.match(wt)  # no valid slurm walltime
 
-    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None)):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=True):
         """
         Arguments:
 
-        in_salloc {bool}              True if running within salloc. This means a node list must be given to each job submission to avoid oversubscription
-        account {str}                 slurm account to use
-        partition {str}               slurm partition to use if not empty
+        in_salloc {bool}                        True if running within salloc. This means a node list must be given to each job submission to avoid oversubscription
+        account {str}                           slurm account to use
+        partition {str}                         slurm partition to use if not empty
+        reserve_jobs_outside_salloc {bool}      True if we permit to reserve jobs outside the own salloc allocation.
 
         """
 
@@ -31,6 +33,8 @@ class SlurmCluster(cluster.Cluster):
         self.partition = partition
         self.in_salloc = in_salloc
         self.started_jobs = []
+        self.salloc_jobids = []
+        self.reserve_jobs_outside_salloc = reserve_jobs_outside_salloc
 
         # REM: if using in_salloc and if a job quits nodes are not freed.
         # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
@@ -49,6 +53,7 @@ class SlurmCluster(cluster.Cluster):
 
 
     def set_nodes_to(self, kind, n_nodes):
+        assert n_nodes > 0
         to_place = n_nodes
         nodes = set()
         for k, v in self.node_occupation.items():
@@ -59,9 +64,14 @@ class SlurmCluster(cluster.Cluster):
 
             if to_place == 0:
                 break
-        assert to_place == 0  # otherwise did not found enough nodes in reservation...
+        if to_place == 0:
+            self.node_occupation = tmp
+            return list(nodes)
+        else:  # did not find enough space in the reservation... reserver outside...
 
-        return list(nodes)
+            assert self.reserve_jobs_outside_salloc  # otherwise this is not permitted!
+            return []
+
 
 
 
@@ -75,6 +85,8 @@ class SlurmCluster(cluster.Cluster):
 
         node_list_param = ''
 
+        nodes = []
+
         if self.in_salloc:
             # Generate node_list
             if is_server:
@@ -82,14 +94,8 @@ class SlurmCluster(cluster.Cluster):
             else:
                 nodes = self.set_nodes_to(SIMULATION, n_nodes)
 
-            #n = []
-            # for node in nodes:
-                # n += [node]*(n_procs//n_nodes)
-
-            #node_list_param = '--nodelist=%s' % (','.join(n))
+        if len(nodes) > 0:
             node_list_param = '--nodelist=%s' % ','.join(nodes)
-
-
 
         partition_param = ''
         if self.partition:
@@ -114,15 +120,33 @@ class SlurmCluster(cluster.Cluster):
 
         print("Launching %s" % run_cmd)
 
-        # if logfile == '':
+        # unset allocation id's in case we were just running this one outside...
+        if self.in_salloc and len(nodes) == 0:
+            slurm_allocation_id = os.getenv('SLURM_JOB_ID')
+            del os.environ['SLURM_JOB_ID']
+            del os.environ['SLURM_JOBID']
+
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
 
+<<<<<<< Updated upstream
         if self.in_salloc:
             job_id = proc.pid
             for node in nodes:
                 self.node_occupation[node]['job_id'] = job_id
             print("in salloc, using pid:", job_id)
             return job_id
+=======
+        # reset allocation id's in case we were just running this one outside...
+        if self.in_salloc and len(nodes) == 0:
+            os.environ['SLURM_JOB_ID'] = slurm_allocation_id
+            os.environ['SLURM_JOBID']  = slurm_allocation_id
+
+        if self.in_salloc and len(nodes) > 0:
+            pid = proc.pid
+            self.salloc_jobids.append(pid)
+            print("in salloc, using pid:", pid)
+            return pid
+>>>>>>> Stashed changes
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
@@ -147,7 +171,7 @@ class SlurmCluster(cluster.Cluster):
 
     def CheckJobState(self, job_id):
         state = 0
-        if self.in_salloc:
+        if self.in_salloc and (job_id in self.salloc_jobids):
             ret_code = subprocess.call(["ps", str(job_id)], stdout=subprocess.DEVNULL)
             if ret_code == 0:
                 state = 1
@@ -188,7 +212,7 @@ class SlurmCluster(cluster.Cluster):
             return 2
 
     def KillJob(self, job_id):
-        if self.in_salloc:
+        if self.in_salloc and (job_id in self.salloc_jobids):
             os.system('kill '+str(job_id))
             return
 

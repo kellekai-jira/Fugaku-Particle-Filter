@@ -17,10 +17,11 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
         """
         Arguments:
 
-        in_salloc {bool}              True if running within salloc. This means a node list must be given to each job submission to avoid oversubscription
-        account {str}                 slurm account to use
-        partition {str}               slurm partition to use if not empty
-        max_devel_nodes{int}          On juwels you can only have e.g. 8 active devel nodes. Thus if this number is > 0 only max_devel_nodes jobs are started in the devel partition. Otherwise no partition argument is set
+        in_salloc {bool}                        True if running within salloc. This means a node list must be given to each job submission to avoid oversubscription
+        account {str}                           slurm account to use
+        partition {str}                         slurm partition to use if not empty
+        reserve_jobs_outside_salloc {bool}      True if we permit to reserve jobs outside the own salloc allocation.
+        max_devel_nodes{int}                    On juwels you can only have e.g. 8 active devel nodes. Thus if this number is > 0 only max_devel_nodes jobs are started in the devel partition. Otherwise no partition argument is set
 
         """
 
@@ -31,6 +32,8 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
         self.partition = partition
         self.in_salloc = in_salloc
         self.started_jobs = []
+        self.salloc_jobids = []
+        self.reserve_jobs_outside_salloc = reserve_jobs_outside_salloc
 
         # REM: if using in_salloc and if a job quits nodes are not freed.
         # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
@@ -62,6 +65,8 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
 
         node_list_param = ''
 
+        nodes = []
+
         if self.in_salloc:
             # Generate node_list
             if is_server:
@@ -69,13 +74,16 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             else:
                 nodes = self.set_nodes_to(SIMULATION, n_nodes)
 
-            #n = []
-            # for node in nodes:
-                # n += [node]*(n_procs//n_nodes)
-
-            #node_list_param = '--nodelist=%s' % (','.join(n))
+        if len(nodes) > 0:
             node_list_param = '--nodelist=%s' % ','.join(nodes)
 
+        partition_param = ''
+        if self.partition:
+            partition_param = '--partition=%s' % self.partition
+
+        output_param = ''
+        if logfile != '':
+            output_param = '--output=%s' % logfile
 
 
         partition_param = ''
@@ -106,12 +114,24 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
 
         print("Launching %s" % run_cmd)
 
-        # if logfile == '':
+        # unset allocation id's in case we were just running this one outside...
+        if self.in_salloc and len(nodes) == 0:
+            slurm_allocation_id = os.getenv('SLURM_JOB_ID')
+            del os.environ['SLURM_JOB_ID']
+            del os.environ['SLURM_JOBID']
+
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
 
-        if self.in_salloc:
-            print("In Salloc, using pid:", proc.pid)
-            return proc.pid
+        # reset allocation id's in case we were just running this one outside...
+        if self.in_salloc and len(nodes) == 0:
+            os.environ['SLURM_JOB_ID'] = slurm_allocation_id
+            os.environ['SLURM_JOBID']  = slurm_allocation_id
+
+        if self.in_salloc and len(nodes) > 0:
+            pid = proc.pid
+            self.salloc_jobids.append(pid)
+            print("in salloc, using pid:", pid)
+            return pid
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
