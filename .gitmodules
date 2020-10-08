@@ -3,4 +3,4 @@
 	url = git@gitlab.inria.fr:sfriedem/parflow-melissa-da.git
 [submodule "melissa"]
 	path = melissa
-	url = git@gitlab.inria.fr:melissa/melissa.git
+	url = ../melissa.git
