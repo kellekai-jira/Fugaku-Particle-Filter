@@ -800,6 +800,15 @@ void fail_state(int state_id) {
     }
 }
 
+void reset_due_dates() {
+    auto reset_date = [&] (std::shared_ptr<SubTask>& it) {
+                          it->due_date = get_due_date();
+                      };
+
+    std::for_each(scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(),
+                  reset_date);
+}
+
 void check_due_dates() {
     time_t now;
     now = time (NULL);
@@ -1510,12 +1519,22 @@ int main(int argc, char * argv[])
                 // init assimilator as we know the field size now.
                 assimilator = Assimilator::create(
                     ASSIMILATOR_TYPE, *field, param_total_steps, mpi);
+
+
+
                 current_nsteps = assimilator->getNSteps();
                 init_new_timestep();  // init_new_timestep needs the latest timestep id from the assimilator!
 
 #ifdef WITH_FTI
                 FT.protect_background( mpi, field );
 #endif
+
+#ifdef RUNNERS_MAY_CRASH
+                // Assimilator creation can take quite long. Thus reset due dates here to
+                // allow tighter runner timeouts:
+                reset_due_dates();
+#endif
+
                 D("Change Phase");
                 phase = PHASE_SIMULATION;
 
