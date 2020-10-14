@@ -49,16 +49,17 @@ class SlurmCluster(cluster.Cluster):
             for line in out.split(b'\n'):
                 if line != b'':
                     hostname = (line.split(b'.')[0]).decode("utf-8")
-                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': -1}
+                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': ""}
 
 
     def set_nodes_to(self, kind, n_nodes):
         assert n_nodes > 0
         to_place = n_nodes
         nodes = set()
-        for k, v in self.node_occupation.items():
+        tmp = copy.deepcopy(self.node_occupation)
+        for k, v in tmp.items():
             if v['kind'] == EMPTY:
-                self.node_occupation[k]['kind'] = kind
+                tmp[k]['kind'] = kind
                 nodes.add(k)
                 to_place -= 1
 
@@ -128,25 +129,16 @@ class SlurmCluster(cluster.Cluster):
 
         proc = subprocess.Popen(run_cmd.split(), stderr=subprocess.PIPE)
 
-<<<<<<< Updated upstream
-        if self.in_salloc:
-            job_id = proc.pid
-            for node in nodes:
-                self.node_occupation[node]['job_id'] = job_id
-            print("in salloc, using pid:", job_id)
-            return job_id
-=======
         # reset allocation id's in case we were just running this one outside...
         if self.in_salloc and len(nodes) == 0:
             os.environ['SLURM_JOB_ID'] = slurm_allocation_id
             os.environ['SLURM_JOBID']  = slurm_allocation_id
 
         if self.in_salloc and len(nodes) > 0:
-            pid = proc.pid
+            pid = str(proc.pid)
             self.salloc_jobids.append(pid)
             print("in salloc, using pid:", pid)
             return pid
->>>>>>> Stashed changes
         # else:
             # with open(logfile, 'wb') as f:
                 # proc = subprocess.Popen(run_cmd.split(), stdout=f, stderr=subprocess.PIPE)
@@ -159,7 +151,7 @@ class SlurmCluster(cluster.Cluster):
             #print(s)
             res = regex.search(s)
             if res:
-                job_id = res.groups()[0]
+                job_id = str(res.groups()[0])
                 self.started_jobs.append(job_id)
                 print('extracted jobid:', job_id)
                 return job_id
@@ -172,14 +164,14 @@ class SlurmCluster(cluster.Cluster):
     def CheckJobState(self, job_id):
         state = 0
         if self.in_salloc and (job_id in self.salloc_jobids):
-            ret_code = subprocess.call(["ps", str(job_id)], stdout=subprocess.DEVNULL)
+            ret_code = subprocess.call(["ps", job_id], stdout=subprocess.DEVNULL)
             if ret_code == 0:
                 state = 1
             else:
                 state = 2
                 for k, v in self.node_occupation.items():
                     if v['job_id'] == job_id:
-                        self.node_occupation[k]['job_id'] = -1
+                        self.node_occupation[k]['job_id'] = ""
                         self.node_occupation[k]['kind'] = EMPTY
 
 
@@ -189,7 +181,7 @@ class SlurmCluster(cluster.Cluster):
         # for a strange reason this cannot handle jobsteps (jobid 1234.45)
         # Thus the killing mechanism failes at the end for such things after a successful
         # run
-        proc = subprocess.Popen(["squeue", "-o %T", "--job=%s" % job_id],
+        proc = subprocess.Popen(["squeue", "-o %T", "--job=%s" % str(job_id)],
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
                               universal_newlines=True)
@@ -213,7 +205,7 @@ class SlurmCluster(cluster.Cluster):
 
     def KillJob(self, job_id):
         if self.in_salloc and (job_id in self.salloc_jobids):
-            os.system('kill '+str(job_id))
+            os.system('kill '+job_id)
             return
 
         print("scancel", job_id)

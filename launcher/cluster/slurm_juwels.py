@@ -13,7 +13,7 @@ SIMULATION = 2
 
 class SlurmJuwelsCluster(cluster.SlurmCluster):
 
-    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), max_devel_nodes=-1):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=True, max_devel_nodes=-1):
         """
         Arguments:
 
@@ -49,7 +49,7 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             for line in out.split(b'\n'):
                 if line != b'':
                     hostname = (line.split(b'.')[0]).decode("utf-8")
-                    self.node_occupation[hostname] = EMPTY
+                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': ""}
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
@@ -128,7 +128,7 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             os.environ['SLURM_JOBID']  = slurm_allocation_id
 
         if self.in_salloc and len(nodes) > 0:
-            pid = proc.pid
+            pid = str(proc.pid)
             self.salloc_jobids.append(pid)
             print("in salloc, using pid:", pid)
             return pid
@@ -144,7 +144,7 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             #print(s)
             res = regex.search(s)
             if res:
-                job_id = res.groups()[0]
+                job_id = str(res.groups()[0])
                 self.started_jobs.append(job_id)
                 print('extracted jobid:', job_id)
                 return job_id
