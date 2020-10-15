@@ -72,6 +72,7 @@ extern int ENSEMBLE_SIZE;
 
 int ENSEMBLE_SIZE = 5;
 
+const int MAX_FAIL_COUNT = 5;
 
 #ifdef WITH_FTI
 FTmodule FT;
@@ -327,6 +328,7 @@ std::map<int, std::shared_ptr<Runner> >::iterator get_completely_idle_runner()
 }
 
 std::set<int> unscheduled_tasks;
+std::vector<int> failcount;
 
 // only important on rank 0:
 // if == comm_size we start the update step. is reseted when a state is rescheduled!
@@ -780,6 +782,22 @@ void init_new_timestep()
     {
         unscheduled_tasks.insert(i);
     }
+    std::fill(failcount.begin(), failcount.end(), 0);
+}
+
+void fail_state(int state_id) {
+    assert(comm_rank == 0);
+    failcount.at(state_id) ++;
+    int failed = failcount.at(state_id);
+    if (failed > MAX_FAIL_COUNT)
+    {
+        L("Propagating ensemble member %d failed %d times in a row on different runners. Go fix your ensemble. Checkpointing now and quitting.",
+                state_id, failed);
+
+        // TODO: maybe send a little error message to the launcher!
+        launcher.reset();
+        exit(1);
+    }
 }
 
 void check_due_dates() {
@@ -817,6 +835,7 @@ void check_due_dates() {
         if (comm_rank == 0)
         {
             trigger(REMOVE_RUNNER, it->runner_id);
+            fail_state(it->state_id);
 
             // reschedule directly if possible
             if (get_completely_idle_runner() != idle_runners.end())
@@ -866,6 +885,7 @@ void check_kill_requests() {
         if (is_new)
         {
             trigger(REMOVE_RUNNER, t.runner_id);
+            fail_state(t.state_id);
         }
         else
         {
@@ -1335,6 +1355,9 @@ int main(int argc, char * argv[])
     comm_rank = mpi.rank();
 
     std::shared_ptr<Assimilator> assimilator;     // will be inited later when we know the field dimensions.
+
+    failcount.resize(ENSEMBLE_SIZE);
+    std::fill(failcount.begin(), failcount.end(), 0);
 
     context = zmq_ctx_new ();
     int major, minor, patch;
