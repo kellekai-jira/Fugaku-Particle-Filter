@@ -34,15 +34,19 @@ run_melissa_da_study(
 ## 1. Install
 - install dependencies (see `Dockerfile` for a more up to date list).
   On ubuntu this can be done like this:
-```
- apt install gfortran \
- git \
- openmpi-bin libopenmpi-dev openmpi-common \
- libhdf5-openmpi-dev \
- build-essential gcc g++ make cmake \
- python3 python3-numpy python3-pandas \
- libzmq5-dev pkg-config \
- libblas-dev liblapack-dev
+```sh
+apt install \
+	build-essential \
+	cmake \
+	gfortran \
+	git \
+	libhdf5-openmpi-dev \
+	libopenblas-dev \
+	libopenmpi-dev \
+	libzmq5-dev \
+	pkg-config \
+	python2 python2-numpy \
+	python3 python3-pandas
 ```
 
 - download PDAF-D V1.15
