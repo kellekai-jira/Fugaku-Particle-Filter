@@ -45,7 +45,7 @@ apt install \
 	libopenmpi-dev \
 	libzmq5-dev \
 	pkg-config \
-	python2 python2-numpy \
+	python python-numpy \
 	python3 python3-pandas
 ```
 
