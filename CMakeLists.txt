@@ -1,5 +1,5 @@
 project(Melissa LANGUAGES CXX Fortran C)
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.7.2)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
 
@@ -12,7 +12,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++")
 
 # MPI #
 find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+include_directories(${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 link_libraries(${MPI_LIBRARIES})
 
