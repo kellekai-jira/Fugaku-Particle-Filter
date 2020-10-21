@@ -528,7 +528,7 @@ void broadcast_field_information_and_calculate_parts() {
 
     MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0,
               mpi.comm());                                                             // 1:fieldname
-    MPI_Bcast(&runner_comm_size, 1, my_MPI_SIZE_T, 0,
+    MPI_Bcast(&runner_comm_size, 1, MPI_INT, 0,
               mpi.comm());                                                                     // 2:runner_comm_size
 
     if (comm_rank != 0)
