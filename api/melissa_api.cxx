@@ -661,7 +661,9 @@ void melissa_init_with_index_map(const char *field_name,
                   local_hidden_vect_sizes.data(), 1, my_MPI_SIZE_T,
                   comm);
 
-    D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
+	if(local_hidden_vect_sizes.size() >= 2) {
+		D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
+	}
 
     std::vector<int> global_index_map;
     std::vector<int> global_index_map_hidden;
