@@ -1,8 +1,43 @@
-from cluster import cluster
-import os
-import subprocess
+#!/usr/bin/python3
+
+# Copyright (c) 2020, Institut National de Recherche en Informatique et en Automatique (https://www.inria.fr/)
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+# * Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+# TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
+import os
+import subprocess
+import sys
+
+
+from cluster import cluster
+
 
 class LocalCluster(cluster.Cluster):
     def __init__(self):
@@ -20,6 +55,18 @@ class LocalCluster(cluster.Cluster):
             # assume mpich:
             self.env_variable_pattern = ' -genv %s %s '
 
+        self.jobs = {}
+
+
+    def __del__(self):
+        if self.jobs == {}:
+            return
+
+        pid = os.getpid()
+        msg = 'pid={:d}: LocalCluster: jobs {} not cleaned up'
+        print(msg.format(pid, jobs.keys()), file=sys.stderr)
+
+
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
             additional_env, logfile, is_server):
         # TODO: use annas template engine here instead of this function!
@@ -27,8 +74,8 @@ class LocalCluster(cluster.Cluster):
 
 
         additional_env_parameters = ''
-        for name, value in additional_env.items():
-            additional_env_parameters += self.env_variable_pattern % (name, value)
+        for key, value in additional_env.items():
+            additional_env_parameters += self.env_variable_pattern % (key, value)
 
         run_cmd = '%s -n %d %s %s' % (
                 self.mpiexec,
@@ -37,38 +84,57 @@ class LocalCluster(cluster.Cluster):
                 cmd)
 
         print("Launching %s" % run_cmd)
-        pid = 0
 
         if logfile == '':
-            pid = subprocess.Popen(run_cmd.split()).pid
+            job = subprocess.Popen(run_cmd.split())
         else:
             with open(logfile, 'wb') as f:
-                pid = subprocess.Popen(run_cmd.split(), stdout=f).pid
+                job = subprocess.Popen(run_cmd.split(), stdout=f)
 
-        print("Process id: %d" % pid)
-        return pid
+        self.jobs[job.pid] = job
+
+        print("Launched {:s} pid={:d}".format(name, job.pid))
+        return job.pid
+
 
     def CheckJobState(self, job_id):
-        state = 0
-        ret_code = subprocess.call(["ps", str(job_id)], stdout=subprocess.DEVNULL)
-        if ret_code == 0:
-            state = 1
+        if not job_id in self.jobs:
+            return 2
+
+        job = self.jobs[job_id]
+
+        if job.poll() is None:
+            return 1
         else:
-            state = 2
-        #logging.debug('Checking for job_id %d: state: %d' % (job_id, state))
-        return state
+            del self.jobs[job_id]
+            return 2
+
 
     def KillJob(self, job_id):
-        os.system('kill '+str(job_id))
+        if not job_id in self.jobs:
+            print('no job found with id {:d}'.format(job_id), file=sys.stderr)
+            return
+
+        job = self.jobs[job_id]
+        job.terminate()
+        job.wait()
+        del self.jobs[job_id]
+
 
     def GetLoad(self):
         """number between 0 and 1"""
         return 0.5
 
-    def CleanUp(self, runner_executable):
-        os.system('killall melissa_server')
-        os.system('killall gdb')
-        os.system('killall xterm')
-        os.system('killall %s' % self.mpiexec)
-        #os.system('killall python3')
-        os.system('killall %s' % runner_executable)
+    def CleanUp(self, _):
+        return
+        pid = os.getpid()
+        for job_id in self.jobs:
+            j = self.jobs[job_id]
+
+            if j.poll() is None:
+                msg = 'pid={:d}: LocalCluster terminating process {:d}'
+                print(fmt.format(pid, j.pid))
+                j.terminate()
+                j.wait()
+
+        self.jobs = {}
