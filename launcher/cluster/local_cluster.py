@@ -64,7 +64,10 @@ class LocalCluster(cluster.Cluster):
 
         pid = os.getpid()
         msg = 'pid={:d}: LocalCluster: jobs {} not cleaned up'
-        print(msg.format(pid, jobs.keys()), file=sys.stderr)
+        print(msg.format(pid, self.jobs.keys()), file=sys.stderr)
+        print('cleaning them up now...')
+        self.CleanUp('asdf')
+
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
@@ -126,15 +129,15 @@ class LocalCluster(cluster.Cluster):
         return 0.5
 
     def CleanUp(self, _):
-        return
+        #return
         pid = os.getpid()
         for job_id in self.jobs:
-            j = self.jobs[job_id]
+            job = self.jobs[job_id]
 
-            if j.poll() is None:
+            if job.poll() is None:
                 msg = 'pid={:d}: LocalCluster terminating process {:d}'
-                print(fmt.format(pid, j.pid))
-                j.terminate()
-                j.wait()
+                print(msg.format(pid, job.pid))
+                job.terminate()
+                job.wait()
 
         self.jobs = {}
