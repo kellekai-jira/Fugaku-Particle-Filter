@@ -116,7 +116,8 @@ class FifoThread(Thread):
 
         if what == STOP_ITERATION:
             iterations += 1
-            print(iterations)
+            if iterations % 100 == 0:
+                print(iterations)
 
         # if at least 5 runners wait 3 iterations and crash 3 runners
         if runners >= n_runners:
@@ -153,16 +154,9 @@ class FifoThread(Thread):
         except OSError as e:
             print("Failed to create FIFO: %s" % e)
         else:
-            with open(fifo_name_server, 'r') as fifo:
-                print("Pipe size            : "+str(fcntl.fcntl(fifo, F_GETPIPE_SZ)))
-                fcntl.fcntl(fifo, F_SETPIPE_SZ, 0)
-                print("Pipe (modified) size : "+str(fcntl.fcntl(fifo, F_GETPIPE_SZ)))
-            # write stuff to fifo
-                while running:
-                    time.sleep(0.005)
-                    data = fifo.read()
-                    #for line in fifo.readlines():
-                    if data != "":
+            while running:
+                with open(fifo_name_server, 'r') as fifo:
+                    for data in fifo:
                         for line in data.split('\n'):
                             if line == '':
                                 continue
@@ -171,6 +165,8 @@ class FifoThread(Thread):
                             running = self.on_timing_event(*args)
                             if not running:
                                 break
+                        if not running:
+                            break
 
 
 
