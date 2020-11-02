@@ -97,10 +97,7 @@ private:
 
 public:
     std::list<TimingEvent> events;  // a big vector should be more performant!
-    void trigger_event(TimingEventType type, const int parameter)
-    {
-        events.push_back(TimingEvent(type, parameter));
-    }
+    void trigger_event(TimingEventType type, const int parameter);  // as we overwrite this for testing it is defined in an extern cxx file
     void print_events(const char * base_filename, const int rank) {
         std::cout << "------------ Writing Timing Event List (csv) ------------" <<
             std::endl;

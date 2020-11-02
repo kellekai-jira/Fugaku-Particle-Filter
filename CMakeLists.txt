@@ -139,6 +139,8 @@ add_subdirectory(launcher)
 
 add_subdirectory(examples)
 
+add_subdirectory(test)
+
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
