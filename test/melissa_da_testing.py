@@ -54,11 +54,29 @@ class FifoThread(Thread):
         assert False  # unimplemented
         return False
 
+    def on_timing_event_(self, what, parameter):
+        # count runners
+        if what == ADD_RUNNER:
+            self.runners += 1
+            print('runners:', self.runners)
+        if what == REMOVE_RUNNER:
+            self.runners -= 1
+            print('runners:', self.runners)
+        # count assimilation cycles
+        if what == STOP_ITERATION:
+            self.iterations += 1
+            if self.iterations % 100 == 0:
+                print('assimilation cycle:', self.iterations)
+
+        return self.on_timing_event(what, parameter)
+
     def __init__(self):
         super().__init__()
         self.tmpdir = tempfile.mkdtemp()
         self.fifo_name_server = os.path.join(self.tmpdir, 'server_fifo')
         self.running = True
+        self.runners = 0
+        self.iterations = 0
 
     def run(self):
         try:
@@ -74,7 +92,7 @@ class FifoThread(Thread):
                                 continue
                             args = [int(x) for x in line.split(',')]
                             assert len(args) == 2
-                            self.running = self.on_timing_event(*args)
+                            self.running = self.on_timing_event_(*args)
                             if not self.running:
                                 break
                         if not self.running:
@@ -82,4 +100,3 @@ class FifoThread(Thread):
 
             os.remove(self.fifo_name_server)
             os.rmdir(self.tmpdir)
-

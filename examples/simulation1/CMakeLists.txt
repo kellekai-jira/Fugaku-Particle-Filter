@@ -33,10 +33,6 @@ python_test("test-check-stateless")
 
 python_test("test-different-parallelism")
 
-python_test("test-crashing-runner")
-
-python_test("test-crashing-server1")
-
 python_test("test-index-map")
 
 python_test("test-hidden-index-map")
