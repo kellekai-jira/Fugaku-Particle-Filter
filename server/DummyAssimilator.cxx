@@ -38,6 +38,14 @@ int DummyAssimilator::do_update_step(const int current_step) {
             // pretend to do some da...
             ens_it->state_analysis[i] =
                 ens_it->state_background[i] + state_id;
+            if (ens_it == field.ensemble_members.begin())
+            {
+               ens_it->state_analysis[i] += (field.ensemble_members.end()-1)->state_background[i];
+            }
+            else
+            {
+               ens_it->state_analysis[i] += (ens_it-1)->state_background[i];
+            }
         }
         state_id++;
     }
