@@ -3,7 +3,7 @@
 #set -e
 #set -x
 
-source ../../build/install/bin/melissa-da_set_env.sh
+#source ../../build/install/bin/melissa-da_set_env.sh
 
 cd STATS
 
@@ -41,7 +41,7 @@ cd -
 rm -f failed.log
 
 function my_diff {
-  python ../diff.py $fn1 $verification_path/$fn2
+  python $MELISSA_DA_SOURCE_PATH/examples/simulation2-pdaf/diff.py $fn1 $verification_path/$fn2
   res=$?
   if [ "$res" != "0" ];
   then

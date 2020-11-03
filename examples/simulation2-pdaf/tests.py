@@ -27,39 +27,8 @@ def run(server_slowdown_factor_=1):
 
 if sys.argv[1] == 'test-example-simulation2':
     run()
-elif sys.argv[1] == 'test-crashing-server2':
-    class KillerGiraffe(Thread):
-        def run(self):
-            global had_checkpoint, was_unfinished
-            time.sleep(10)
-            print('Crashing a server...')
-            #killing_giraffe('melissa_server')
-            subprocess.call(["killall", "melissa_server"])
-            had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
-            was_unfinished = not os.path.isfile("state_step16_for.txt")
-
-            from shutil import copyfile
-            copyfile('config.fti', 'config.fti.0')
-
-    giraffe = KillerGiraffe()
-    giraffe.start()
-    run(10000)
-
-    # Check if server was restarted:
-    assert os.path.isfile("STATS/server.log.0")
-    assert os.path.isfile("STATS/server.log")
-
-    # Check for FTI logs:
-    assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
-    assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
-
-
-    print("Had checkpoint?", had_checkpoint)
-    assert had_checkpoint
-
-    print("Was unfinished?", was_unfinished)
-    assert was_unfinished
-
+else:
+    assert False  # Testcase not implemented
 
 
 

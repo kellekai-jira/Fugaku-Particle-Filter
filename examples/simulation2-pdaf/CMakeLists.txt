@@ -24,4 +24,3 @@ add_test(NAME simulation2-pdaf
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 python_test("test-example-simulation2")
-python_test("test-crashing-server2")

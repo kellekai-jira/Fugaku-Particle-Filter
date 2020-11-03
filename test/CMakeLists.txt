@@ -51,5 +51,11 @@ function(add_python_test test_name test_script)
     #)
 endfunction()
 
-add_python_test("test-crashing-runner" "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-runner.py")
-add_python_test("test-crashing-server1" "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-server.py")
+add_python_test("test-crashing-runner"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-runner.py")
+add_python_test("test-crashing-server1"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-server1.py")
+add_python_test("test-crashing-server2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-server2.py")
+add_python_test("test-different-parallelism"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-different-parallelism.py")
