@@ -51,4 +51,4 @@ function(add_python_test test_name test_script)
     #)
 endfunction()
 
-add_python_test("test-crashing-runner2" "${CMAKE_CURRENT_SOURCE_DIR}/tests.py")
+add_python_test("test-crashing-runner2" "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-runner.py")
