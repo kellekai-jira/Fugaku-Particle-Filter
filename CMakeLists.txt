@@ -139,7 +139,7 @@ add_subdirectory(launcher)
 
 add_subdirectory(examples)
 
-#add_subdirectory(test)
+add_subdirectory(test)
 
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)

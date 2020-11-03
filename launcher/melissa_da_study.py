@@ -247,11 +247,13 @@ def run_melissa_da_study(
     import sys
 
     def signal_handler(sig, frame):
-        cluster.CleanUp(EXECUTABLE)
+        melissa_study.stop()
 
+        cluster.CleanUp(EXECUTABLE)
         sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     melissa_study = melissa.Study()
     melissa_study.set_working_directory(WORKDIR)

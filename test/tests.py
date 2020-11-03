@@ -11,6 +11,8 @@ import fcntl
 import pandas as pd
 from io import StringIO
 
+from multiprocessing import Process
+
 import time
 from threading import Thread
 
@@ -19,10 +21,10 @@ import signal
 
 import random
 
-F_SETPIPE_SZ = 1031  # Linux 2.6.35+
-F_GETPIPE_SZ = 1032  # Linux 2.6.35+
-
 clean_old_stats()
+
+# print('some cleanup action')
+# os.system('killall simulation1; killall melissa_server; killall xterm; ')
 
 executable='simulation1'
 total_steps=100
@@ -33,9 +35,15 @@ procs_server=1
 procs_runner=1
 n_runners=1
 
-def compare(reference_file, output_file="STATS/output.txt"):
+def compare_subset(reference_file, output_file="STATS/output.txt"):
     print('Compare %s with %s...' % (output_file, reference_file))
-    ret = subprocess.call(['diff', '-s', '--side-by-side', output_file, reference_file])
+    with open(output_file) as f:
+        line_number = len(f.readlines())
+
+    os.system('head -n %d %s > /tmp/cut-reference_file' % (line_number-2, reference_file))
+    os.system('head -n %d %s > /tmp/cut-output_file' % (line_number-2, output_file))
+
+    ret = subprocess.call(['diff', '-s', '--side-by-side', '/tmp/cut-output_file', '/tmp/cut-reference_file'])
     if ret != 0:
         print("failed! Wrong %s generated!" % output_file)
         exit(ret)
@@ -50,6 +58,7 @@ def get_timing_information():
 
 
 def run(server_slowdown_factor_=1):
+    print('in run...')
     start = time.time()
     run_melissa_da_study(
             #'xterm_gdb ' +
@@ -113,11 +122,12 @@ class FifoThread(Thread):
         if what == REMOVE_RUNNER:
             runners -= 1
             remove_runners_called = True
+            print('remove runners')
 
         if what == STOP_ITERATION:
             iterations += 1
             if iterations % 100 == 0:
-                print(iterations)
+                print('assimilation cycle:', iterations)
 
         # if at least 5 runners wait 3 iterations and crash 3 runners
         if runners >= n_runners:
@@ -128,13 +138,11 @@ class FifoThread(Thread):
                         def run(self):
                             print('Crashing first runner...')
                             killing_giraffe('simulation1')
-                            time.sleep(1)
+                            time.sleep(.3)
                             print('Crashing second runner...')
                             killing_giraffe('simulation1')
-                            time.sleep(1)
-                            print('Crashing third runner...')
-                            killing_giraffe('simulation1')
-                            time.sleep(1)
+                            time.sleep(.3)
+                            global killed_all
                             killed_all = True
                     giraffe = KillerGiraffe()
                     giraffe.start()
@@ -185,24 +193,22 @@ ensemble_size = 2
 procs_server = 3
 procs_runner = 2
 n_runners = 5
-run()
-running = False
-
-# wait for giraffe to finish:
-print("waiting for FifoThread")
+p = Process(target=run)
+p.start()
 ft.join()
-#giraffe.stop()
+
+print("FifoThread ended, now terminating...")
+p.terminate()
+
+# print('some cleanup action')
+# os.system('killall simulation1; killall melissa_server; killall xterm; ')
 
 assert remove_runners_called == True
+assert runners == n_runners  # check if runners were restarted!
+assert iterations_after_runners >= 3
+assert iterations_after_kills >= 3
 
-compare('reference-giraffe.txt')
-
-ti = get_timing_information()
-assert len(ti['iteration']) == 200
-
-
+compare_subset(os.environ['MELISSA_DA_SOURCE_PATH'] + '/test/reference-10000.txt')
 
 print("passed!")
-print("waiting for threads?")
-exit(0)
 

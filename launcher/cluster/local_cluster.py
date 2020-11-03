@@ -129,7 +129,6 @@ class LocalCluster(cluster.Cluster):
         return 0.5
 
     def CleanUp(self, _):
-        #return
         pid = os.getpid()
         for job_id in self.jobs:
             job = self.jobs[job_id]

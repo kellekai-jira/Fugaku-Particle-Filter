@@ -27,8 +27,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 find_package(Melissa CONFIG REQUIRED)
-find_package(MPI REQUIRED)
-find_package(ZeroMQ REQUIRED)
 
 function(add_python_test test_name test_script)
     add_test(
@@ -40,24 +38,17 @@ function(add_python_test test_name test_script)
     list(APPEND PYTHONPATH_LIST ${CMAKE_BINARY_DIR}/test)
     string(REPLACE ";" ":" PYTHONPATH "${PYTHONPATH_LIST}")
 
-    set_property(
-        TEST ${test_name}
-        APPEND PROPERTY ENVIRONMENT
-            LD_PRELOAD=${CMAKE_BINARY_DIR}/test/libmelissa_da_test.so
-            MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
-            MELISSA_DA_WITH_FTI=FALSE
-            MELISSA_INSTALL_PREFIX=${Melissa_PATH}
-            MPIEXEC=${MPIEXEC}
-            PYTHONPATH=${PYTHONPATH}
-            PYTHONDONTWRITEBYTECODE=1
-    )
+    # does not work correctly:
+    #set_property(
+        #TEST ${test_name}
+        #APPEND PROPERTY ENVIRONMENT
+            #MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
+            #MELISSA_DA_WITH_FTI=FALSE
+            #MELISSA_INSTALL_PREFIX=${Melissa_PATH}
+            #MPIEXEC=${MPIEXEC}
+            #PYTHONPATH=${PYTHONPATH}
+            #PYTHONDONTWRITEBYTECODE=1
+    #)
 endfunction()
 
-add_library(melissa_da_test SHARED preload.cxx)
-target_compile_options(melissa_da_test PRIVATE -Wextra -Wall -pedantic)
-target_include_directories(melissa_da_test PRIVATE ${CMAKE_SOURCE_DIR})
-target_link_libraries(melissa_da_test)
-
-target_link_libraries(melissa_da_test melissa_api -ldl)
-
-
+add_python_test("test-crashing-runner2" "${CMAKE_CURRENT_SOURCE_DIR}/tests.py")
