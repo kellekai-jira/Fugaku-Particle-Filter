@@ -31,8 +31,6 @@ add_test(NAME "test-example-simulation1" COMMAND ${in_env} python3 ./script.py $
 
 python_test("test-check-stateless")
 
-python_test("test-different-parallelism")
-
 python_test("test-index-map")
 
 python_test("test-hidden-index-map")

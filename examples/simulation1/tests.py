@@ -95,53 +95,8 @@ def test_index_map(executable_):
 
 
 testcase = sys.argv[1]
-elif testcase == 'test-crashing-launcher':
-    subprocess.call(["bash", "-c", "python3 tests.py long-run"])
+if testcase == 'test-crashing-launcher':
     assert False # unimplemented
-
-elif testcase == 'test-different-parallelism':
-    MAX_SERVER_PROCS = 3
-    MAX_SIMULATION_PROCS = 3
-    MAX_RUNNERS = 3
-
-    total_steps = 5
-
-
-    print('ensemble members: %d, total_steps: %d' % (ensemble_size, total_steps))
-
-
-    # fill cases...
-    cases = []
-    for sep in range(1, MAX_SERVER_PROCS + 1):
-        for sip in range(1, MAX_SIMULATION_PROCS + 1):
-            for mr in range(1, MAX_RUNNERS + 1):
-                cases.append((sep, sip, mr))
-    #server procs: 1, simulation procs: 3, model runners: 2 -- this produces strange FTI errors
-    #cases = [(1,3,2)]
-    for i, case in enumerate(cases):
-        procs_server, procs_runner, n_runners = case
-
-        print(os.getcwd())
-
-        print("------------------------------------------------------------------------")
-        print('step %d/%d' % (i+1, len(cases)))
-        print('server procs: %d, simulation procs: %d, model runners: %d'
-            % (procs_server, procs_runner, n_runners))
-
-
-        if os.path.isfile('STATS/server.run-information.csv'):
-            os.remove('STATS/server.run-information.csv')
-        run()
-
-        # runner 0 does the output.
-        compare('reference.txt')
-
-
-        used_runners = get_run_information()['number runners(max)'][0]
-        if used_runners < n_runners:
-            print("failed! Server could only see %d/%d runners. Launcher was too slow?" %
-                    (used_runners, n_runners))
-            exit(1)
 
 elif testcase == 'test-check-stateless':
     assert check_stateless('simulation1')
@@ -180,12 +135,6 @@ elif testcase == 'test-empty-hidden-index-map':
     run()
     os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     compare("STATS/index-map.csv", './reference-empty-hidden-index-map.csv')
-
-elif testcase == 'long-run':
-    # To generate reference for KillerGiraffe tests and for crashing_launcher test
-    long_run()
-
-
 else:
     print('Error! does not know the testcase %s' % testcase)
     assert False
