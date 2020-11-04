@@ -71,7 +71,7 @@ SUBROUTINE initialize()
   if (nx == 36 .and. ny == 18) then
       ALLOCATE(field(ny, nx))
       ! Read global model field
-      call get_environment_variable( 'DATASET_PATH', dataset_path )
+      call get_environment_variable( 'MELISSA_DA_DATASET_PATH', dataset_path )
       OPEN(11, file = TRIM(dataset_path)//'/true_initial.txt', status='old')
 
       DO i = 1, ny
