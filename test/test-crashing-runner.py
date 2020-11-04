@@ -1,5 +1,7 @@
 from melissa_da_testing import *
 
+PROCS_SERVER = 3
+
 class RunnerTester(FifoThread):
     def __init__(self):
         super().__init__()
@@ -9,16 +11,16 @@ class RunnerTester(FifoThread):
         self.killed_all = False
 
     def on_timing_event(self, what, parameter):
-        global N_RUNNERS
+        global N_RUNNERS, PROCS_SERVER
 
         if what == REMOVE_RUNNER:
             self.remove_runners_called = True
 
-        # if at least all runners are up wait 7 iterations and crash 2 runners
+        # if at least all runners are up wait 3 iterations and crash 2 runners
         if self.runners >= N_RUNNERS:
             if what == STOP_ITERATION:
                 self.iterations_after_runners += 1
-                if self.iterations_after_runners == 7:
+                if self.iterations_after_runners == 3*PROCS_SERVER:
                     def perform_kills(parent):
                         print('Crashing first runner...')
                         killing_giraffe('simulation1')
@@ -37,7 +39,7 @@ class RunnerTester(FifoThread):
                 if self.killed_all:
                     self.iterations_after_kills += 1
 
-                    if self.iterations_after_kills >= 7 and self.runners == N_RUNNERS:
+                    if self.iterations_after_kills >= 3 * PROCS_SERVER and self.runners == N_RUNNERS:
                         return False
         return True
 
@@ -59,7 +61,7 @@ def run():
         ensemble_size=30,
         assimilator_type=ASSIMILATOR_DUMMY,
         cluster=LocalCluster(),
-        procs_server=3,
+        procs_server=PROCS_SERVER,
         procs_runner=2,
         n_runners=N_RUNNERS,
         show_server_log=False,

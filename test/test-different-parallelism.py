@@ -5,6 +5,7 @@ MAX_SIMULATION_PROCS = 3
 MAX_RUNNERS = 3
 
 N_RUNNERS = -1
+PROCS_SERVER = 3
 
 
 class RunnerWaiter(FifoThread):
@@ -13,13 +14,13 @@ class RunnerWaiter(FifoThread):
         self.iterations_after_runners = 0
 
     def on_timing_event(self, what, parameter):
-        global N_RUNNERS
+        global N_RUNNERS, PROCS_SERVER
 
         # if at least all runners are up wait 7 iterations and crash server
         if self.runners >= N_RUNNERS:
             if what == STOP_ITERATION:
                 self.iterations_after_runners += 1
-                if self.iterations_after_runners == 30:
+                if self.iterations_after_runners == 10*PROCS_SERVER:  # every server proc is sending the stop iteration event...
                     return False
 
         return True
@@ -41,14 +42,14 @@ random.shuffle(cases)
 cases = cases[:3]
 
 for i, case in enumerate(cases):
-    procs_server, procs_runner, n_runners = case
+    PROCS_SERVER, procs_runner, n_runners = case
 
     print(os.getcwd())
 
     print("------------------------------------------------------------------------")
     print('step %d/%d' % (i+1, len(cases)))
     print('server procs: %d, simulation procs: %d, model runners: %d'
-        % (procs_server, procs_runner, n_runners))
+        % (PROCS_SERVER, procs_runner, n_runners))
 
 
     if os.path.isfile('STATS/server.run-information.csv'):
@@ -69,7 +70,7 @@ for i, case in enumerate(cases):
             ensemble_size=30,
             assimilator_type=ASSIMILATOR_DUMMY,
             cluster=LocalCluster(),
-            procs_server=3,
+            procs_server=PROCS_SERVER,
             procs_runner=2,
             n_runners=N_RUNNERS,
             show_server_log=False,

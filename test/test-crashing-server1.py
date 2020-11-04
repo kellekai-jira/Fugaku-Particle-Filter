@@ -2,6 +2,7 @@ import shutil
 
 from melissa_da_testing import *
 
+PROCS_SERVER = -1
 
 class ServerTester(FifoThread):
     def __init__(self):
@@ -13,13 +14,13 @@ class ServerTester(FifoThread):
         self.server_had_checkpoint = False
 
     def on_timing_event(self, what, parameter):
-        global N_RUNNERS
+        global N_RUNNERS, PROCS_SERVER
 
         # if at least all runners are up wait 7 iterations and crash server
         if self.runners >= N_RUNNERS:
             if what == STOP_ITERATION:
                 self.iterations_after_runners += 1
-                if self.iterations_after_runners == 40:
+                if self.iterations_after_runners == 12 * PROCS_SERVER:
                     print('Crashing server...')
                     #killing_giraffe('melissa_server')
                     os.system('killall melissa_server')
@@ -35,7 +36,7 @@ class ServerTester(FifoThread):
 
             self.iterations_after_kills += 1
 
-            if self.iterations_after_kills >= 40:
+            if self.iterations_after_kills >= 12*PROCS_SERVER:
                 return False
 
         return True
@@ -48,6 +49,7 @@ st.start()
 
 # override some study parameters:
 N_RUNNERS = 2
+PROCS_SERVER = 3
 ase = {}
 ase["MELISSA_DA_TEST_FIFO"] = st.fifo_name_server
 
@@ -57,7 +59,7 @@ def run():
         ensemble_size=30,
         assimilator_type=ASSIMILATOR_DUMMY,
         cluster=LocalCluster(),
-        procs_server=3,
+        procs_server=PROCS_SERVER,
         procs_runner=2,
         n_runners=N_RUNNERS,
         show_server_log=False,
@@ -75,8 +77,8 @@ st.join()
 print("ServerTester Thread ended, now terminating study...")
 study.terminate()
 
-assert st.iterations_after_runners >= 20  # did not kill server too early
-assert st.iterations_after_kills >= 20  # server was back up again
+assert st.iterations_after_runners >= 10 * PROCS_SERVER  # did not kill server too early
+assert st.iterations_after_kills >= 10 * PROCS_SERVER  # server was back up again
 assert st.server_had_checkpoint
 
 

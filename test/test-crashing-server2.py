@@ -18,7 +18,7 @@ class ServerTester(FifoThread):
         #  wait 7 iterations and crash server
         if what == STOP_ITERATION:
             print('iteration :', self.iterations)
-            if self.iterations == 4 * PROCS_SERVER:
+            if self.iterations == 2 * PROCS_SERVER:
                 print('Crashing server...')
                 #killing_giraffe('melissa_server')
                 os.system('killall melissa_server')
