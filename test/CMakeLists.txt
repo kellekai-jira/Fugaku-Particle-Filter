@@ -33,22 +33,44 @@ function(add_python_test test_name test_script)
         NAME ${test_name}
         COMMAND python3 -u ${test_script}
     )
+    set(PATH_LIST $ENV{PATH})
+    list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/server)
+    list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation1)
+    list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation2-pdaf)
+    list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation3-empty)
+    string(REPLACE ";" ":" PATH_ "${PATH_LIST}")
 
     set(PYTHONPATH_LIST $ENV{PYTHONPATH})
-    list(APPEND PYTHONPATH_LIST ${CMAKE_BINARY_DIR}/test)
+    list(APPEND PYTHONPATH_LIST ${CMAKE_SOURCE_DIR}/test)
+    list(APPEND PYTHONPATH_LIST ${CMAKE_SOURCE_DIR}/launcher)
+    list(APPEND PYTHONPATH_LIST ${Melissa_PATH}/share/melissa)
     string(REPLACE ";" ":" PYTHONPATH "${PYTHONPATH_LIST}")
 
+
+    set(LD_LIBRARY_PATH_LIST=$ENV{LD_LIBRARY_PATH})
+    list(APPEND LD_LIBRARY_PATH_LIST ${ZeroMQ_INCLUDE_DIR}/../lib)
+    list(APPEND LD_LIBRARY_PATH_LIST ${CMAKE_INSTALL_PREFIX}/lib)
+    list(APPEND LD_LIBRARY_PATH_LIST ${FTI_PATH}/lib)
+    string(REPLACE ";" ":" LD_LIBRARY_PATH_ "${LD_LIBRARY_PATH_LIST}")
+
     # does not work correctly:
-    #set_property(
-        #TEST ${test_name}
-        #APPEND PROPERTY ENVIRONMENT
-            #MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
-            #MELISSA_DA_WITH_FTI=FALSE
-            #MELISSA_INSTALL_PREFIX=${Melissa_PATH}
-            #MPIEXEC=${MPIEXEC}
-            #PYTHONPATH=${PYTHONPATH}
-            #PYTHONDONTWRITEBYTECODE=1
-    #)
+    set_property(
+        TEST ${test_name}
+        APPEND PROPERTY ENVIRONMENT
+            MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
+            MELISSA_DA_DATADIR=${CMAKE_SOURCE_DIR}/share
+            MELISSA_DA_WITH_FTI=TRUE
+            MELISSA_DA_SOURCE_PATH=${CMAKE_SOURCE_DIR}
+            MELISSA_INSTALL_PREFIX=${Melissa_PATH}
+            MELISSA_DA_DATASET_PATH=${PDAF_PATH}/tutorial/inputs_online/
+            MPIEXEC=${MPIEXEC}
+            PYTHONPATH=${PYTHONPATH}
+            PYTHONDONTWRITEBYTECODE=1
+            PDAF_PATH=${PDAF_PATH}
+            "LD_LIBRARY_PATH=${LD_LIBRARY_PATH_}"
+            "PATH=${PATH_}"
+    )
+
 endfunction()
 
 add_python_test("test-crashing-runner"

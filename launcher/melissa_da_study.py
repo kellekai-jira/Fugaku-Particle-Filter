@@ -35,6 +35,8 @@ start_time = int(time.time()*1000)  # in milliseconds
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
 melissa_with_fti = (os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE')
+melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
+assert melissa_da_datadir
 
 # Assimilator types:
 ASSIMILATOR_DUMMY = 0
@@ -62,7 +64,8 @@ def run_melissa_da_study(
         n_runners=1,
         show_server_log = True,
         show_simulation_log = True,
-        config_fti_path = melissa_da_path + "/share/melissa-da/config.fti",
+        config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
+
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
         runner_timeout=5,
         additional_server_env={},
@@ -102,9 +105,8 @@ def run_melissa_da_study(
 
         # sometimes the server starts in a runner dir...
 
-        cmd = '%s %s/bin/melissa_server %s' % (
+        cmd = '%s melissa_server %s' % (
                 precommand_server,
-                os.getenv('MELISSA_DA_PATH'),
                 server.cmd_opt
                 )
 
