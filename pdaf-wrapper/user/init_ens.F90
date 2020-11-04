@@ -81,7 +81,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
 ! *** Read ensemble from files ***
 ! ********************************
 
-  call get_environment_variable( 'DATASET_PATH', dataset_path )
+  call get_environment_variable( 'MELISSA_DA_DATASET_PATH', dataset_path )
   call get_environment_variable( 'INIT_TYPE', init_type )
   if (init_type == "RANDOM") then
       print *, 'performing random init'

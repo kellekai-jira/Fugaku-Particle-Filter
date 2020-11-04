@@ -80,7 +80,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
         WRITE (stepstr, '(i2)') current_step
      END IF
 
-     call get_environment_variable( 'DATASET_PATH', dataset_path )
+     call get_environment_variable( 'MELISSA_DA_DATASET_PATH', dataset_path )
      OPEN (12, &
        file=TRIM(dataset_path)//'/obs_step'// &
        TRIM(stepstr)//'.txt', status='old')

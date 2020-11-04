@@ -48,8 +48,6 @@ if (WITH_FTI)
         find_package(Threads REQUIRED)
         link_libraries(${CMAKE_THREAD_LIBS_INIT})
     endif()
-    install(FILES config.fti
-            DESTINATION share/melissa-da)
     # set to TRUE so even if it was ON it's TRUE now. This is easier readable by others
     # relying on the setenv script which exports this variable
     set(WITH_FTI TRUE)
@@ -140,6 +138,10 @@ add_subdirectory(launcher)
 add_subdirectory(examples)
 
 add_subdirectory(test)
+
+
+set(DATADIR_INSTALL "${CMAKE_INSTALL_PREFIX}/share/melissa-da")
+add_subdirectory(share)
 
 
 configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
