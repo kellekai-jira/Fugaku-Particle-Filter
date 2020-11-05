@@ -1,6 +1,7 @@
 from melissa_da_testing import *
 
 PROCS_SERVER = 3
+N_RUNNERS = 5
 
 class RunnerTester(FifoThread):
     def __init__(self):
@@ -49,16 +50,14 @@ rt = RunnerTester()
 rt.start()
 
 
-# override some study parameters:
-N_RUNNERS = 5
-ase = {}
-ase["MELISSA_DA_TEST_FIFO"] = rt.fifo_name_server
 
 def run():
+    ase = {}
+    ase["MELISSA_DA_TEST_FIFO"] = rt.fifo_name_server
     run_melissa_da_study(
         runner_timeout=1,  # detect tests very fast
-        total_steps=1000,
-        ensemble_size=30,
+        total_steps=3000,
+        ensemble_size=10,
         assimilator_type=ASSIMILATOR_DUMMY,
         cluster=LocalCluster(),
         procs_server=PROCS_SERVER,
@@ -66,7 +65,6 @@ def run():
         n_runners=N_RUNNERS,
         show_server_log=False,
         show_simulation_log=False,
-        #precommand_server='xterm_gdb',
         additional_server_env=ase,
         with_fault_tolerance=True)
 

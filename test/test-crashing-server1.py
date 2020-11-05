@@ -2,7 +2,8 @@ import shutil
 
 from melissa_da_testing import *
 
-PROCS_SERVER = -1
+PROCS_SERVER = 2
+N_RUNNERS = 2
 
 class ServerTester(FifoThread):
     def __init__(self):
@@ -43,20 +44,14 @@ class ServerTester(FifoThread):
 
 
 st = ServerTester()
-#os.environ["MELISSA_DA_TEST_FIFO"] = fifo_name_runner
 st.start()
 
-
-# override some study parameters:
-N_RUNNERS = 2
-PROCS_SERVER = 3
-ase = {}
-ase["MELISSA_DA_TEST_FIFO"] = st.fifo_name_server
-
 def run():
+    ase = {}
+    ase["MELISSA_DA_TEST_FIFO"] = st.fifo_name_server
     run_melissa_da_study(
-        total_steps=1000,
-        ensemble_size=30,
+        total_steps=3000,
+        ensemble_size=10,
         assimilator_type=ASSIMILATOR_DUMMY,
         cluster=LocalCluster(),
         procs_server=PROCS_SERVER,
@@ -64,7 +59,6 @@ def run():
         n_runners=N_RUNNERS,
         show_server_log=False,
         show_simulation_log=False,
-        #precommand_server='xterm_gdb',
         additional_server_env=ase,
         with_fault_tolerance=True)
 

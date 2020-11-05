@@ -4,6 +4,7 @@ from melissa_da_testing import *
 
 
 PROCS_SERVER = 2
+N_RUNNERS = 2
 class ServerTester(FifoThread):
     def __init__(self):
         super().__init__()
@@ -32,16 +33,13 @@ class ServerTester(FifoThread):
 
 
 st = ServerTester()
-#os.environ["MELISSA_DA_TEST_FIFO"] = fifo_name_runner
 st.start()
 
 
-# override some study parameters:
-N_RUNNERS = 2
-ase = {}
-ase["MELISSA_DA_TEST_FIFO"] = st.fifo_name_server
 
 def run():
+    ase = {}
+    ase["MELISSA_DA_TEST_FIFO"] = st.fifo_name_server
     run_melissa_da_study(
         runner_cmd='simulation2-pdaf',
         total_steps=18,
@@ -54,7 +52,6 @@ def run():
         show_server_log=False,
         show_simulation_log=False,
         server_slowdown_factor=10000,  # slow down so it works better
-        #precommand_server='xterm_gdb',
         additional_server_env=ase,
         with_fault_tolerance=True)
 

@@ -5,7 +5,7 @@ MAX_SIMULATION_PROCS = 3
 MAX_RUNNERS = 3
 
 N_RUNNERS = -1
-PROCS_SERVER = 3
+PROCS_SERVER = -1
 
 
 class RunnerWaiter(FifoThread):
@@ -16,11 +16,11 @@ class RunnerWaiter(FifoThread):
     def on_timing_event(self, what, parameter):
         global N_RUNNERS, PROCS_SERVER
 
-        # if at least all runners are up wait 7 iterations and crash server
+        # if at least all runners are up wait 8 iterations and crash server
         if self.runners >= N_RUNNERS:
             if what == STOP_ITERATION:
                 self.iterations_after_runners += 1
-                if self.iterations_after_runners == 10*PROCS_SERVER:  # every server proc is sending the stop iteration event...
+                if self.iterations_after_runners == 8*PROCS_SERVER:  # every server proc is sending the stop iteration event...
                     return False
 
         return True
@@ -33,6 +33,7 @@ for sep in range(1, MAX_SERVER_PROCS + 1):
     for sip in range(1, MAX_SIMULATION_PROCS + 1):
         for mr in range(1, MAX_RUNNERS + 1):
             cases.append((sep, sip, mr))
+
 #server procs: 1, simulation procs: 3, model runners: 2 -- this produces strange FTI errors
 #cases = [(1,3,2)]
 
@@ -66,12 +67,12 @@ for i, case in enumerate(cases):
 
     def run():
         run_melissa_da_study(
-            total_steps=1000,
-            ensemble_size=30,
+            total_steps=3000,
+            ensemble_size=10,
             assimilator_type=ASSIMILATOR_DUMMY,
             cluster=LocalCluster(),
             procs_server=PROCS_SERVER,
-            procs_runner=2,
+            procs_runner=procs_runner,
             n_runners=N_RUNNERS,
             show_server_log=False,
             show_simulation_log=False,
@@ -89,7 +90,7 @@ for i, case in enumerate(cases):
     study.terminate()
 
 
-    assert rw.iterations_after_runners >= 10  # did not kill server too early
+    assert rw.iterations_after_runners >= 8 * PROCS_SERVER  # did not kill server too early
     assert rw.runners == N_RUNNERS
 
 

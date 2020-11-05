@@ -894,7 +894,7 @@ void check_kill_requests() {
 #ifdef REPORT_TIMING
         // only trigger REMOVE_RUNNER if this runner was not yet removed. Since the same
         // runner can have 2 different tasks it is possible that it will be emplaced
-        // 2 times (with diferent task state_ids on killed.
+        // 2 times (with different task state_ids on killed.)
         auto found = std::find_if(killed.begin(), killed.end(),
                 [&t] (const Task &task) {
                     return task.runner_id == t.runner_id;
