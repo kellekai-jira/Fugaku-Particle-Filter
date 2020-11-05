@@ -376,10 +376,6 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     static int highest_runner_id = 0;
     assert(zmq_msg_size(&msg) == sizeof(int));
 
-    trigger(ADD_RUNNER, buf[1]);
-
-    D("Server registering Runner ID %d", buf[1]);
-
     zmq_msg_t msg_reply1, msg_reply2;
     zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
 
@@ -396,6 +392,10 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
                       comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char),
                       NULL, NULL);
     zmq_msg_send(&msg_reply2, configuration_socket, 0);
+
+    trigger(ADD_RUNNER, out_buf[0]);
+    D("Server registering Runner ID %d", out_buf[0]);
+
 
 }
 
@@ -890,10 +890,23 @@ void check_kill_requests() {
         Task t({buf[0], buf[1]});
         L("Got state_id to kill... %d, killing runner_id %d",
           t.state_id, t.runner_id);
+
+#ifdef REPORT_TIMING
+        // only trigger REMOVE_RUNNER if this runner was not yet removed. Since the same
+        // runner can have 2 different tasks it is possible that it will be emplaced
+        // 2 times (with diferent task state_ids on killed.
+        auto found = std::find_if(killed.begin(), killed.end(),
+                [&t] (const Task &task) {
+                    return task.runner_id == t.runner_id;
+                });
+        if (found == killed.end()) {
+            trigger(REMOVE_RUNNER, t.runner_id);
+        }
+#endif
+
         bool is_new = killed.emplace(t).second;
         if (is_new)
         {
-            trigger(REMOVE_RUNNER, t.runner_id);
             fail_state(t.state_id);
         }
         else

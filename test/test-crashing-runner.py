@@ -35,7 +35,7 @@ class RunnerTester(FifoThread):
                     # The evil giraffe strikes back again, performing 2 runner kills!
                     giraffe.start()
 
-        # Then wait still 7 iterations and that all runners are up again.
+        # Then wait still 3 iterations and that all runners are up again.
                 if self.killed_all:
                     self.iterations_after_kills += 1
 
@@ -83,8 +83,8 @@ study.terminate()
 
 assert rt.remove_runners_called == True
 assert rt.runners == N_RUNNERS  # check if runners were restarted!
-assert rt.iterations_after_runners >= 7
-assert rt.iterations_after_kills >= 7
+assert rt.iterations_after_runners >= 3*PROCS_SERVER
+assert rt.iterations_after_kills >= 3*PROCS_SERVER
 
 compare_subset(os.environ['MELISSA_DA_SOURCE_PATH'] + '/test/reference-1000.txt')
 

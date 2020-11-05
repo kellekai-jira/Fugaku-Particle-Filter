@@ -65,8 +65,8 @@ class FifoThread(Thread):
         # count assimilation cycles
         if what == STOP_ITERATION:
             self.iterations += 1
-            if self.iterations % 100 == 0:
-                print('assimilation cycle:', self.iterations)
+            if self.iterations % 100 == 0:  # to get assimilation cycle from it need to be divided by  procs_server
+                print('iteration count:', self.iterations)
 
         return self.on_timing_event(what, parameter)
 
