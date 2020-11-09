@@ -137,7 +137,7 @@ public:
         // Time since epoch in ms. Set from the launcher.
         null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
     {
-        char * fifo_file = nullptr;
+        const char * fifo_file = nullptr;
         fifo_file = getenv("MELISSA_DA_TEST_FIFO");
         if (fifo_file != nullptr) {
             timing_to_fifo_testing = true;
