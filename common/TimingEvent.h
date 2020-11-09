@@ -33,25 +33,8 @@ enum TimingEventType
 #define TIMED_RANK 0
 #endif
 
-//#ifdef NDEBUG
 #define trigger(type, param) if (comm_rank == TIMED_RANK) timing->trigger_event(type, \
                                                                        param)
-//#else
-//#define trigger(type, param) if (comm_rank == TIMED_RANK) { timing->trigger_event(type, \
-                                                                         //param); \
-                                                   //auto now = \
-                                                       //std::chrono:: \
-                                                       //high_resolution_clock:: \
-                                                       //now(); double \
-                                                       //xxxxt = \
-                                                       //std::chrono::duration< \
-                                                           //double, std::milli>( \
-                                                           //now.time_since_epoch()) \
-                                                       //. \
-                                                       //count(); D( \
-                                                       //"Trigger event %d with parameter %d at %f ms", \
-                                                       //type, param, xxxxt); }
-//#endif NDEBUG
 #else
 #define trigger(type, param)
 #endif
@@ -100,6 +83,33 @@ private:
 
 public:
     std::list<TimingEvent> events;  // a big vector should be more performant!
+
+    Timing() :
+        // Time since epoch in ms. Set from the launcher.
+        null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
+    {
+        const char * fifo_file = getenv("MELISSA_DA_TEST_FIFO");
+        if (fifo_file != nullptr) {
+            timing_to_fifo_testing = true;
+            fifo_os = std::ofstream(fifo_file);
+            std::fprintf(
+                    stderr, "connected to fifo %s",
+                    fifo_file
+                    );
+        }
+
+        this->trigger_event(INIT, 0); // == trigger(INIT, 0)
+        const auto p1 = std::chrono::system_clock::now();
+        const unsigned long long ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(
+                p1.time_since_epoch()).count();
+
+
+        L("Init timing at %llu ms since epoch", ms_since_epoch);
+
+        L("Null time   at %llu ms since epoch (timing-events csv are relative to this)", atoll(getenv("MELISSA_TIMING_NULL")));
+
+    }
+
     void trigger_event(TimingEventType type, const int parameter) {
         events.push_back(TimingEvent(type, parameter));
 
@@ -129,33 +139,6 @@ public:
             outfile << it->type << ',';
             outfile << it->parameter << std::endl;
         }
-    }
-
-    Timing() :
-        // Time since epoch in ms. Set from the launcher.
-        null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
-    {
-        const char * fifo_file = nullptr;
-        fifo_file = getenv("MELISSA_DA_TEST_FIFO");
-        if (fifo_file != nullptr) {
-            timing_to_fifo_testing = true;
-            fifo_os = std::ofstream(fifo_file);
-            std::fprintf(
-                    stderr, "connected to fifo %s",
-                    fifo_file
-                    );
-        }
-
-        this->trigger_event(INIT, 0); // == trigger(INIT, 0)
-        const auto p1 = std::chrono::system_clock::now();
-        const unsigned long long ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(
-                p1.time_since_epoch()).count();
-
-
-        L("Init timing at %llu ms since epoch", ms_since_epoch);
-
-        L("Null time   at %llu ms since epoch (timing-events csv are relative to this)", atoll(getenv("MELISSA_TIMING_NULL")));
-
     }
 
     template<std::size_t SIZE>
@@ -193,7 +176,7 @@ public:
                                 << std::endl;
 
                             // remove from stack:
-                            open_events.erase( --(oevt.base()) );  // hope this reverse operator works
+                            open_events.erase( --(oevt.base()) );
 
                             found_anything = true;
                             break;
