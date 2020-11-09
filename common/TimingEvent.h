@@ -95,7 +95,6 @@ private:
         return std::chrono::duration<double, std::milli>(lhs - null_time).count();
     }
 
-    char * fifo_file = nullptr;
     bool timing_to_fifo_testing = false;
     std::ofstream fifo_os;
 
@@ -105,12 +104,8 @@ public:
         events.push_back(TimingEvent(type, parameter));
 
         if (timing_to_fifo_testing) {
-            //fifo_os = std::ofstream(fifo_file, std::ofstream::out | std::ofstream::app);
             fifo_os << type << "," << parameter << std::endl;
             fifo_os.flush();
-            //fifo_os.close();
-            //std::string str = std::to_string(type) + "," + std::to_string(parameter) + "\n";
-            //fifo_os.write(str.c_str(), str.size());
         }
     }
 
@@ -142,8 +137,7 @@ public:
         // Time since epoch in ms. Set from the launcher.
         null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
     {
-
-
+        char * fifo_file = nullptr;
         fifo_file = getenv("MELISSA_DA_TEST_FIFO");
         if (fifo_file != nullptr) {
             timing_to_fifo_testing = true;
@@ -229,12 +223,6 @@ public:
         }
 
         outfile.close();
-    }
-
-    ~Timing() {
-        if (timing_to_fifo_testing) {
-            fifo_os.close();
-        }
     }
 };
 
