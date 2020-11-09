@@ -117,7 +117,6 @@ public:
 
         nullfile << "null time (ms)" << std::endl;
         nullfile << getenv("MELISSA_TIMING_NULL") << std::endl;
-        nullfile.close();
 
 
         std::ofstream outfile ( "timing-events." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
@@ -130,7 +129,6 @@ public:
             outfile << it->type << ',';
             outfile << it->parameter << std::endl;
         }
-        outfile.close();
     }
 
     Timing() :
@@ -222,7 +220,6 @@ public:
 
         }
 
-        outfile.close();
     }
 };
 
