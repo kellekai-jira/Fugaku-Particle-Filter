@@ -14,12 +14,12 @@ class RunnerTester(FifoThread):
     def on_timing_event(self, what, parameter):
         global N_RUNNERS, PROCS_SERVER
 
-        if what == REMOVE_RUNNER:
+        if what == Event.REMOVE_RUNNER:
             self.remove_runners_called = True
 
         # if at least all runners are up wait 3 iterations and crash 2 runners
         if self.runners >= N_RUNNERS:
-            if what == STOP_ITERATION:
+            if what == Event.STOP_ITERATION:
                 self.iterations_after_runners += 1
                 if self.iterations_after_runners == 3*PROCS_SERVER:
                     def perform_kills(parent):

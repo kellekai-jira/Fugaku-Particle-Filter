@@ -17,7 +17,7 @@ class ServerTester(FifoThread):
         global N_RUNNERS, PROCS_SERVER
 
         #  wait 7 iterations and crash server
-        if what == STOP_ITERATION:
+        if what == Event.STOP_ITERATION:
             print('iteration :', self.iterations)
             if self.iterations == 2 * PROCS_SERVER:
                 print('Crashing server...')

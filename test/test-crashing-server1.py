@@ -19,7 +19,7 @@ class ServerTester(FifoThread):
 
         # if at least all runners are up wait 7 iterations and crash server
         if self.runners >= N_RUNNERS:
-            if what == STOP_ITERATION:
+            if what == Event.STOP_ITERATION:
                 self.iterations_after_runners += 1
                 if self.iterations_after_runners == 12 * PROCS_SERVER:
                     print('Crashing server...')
@@ -32,7 +32,7 @@ class ServerTester(FifoThread):
 
 
         # Then wait still 20 iterations and that all runners are up again.
-        if self.killed_server and what == STOP_ITERATION:
+        if self.killed_server and what == Event.STOP_ITERATION:
             #print('iteration after kills')
 
             self.iterations_after_kills += 1

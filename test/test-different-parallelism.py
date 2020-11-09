@@ -18,7 +18,7 @@ class RunnerWaiter(FifoThread):
 
         # if at least all runners are up wait 8 iterations and crash server
         if self.runners >= N_RUNNERS:
-            if what == STOP_ITERATION:
+            if what == Event.STOP_ITERATION:
                 self.iterations_after_runners += 1
                 if self.iterations_after_runners == 8*PROCS_SERVER:  # every server proc is sending the stop iteration event...
                     return False
@@ -100,6 +100,6 @@ for i, case in enumerate(cases):
 
     print('Wait for port freeing...')
     # port freeing takes some time..
-    while subprocess.call(['bash', '-c', 'netstat -tulpn | grep 5555'],
-            stderr=subprocess.DEVNULL, stdout= subprocess.DEVNULL) != 1:
+    while subprocess.call(['bash', '-c', 'ss -tlpn | grep 5555'],
+            stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) != 1:
         time.sleep(.1)
