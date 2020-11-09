@@ -26,10 +26,10 @@ def compare_subset(reference_file, output_file="STATS/output.txt"):
 
     with tempfile.NamedTemporaryFile(mode="w") as reference:
         with tempfile.NamedTemporaryFile(mode="w") as output:
-           os.system("head something >'{:s}'".format(reference.name))
-           os.system("head else >'{:s}'".format(output.name))
+            os.system(f"head -n {line_number} {reference_file} >'{reference.name}'")
+            os.system(f"head -n {line_number} {output_file} >'{output.name}'")
 
-           compare(reference.name, output.name)
+            compare(reference.name, output.name)
 
 def get_run_information():
     return pd.read_csv('STATS/server.run-information.csv')
