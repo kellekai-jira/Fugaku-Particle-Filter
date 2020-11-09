@@ -136,8 +136,7 @@ elif testcase == 'test-empty-hidden-index-map':
     os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     compare("STATS/index-map.csv", './reference-empty-hidden-index-map.csv')
 else:
-    print('Error! does not know the testcase %s' % testcase)
-    assert False
+    raise NotImplementedError("{:s} not implemented".format(testcase))
 
 print("passed!")
 exit(0)
