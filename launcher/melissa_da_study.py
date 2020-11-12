@@ -65,7 +65,6 @@ def run_melissa_da_study(
         show_server_log = True,
         show_simulation_log = True,
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
-
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
         runner_timeout=5,
         additional_server_env={},
@@ -168,6 +167,9 @@ def run_melissa_da_study(
         precommand = 'xterm_gdb'
         precommand = ''
 
+        assert len(group.simu_id) == 1  # check if study was correctly configured to have groups of size 1
+        runner_id = group.simu_id[0]
+
         cmd = '%s %s' % (
                 precommand,
                 RUNNER_CMD
@@ -178,9 +180,9 @@ def run_melissa_da_study(
         print('Starting runner! REM: the simulation group id != runner id!')
         logfile = ''
         if not show_simulation_log:
-            logfile = '%s/runner-%03d.log' % (WORKDIR, launch_runner.next_runner_id)
+            logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
             if create_runner_dir:
-                runner_dir = '%s/runner-%03d' % (WORKDIR, launch_runner.next_runner_id)
+                runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
                 os.mkdir(runner_dir)
                 os.chdir(runner_dir)
 
@@ -189,7 +191,8 @@ def run_melissa_da_study(
 
         additional_runner_env = {
                 "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
-                "MELISSA_TIMING_NULL": str(start_time)
+                "MELISSA_TIMING_NULL": str(start_time),
+                "MELISSA_DA_RUNNER_ID": str(runner_id)
                 }
         lib_path = os.getenv('LD_LIBRARY_PATH')
         if lib_path != '':
@@ -205,9 +208,6 @@ def run_melissa_da_study(
         global started_runners
         started_runners += 1
 
-        launch_runner.next_runner_id += 1
-
-    launch_runner.next_runner_id = 0
 
     def check_job(job):
         # Check the job state:
@@ -260,8 +260,8 @@ def run_melissa_da_study(
     melissa_study = melissa.Study()
     melissa_study.set_working_directory(WORKDIR)
 
-    melissa_study.set_simulation_timeout(400)      # simulations are restarted if no life sign for 400 seconds.... max time simulations have to run till the end. ignore this: -1
-    melissa_study.set_simulation_timeout(-1)
+    #melissa_study.set_simulation_timeout(-1)  # would deactivate runner timeout
+    melissa_study.set_simulation_timeout(runner_timeout)        # simulations have runner_timeout seconds to start up
     melissa_study.set_checkpoint_interval(300)     # server checkpoints every 300 seconds
     melissa_study.set_verbosity(3)                 # verbosity: 0: only errors, 1: errors + warnings, 2: usefull infos (default), 3: debug info
 
@@ -301,6 +301,7 @@ def run_melissa_da_study(
     os.chdir(old_cwd)
 
     # flush print output to the console
+    cluster.CleanUp(EXECUTABLE)
     sys.stdout.flush()
 
 

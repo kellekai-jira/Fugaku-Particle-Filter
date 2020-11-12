@@ -34,6 +34,7 @@ public:
 
     bool checkLauncherDueDate();
     void ping();
+    void notify(const int runner_id, const int status);
 };
 
 #endif /* LAUNCHERCONNECTION_H_ */

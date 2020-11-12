@@ -373,19 +373,20 @@ SubTaskList finished_sub_tasks;  // TODO: why do we need to store this? actually
 void register_runner_id(zmq_msg_t &msg, const int * buf,
                         void * configuration_socket,
                         char * data_response_port_names) {
-    static int highest_runner_id = 0;
-    assert(zmq_msg_size(&msg) == sizeof(int));
+    static bool register_field = true;
+    assert(zmq_msg_size(&msg) == 2 * sizeof(int));
 
     zmq_msg_t msg_reply1, msg_reply2;
-    zmq_msg_init_size(&msg_reply1, 3 * sizeof(int));
+    zmq_msg_init_size(&msg_reply1, 2 * sizeof(int));
+
+    int runner_id = buf[1];
 
     // At the moment we request field registration from runner id 0. TODO! be fault tollerant during server init too? - actually we do not want to. faults during init may make it crashing...
-    int request_register_field =  highest_runner_id == 0 ? 1 : 0;
 
     int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-    out_buf[0] = highest_runner_id++;              // every model task runner gets an other runner id.
-    out_buf[1] = request_register_field;
-    out_buf[2] = comm_size;
+    out_buf[0] = (register_field ? 1 : 0);
+    register_field = false;
+    out_buf[1] = comm_size;
     zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
 
     zmq_msg_init_data(&msg_reply2, data_response_port_names,
@@ -393,10 +394,13 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
                       NULL, NULL);
     zmq_msg_send(&msg_reply2, configuration_socket, 0);
 
-    trigger(ADD_RUNNER, out_buf[0]);
-    D("Server registering Runner ID %d", out_buf[0]);
+    trigger(ADD_RUNNER, runner_id);
+    D("Server registering Runner ID %d", runner_id);
 
+    // FIXME: have runner timeouts....
 
+    // notify launcher about connected runner.
+    launcher->notify(runner_id, RUNNING);
 }
 
 std::vector<int> global_index_map;

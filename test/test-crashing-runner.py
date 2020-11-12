@@ -55,7 +55,7 @@ def run():
     ase = {}
     ase["MELISSA_DA_TEST_FIFO"] = rt.fifo_name_server
     run_melissa_da_study(
-        runner_timeout=1,  # detect tests very fast
+        runner_timeout=5,  # detect tests very fast. Still this may not be too tight as the launcher uses the same timeout to detect if a runner started up. so it must be larger than the runners startup time.
         total_steps=3000,
         ensemble_size=10,
         assimilator_type=ASSIMILATOR_DUMMY,

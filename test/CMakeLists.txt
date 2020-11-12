@@ -81,3 +81,9 @@ add_python_test("test-crashing-server2"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-crashing-server2.py")
 add_python_test("test-different-parallelism"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-different-parallelism.py")
+add_python_test("test-unresponsive-runner"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-unresponsive-runner.py")
+
+# Should be the last test!
+add_python_test("test-cleanup"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-cleanup.py")

@@ -111,5 +111,10 @@ void LauncherConnection::ping()
     }
 }
 
+void LauncherConnection::notify(const int runner_id, const int status)
+{
+    ZMQ_CHECK(send_message_simu_status(runner_id, status, text_pusher, 0));
+}
+
 
 

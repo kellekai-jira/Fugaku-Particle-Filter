@@ -449,23 +449,28 @@ struct ConfigurationConnection
     bool register_runner_id(Server * out_server)
     {
         zmq_msg_t msg_request, msg_reply;
-        zmq_msg_init_size(&msg_request, sizeof(int));
+        zmq_msg_init_size(&msg_request, 2 * sizeof(int));
         int * header = reinterpret_cast<int*>(zmq_msg_data(
                                                   &msg_request));
+
+        runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+
         header[0] = REGISTER_RUNNER_ID;
+        header[1] = runner_id;
+
+        L("registering runner_id %d at server", runner_id);
         ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
 
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
-        assert(zmq_msg_size(&msg_reply) == 3 * sizeof(int));
+        assert(zmq_msg_size(&msg_reply) == 2 * sizeof(int));
         int * buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply));
 
-        runner_id = buf[0];
-        bool request_register_field = (buf[1] != 0);
+        bool request_register_field = (buf[0] != 0);
 
-        L("Got runner_id %d. Registering field? %d", runner_id, buf[1]);
+        L("Registering field? %d", buf[0]);
 
-        out_server->comm_size = buf[2];
+        out_server->comm_size = buf[1];
         zmq_msg_close(&msg_reply);
 
         size_t port_names_size = out_server->comm_size *
