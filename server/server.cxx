@@ -848,6 +848,8 @@ void check_due_dates() {
         if (comm_rank == 0)
         {
             trigger(REMOVE_RUNNER, it->runner_id);
+            launcher->notify(it->runner_id, TIMEOUT);
+
             fail_state(it->state_id);
 
             // reschedule directly if possible
@@ -905,6 +907,7 @@ void check_kill_requests() {
                 });
         if (found == killed.end()) {
             trigger(REMOVE_RUNNER, t.runner_id);
+            launcher->notify(t.runner_id, TIMEOUT);
         }
 #endif
 
