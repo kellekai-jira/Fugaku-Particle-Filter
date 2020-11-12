@@ -2,12 +2,12 @@ import tempfile
 from melissa_da_testing import *
 
 
-cmd = os.environ['MELISSA_DA_SOURCE_PATH'] + '/test/unresponsive_runner.sh'
+cmd = os.environ['MELISSA_DA_SOURCE_PATH'] + '/test/never_connecting_runner.sh'
 # TempFile:
 fd, tmp_file_name = tempfile.mkstemp()
 
 ae = {
-        'BE_UNRESPONSIVE': tmp_file_name
+        'BE_NEVER_CONNECTING': tmp_file_name
 }
 
 
@@ -118,14 +118,14 @@ found = 0
 for i in [0, 1]:
     with open(f'STATS/runner-00{i}.log') as f:
         for line in f:
-            if 'unresponsive runner' in line:
+            if 'never connecting runner' in line:
                 found += 1
 
 assert found == 0  # must be found exactly once!
 
-with open('STATS/unresponsive_runner') as f:
+with open('STATS/never_connecting_runner') as f:
     for line in f:
-        if 'unresponsive runner' in line:
+        if 'never connecting runner' in line:
             found += 1
 assert found == 1
 

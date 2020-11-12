@@ -9,7 +9,7 @@ for line in lines:
 
     print_line = False
     for trigger_word in ['simulation1', 'simulation2', 'simulation3', 'melissa_server',
-            'unresponsive_runner.sh']:
+            'never_connecting_runner.sh']:
         if trigger_word in line:
             print_line = True
             passed = False
