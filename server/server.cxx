@@ -98,6 +98,7 @@ const int TAG_ALL_FINISHED = 45;
 
 int highest_received_task_id = 0;
 
+std::map<int, bool> launcher_notified_about_runner;
 
 // only important on ranks != 0:
 int highest_sent_task_id = 0;
@@ -397,10 +398,12 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     trigger(ADD_RUNNER, runner_id);
     D("Server registering Runner ID %d", runner_id);
 
-    // FIXME: have runner timeouts....
-
-    // notify launcher about connected runner.
-    launcher->notify(runner_id, RUNNING);
+    // notify launcher on first expose. This way we are sure that then we always have an open connection and we see if the runner breaks if it doesn't respond on this connection.
+    auto res = launcher_notified_about_runner.emplace(std::pair<int, bool>(runner_id, false));
+    if (!res.second) {
+        // element existed already. This is probably a runner restart. So renotify launcher when runner ready
+        launcher_notified_about_runner.at(runner_id) = false;
+    }
 }
 
 std::vector<int> global_index_map;
@@ -984,6 +987,13 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         return st->runner_id == runner_id && st->state_id ==
         runner_state_id && st->runner_rank == runner_rank;
     });
+
+
+    // notify launcher about newly connected runner.
+    if (comm_rank == 0 && launcher_notified_about_runner.at(runner_id) == false) {
+        launcher->notify(runner_id, RUNNING);
+        launcher_notified_about_runner.at(runner_id) = true;
+    }
 
     RunnerRankConnection csr(identity);
     auto found = std::find_if(killed.begin(), killed.end(), [runner_id] (

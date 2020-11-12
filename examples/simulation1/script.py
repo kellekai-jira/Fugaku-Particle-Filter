@@ -9,5 +9,5 @@ run_melissa_da_study(
         procs_server=2,
         procs_runner=3,
         n_runners=1,
-        show_server_log = False,
-        show_simulation_log = False)
+        show_server_log=False,
+        show_simulation_log=False)
