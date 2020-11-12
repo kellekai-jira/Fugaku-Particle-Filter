@@ -93,7 +93,7 @@ public:
             timing_to_fifo_testing = true;
             fifo_os = std::ofstream(fifo_file);
             std::fprintf(
-                    stderr, "connected to fifo %s",
+                    stderr, "connected to fifo %s\n",
                     fifo_file
                     );
         }
