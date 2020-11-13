@@ -189,6 +189,12 @@ int main(int argc, char * args[])
         nsteps = melissa_expose("variableX", state1.data(), nullptr);
 #endif
 
+#ifdef DEADLOCK
+        while (true) {
+            sleep(1);
+        }
+#endif
+
         if (nsteps > 0 && is_first_timestep)
         {
             printf("First timestep to propagate: %d\n",

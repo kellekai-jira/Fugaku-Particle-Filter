@@ -83,6 +83,8 @@ add_python_test("test-different-parallelism"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-different-parallelism.py")
 add_python_test("test-never-connecting-runner"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-never-connecting-runner.py")
+add_python_test("test-unresponsive-runner"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-unresponsive-runner.py")
 
 # Should be the last test!
 add_python_test("test-cleanup"
