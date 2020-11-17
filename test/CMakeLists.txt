@@ -53,7 +53,6 @@ function(add_python_test test_name test_script)
     list(APPEND LD_LIBRARY_PATH_LIST ${FTI_PATH}/lib)
     string(REPLACE ";" ":" LD_LIBRARY_PATH_ "${LD_LIBRARY_PATH_LIST}")
 
-    # does not work correctly:
     set_property(
         TEST ${test_name}
         APPEND PROPERTY ENVIRONMENT
