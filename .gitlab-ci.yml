@@ -1,76 +1,11 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-stages:
-  - build_deps
-  - build
-  - test
-
-build_deps:
-  stage: build_deps
+debian/9/amd64:
+  image: datamove/debian/9/amd64
   tags:
-    - melissa-da
+    - lxd
   script:
-    # don't forget to cd backwards at the ends so the artifacts can be found
-    - "mkdir melissa/build && cd melissa/build && cmake .. && make install && cd ../.."
-  artifacts:
-    paths:
-      - melissa/install/
-
- # FIXME: reactivate
-#build:
-  #stage: build
-  #tags:
-    #- melissa-da
-  #script:
-    ## don't forget to cd backwards at the ends so the artifacts can be found
-    #- "mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install && make -j 10 install && cd .."
-  #artifacts:
-    #paths:
-      ## export further...
-      #- melissa/install/
-      #- build/
-  #dependencies:
-    #- build_deps
-
-
-#test:
-  #stage: test
-  #tags:
-    #- melissa-da
-  #script:
-    #- "cd build && ctest --verbose"
-  #dependencies:
-    #- build
-
-
-build_fti:
-  stage: build
-  tags:
-    - melissa-da
-  script:
-    - "mkdir build" # don't forget to cd backwards at the ends so the artifacts can be found
-    - "cd build"  #- "cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON"  # TODO: check with threads...
-    - "cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -DFTI_PATH=$HOME/FTI -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi -DWITH_FTI_THREADS=ON"
-    - "make -j10 install"
-    - "cd .."
-  artifacts:
-    paths:
-      # export further...
-      - melissa/install/
-      - build/
-  dependencies:
-    - build_deps
-
-test_fti:
-  stage: test
-  tags:
-    - melissa-da
-  script:
-    - "export LD_LIBRARY_PATH=$HOME/FTI:$LD_LIBRARY_PATH"  # TODO no idea if this works... but should!  The question is if bash executes the script... # For preinstalled FTI
-    - "env"
-    - "cd build && ctest --verbose"
-  dependencies:
-    - build_fti
-  after_script:
-    - killall simulation1 simulation1-hidden simulation1-stateful simulation2-pdaf simulation3-empty melissa_server python3
+    - mkdir build
+    - cd build
+    - bash ../build-and-test.sh .. ~/PDAF-D_V1.15 ~/fti
