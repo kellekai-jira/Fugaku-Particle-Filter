@@ -66,7 +66,7 @@ class LocalCluster(cluster.Cluster):
         msg = 'pid={:d}: LocalCluster: jobs {} not cleaned up'
         print(msg.format(pid, self.jobs.keys()), file=sys.stderr)
         print('cleaning them up now...')
-        self.CleanUp('asdf')
+        self.CleanUp(None)
 
 
 
@@ -153,4 +153,7 @@ class LocalCluster(cluster.Cluster):
 
         # Since zombie processes might keep running since sigterm is not propagated by
         # mpiexec correctly, we need to rely on this nasty trick:
-        os.system(f'killall {executable}; killall melissa_server')
+        if executable is not None:
+            os.system("killall {:s}".format(executable))
+
+        os.system("killall melissa_server")
