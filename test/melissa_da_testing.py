@@ -22,15 +22,16 @@ def compare_subset(reference_file, output_file="STATS/output.txt"):
     print('Compare %s with %s...' % (output_file, reference_file))
 
     with tempfile.NamedTemporaryFile(mode="w") as uniq:
-        os.system(f"uniq {output_file} > {uniq.name}")
+        os.system("uniq {:s} > {:s}".format(output_file, uniq.name))
         with open(uniq.name) as f:
             line_number = len(f.readlines())
 
 
         with tempfile.NamedTemporaryFile(mode="w") as reference:
             with tempfile.NamedTemporaryFile(mode="w") as output:
-                os.system(f"head -n {line_number} {reference_file} >'{reference.name}'")
-                os.system(f"head -n {line_number} {uniq.name} >'{output.name}'")
+                os.system("head -n {line_number} {reference_file} >'{reference.name}'")
+                os.system("head -n {:d} {:s} >'{:s}'".format(line_number, reference_file, reference.name))
+                os.system("head -n {:d} {:s} >'{:s}'".format(line_number, uniq.name, output.name))
 
                 compare(reference.name, output.name)
 

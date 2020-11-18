@@ -90,10 +90,10 @@ study_options = {
 def on_event(what, parameter, iterations, runners):
     if what == Event.ADD_RUNNER:
         on_event.runners.add(parameter)
-        print(f'adding runner({parameter})', on_event.runners)
+        print("adding runner({})".format(on_event.runners))
     elif what == Event.REMOVE_RUNNER:
         on_event.runners.remove(parameter)
-        print(f'removing runner({parameter})', on_event.runners)
+        print("removing runner({}})".format(on_event.runners))
 
     if on_event.good_iterations == -1 and len(on_event.runners) == 2:
         on_event.good_iterations = iterations
@@ -116,7 +116,7 @@ assert found == 1
 
 found = 0
 for i in [0, 1]:
-    with open(f'STATS/runner-00{i}.log') as f:
+    with open("STATS/runner-{:03d}.log".format(i)) as f:
         for line in f:
             if 'never connecting runner' in line:
                 found += 1
