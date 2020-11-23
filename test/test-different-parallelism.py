@@ -1,5 +1,7 @@
 from melissa_da_testing import *
 
+import socket
+
 MAX_SERVER_PROCS = 3
 MAX_SIMULATION_PROCS = 3
 MAX_RUNNERS = 3
@@ -100,6 +102,13 @@ for i, case in enumerate(cases):
 
     print('Wait for port freeing...')
     # port freeing takes some time..
-    while subprocess.call(['bash', '-c', 'ss -tlpn | grep 5555'],
-            stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) != 1:
+    while True:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = s.connect_ex(('127.0.0.1', 5555))
+
+        s.close()
+        if result != 0:
+            print('socket is closed')
+            break
+
         time.sleep(.1)
