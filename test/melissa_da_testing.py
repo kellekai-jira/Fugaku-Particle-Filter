@@ -29,7 +29,6 @@ def compare_subset(reference_file, output_file="STATS/output.txt"):
 
         with tempfile.NamedTemporaryFile(mode="w") as reference:
             with tempfile.NamedTemporaryFile(mode="w") as output:
-                os.system("head -n {line_number} {reference_file} >'{reference.name}'")
                 os.system("head -n {:d} {:s} >'{:s}'".format(line_number, reference_file, reference.name))
                 os.system("head -n {:d} {:s} >'{:s}'".format(line_number, uniq.name, output.name))
 

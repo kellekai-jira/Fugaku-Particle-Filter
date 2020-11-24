@@ -30,7 +30,7 @@ class RunnerTester(FifoThread):
                         killing_giraffe('simulation1')
                         time.sleep(.3)
                         parent.killed_all = True
-                        print('killed_all!!!')
+                        print('killed all!')
 
                     giraffe = Thread(target=perform_kills, args=(self,))
                     # The evil giraffe strikes back again, performing 2 runner kills!

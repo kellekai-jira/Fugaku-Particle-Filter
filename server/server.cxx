@@ -382,6 +382,13 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
 
     int runner_id = buf[1];
 
+    auto found = std::find_if(killed.begin(), killed.end(),
+            [runner_id] (const Task &task) {
+                return task.runner_id == runner_id;
+            });
+
+    assert(found == killed.end());  // runner was not dead yet
+
     // At the moment we request field registration from runner id 0. TODO! be fault tollerant during server init too? - actually we do not want to. faults during init may make it crashing...
 
     int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));

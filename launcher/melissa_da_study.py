@@ -170,6 +170,14 @@ def run_melissa_da_study(
         assert len(group.simu_id) == 1  # check if study was correctly configured to have groups of size 1
         runner_id = group.simu_id[0]
 
+        # The server cannot accept 2 times the same runner_id.
+        # I added a line in the launcher so it calculates the modulus if a runner id is too large to transform it in a simu id
+        while runner_id in launch_runner.used_runner_ids:
+            runner_id += n_runners
+
+        launch_runner.used_runner_ids.add(runner_id)
+
+
         cmd = '%s %s' % (
                 precommand,
                 RUNNER_CMD
@@ -177,7 +185,6 @@ def run_melissa_da_study(
 
         melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
 
-        print('Starting runner! REM: the simulation group id != runner id!')
         logfile = ''
         if not show_simulation_log:
             logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
@@ -207,6 +214,7 @@ def run_melissa_da_study(
 
         global started_runners
         started_runners += 1
+    launch_runner.used_runner_ids = set()
 
 
     def check_job(job):

@@ -1,4 +1,5 @@
 import tempfile
+import re
 from melissa_da_testing import *
 
 
@@ -112,17 +113,20 @@ with open('STATS/melissa_launcher.log') as f:
         if 'resubmit group' in line and '(timeout detected by launcher)' in line:
             found += 1
 
-assert found == 1
+assert found == 1  # One group was resubmitted
 
 found = 0
+regex = re.compile('runner-[0-9]+.log')
+log_files = filter(lambda x: regex.search(x), next(os.walk('STATS/'))[2])
 for i in [0, 1]:
     with open("STATS/runner-{:03d}.log".format(i)) as f:
         for line in f:
             if 'never connecting runner' in line:
                 found += 1
 
-assert found == 0  # must be found exactly once!
+assert found == 1  # One is the logfile of the never connecting runner
 
+found = 0
 with open('STATS/never_connecting_runner') as f:
     for line in f:
         if 'never connecting runner' in line:
