@@ -52,8 +52,7 @@ def run():
         show_server_log=False,
         show_simulation_log=False,
         server_slowdown_factor=10000,  # slow down so it works better
-        additional_server_env=ase,
-        with_fault_tolerance=True)
+        additional_server_env=ase)
 
 run()
 st.running = False

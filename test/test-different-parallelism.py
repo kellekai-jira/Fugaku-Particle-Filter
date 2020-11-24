@@ -79,8 +79,7 @@ for i, case in enumerate(cases):
             show_server_log=False,
             show_simulation_log=False,
             #precommand_server='xterm_gdb',
-            additional_server_env=ase,
-            with_fault_tolerance=True)
+            additional_server_env=ase)
 
 # run the study in an extern process so it is easier to terminate
     study = Process(target=run)

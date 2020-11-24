@@ -326,7 +326,7 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
         show_server_log = False,
         show_simulation_log = False)
 
-    with open('STATS/server.log', 'r') as f:
+    with open('STATS/server.log.1', 'r') as f:
         for line in f.readlines():
             if '**** Check Successful' in line:
                 log('Simulation %s seems stateless'

@@ -83,7 +83,6 @@ study_options = {
         "show_server_log": False,
         "show_simulation_log": False,
         "additional_env": ae,
-        "with_fault_tolerance": True,
         #"precommand_server": "xterm_gdb",
         "runner_timeout": 5
         }

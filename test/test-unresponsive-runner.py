@@ -11,8 +11,7 @@ run_melissa_da_study(
     procs_runner=2,
     n_runners=2,
     show_server_log=False,
-    show_simulation_log=False,
-    with_fault_tolerance=True)
+    show_simulation_log=False)
 
 
 found1 = False
