@@ -27,9 +27,9 @@ class Cluster:
     def CheckJobState(self, job_id):
         """
         Check the job state:
-        0: not runing  TODO: use macros!  TODO: what's the difference between not running and not running anymore?
-        1: running
-        2: not running anymore (finished or crashed)
+        STATE_WAITING: not runing  TODO: use macros!  TODO: what's the difference between not running and not running anymore?
+        STATE_RUNNING: running
+        STATE_STOP:    not running anymore (finished or crashed)
         """
         raise NotImplementedError
 
@@ -50,3 +50,8 @@ class Cluster:
         runner_executable {str}              name of the runner executable as it might be passed to the killall command
         """
         raise NotImplementedError
+
+
+STATE_WAITING = 0
+STATE_RUNNING = 1
+STATE_STOP    = 2

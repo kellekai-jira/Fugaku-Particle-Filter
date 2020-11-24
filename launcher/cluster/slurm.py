@@ -162,13 +162,13 @@ class SlurmCluster(cluster.Cluster):
 
 
     def CheckJobState(self, job_id):
-        state = 0
+        state = cluster.STATE_WAITING
         if self.in_salloc and (job_id in self.salloc_jobids):
             ret_code = subprocess.call(["ps", job_id], stdout=subprocess.DEVNULL)
             if ret_code == 0:
-                state = 1
+                state = cluster.STATE_RUNNING
             else:
-                state = 2
+                state = cluster.STATE_STOP
                 for k, v in self.node_occupation.items():
                     if v['job_id'] == job_id:
                         self.node_occupation[k]['job_id'] = ""
@@ -197,11 +197,11 @@ class SlurmCluster(cluster.Cluster):
 
 
         if in_out(["PENDING"]):
-            return 0
+            return cluster.STATE_WAITING
         elif in_out(["CONFIGURING", "RUNNING"]):
-            return 1
+            return cluster.STATE_RUNNING
         else:
-            return 2
+            return cluster.STATE_STOP
 
     def KillJob(self, job_id):
         if self.in_salloc and (job_id in self.salloc_jobids):

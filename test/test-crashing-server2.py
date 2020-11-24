@@ -64,12 +64,12 @@ assert st.was_unfinished
 
 
  # Check if server was restarted:
-assert os.path.isfile("STATS/server.log.0")
-assert os.path.isfile("STATS/server.log")
+assert os.path.isfile("STATS/server.log.1")
+assert os.path.isfile("STATS/server.log.2")
 
 # Check for FTI logs:
-assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.0"]) == 0
-assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log"]) == 0
+assert subprocess.call(["grep", "Ckpt. ID.*taken in", "STATS/server.log.1"]) == 0
+assert subprocess.call(["grep", "This is a restart. The execution ID is", "STATS/server.log.2"]) == 0
 
 
 exit(subprocess.call(["bash", os.environ['MELISSA_DA_SOURCE_PATH'] + "/examples/simulation2-pdaf/test.sh"]))

@@ -15,19 +15,15 @@
 ###################################################################
 
 import os
-import sys
-import socket
 import time
-import subprocess
 from shutil import copyfile
+
+#import logging  # FIXME: use logging
+import threading
 
 from cluster import *
 
-from launcher import melissa
-
 from utils import *
-
-import logging
 
 start_time = int(time.time()*1000)  # in milliseconds
 
@@ -38,20 +34,7 @@ melissa_with_fti = (os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE')
 melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
 assert melissa_da_datadir
 
-# Assimilator types:
-ASSIMILATOR_DUMMY = 0
-ASSIMILATOR_PDAF = 1
-ASSIMILATOR_EMPTY = 2
-ASSIMILATOR_CHECK_STATELESS = 3
-ASSIMILATOR_PRINT_INDEX_MAP = 4
 
-started_runners = 0  # as Python seems to not support closurs this has to be global.
-
-def join_dicts(out, b):
-    for k, v in b.items():
-        #assert k not in out
-        out[k] = v
-    return out
 
 def run_melissa_da_study(
         runner_cmd='simulation1',
@@ -73,15 +56,10 @@ def run_melissa_da_study(
         nodes_server=1,
         nodes_runner=1,
         walltime='xxxx01:00:00',
-        with_fault_tolerance=True,
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
         additional_env={}):
 
     assert isinstance(cluster, Cluster)
-
-    global started_runners
-    started_runners = 0
-
 
     old_cwd = os.getcwd()
     WORKDIR = old_cwd + '/STATS'
@@ -94,144 +72,7 @@ def run_melissa_da_study(
 
     os.chdir(WORKDIR)
 
-    # The launch_server function to put in USER_FUNCTIONS['launch_server'].
-    # It takes a Server object as argument, and must set its job_id attribute.
-    # Here, we use the PID of the subprocess.
-    # The server object provides two important attributes:
-    #   path: the path to melissa_server executable
-    #   cmd_opt: the options set by the launcher to pass to the server.
-    def launch_server(server):
 
-        # sometimes the server starts in a runner dir...
-
-        cmd = '%s melissa_server %s' % (
-                precommand_server,
-                server.cmd_opt
-                )
-
-        envs = additional_env.copy()
-        envs['MELISSA_TIMING_NULL'] = str(start_time)
-        join_dicts(envs, additional_server_env)
-
-        if not 'LD_LIBRARY_PATH' in envs:
-            lib_path = os.getenv('LD_LIBRARY_PATH')
-            if lib_path != '':
-                envs['LD_LIBRARY_PATH'] = lib_path
-
-
-        logfile = '' if show_server_log else '%s/server.log' % WORKDIR
-
-        # TODO: why not using return?
-        server.job_id = cluster.ScheduleJob('melissa_server',
-                walltime, server.cores, server.nodes, cmd, envs, logfile, is_server=True)
-
-
-    def restart_server(server):
-        if (not show_server_log) and os.path.isfile('server.log'):
-            # find new free server logfile name:
-            i = 0
-            def fn(i):
-                return 'server.log.%d'%i
-            while os.path.isfile(fn(i)):
-                i += 1
-            os.rename('server.log', fn(i))
-
-
-
-        if melissa_with_fti:
-            launch_server(server)
-        else:
-            # FIXME: gracefully shut down all runners!
-            logging.info("Server cannot be recovered as melissa-da was not compiled using WITH_FTI")
-            from launcher.simulation import FINISHED
-            with server.lock:
-                server.status = FINISHED
-                server.want_stop = True
-            logging.debug("Ending server now")
-
-
-
-
-# The launch_group function to put in USER_FUNCTIONS['launch_group'].
-# It is used to launch batches of simulations (or groups of simulation the case of Sobol' indices computation).
-# It takes a Group object as argument, and must set the job ID of the group of simulations in the attribute job_id of the Group object.
-# This object provides three important attributes:
-#   simu_id:
-#   rank
-#   param_set
-# We distinguish three kinds of groups:
-
-# Once we have set the job IDs of our jobs, we can use it to define the fault tolerance functions. In our case, we will use the same function for the server and the simulations. It takes a `Job` object as argument, and sets its `status` attribute to 0 if it is waiting to be scheduled, 1 if it is currently running, or 2 if it is not running anymore. In your local machine, a job will never be have a 0 status, because it is launched immediately when `USER_FUNCTIONS['launch_group']` is called.
-
-    def launch_runner(group):
-        precommand = 'xterm_gdb'
-        precommand = ''
-
-        assert len(group.simu_id) == 1  # check if study was correctly configured to have groups of size 1
-        runner_id = group.simu_id[0]
-
-        # The server cannot accept 2 times the same runner_id.
-        # I added a line in the launcher so it calculates the modulus if a runner id is too large to transform it in a simu id
-        while runner_id in launch_runner.used_runner_ids:
-            runner_id += n_runners
-
-        launch_runner.used_runner_ids.add(runner_id)
-
-
-        cmd = '%s %s' % (
-                precommand,
-                RUNNER_CMD
-                )
-
-        melissa_server_master_node = 'tcp://%s:4000' % group.server_node_name
-
-        logfile = ''
-        if not show_simulation_log:
-            logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
-            if create_runner_dir:
-                runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
-                os.mkdir(runner_dir)
-                os.chdir(runner_dir)
-
-            if prepare_runner_dir is not None:
-                prepare_runner_dir()
-
-        additional_runner_env = {
-                "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
-                "MELISSA_TIMING_NULL": str(start_time),
-                "MELISSA_DA_RUNNER_ID": str(runner_id)
-                }
-        lib_path = os.getenv('LD_LIBRARY_PATH')
-        if lib_path != '':
-            additional_runner_env['LD_LIBRARY_PATH'] = lib_path
-
-        envs = additional_env.copy()
-        join_dicts(envs, additional_runner_env)
-
-        group.job_id = cluster.ScheduleJob(EXECUTABLE, walltime, group.cores, group.nodes, cmd, envs, logfile, is_server=False)
-
-        os.chdir(WORKDIR)
-
-        global started_runners
-        started_runners += 1
-    launch_runner.used_runner_ids = set()
-
-
-    def check_job(job):
-        # Check the job state:
-        # 0: not runing  TODO: use macros!  TODO: what's the difference between not running and not running anymore?
-        # 1: running
-        # 2: not running anymore (finished or crashed)
-        # we set the job_status attribute of the Job object. Group and Server objects inherite of Job.
-        job.job_status = cluster.CheckJobState(job.job_id)
-
-    def check_load():
-        global started_runners
-        return started_runners < MAX_RUNNERS and cluster.GetLoad() < 1.0
-
-
-    def kill_job(job):
-        cluster.KillJob(job.job_id)
 
 
 
@@ -243,8 +84,6 @@ def run_melissa_da_study(
     # split away arguments and take only the last bit of the path.
     EXECUTABLE = runner_cmd.split(' ')[0].split('/')[-1]
 
-    MAX_RUNNERS = n_runners
-    PROCS_RUNNER = procs_runner
 
     cluster.CleanUp(EXECUTABLE)
 
@@ -257,60 +96,220 @@ def run_melissa_da_study(
     import sys
 
     def signal_handler(sig, frame):
-        melissa_study.stop()
-
         cluster.CleanUp(EXECUTABLE)
         sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    melissa_study = melissa.Study()
-    melissa_study.set_working_directory(WORKDIR)
-
-    #melissa_study.set_simulation_timeout(-1)  # would deactivate runner timeout
-    melissa_study.set_simulation_timeout(runner_timeout)        # simulations have runner_timeout seconds to start up
-    melissa_study.set_checkpoint_interval(300)     # server checkpoints every 300 seconds
-    melissa_study.set_verbosity(3)                 # verbosity: 0: only errors, 1: errors + warnings, 2: usefull infos (default), 3: debug info
-
-    # each runner is started seperately:
-    melissa_study.set_batch_size(1)
-    melissa_study.set_sampling_size(n_runners)  #  == n_runnners.
-
-    melissa_study.set_assimilation(True)
-
-# some secret options...:
-    melissa_study.set_option('assimilation_total_steps', total_steps)
-    melissa_study.set_option('assimilation_ensemble_size', ensemble_size)
-    melissa_study.set_option('assimilation_assimilator_type', assimilator_type)  # ASSIMILATOR_DUMMY
-    melissa_study.set_option('assimilation_max_runner_timeout', runner_timeout)  # seconds, timeout checked from the server side
-    melissa_study.set_option('assimilation_server_slowdown_factor', server_slowdown_factor)
-
-    melissa_study.set_option('server_cores', procs_server)  # overall cores for the server
-    melissa_study.set_option('server_nodes', nodes_server)  # using that many nodes  ... on  a well defined cluster the other can be guessed probably. TODO: make changeable. best in dependence of cluster cores per node constant...
-
-    melissa_study.set_option('simulation_cores', procs_runner)  # cores of one runner
-    melissa_study.set_option('simulation_nodes', nodes_runner)  # using that many nodes
+   # TODO: do we have to do sth to replace this?    melissa_study.set_simulation_timeout(runner_timeout)        # simulations have runner_timeout seconds to start up
 
 
-    melissa_study.set_option('disable_fault_tolerance', not with_fault_tolerance)
+    class Job:
+        def __init__(self, job_id):
+            self.job_id = job_id
+            self.state = STATE_WAITING
+            self.cstate = STATE_WAITING
+            Job.jobs.append(self)
+        def check_state(self):
+            return self.cstate
 
-    melissa_study.simulation.launch(launch_runner)
-    melissa_study.server.launch(launch_server)
-    melissa_study.check_job(check_job)
-    melissa_study.simulation.check_job(check_job)
-    melissa_study.server.restart(restart_server)
-    melissa_study.check_scheduler_load(check_load)
-    melissa_study.cancel_job(kill_job)
+        def __del__(self):
+            cluster.KillJob(self.job_id)
 
-    melissa_study.run()
+    Job.jobs = []
+
+    running = True
+    def refresh_states():
+        while running:
+            for job in Job.jobs:
+                job.cstate = cluster.CheckJobState(job.job_id)
+
+            time.sleep(.1)
+    state_refresher = threading.Thread(target=refresh_states)
+    state_refresher.start()
 
 
+    MAX_SERVER_STARTS = 3
+    SERVER_TIMEOUT = 10  # seconds
+    class Server(Job):
+        def __init__(self):
+            self.node_name = ''
+            self.last_msg_to = time.time()
+            self.last_msg_from = time.time()
+            Server.starts += 1
+            assert Server.starts < 2 or melissa_with_fti  # can't restart server without fti!
+
+            if Server.starts > MAX_SERVER_STARTS:
+                raise Exception("Too many server restarts!")
+
+
+
+            options = [total_steps, ensemble_size, assimilator_type,
+                               runner_timeout, server_slowdown_factor]
+
+            node_name = get_node_name()
+            options.append(node_name)
+
+            debug('filling:', options)
+            cmd_opt = '%d %d %d %d %d %s' % tuple(options)
+
+            cmd = '%s melissa_server %s' % (
+                    precommand_server,
+                    cmd_opt
+                    )
+
+            envs = additional_env.copy()
+            envs['MELISSA_TIMING_NULL'] = str(start_time)
+            join_dicts(envs, additional_server_env)
+
+            if not 'LD_LIBRARY_PATH' in envs:
+                lib_path = os.getenv('LD_LIBRARY_PATH')
+                if lib_path != '':
+                    envs['LD_LIBRARY_PATH'] = lib_path
+
+
+            logfile = '' if show_server_log else '%s/server.log.%d' % (WORKDIR, Server.starts)
+
+            job_id = cluster.ScheduleJob('melissa_server',
+                    walltime,  procs_server, nodes_server, cmd, envs, logfile, is_server=True)
+            Job.__init__(self, job_id)
+
+    Server.starts = 0
+
+    class Runner(Job):
+        def __init__(self, runner_id, server_node_name):
+            #self.runner_id = runner_id
+
+            precommand = 'xterm_gdb'
+            precommand = ''
+
+            cmd = '%s %s' % (
+                    precommand,
+                    RUNNER_CMD
+                    )
+
+            melissa_server_master_node = 'tcp://%s:4000' % server_node_name
+
+            logfile = ''
+            if not show_simulation_log:
+                logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
+                if create_runner_dir:
+                    runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
+                    os.mkdir(runner_dir)
+                    os.chdir(runner_dir)
+
+                if prepare_runner_dir is not None:
+                    prepare_runner_dir()
+
+            additional_runner_env = {
+                    "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
+                    "MELISSA_TIMING_NULL": str(start_time),
+                    "MELISSA_DA_RUNNER_ID": str(runner_id)
+                    }
+            lib_path = os.getenv('LD_LIBRARY_PATH')
+            if lib_path != '':
+                additional_runner_env['LD_LIBRARY_PATH'] = lib_path
+
+            envs = additional_env.copy()
+            join_dicts(envs, additional_runner_env)
+
+            job_id = cluster.ScheduleJob(EXECUTABLE, walltime, procs_runner, nodes_runner, cmd, envs, logfile, is_server=False)
+
+            os.chdir(WORKDIR)
+
+
+            self.start_running_time = -1
+            self.server_knows_it = False
+
+            Job.__init__(self, job_id)
+
+
+    init_sockets()
+
+
+    runners = {}  # running runners
+    server = None
+    next_runner_id = 0
+    while running:
+        time.sleep(0.1)  # chill down processor...
+
+        if not server:  # No server. Start one!
+            server = Server()
+        if server.state == STATE_WAITING:
+            if server.check_state() == STATE_RUNNING:
+                server.state = STATE_RUNNING
+                debug('Server running now!')
+        if server.state == STATE_RUNNING:
+            if server.node_name != '' and len(runners) < n_runners:  # TODO depend on check load here!
+                runner_id = next_runner_id
+                next_runner_id += 1
+                runners[runner_id] = Runner(runner_id, server.node_name)
+
+            # Check if the server did not timeout!
+            if time.time() - server.last_msg_from > SERVER_TIMEOUT:
+                error('Server timed out!')
+                runners.clear()
+                del server
+                break
+
+            # Check if we need to give a live sign to the server?
+            if (time.time() - server.last_msg_to) > 10:
+                melissa_comm4py.send_hello()
+                server.last_msg_to = time.time()
+
+
+            # Check if some runners died for some strange reasons or if they timed out...
+            for key in list(runners.keys()):
+                runner = runners[key]
+                if runner.state == STATE_WAITING:  # State transition from waiting to running
+                    if runner.check_state() == STATE_RUNNING:
+                        runner.state = STATE_RUNNING
+                        runner.start_running_time = time.time()
+                elif runner.state == STATE_RUNNING:
+                    if not runner.server_knows_it and runner.start_running_time != -1 and time.time() - runner.start_running_time > runner_timeout:
+                        error('Runner %d is killed as it did not register at the server within %d seconds' % (key, runner_timeout))
+                        del runners[key]
+                    if runner.check_state() != STATE_RUNNING:
+                        error('Runner %d is killed as it is not up anymore' % key)
+                        del runners[key]  # TODO: check that these dels work in here!
+
+
+            # Check messages from server
+            server_msgs = get_server_messages()
+            if server.node_name != '' and len(server_msgs) > 0:
+                server.last_msg_from = time.time()
+            for msg in server_msgs:
+                if msg['type'] == MSG_SERVER_NODE_NAME:
+                    log('Registering server')
+                    server.node_name = msg['parameter']
+                if msg['type'] == MSG_TIMEOUT:
+                    error('Server wants me to crash runner %d' % msg['parameter'])
+                    del runners[msg['parameter']]
+                elif msg['type'] == MSG_REGISTERED:
+                    runners[msg['parameter']].server_knows_it = True
+                elif msg['type'] == MSG_PING:
+                    pass
+                elif msg['type'] == MSG_STOP:
+                    running = False
+                    log('Gracefully ending study now.')
+                    runners.clear()
+                    del server
+                    break
+
+
+    finalize_sockets()
+    state_refresher.join()
     os.chdir(old_cwd)
 
     # flush print output to the console
     cluster.CleanUp(EXECUTABLE)
     sys.stdout.flush()
+
+
+
+
+
 
 
 def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
@@ -330,11 +329,11 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
     with open('STATS/server.log', 'r') as f:
         for line in f.readlines():
             if '**** Check Successful' in line:
-                print('Simulation %s seems stateless'
+                log('Simulation %s seems stateless'
                         % runner_cmd)
                 return True
 
-    print('Simulation %s is stateful and thus cannot be used with melissa-da')
+    error('Simulation %s is stateful and thus cannot be used with melissa-da')
     return False
 
 # exporting for import * :
@@ -346,4 +345,3 @@ __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_PRINT_INDEX_MAP']
-

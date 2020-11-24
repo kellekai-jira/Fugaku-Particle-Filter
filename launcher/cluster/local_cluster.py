@@ -102,15 +102,15 @@ class LocalCluster(cluster.Cluster):
 
     def CheckJobState(self, job_id):
         if not job_id in self.jobs:
-            return 2
+            return cluster.STATE_STOP
 
         job = self.jobs[job_id]
 
         if job.poll() is None:
-            return 1
+            return cluster.STATE_RUNNING
         else:
             del self.jobs[job_id]
-            return 2
+            return cluster.STATE_STOP
 
 
     def KillJob(self, job_id):

@@ -17,7 +17,7 @@ private:
     void * text_requester = nullptr;
 
     const int LAUNCHER_TIMEOUT=60;  // seconds
-    const int LAUNCHER_PING_INTERVAL=60;  // seconds
+    const int LAUNCHER_PING_INTERVAL=50;  // seconds
 
     int due_date_launcher;
     int next_message_date_to_launcher;
