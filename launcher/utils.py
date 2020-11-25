@@ -4,6 +4,7 @@ import signal
 import subprocess
 import random
 import shutil
+import logging
 
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
@@ -46,9 +47,23 @@ ASSIMILATOR_EMPTY = 2
 ASSIMILATOR_CHECK_STATELESS = 3
 ASSIMILATOR_PRINT_INDEX_MAP = 4
 
-debug = print
-log = print
-error = print
+LOG_LEVEL_DEBUG = 3
+LOG_LEVEL_LOG   = 2
+LOG_LEVEL_ERROR = 1
+
+def logger_function(loglevel):
+    f = [0, logging.error, logging.info, logging.debug][loglevel]
+
+    def l(*args, **kwargs):
+        print(*args, **kwargs)
+        nonlocal f
+        f(*args, **kwargs)
+
+    return l
+
+debug = logger_function(LOG_LEVEL_DEBUG)
+log   = logger_function(LOG_LEVEL_LOG)
+error = logger_function(LOG_LEVEL_ERROR)
 
 def get_node_name():
     buff = create_string_buffer(256)

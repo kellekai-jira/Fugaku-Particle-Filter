@@ -69,11 +69,16 @@ def run_melissa_da_study(
     if (not os.path.isdir(WORKDIR)):
         os.mkdir(WORKDIR)
 
-    if melissa_with_fti:
-        copyfile(config_fti_path, WORKDIR+"/config.fti")
-
     os.chdir(WORKDIR)
 
+    logging.basicConfig(format='%(asctime)s %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S %p',
+                            filename='melissa_launcher.log',
+                            filemode='w',
+                            level=logging.DEBUG)
+
+    if melissa_with_fti:
+        copyfile(config_fti_path, WORKDIR+"/config.fti")
 
 
 
