@@ -17,6 +17,8 @@
 import os
 import time
 from shutil import copyfile
+import signal
+import sys
 
 #import logging  # FIXME: use logging
 import threading
@@ -91,12 +93,22 @@ def run_melissa_da_study(
 
 
 
+    running = True
 # dirty but convenient to kill stuff...
-    import signal
-    import sys
 
     def signal_handler(sig, frame):
+        debug("Received Signal %d, Cleaning up now!" % sig)
+        nonlocal running
+        running = False
+
+        if sig == signal.SIGTERM:
+            debug("SIGTERM: trying to join state_refresher...")
+            state_refresher.join()
+            debug("State refresher joined")
+
+
         cluster.CleanUp(EXECUTABLE)
+
         sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -119,7 +131,6 @@ def run_melissa_da_study(
 
     Job.jobs = []
 
-    running = True
     def refresh_states():
         while running:
             for job in Job.jobs:
@@ -251,7 +262,8 @@ def run_melissa_da_study(
                 error('Server timed out!')
                 runners.clear()
                 del server
-                break
+                server = None
+                continue
 
             # Check if we need to give a live sign to the server?
             if (time.time() - server.last_msg_to) > 10:
