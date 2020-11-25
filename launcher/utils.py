@@ -92,21 +92,17 @@ def finalize_sockets():
 def get_server_messages():
     msgs = []
         # TODO?: last_msg_to_server = 0
-    buff = create_string_buffer(melissa_comm4py.melissa_get_message_len())
+    buf = create_string_buffer(melissa_comm4py.melissa_get_message_len())
+    assert len(buf) == melissa_comm4py.melissa_get_message_len()
 
-    melissa_comm4py.poll_message(buff)
-    message = buff.value.decode().split()
+    melissa_comm4py.poll_message(buf, len(buf))
+    message = buf.value.decode().split()
     while message[0] != 'null':
         if message[0] != 'nothing':
             msg = {}
-            debug('message: '+buff.value.decode())
+            debug('message: '+buf.value.decode())
             if message[0] == 'stop':
                 msg['type'] = MSG_STOP
-            elif message[0] == 'timeout':
-                assert False  # TODO: should never happen in DA?!
-                msg['type'] = MSG_TIMEOUT
-                msg['runner_id'] = int(message[1])
-
             elif message[0] == 'group_state':
                 state = int(message[2])
                 if state == 1:  # RUNNING in melissa_messages.h  TODO: unify with the enums used here!
@@ -114,7 +110,7 @@ def get_server_messages():
                 elif state == 4:  # TIMEOUT in melissa_messages.h  TODO: unify with the enums used here!
                     msg['type'] = MSG_TIMEOUT
                 else:
-                    assert False  # Wrong state!
+                    raise ValueError("Unexpected state %d", state)
 
                 msg['runner_id'] = int(message[1])
             elif message[0] == 'server':
@@ -127,13 +123,13 @@ def get_server_messages():
                 # should receive all 50 seconds
                 msg['type'] = MSG_PING
             else:
-                assert False  # unknown message type!
+                raise ValueError("Unexpected message type '%s'" % message[0])
 
 
             msgs.append(msg)
 
-        melissa_comm4py.poll_message(buff)
-        message = buff.value.decode().split()
+        melissa_comm4py.poll_message(buf, len(buf))
+        message = buf.value.decode().split()
 
     return msgs
 
