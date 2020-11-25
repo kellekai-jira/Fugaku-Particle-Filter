@@ -80,7 +80,7 @@ def get_server_messages():
             elif message[0] == 'timeout':
                 assert False  # TODO: should never happen in DA?!
                 msg['type'] = MSG_TIMEOUT
-                msg['parameter'] = int(message[1])
+                msg['runner_id'] = int(message[1])
 
             elif message[0] == 'group_state':
                 state = int(message[2])
@@ -91,12 +91,12 @@ def get_server_messages():
                 else:
                     assert False  # Wrong state!
 
-                msg['parameter'] = int(message[1])
+                msg['runner_id'] = int(message[1])
             elif message[0] == 'server':
                 msg['type'] = MSG_SERVER_NODE_NAME
                 rank = int(message[1])
                 assert rank == 0  # in Melissa-DA only rank 0 connects.
-                msg['parameter'] = message[2]
+                msg['node_name'] = message[2]
 
             elif message[0] == 'alive':
                 # should receive all 50 seconds

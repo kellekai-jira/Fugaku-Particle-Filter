@@ -280,14 +280,18 @@ def run_melissa_da_study(
             if server.node_name != '' and len(server_msgs) > 0:
                 server.last_msg_from = time.time()
             for msg in server_msgs:
+                if 'runner_id' in msg and not msg['runner_id'] in runners:
+                    debug('omitting message concerning already dead runner %d' %
+                            msg['runner_id'])
+                    continue
                 if msg['type'] == MSG_SERVER_NODE_NAME:
                     log('Registering server')
-                    server.node_name = msg['parameter']
+                    server.node_name = msg['node_name']
                 if msg['type'] == MSG_TIMEOUT:
-                    error('Server wants me to crash runner %d' % msg['parameter'])
-                    del runners[msg['parameter']]
+                    error('Server wants me to crash runner %d' % msg['runner_id'])
+                    del runners[msg['runner_id']]
                 elif msg['type'] == MSG_REGISTERED:
-                    runners[msg['parameter']].server_knows_it = True
+                    runners[msg['runner_id']].server_knows_it = True
                 elif msg['type'] == MSG_PING:
                     pass
                 elif msg['type'] == MSG_STOP:
