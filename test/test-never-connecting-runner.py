@@ -12,7 +12,7 @@ ae = {
 }
 
 
-def run_study_and_wait_for(on_event, study_options):
+def run_study_and_wait_for(on_event, study_options):  #TODO: use this function for all othe rtestcases in this folder too
     tmpdir = tempfile.mkdtemp()
     fifo_name_server = os.path.join(tmpdir, 'server_fifo')
     runners = 0
@@ -109,7 +109,7 @@ run_study_and_wait_for(on_event, study_options=study_options)
 found = 0
 with open('STATS/melissa_launcher.log') as f:
     for line in f:
-        if 'resubmit group' in line and '(timeout detected by launcher)' in line:
+        if 'is killed as it did not register at the server within' in line:
             found += 1
 
 assert found == 1  # One group was resubmitted

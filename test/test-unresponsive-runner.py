@@ -18,10 +18,17 @@ found1 = False
 found2 = False
 with open('STATS/melissa_launcher.log') as f:
     for line in f.readlines():
-        if 'All runners crashed. Stopping study now.' in line:
+        if 'Gracefully ending study now' in line:
             found1 = True
-        if 'times, remove simulation':
+            break
+
+with open('STATS/server.log.1') as f:
+    for line in f.readlines():
+        if 'times in a row on' in line and 'Go fix your ensemble' in line:
             found2 = True
+            break
 
 assert found1
 assert found2
+
+print('passed')
