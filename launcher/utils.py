@@ -52,23 +52,33 @@ LOG_LEVEL_LOG   = 2
 LOG_LEVEL_ERROR = 1
 
 def logger_function(loglevel):
-    f = [0, logging.error, logging.info, logging.debug][loglevel]
 
     def l(*args, **kwargs):
         print(*args, **kwargs)
-        nonlocal f
+        nonlocal loglevel
+        f = [0, logging.error, logging.info, logging.debug][loglevel]
         f(*args, **kwargs)
 
     return l
+
 
 debug = logger_function(LOG_LEVEL_DEBUG)
 log   = logger_function(LOG_LEVEL_LOG)
 error = logger_function(LOG_LEVEL_ERROR)
 
+def start_logging(workdir):
+    logfile = workdir+'/melissa_launcher.log'
+    logging.basicConfig(format='%(asctime)s %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S %p',
+                            filename=logfile,
+                            level=logging.DEBUG)
+
+    log("Start logging into %s" % logfile)
+
 def get_node_name():
-    buff = create_string_buffer(256)
-    melissa_comm4py.get_node_name(buff)
-    return buff.value.decode()
+    buf = create_string_buffer(256)
+    melissa_comm4py.get_node_name(buf)
+    return buf.value.decode()
 
 def init_sockets():
     melissa_comm4py.init_context()
@@ -128,11 +138,11 @@ def get_server_messages():
     return msgs
 
 def clean_old_stats():
-    log("Cleaning old results...")
+    print("Cleaning old results...")
     if os.path.isdir("STATS"):
         shutil.rmtree("STATS")
     else:
-        log("Nothing to clean!")
+        print("Nothing to clean!")
 
 
 def join_dicts(out, b):

@@ -20,7 +20,6 @@ from shutil import copyfile
 import signal
 import sys
 
-#import logging  # FIXME: use logging
 import threading
 
 from cluster import *
@@ -69,16 +68,13 @@ def run_melissa_da_study(
     if (not os.path.isdir(WORKDIR)):
         os.mkdir(WORKDIR)
 
-    os.chdir(WORKDIR)
-
-    logging.basicConfig(format='%(asctime)s %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S %p',
-                            filename='melissa_launcher.log',
-                            filemode='w',
-                            level=logging.DEBUG)
-
     if melissa_with_fti:
         copyfile(config_fti_path, WORKDIR+"/config.fti")
+
+    os.chdir(WORKDIR)
+
+    start_logging(WORKDIR)
+
 
 
 
@@ -167,7 +163,7 @@ def run_melissa_da_study(
             node_name = get_node_name()
             options.append(node_name)
 
-            debug('filling:', options)
+            debug('filling: %s' % str(options))
             cmd_opt = '%d %d %d %d %d %s' % tuple(options)
 
             cmd = '%s melissa_server %s' % (
