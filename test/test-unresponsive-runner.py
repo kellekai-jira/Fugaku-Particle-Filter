@@ -36,4 +36,6 @@ with open('STATS/server.log.1') as f:
 assert found1
 assert found2
 
+# TODO: test if checkpoint file is correct!
+
 print('passed')
