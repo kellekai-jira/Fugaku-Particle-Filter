@@ -23,7 +23,6 @@ class ServerTester(FifoThread):
                 print('Crashing server...')
                 #killing_giraffe('melissa_server')
                 os.system('killall melissa_server')
-                print('im in', os.getcwd())
                 self.server_had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'config.fti']) == 0)
                 self.was_unfinished = not os.path.isfile("state_step16_for.txt")
                 shutil.copyfile('config.fti', 'config.fti.0')

@@ -128,6 +128,7 @@ def run_melissa_da_study(
             return self.cstate
 
         def __del__(self):
+            debug("Killing Job job_id=%d" % self.job_id)
             cluster.KillJob(self.job_id)
 
     Job.jobs = []
@@ -252,6 +253,7 @@ def run_melissa_da_study(
             if server.check_state() == STATE_RUNNING:
                 server.state = STATE_RUNNING
                 debug('Server running now!')
+                server.last_msg_from = time.time()
         if server.state == STATE_RUNNING:
             if server.node_name != '' and len(runners) < n_runners:  # TODO depend on check load here!
                 runner_id = next_runner_id
@@ -261,9 +263,10 @@ def run_melissa_da_study(
             # Check if the server did not timeout!
             if time.time() - server.last_msg_from > SERVER_TIMEOUT:
                 error('Server timed out!')
-                runners.clear()
+                runners.clear()  # clear is sometimes not enough to kill all zombies so we call cleanup
                 del server
                 server = None
+                cluster.CleanUp(EXECUTABLE)
                 continue
 
             # Check if we need to give a live sign to the server?
@@ -312,6 +315,7 @@ def run_melissa_da_study(
                     log('Gracefully ending study now.')
                     runners.clear()
                     del server
+                    # cluster.CleanUp(EXECUTABLE)
                     break
 
 

@@ -997,9 +997,21 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
 
 
     // notify launcher about newly connected runner.
-    if (comm_rank == 0 && launcher_notified_about_runner.at(runner_id) == false) {
-        launcher->notify(runner_id, RUNNING);
-        launcher_notified_about_runner.at(runner_id) = true;
+    if (comm_rank == 0)
+    {
+        bool launcher_notified = true;
+        try {
+            launcher_notified = launcher_notified_about_runner.at(runner_id);
+        }
+        catch (const std::out_of_range& oor) {
+            std::cerr << "Out of Range error: " << oor.what() << '\n';
+            L("Error: a different runner (id=%d) that never registered connected. Probably this is some zombie runner after a server restart", runner_id);
+            exit(1);
+        }
+        if (launcher_notified == false) {
+            launcher->notify(runner_id, RUNNING);
+            launcher_notified_about_runner.at(runner_id) = true;
+        }
     }
 
     RunnerRankConnection csr(identity);
