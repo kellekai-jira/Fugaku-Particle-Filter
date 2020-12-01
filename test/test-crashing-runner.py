@@ -37,10 +37,11 @@ class RunnerTester(FifoThread):
                     giraffe.start()
 
         # Then wait still 3 iterations and that all runners are up again.
-                if self.killed_all:
+                if self.killed_all and self.remove_runners_called:
                     self.iterations_after_kills += 1
 
                     if self.iterations_after_kills >= 3 * PROCS_SERVER and self.runners == N_RUNNERS:
+                        print("Successfully quitting RunnerTester thread")
                         return False
         return True
 
