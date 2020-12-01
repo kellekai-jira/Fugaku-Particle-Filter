@@ -16,8 +16,6 @@ run_melissa_da_study(
     show_server_log=False,
     show_simulation_log=False)
 
-# Since the study will crash we manually clean up:
-local_cluster.CleanUp(EXEC)
 
 found1 = False
 found2 = False
@@ -37,5 +35,10 @@ assert found1
 assert found2
 
 # TODO: test if checkpoint file is correct!
+
+# Since the study will crash we manually clean up:
+time.sleep(1)  # give instruction pointer to the os to be able to finish ongoing app startups
+os.system('ps')
+local_cluster.CleanUp(EXEC)
 
 print('passed')

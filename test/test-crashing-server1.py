@@ -24,7 +24,7 @@ class ServerTester(FifoThread):
                 if self.iterations_after_runners == 12 * PROCS_SERVER:
                     print('Crashing server...')
                     #killing_giraffe('melissa_server')
-                    os.system('killall melissa_server')
+                    os.system('pkill melissa_server')
                     self.server_had_checkpoint = (subprocess.call(['grep', "failure[ ]*=[ ]*[1-3]", 'STATS/config.fti']) == 0)
                     shutil.copyfile('STATS/output.txt', 'STATS/output.txt.0')
                     self.killed_server = True

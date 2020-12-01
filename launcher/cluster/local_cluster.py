@@ -154,6 +154,6 @@ class LocalCluster(cluster.Cluster):
         # Since zombie processes might keep running since sigterm is not propagated by
         # mpiexec correctly, we need to rely on this nasty trick:
         if executable is not None:
-            os.system("killall {:s}".format(executable))
+            os.system("pkill -9 {:s}".format(executable))
 
-        os.system("killall melissa_server")
+        os.system("pkill -9 melissa_server")

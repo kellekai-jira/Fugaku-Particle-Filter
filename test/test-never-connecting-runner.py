@@ -106,6 +106,8 @@ on_event.good_iterations = -1
 # wait for 2 runners to connect! (the first will be never seen by the server
 run_study_and_wait_for(on_event, study_options=study_options)
 
+
+
 found = 0
 with open('STATS/melissa_launcher.log') as f:
     for line in f:
@@ -131,5 +133,12 @@ with open('STATS/never_connecting_runner') as f:
         if 'never connecting runner' in line:
             found += 1
 assert found == 1
+
+print('Running pkill after some sleep time')
+time.sleep(10)  # give instruction pointer to the os to be able to finish ongoing app startups
+os.system('ps')
+os.system('pkill -9 mpiexec')
+os.system('pkill -9 never_connecting_runner')
+os.system('pkill -9 sleep')
 
 print('passed')

@@ -128,8 +128,9 @@ def run_melissa_da_study(
             return self.cstate
 
         def __del__(self):
-            debug("Killing Job job_id=%d" % self.job_id)
-            cluster.KillJob(self.job_id)
+            if hasattr(self, 'job_id'):
+                debug("Killing Job job_id=%d" % self.job_id)
+                cluster.KillJob(self.job_id)
 
     Job.jobs = []
 
