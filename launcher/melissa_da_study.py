@@ -145,7 +145,7 @@ def run_melissa_da_study(
 
 
     MAX_SERVER_STARTS = 3
-    SERVER_TIMEOUT = 10  # seconds
+    SERVER_TIMEOUT = 30  # seconds
     class Server(Job):
         def __init__(self):
             self.node_name = ''
