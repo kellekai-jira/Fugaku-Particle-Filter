@@ -114,7 +114,7 @@ with open('STATS/melissa_launcher.log') as f:
         if 'is killed as it did not register at the server within' in line:
             found += 1
 
-assert found == 1  # One group was resubmitted
+assert found == 1
 
 found = 0
 regex = re.compile('runner-[0-9]+.log')

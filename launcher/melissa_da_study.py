@@ -264,7 +264,8 @@ def run_melissa_da_study(
             # Check if the server did not timeout!
             if time.time() - server.last_msg_from > SERVER_TIMEOUT:
                 error('Server timed out!')
-                runners.clear()  # clear is sometimes not enough to kill all zombies so we call cleanup
+                runners.clear()
+                # clear is sometimes not enough to kill all zombies so we call cleanup
                 del server
                 server = None
                 cluster.CleanUp(EXECUTABLE)
@@ -275,36 +276,41 @@ def run_melissa_da_study(
                 melissa_comm4py.send_hello()
                 server.last_msg_to = time.time()
 
-
-            # Check if some runners died for some strange reasons or if they timed out...
-            for key in list(runners.keys()):
-                runner = runners[key]
-                if runner.state == STATE_WAITING:  # State transition from waiting to running
+            # Check if some runners are running now, timed out while registration or if
+            # they were killed for some strange reasons...
+            for runner_id in list(runners.keys()):
+                runner = runners[runner_id]
+                if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
                         runner.state = STATE_RUNNING
+                        debug('Runner %d running now!' % runner_id)
                         runner.start_running_time = time.time()
                 elif runner.state == STATE_RUNNING:
-                    if not runner.server_knows_it and runner.start_running_time != -1 and time.time() - runner.start_running_time > runner_timeout:
-                        error('Runner %d is killed as it did not register at the server within %d seconds' % (key, runner_timeout))
-                        del runners[key]
+                    if not runner.server_knows_it and \
+                            runner.start_running_time != -1 and \
+                            time.time() - runner.start_running_time > runner_timeout:
+                        error(('Runner %d is killed as it did not register at the server'
+                              + ' within %d seconds') % (runner_id, runner_timeout))
+                        del runners[runner_id]
                     if runner.check_state() != STATE_RUNNING:
-                        error('Runner %d is killed as it is not up anymore' % key)
-                        del runners[key]
+                        error('Runner %d is killed as its job is not up anymore' %
+                                runner_id)
+                        del runners[runner_id]
 
 
             # Check messages from server
             server_msgs = get_server_messages()
-            if server.node_name != '' and len(server_msgs) > 0:
+            if len(server_msgs) > 0:
                 server.last_msg_from = time.time()
             for msg in server_msgs:
                 if 'runner_id' in msg and not msg['runner_id'] in runners:
                     debug('omitting message concerning already dead runner %d' %
                             msg['runner_id'])
                     continue
-                if msg['type'] == MSG_SERVER_NODE_NAME:
+                elif msg['type'] == MSG_SERVER_NODE_NAME:
                     log('Registering server')
                     server.node_name = msg['node_name']
-                if msg['type'] == MSG_TIMEOUT:
+                elif msg['type'] == MSG_TIMEOUT:
                     error('Server wants me to crash runner %d' % msg['runner_id'])
                     del runners[msg['runner_id']]
                 elif msg['type'] == MSG_REGISTERED:
