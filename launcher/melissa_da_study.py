@@ -289,7 +289,7 @@ def run_melissa_da_study(
                         del runners[key]
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner %d is killed as it is not up anymore' % key)
-                        del runners[key]  # TODO: check that these dels work in here!
+                        del runners[key]
 
 
             # Check messages from server
