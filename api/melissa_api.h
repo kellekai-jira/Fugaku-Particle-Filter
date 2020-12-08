@@ -73,8 +73,8 @@ int melissa_get_current_step();
 int melissa_commit_chunks(MPI_Comm comm_);
 
 #define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
-    void melissa_add_chunk_##TYPELETTER(CTYPE * values, const size_t amount, \
-            const int is_assimilated)
+    void melissa_add_chunk_##TYPELETTER(CTYPE * values, const int * amount, \
+            const int * is_assimilated)
 
     add_chunk_wrapper_decl(r, float);
     add_chunk_wrapper_decl(i, int);
