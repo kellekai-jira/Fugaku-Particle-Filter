@@ -33,7 +33,7 @@ void melissa_add_chunk(T * values, const size_t amount, const bool is_assimilate
 #define add_chunk_wrapper(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(CTYPE * values, const int * amount, \
             const int * is_assimilated) \
-        { melissa_add_chunk(values, *amount, *is_assimilated == 0); }
+        { melissa_add_chunk(values, *amount, (*is_assimilated) != 0); }
 
     add_chunk_wrapper(r, float)
     add_chunk_wrapper(i, int)
@@ -43,7 +43,7 @@ void melissa_add_chunk(T * values, const size_t amount, const bool is_assimilate
 
 #undef add_chunk_wrapper
 
-int melissa_commit_chunks(MPI_Comm comm_) {
+int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     size_t hidden_size = 0;
 
     size_t assimilated_size_in_doubles = 0;
@@ -65,10 +65,12 @@ int melissa_commit_chunks(MPI_Comm comm_) {
 
     // Init on first expose
     if (!is_inited) {
+
+        MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
         melissa_init("data",  // TODO: actually this is nonsense to give a field name here!
                   assimilated_size_in_doubles,
                   hidden_size_in_doubles,
-                  comm_);
+                  comm);
         is_inited = true;
     }
 

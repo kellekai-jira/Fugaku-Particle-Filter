@@ -40,11 +40,11 @@ function melissa_expose(field_name,&
 end function melissa_expose
 
 
-function melissa_commit_chunks(comm) bind(c, name = 'melissa_commit_chunks')
+function melissa_commit_chunks_f(comm_fortran) bind(c, name = 'melissa_commit_chunks_f')
     use ISO_C_BINDING, only: C_INT
-    integer(kind=C_INT) :: melissa_commit_chunks
-    integer(kind=C_INT) :: comm
-end function melissa_commit_chunks
+    integer(kind=C_INT) :: melissa_commit_chunks_f
+    integer(kind=C_INT) :: comm_fortran
+end function melissa_commit_chunks_f
 
 
 #define add_chunk_wrapper(TYPELETTER, CTYPE, FORTRANTYPE) \

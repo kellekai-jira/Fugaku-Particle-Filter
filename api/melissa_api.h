@@ -70,7 +70,7 @@ int melissa_get_current_step();
 
 /// Chunk stuff
 /// TODO: write doxygen!
-int melissa_commit_chunks(MPI_Comm comm_);
+int melissa_commit_chunks_f(MPI_Fint * comm_fortran);
 
 #define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(CTYPE * values, const int * amount, \
