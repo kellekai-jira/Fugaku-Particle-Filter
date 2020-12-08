@@ -30,4 +30,4 @@ install(TARGETS melissa_api LIBRARY DESTINATION lib)
 install(TARGETS melissa_api LIBRARY DESTINATION lib)
 
 install(FILES melissa_api.h DESTINATION include)
-install(FILES melissa_api.f90 DESTINATION include)
+install(FILES ${CMAKE_BINARY_DIR}/include/melissa_api.f90 DESTINATION include)
