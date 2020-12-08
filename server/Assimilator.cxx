@@ -12,6 +12,7 @@
 #include "PDAFAssimilator.h"
 #include "EmptyAssimilator.h"
 #include "CheckStatelessAssimilator.h"
+#include "WrfAssimilator.h"
 
 std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
                                                  assimilator_type,
@@ -39,6 +40,10 @@ std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
     case ASSIMILATOR_PRINT_INDEX_MAP:
         L("Chosing Assimilator that only prints out the index map");
         return std::make_shared<PrintIndexMapAssimilator>(field, total_steps, mpi);
+        break;
+    case ASSIMILATOR_WRF:
+        L("Chosing Wrf Assimilator");
+        return std::make_shared<WrfAssimilator>(field, total_steps, mpi);
         break;
     default:
         assert(false);         // should never be reached.

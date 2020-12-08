@@ -372,4 +372,5 @@ __all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY',
-           'ASSIMILATOR_PRINT_INDEX_MAP']
+           'ASSIMILATOR_PRINT_INDEX_MAP',
+           'ASSIMILATOR_WRF']
