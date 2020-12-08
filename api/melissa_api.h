@@ -57,10 +57,7 @@ int melissa_expose(const char *field_name, double *values,
 
 /// wrapper needed for the Fortran interface when using no hidden state as nullptr
 /// transfer between Fortran and C is not trivial
-int melissa_expose_f(const char *field_name, double *values)
-{
-    return melissa_expose(field_name, values, NULL);
-}
+int melissa_expose_f(const char *field_name, double *values);
 
 /// For debug reasons it sometimes is useful to have the melissa current state id
 /// outside of melissa.
@@ -71,6 +68,21 @@ int melissa_get_current_state_id();
 /// the Melissa-DA server.
 int melissa_get_current_step();
 
+/// Chunk stuff
+/// TODO: write doxygen!
+int melissa_commit_chunks(MPI_Comm comm_);
+
+#define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
+    void melissa_add_chunk_##TYPELETTER(CTYPE * values, const size_t amount, \
+            const int is_assimilated)
+
+    add_chunk_wrapper_decl(r, float);
+    add_chunk_wrapper_decl(i, int);
+    add_chunk_wrapper_decl(d, double);
+    add_chunk_wrapper_decl(l, bool);
+    add_chunk_wrapper_decl(c, char);
+
+#undef add_chunk_wrapper_decl
 
 #ifdef __cplusplus
 }

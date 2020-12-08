@@ -39,4 +39,25 @@ function melissa_expose(field_name,&
     real(kind=C_DOUBLE), intent(inout), dimension(*) :: values
 end function melissa_expose
 
+
+#define add_chunk_wrapper(TYPELETTER, CTYPE, FORTRANTYPE) \
+__NL__ subroutine melissa_add_chunk_##TYPELETTER(values, amount, is_assimilated)& \
+__NL__     bind(c, name = __s__melissa_add_chunk_##TYPELETTER##__s__) \
+__NL__     use ISO_C_BINDING, only: CTYPE, C_INT \
+__NL__     FORTRANTYPE(kind=CTYPE), intent(inout), dimension(*) :: values \
+__NL__     integer(kind=C_INT), intent(in) :: amount \
+__NL__     integer(kind=C_INT), intent(in) :: is_assimilated \
+__NL__ end subroutine melissa_add_chunk_##TYPELETTER \
+
+
+add_chunk_wrapper(r, C_FLOAT, real)
+add_chunk_wrapper(i, C_INT, integer)
+add_chunk_wrapper(d, C_DOUBLE, real)
+add_chunk_wrapper(l, C_INT, integer)
+add_chunk_wrapper(c, C_CHAR, character)
+
+#undef add_chunk_wrapper
+
 end interface
+
+

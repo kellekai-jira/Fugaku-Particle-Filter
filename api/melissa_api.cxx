@@ -822,3 +822,9 @@ void melissa_init_f(const char *field_name,
     MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
     melissa_init(field_name, *local_vect_size, *local_hidden_vect_size, comm);
 }
+
+
+int melissa_expose_f(const char *field_name, double *values)
+{
+    return melissa_expose(field_name, values, NULL);
+}
