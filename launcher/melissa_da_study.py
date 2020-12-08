@@ -51,6 +51,7 @@ def run_melissa_da_study(
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
         runner_timeout=5,
+        server_timeout=30,
         additional_server_env={},
         create_runner_dir=False,
         precommand_server='',
@@ -145,7 +146,6 @@ def run_melissa_da_study(
 
 
     MAX_SERVER_STARTS = 3
-    SERVER_TIMEOUT = 30  # seconds
     class Server(Job):
         def __init__(self):
             self.node_name = ''
@@ -262,7 +262,7 @@ def run_melissa_da_study(
                 runners[runner_id] = Runner(runner_id, server.node_name)
 
             # Check if the server did not timeout!
-            if time.time() - server.last_msg_from > SERVER_TIMEOUT:
+            if time.time() - server.last_msg_from > server_timeout:
                 error('Server timed out!')
                 runners.clear()
                 # clear is sometimes not enough to kill all zombies so we call cleanup
