@@ -16,9 +16,11 @@ struct Part
 
 void calculate_local_vect_sizes_server(const int comm_size_server, const
                                    size_t global_vect_size,
-                                   size_t * local_vect_sizes_server);
+                                   size_t * local_vect_sizes_server,
+                                   const int bytes_per_element);
 
 std::vector<Part> calculate_n_to_m(const int comm_size_server, const
-                                   std::vector<size_t> &local_vect_sizes_runner);
+                                   std::vector<size_t> &local_vect_sizes_runner,
+                                   const int bytes_per_element);
 
 #endif

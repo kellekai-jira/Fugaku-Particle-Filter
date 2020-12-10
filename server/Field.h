@@ -48,8 +48,8 @@ struct Field
 
     std::set<int> connected_runner_ranks;
 
-    Field(const std::string &name, const int simu_comm_size_, const size_t
-          ensemble_size_);
+    Field(const std::string &name_, const int simu_comm_size_, const size_t
+          ensemble_size_, int bytes_per_element_, int bytes_per_element_hidden_);
     void calculate_parts(int server_comm_size);
 
     // low: maybe inline those two getPart... functions?
@@ -61,6 +61,9 @@ struct Field
 
     std::vector<int> local_index_map;
     std::vector<int> local_index_map_hidden;
+
+    int bytes_per_element;
+    int bytes_per_element_hidden;
 
 };
 

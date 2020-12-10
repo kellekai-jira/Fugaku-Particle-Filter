@@ -18,8 +18,9 @@ DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_, MpiMa
          field.ensemble_members.end(); ens_it++)
     {
         // analysis state is enough:
-        std::fill(ens_it->state_analysis.begin(),
-                  ens_it->state_analysis.end(), 0.0);
+        double * as_double = reinterpret_cast<double*>(ens_it->state_analysis.data());
+        size_t len_double = ens_it->state_analysis.size()/sizeof(double);
+        std::fill(as_double, as_double + len_double, 0.0);
     }
 
 }
@@ -33,19 +34,29 @@ int DummyAssimilator::do_update_step(const int current_step) {
     {
         assert(ens_it->state_analysis.size() ==
                ens_it->state_background.size());
-        for (size_t i = 0; i < ens_it->state_analysis.size(); i++)
+
+
+        double * as_double = reinterpret_cast<double*>(ens_it->state_analysis.data());
+        size_t len_double = ens_it->state_analysis.size()/sizeof(double);
+
+        double * as_double_bg = reinterpret_cast<double*>(ens_it->state_background.data());
+
+        double * as_double_bg_neighbor;
+        if (ens_it == field.ensemble_members.begin())
+        {
+            as_double_bg_neighbor = reinterpret_cast<double*>((field.ensemble_members.end()-1)->state_background.data());
+        }
+        else
+        {
+            as_double_bg_neighbor = reinterpret_cast<double*>((ens_it-1)->state_background.data());
+        }
+
+
+        for (size_t i = 0; i < len_double; i++)
         {
             // pretend to do some da...
-            ens_it->state_analysis[i] =
-                ens_it->state_background[i] + state_id;
-            if (ens_it == field.ensemble_members.begin())
-            {
-               ens_it->state_analysis[i] += (field.ensemble_members.end()-1)->state_background[i];
-            }
-            else
-            {
-               ens_it->state_analysis[i] += (ens_it-1)->state_background[i];
-            }
+            as_double[i] = as_double_bg[i] + state_id;
+            as_double[i] += as_double_bg_neighbor[i];
         }
         state_id++;
     }

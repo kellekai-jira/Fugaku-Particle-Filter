@@ -13,3 +13,5 @@ if(INSTALL_ZMQ)
 endif(INSTALL_ZMQ)
 
 target_compile_options(melissa_common BEFORE PUBLIC -fPIC)
+
+install(FILES melissa_da_stype.h DESTINATION include)

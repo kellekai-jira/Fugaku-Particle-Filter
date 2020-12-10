@@ -59,7 +59,8 @@ def run():
         n_runners=N_RUNNERS,
         show_server_log=False,
         show_simulation_log=False,
-        additional_server_env=ase)
+        additional_server_env=ase,
+        server_timeout = 20)
 
 # run the study in an extern process so it is easier to terminate
 study = Process(target=run)

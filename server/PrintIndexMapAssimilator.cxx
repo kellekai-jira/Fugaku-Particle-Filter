@@ -31,8 +31,7 @@ void PrintIndexMapAssimilator::index_map_to_file()
 
     }
 
-    gather_and_print(myfile, field.globalVectSize(),
-            field.local_vect_size, field.local_index_map.data(), print_it);
+    gather_and_print(myfile, field.local_index_map, print_it);
 
     if (print_it)
     {
@@ -40,8 +39,7 @@ void PrintIndexMapAssimilator::index_map_to_file()
         myfile.open ("index-map-hidden.csv", std::ios::trunc);
         myfile << "index_map_hidden" << std::endl;
     }
-    gather_and_print(myfile, field.globalVectSizeHidden(),
-            field.local_vect_size_hidden, field.local_index_map_hidden.data(), print_it);
+    gather_and_print(myfile, field.local_index_map_hidden, print_it);
 
     if (print_it)
     {
@@ -67,25 +65,26 @@ PrintIndexMapAssimilator::PrintIndexMapAssimilator(Field & field_, const int tot
     nsteps = 1;
 }
 
-void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os, size_t global_vect_size,
-        size_t local_vect_size, const int local_index_map_data[], bool print_it)
+void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os,
+        const std::vector<int> & local_index_map, bool print_it)
 
 {
-    std::vector<int> global_index_map(global_vect_size);
-    std::vector<size_t> local_vect_sizes(mpi.size());
-    MPI_Gather(&local_vect_size, 1, my_MPI_SIZE_T, local_vect_sizes.data(), 1,
-            my_MPI_SIZE_T, 0, mpi.comm());
+    std::vector<int> local_index_map_sizes(mpi.size());
+    int local_index_map_size = local_index_map.size();
+    MPI_Gather(&local_index_map_size, 1, MPI_INT, local_index_map_sizes.data(), 1,
+            MPI_INT, 0, mpi.comm());
+    std::vector<int> global_index_map(sum_vec(local_index_map_sizes));
     int displs[mpi.size()];
     int last_displ = 0;
     int rcounts [mpi.size()];
     // convert to int...
-    std::copy(local_vect_sizes.begin(), local_vect_sizes.end(), rcounts);
+    std::copy(local_index_map_sizes.begin(), local_index_map_sizes.end(), rcounts);
     for (int i=0; i<mpi.size(); ++i) {
         displs[i] = last_displ;
-        last_displ += local_vect_sizes[i];
+        last_displ += local_index_map_sizes.at(i);
     }
 
-    MPI_Gatherv( local_index_map_data, local_vect_size, MPI_INT,
+    MPI_Gatherv( local_index_map.data(), local_index_map.size(), MPI_INT,
             global_index_map.data(), rcounts, displs, MPI_INT, 0, mpi.comm());
 
     if (print_it)
@@ -96,6 +95,7 @@ void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os, size_t global
         }
     }
 }
+
 int PrintIndexMapAssimilator::do_update_step(const int current_step) {
 
     L("Doing Printing Index Map...\n");

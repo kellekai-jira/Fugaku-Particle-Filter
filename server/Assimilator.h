@@ -11,6 +11,7 @@
 #include <memory>
 #include "Field.h"
 #include "MpiManager.h"
+#include "utils.h"
 
 // FIXME: move all assimilators into folder
 
@@ -32,8 +33,8 @@ public:
 // REM: the constructor must init the ensemble! (analysis states!)
 // called if every state was saved.
 // TODO: at the moment we do not need those things, but later it might be good to use them to diminish coupling....
-// void put_part(const Part & part, const double * data);
-// double * get_part(const Part & part) = 0;
+// void put_part(const Part & part, const STYPE * data);
+// STYPE * get_part(const Part & part) = 0;
 
 
 // returns how many steps must be performed by the model in the next iteration
@@ -44,8 +45,8 @@ public:
 // normally such messages are discarded and a proper analysis state is sent back
 // see the CheckStatelessAssimilator to see how to use this function.
     virtual void on_init_state(const int runner_id, const Part & part, const
-                               double * values, const Part & hidden_part,
-                               const double * values_hidden)
+                               STYPE * values, const Part & hidden_part,
+                               const STYPE * values_hidden)
     {
     };
 

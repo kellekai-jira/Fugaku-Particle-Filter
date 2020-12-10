@@ -361,7 +361,7 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
                         % runner_cmd)
                 return True
 
-    error('Simulation %s is stateful and thus cannot be used with melissa-da')
+    error('Simulation %s is stateful and thus cannot be used with melissa-da' % runner_cmd)
     return False
 
 # exporting for import * :

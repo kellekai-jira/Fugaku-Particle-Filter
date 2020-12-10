@@ -23,9 +23,9 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
 
     // we transmit only one third to pdaf
     // convert to fortran
-    const int global_vect_size = field.globalVectSize();
-    const int local_vect_size = field.local_vect_size;  // transform to int
-    const int local_vect_size_hidden = field.local_vect_size_hidden;  // transform to int
+    const int global_vect_size = field.globalVectSize() / sizeof(double);
+    const int local_vect_size = field.local_vect_size / sizeof(double);  // transform to int
+    const int local_vect_size_hidden = field.local_vect_size_hidden / sizeof(double);  // transform to int
     const int ensemble_size = field.ensemble_members.size();
 
     const MPI_Fint comm_world = mpi.fortranComm();
@@ -43,7 +43,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     //const int current_step = 0; not needed, we init at 0 already...
     //cwrapper_set_current_step(&current_step);
     getAllEnsembleMembers();
-    printf("[%d] hidden state size: %d\n", comm_rank, local_vect_size_hidden);
+    printf("[%d] hidden state size: %d doubles\n", comm_rank, local_vect_size_hidden);
 
     TimePoint start = std::chrono::high_resolution_clock::now();
     if (local_vect_size_hidden > 0)
@@ -53,7 +53,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
         {
             double * hidden_state_p;
             hidden_state_p =
-                field.ensemble_members[member_id].state_hidden.data();
+                reinterpret_cast<double*>(field.ensemble_members[member_id].state_hidden.data());
 
 
 
@@ -76,9 +76,9 @@ void PDAFAssimilator::getAllEnsembleMembers()
     for (auto eit = field.ensemble_members.begin(); eit !=
          field.ensemble_members.end(); eit++)
     {
-        const int local_vect_size = field.local_vect_size;  // transform to int
+        const int local_vect_size = field.local_vect_size/sizeof(double);  // transform to int
 
-        double * data = eit->state_analysis.data();
+        double * data = reinterpret_cast<double*>(eit->state_analysis.data());
         // int nnsteps =
         int nnsteps = cwrapper_PDAF_get_state(&doexit, &local_vect_size, data,
                                               &status);
@@ -107,7 +107,7 @@ int PDAFAssimilator::do_update_step(const int current_step)
     MPI_Barrier(mpi.comm());      // TODO: remove this line!
     L("Doing update step...\n");
 
-    const int local_vect_size = field.local_vect_size;  // transform to int
+    const int local_vect_size = field.local_vect_size / sizeof(double);  // transform to int
 
     //        ! *** PDAF: Send state forecast to filter;                           ***
     //        ! *** PDAF: Perform assimilation if ensemble forecast is completed   ***
@@ -120,7 +120,7 @@ int PDAFAssimilator::do_update_step(const int current_step)
          field.ensemble_members.end(); eit++)
     {
 
-        const double * data = eit->state_background.data();
+        const double * data = reinterpret_cast<double*>(eit->state_background.data());
         cwrapper_PDAF_put_state(&local_vect_size, data, &status);
 
         if (status != 0)

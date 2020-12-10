@@ -223,7 +223,7 @@ public:
         osr << assimilated_state_size << ',';
         osr << hidden_state_size << ',';
         osr << iterations << ',';
-        osr << 8*assimilated_state_size*ensemble_members*2.0/mean_runtime*1000/1024/
+        osr << assimilated_state_size*ensemble_members*2.0/mean_runtime*1000/1024/
             1024 <<
             ',';
         osr << (iterations-warmup);

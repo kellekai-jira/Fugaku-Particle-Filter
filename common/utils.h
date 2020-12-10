@@ -25,6 +25,8 @@
 #include <chrono>
 
 
+#include "melissa_da_stype.h"
+
 inline void print_stack_trace() {
     void *array[10];
     size_t size;

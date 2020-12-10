@@ -9,6 +9,7 @@
 #define API_MELISSA_API_H_
 
 #include <mpi.h>
+#include <melissa_da_stype.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,13 +17,15 @@ extern "C" {
 
 /// Every rank that contains some model state information and thus shall communicate with
 /// the Melissa-DA server as must call this function once during init.
-/// local_vect_size and local_hidden_vect_Size are in doubles.
+/// local_vect_size and local_hidden_vect_Size are in bytes.
 /// local_hidden_vect_size may be 0.
 // TODO: check if local_vect_size may be 0 too (it might be thinkable that some ranks have
 //       no assimilated but only hidden state)
 void melissa_init(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
+                  const int bytes_per_element,
+                  const int bytes_per_element_hidden,
                   MPI_Comm comm_
                   );
 
@@ -32,19 +35,22 @@ void melissa_init(const char *field_name,
 void melissa_init_with_index_map(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
+                  const int bytes_per_element,
+                  const int bytes_per_element_hidden,
                   MPI_Comm comm_,
                   const int local_index_map[],
                   const int local_index_map_hidden[]
                   );
 
+// REM: Fortran api calls still with doubles!
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const int  *local_vect_size,
+                         const int  *local_doubles_amount,
                          const int  *local_hidden_vect_size);      // comm is casted into an pointer to an mpi communicaotr if not null.
 
 void melissa_init_f(const char *field_name,
-                    int        *local_vect_size,
-                    int        *local_hidden_vect_size,
+                    int        *local_doubles_amount,
+                    int        *local_hidden_doubles_amount,
                     MPI_Fint   *comm_fortran);
 
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
@@ -52,8 +58,11 @@ void melissa_init_f(const char *field_name,
 /// Exposes data to melissa
 /// returns 0 if simulation should end now.
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
-int melissa_expose(const char *field_name, double *values,
-                   double *hidden_values);
+int melissa_expose(const char *field_name, STYPE *values,
+                   STYPE *hidden_values);
+
+/// legacy interface using doubles...
+int melissa_expose_d(const char *field_name, double *values, double *hidden_values);
 
 /// wrapper needed for the Fortran interface when using no hidden state as nullptr
 /// transfer between Fortran and C is not trivial
@@ -73,7 +82,8 @@ int melissa_get_current_step();
 int melissa_commit_chunks_f(MPI_Fint * comm_fortran);
 
 #define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
-    void melissa_add_chunk_##TYPELETTER(CTYPE * values, const int * amount, \
+    void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
+            CTYPE * values, const int * amount, \
             const int * is_assimilated)
 
     add_chunk_wrapper_decl(r, float);

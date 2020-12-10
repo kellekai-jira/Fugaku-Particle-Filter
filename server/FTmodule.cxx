@@ -66,13 +66,13 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
         hsize_t offset = offset_base;
         std::string dataset_name(field->name);
         dataset_name += "_" + std::to_string( dataset_id-m_id_offset );
-        FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_DBLE );
+        FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_CHAR );
         std::vector<Part>::iterator it_part = field->parts.begin();
         while( (it_part = std::find_if( it_part, field->parts.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts.end() ){
             offset += static_cast<hsize_t>(it_part->local_offset_server);
             hsize_t count = static_cast<hsize_t>(it_part->send_count);
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
-            FTI_Protect( subset_id, ptr, it_part->send_count, FTI_DBLE );
+            FTI_Protect( subset_id, ptr, it_part->send_count, FTI_CHAR );
             count_tot += count;
             FTI_AddSubset( subset_id, 1, &offset, &count, dataset_id );
             std::string subset_name(dataset_name);

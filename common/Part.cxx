@@ -3,27 +3,39 @@
 
 void calculate_local_vect_sizes_server(const int comm_size_server, const
                                    size_t global_vect_size,
-                                   size_t * local_vect_sizes_server) {
+                                   size_t * local_vect_sizes_server,
+                                   const int bytes_per_element) {
+
+
+    // transform from bytes into elements
+    int global_elements = global_vect_size/bytes_per_element;
     for (int i = 0; i < comm_size_server; ++i)
     {
         // every server rank gets the same amount
-        local_vect_sizes_server[i] = global_vect_size /
+        local_vect_sizes_server[i] = global_elements /
                                      comm_size_server;
 
         // let n be the rest of this division
         // the first n server ranks get one more to split the rest fair up...
-        size_t n_rest = global_vect_size - size_t(global_vect_size /
+        size_t n_rest = global_elements - size_t(global_elements /
                                                   comm_size_server) *
                         comm_size_server;
         if (size_t(i) < n_rest)
         {
             local_vect_sizes_server[i]++;
         }
+
+        // now transform back from  elementcount to bytes
+        local_vect_sizes_server[i] *= bytes_per_element;
     }
 }
 
+
+
+/// This never splits elements where one element consists of bytes_per_element bytes.
 std::vector<Part> calculate_n_to_m(const int comm_size_server, const
-                                   std::vector<size_t> &local_vect_sizes_runner)
+                                   std::vector<size_t> &local_vect_sizes_runner,
+                                   const int bytes_per_element)
 {
     std::vector <Part> parts(0);
     size_t local_vect_sizes_server[comm_size_server];
@@ -36,7 +48,7 @@ std::vector<Part> calculate_n_to_m(const int comm_size_server, const
     }
 
     calculate_local_vect_sizes_server(comm_size_server, global_vect_size,
-            local_vect_sizes_server);
+            local_vect_sizes_server, bytes_per_element);
 
 
     parts.push_back({0, 0, 0, 0, 0});

@@ -110,8 +110,8 @@ struct ServerRankConnection
         zmq_close(data_request_socket);
     }
 
-    void send(double * values, const size_t doubles_to_send,
-              double * values_hidden, const size_t doubles_to_send_hidden,
+    void send(STYPE * values, const size_t bytes_to_send,
+              STYPE * values_hidden, const size_t bytes_to_send_hidden,
               const int
               current_state_id, const int current_step, const
               char * field_name)
@@ -135,8 +135,8 @@ struct ServerRankConnection
             "-> Simulation runnerid %d, rank %d sending stateid %d current_step=%d fieldname=%s, %lu+%lu hidden bytes",
             getRunnerId(), getCommRank(), current_state_id,
             current_step,
-            field_name, doubles_to_send * sizeof(double),
-            doubles_to_send_hidden * sizeof(double));
+            field_name, bytes_to_send,
+            bytes_to_send_hidden);
         D("values[0]  = %.3f", values[0]);
         D("values[1]  = %.3f", values[1]);
         D("values[2]  = %.3f", values[2]);
@@ -144,10 +144,9 @@ struct ServerRankConnection
         // D("hidden values[1]  = %.3f", values_hidden[1]);
         // D("hidden values[2]  = %.3f", values_hidden[2]);
         // D("values[35] = %.3f", values[35]);
-        zmq_msg_init_data(&msg_data, values, doubles_to_send *
-                          sizeof(double), NULL, NULL);
+        zmq_msg_init_data(&msg_data, values, bytes_to_send, NULL, NULL);
         int flag;
-        if (doubles_to_send_hidden > 0)
+        if (bytes_to_send_hidden > 0)
         {
             flag = ZMQ_SNDMORE;
         }
@@ -158,22 +157,21 @@ struct ServerRankConnection
 
         ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, flag));
 
-        if (doubles_to_send_hidden > 0)
+        if (bytes_to_send_hidden > 0)
         {
             zmq_msg_init_data(&msg_data_hidden, values_hidden,
-                              doubles_to_send_hidden *
-                              sizeof(double), NULL, NULL);
+                              bytes_to_send_hidden, NULL, NULL);
             ZMQ_CHECK(zmq_msg_send(&msg_data_hidden, data_request_socket, 0));
         }
     }
 
-    int receive(double * out_values, size_t doubles_expected,
-                double * out_values_hidden, size_t doubles_expected_hidden,
+    int receive(STYPE * out_values, size_t bytes_expected,
+                STYPE * out_values_hidden, size_t bytes_expected_hidden,
                 int * out_current_state_id, int *out_current_step)
     {
 // receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
 // the first message also contains out_current_state_id and out_current_step
-// the 2nd message just consists of doubles that will be put into out_values
+// the 2nd message just consists of bytes that will be put into out_values
         zmq_msg_t msg;
         zmq_msg_init(&msg);
         ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
@@ -197,25 +195,23 @@ struct ServerRankConnection
 
             D(
                 "<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... for state %d, current_step=%d, nsteps=%d (socket=%p)",
-                zmq_msg_size(&msg), doubles_expected *
-                sizeof(double),
-                doubles_expected_hidden * sizeof(double),
+                zmq_msg_size(&msg), bytes_expected,
+                bytes_expected_hidden,
                 *out_current_state_id, *out_current_step, nsteps,
                 data_request_socket);
 
-            assert(zmq_msg_size(&msg) == doubles_expected *
-                   sizeof(double));
+            assert(zmq_msg_size(&msg) == bytes_expected);
 
-            double * buf = reinterpret_cast<double*>(zmq_msg_data(
+            STYPE * buf = reinterpret_cast<STYPE*>(zmq_msg_data(
                                                          &msg));
-            std::copy(buf, buf + doubles_expected, out_values);
+            std::copy(buf, buf + bytes_expected, out_values);
 
             // print_vector(std::vector<double>(out_values,
             //                                 out_values +
             //                                 doubles_expected));
             zmq_msg_close(&msg);
 
-            if (doubles_expected_hidden > 0)
+            if (bytes_expected_hidden > 0)
             {
                 assert_more_zmq_messages(data_request_socket);
 
@@ -223,12 +219,11 @@ struct ServerRankConnection
                 zmq_msg_init(&msg);
 
                 ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
-                assert(zmq_msg_size(&msg) == doubles_expected_hidden *
-                       sizeof(double));
+                assert(zmq_msg_size(&msg) == bytes_expected_hidden);
 
-                buf = reinterpret_cast<double*>(zmq_msg_data(
+                buf = reinterpret_cast<STYPE*>(zmq_msg_data(
                                                     &msg));
-                std::copy(buf, buf + doubles_expected_hidden,
+                std::copy(buf, buf + bytes_expected_hidden,
                           out_values_hidden);
 
                 // print_vector(std::vector<double>(out_values_hidden,
@@ -240,7 +235,6 @@ struct ServerRankConnection
             assert_no_more_zmq_messages(data_request_socket);
         }
         else if (type == END_RUNNER)
-        {         // TODO use zmq cpp for less errors!
                   // TODO: is this really an error?
             printf(
                 "Error: Server decided to end this runner now.\n");
@@ -327,11 +321,14 @@ struct Field
     size_t local_hidden_vect_size;
     std::vector<ConnectedServerRank> connected_server_ranks;
     void initConnections(const std::vector<size_t> &local_vect_sizes, const
-                         std::vector<size_t> &local_hidden_vect_sizes) {
+                         std::vector<size_t> &local_hidden_vect_sizes,
+                         const int bytes_per_element,
+                         const int bytes_per_element_hidden) {
         std::vector<Part> parts = calculate_n_to_m(server.comm_size,
-                                                   local_vect_sizes);
+                                                   local_vect_sizes, bytes_per_element);
         std::vector<Part> parts_hidden = calculate_n_to_m(server.comm_size,
-                                                          local_hidden_vect_sizes);
+                                                          local_hidden_vect_sizes,
+                                                          bytes_per_element_hidden);
 
         assert(parts_hidden.size() == 0 || parts_hidden.size() == parts.size());
         // for this to hold true the hidden state should be at least as big as
@@ -369,8 +366,9 @@ struct Field
         }
     }
 
+    // TODO: change MPI_INT to size_t where possible, also in server.cxx
     // TODO: this will crash if there are more than two fields? maybe use dealer socket that supports send send recv recv scheme.
-    void putState(double * values, double * hidden_values, const
+    void putState(STYPE * values, STYPE * hidden_values, const
                   char * field_name) {
         // send every state part to the right server rank
         for (auto csr = connected_server_ranks.begin(); csr !=
@@ -391,7 +389,7 @@ struct Field
 
     }
 
-    int getState(double * values, double * values_hidden) {
+    int getState(STYPE * values, STYPE * values_hidden) {
         int nsteps = -1;
         // TODO: an optimization would be to poll instead of receiving directly. this way we receive first whoever comes first. but as we need to synchronize after it probably does not matter a lot?
         for (auto csr = connected_server_ranks.begin(); csr !=
@@ -496,19 +494,22 @@ struct ConfigurationConnection
     // TODO: high water mark and so on?
     void register_field(const char * field_name, size_t local_vect_sizes[],
                         size_t local_hidden_vect_sizes[], std::vector<int>& global_index_map,
-                        std::vector<int>& global_index_map_hidden)
+                        std::vector<int>& global_index_map_hidden,
+                        const int bytes_per_element, const int bytes_per_element_hidden)
     {
         zmq_msg_t msg_header, msg_local_vect_sizes, msg_local_hidden_vect_sizes,
                   msg_index_map, msg_index_map_hidden,
                   msg_reply;
-        zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) +
+        zmq_msg_init_size(&msg_header, sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) +
                           MPI_MAX_PROCESSOR_NAME * sizeof(char) );
         int * header = reinterpret_cast<int*>(zmq_msg_data(
                                                   &msg_header));
         int type = REGISTER_FIELD;
         header[0] = type;
         header[1] = getCommSize();
-        strcpy(reinterpret_cast<char*>(&header[2]), field_name);
+        header[2] = bytes_per_element;
+        header[3] = bytes_per_element_hidden;
+        strncpy(reinterpret_cast<char*>(&header[4]), field_name, MPI_MAX_PROCESSOR_NAME);
         ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
 
         zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes,
@@ -602,15 +603,18 @@ int melissa_get_current_state_id()
 void melissa_init(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
+                  const int bytes_per_element,
+                  const int bytes_per_element_hidden,
                   MPI_Comm comm_)
 {
     melissa_init_with_index_map(field_name, local_vect_size, local_hidden_vect_size,
-            comm_, nullptr, nullptr);
+            bytes_per_element, bytes_per_element_hidden, comm_, nullptr, nullptr);
 }
 
+// TODO: later one could send the index map over all ranks in parallel!
 void gather_global_index_map(const size_t local_vect_size, const int local_index_map[],
         std::vector<int> &global_index_map, const size_t local_vect_sizes[],
-        MPI_Comm comm)
+        MPI_Comm comm, const int bytes_per_element)
 {
     if (local_index_map == nullptr)
     {
@@ -627,11 +631,12 @@ void gather_global_index_map(const size_t local_vect_size, const int local_index
         // move to int...
         std::copy(local_vect_sizes, local_vect_sizes+getCommSize(), rcounts);
         for (int i=0; i<getCommSize(); ++i) {
+            rcounts[i] /= bytes_per_element;
             displs[i] = last_displ;
-            last_displ += local_vect_sizes[i];
+            last_displ += local_vect_sizes[i]/bytes_per_element;
         }
 
-        MPI_Gatherv( local_index_map, local_vect_size, MPI_INT,
+        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_INT,
                 global_index_map.data(), rcounts, displs, MPI_INT, 0, comm);
     }
 }
@@ -639,14 +644,25 @@ void gather_global_index_map(const size_t local_vect_size, const int local_index
 void melissa_init_with_index_map(const char *field_name,
                   const int local_vect_size,
                   const int local_hidden_vect_size,
+                  const int bytes_per_element,
+                  const int bytes_per_element_hidden,
                   MPI_Comm comm_,
-                  const int local_index_map[],
+                  const int local_index_map[],// FIXME for WRF: add varid list!
                   const int local_index_map_hidden[]
                   )
 {
     // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
-
     bool register_field = first_melissa_init(comm_);
+
+    // Check That bytes_per_element are the same on all ranks
+    int tmp_assert = bytes_per_element;
+    MPI_Bcast(&tmp_assert, 1, MPI_INT, 0, comm);
+    assert(tmp_assert == bytes_per_element);
+
+    // Check That bytes_per_element_hidden are the same on all ranks
+    tmp_assert = bytes_per_element_hidden;
+    MPI_Bcast(&tmp_assert, 1, MPI_INT, 0, comm);
+    assert(tmp_assert == bytes_per_element_hidden);
 
     // create field
     field.name = field_name;
@@ -666,37 +682,50 @@ void melissa_init_with_index_map(const char *field_name,
                   local_hidden_vect_sizes.data(), 1, my_MPI_SIZE_T,
                   comm);
 
+
+
 	if(local_hidden_vect_sizes.size() >= 2) {
 		D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
 	}
 
-    std::vector<int> global_index_map;
+
+
+    // gather the global index map from this
+    std::vector<int> global_index_map; // TODO: use special index map type that can encode the var name as well!!
     std::vector<int> global_index_map_hidden;
     if (comm_rank == 0)
     {
-        global_index_map.resize(sum_vec(local_vect_sizes));
-        global_index_map_hidden.resize(sum_vec(local_hidden_vect_sizes));
+        int global_vect_size = sum_vec(local_vect_sizes);
+        assert(global_vect_size % bytes_per_element == 0);
+        global_index_map.resize(sum_vec(local_vect_sizes)/bytes_per_element);
+
+        int global_vect_size_hidden = sum_vec(local_hidden_vect_sizes);
+        assert(global_vect_size_hidden % bytes_per_element_hidden == 0);
+        global_index_map_hidden.resize(global_vect_size_hidden/bytes_per_element_hidden);
     }
 
     gather_global_index_map(local_vect_size, local_index_map,
         global_index_map, local_vect_sizes.data(),
-        comm_);
+        comm_, bytes_per_element);
 
     gather_global_index_map(local_hidden_vect_size, local_index_map_hidden,
         global_index_map_hidden, local_hidden_vect_sizes.data(),
-        comm_);
+        comm_, bytes_per_element_hidden);
 
     if (register_field)
     {
         // Tell the server which kind of data he has to expect
         ccon->register_field(field_name, local_vect_sizes.data(),
-                             local_hidden_vect_sizes.data(), global_index_map, global_index_map_hidden);
+                             local_hidden_vect_sizes.data(),
+                             global_index_map, global_index_map_hidden,
+                             bytes_per_element, bytes_per_element_hidden);
     }
 
 
 
     // Calculate to which server ports the local part of the field will connect
-    field.initConnections(local_vect_sizes, local_hidden_vect_sizes);
+    field.initConnections(local_vect_sizes, local_hidden_vect_sizes, bytes_per_element,
+            bytes_per_element_hidden);
 
     trigger(START_PROPAGATE_STATE, field.current_state_id);
 
@@ -705,17 +734,19 @@ void melissa_init_with_index_map(const char *field_name,
 bool no_mpi = false;
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const int  *local_vect_size,
-                         const int  *local_hidden_vect_size) {     // comm is casted into an pointer to an mpi communicaotr if not null.
+                         const int  *local_doubles_amount,
+                         const int  *local_hidden_doubles_amount) {     // comm is casted into an pointer to an mpi communicaotr if not null.
     MPI_Init(NULL, NULL);      // TODO: maybe we also do not need to do this? what happens if we clear out this line?
     no_mpi = true;
-    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size,
+    melissa_init(field_name, *local_doubles_amount * sizeof(double),
+            *local_hidden_doubles_amount * sizeof(double),
+            sizeof(double), sizeof(double),
                  MPI_COMM_WORLD);
 }
 
 
-int melissa_expose(const char *field_name, double *values,
-                   double *hidden_values)
+int melissa_expose(const char *field_name, STYPE *values,
+                   STYPE *hidden_values)
 {
     trigger(STOP_PROPAGATE_STATE, field.current_state_id);
     trigger(START_IDLE_RUNNER, getRunnerId());
@@ -814,17 +845,26 @@ int melissa_get_current_step()
 
 
 void melissa_init_f(const char *field_name,
-                    int        *local_vect_size,
-                    int        *local_hidden_vect_size,
+                    int        *local_doubles_amount,
+                    int        *local_hidden_doubles_amount,
                     MPI_Fint   *comm_fortran)
 {
 
     MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
-    melissa_init(field_name, *local_vect_size, *local_hidden_vect_size, comm);
+    melissa_init(field_name, *local_doubles_amount * sizeof(double), *local_hidden_doubles_amount * sizeof(double),
+            sizeof(double), sizeof(double), comm);
 }
 
 
 int melissa_expose_f(const char *field_name, double *values)
 {
-    return melissa_expose(field_name, values, NULL);
+    return melissa_expose(field_name, reinterpret_cast<STYPE*>(values), NULL);
+}
+
+
+/// legacy interface using doubles...
+int melissa_expose_d(const char *field_name, double *values, double *hidden_values)
+{
+    return melissa_expose(field_name, reinterpret_cast<STYPE*>(values),
+            reinterpret_cast<STYPE*>(hidden_values));
 }

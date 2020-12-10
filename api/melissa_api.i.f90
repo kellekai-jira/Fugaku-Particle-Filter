@@ -48,9 +48,11 @@ end function melissa_commit_chunks_f
 
 
 #define add_chunk_wrapper(TYPELETTER, CTYPE, FORTRANTYPE) \
-__NL__ subroutine melissa_add_chunk_##TYPELETTER(values, amount, is_assimilated)& \
+__NL__ subroutine melissa_add_chunk_##TYPELETTER(varid, index_map, values, amount, is_assimilated)& \
 __NL__     bind(c, name = __s__melissa_add_chunk_##TYPELETTER##__s__) \
 __NL__     use ISO_C_BINDING, only: CTYPE, C_INT \
+__NL__     integer(C_INT), intent(in) :: varid \
+__NL__     integer(C_INT), dimension(:), allocatable, intent(in) :: index_map \
 __NL__     FORTRANTYPE(kind=CTYPE), intent(inout), dimension(*) :: values \
 __NL__     integer(kind=C_INT), intent(in) :: amount \
 __NL__     integer(kind=C_INT), intent(in) :: is_assimilated \

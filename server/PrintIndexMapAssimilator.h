@@ -16,8 +16,9 @@ class PrintIndexMapAssimilator : public Assimilator
 private:
     Field & field;
     MpiManager & mpi;
-    void gather_and_print(std::ofstream &os, size_t global_vect_size,
-        size_t local_vect_size, const int local_index_map_data[], bool print_it);
+
+    void gather_and_print(std::ofstream &os,
+        const std::vector<int> & local_index_map, bool print_it);
     void index_map_to_file();
 public:
     PrintIndexMapAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);

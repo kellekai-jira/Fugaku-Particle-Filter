@@ -67,8 +67,10 @@ int main(int argc, char * args[])
     }
 
     melissa_init("variableX",
-                 local_vect_size,
+                 local_vect_size*sizeof(double),
                  0,
+                 sizeof(double),
+                 sizeof(double),
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0);
@@ -85,7 +87,7 @@ int main(int argc, char * args[])
         // usleep(10000);
         // usleep(1000000);
 
-        nsteps = melissa_expose("variableX", state1.data(), nullptr);
+        nsteps = melissa_expose_d("variableX", state1.data(), nullptr);
         // printf("calculating from timestep %d\n",
         //       melissa_get_current_step());
 

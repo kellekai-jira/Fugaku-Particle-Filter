@@ -96,13 +96,23 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
         {
             // analysis state is enough:
             // calculate max diff
+            const double * cstate =
+                reinterpret_cast<const double*>(correct_states[index].data());
+            const double * cstate_hidden =
+                reinterpret_cast<const double*>(correct_states_hidden[index].data());
+
+            const double * bstate =
+                reinterpret_cast<const double*>(ens_it->state_background.data());
+            const double * hstate =
+                reinterpret_cast<const double*>(ens_it->state_hidden.data());
+
             double max_diff = 0.0;
-            double min_value = correct_states[index][0];
-            double max_value = correct_states[index][0];
-            for (size_t i = 0; i < correct_states[index].size(); ++i)
+            double min_value = cstate[0];
+            double max_value = cstate[0];
+            for (size_t i = 0; i < correct_states[index].size()/sizeof(double); ++i)
             {
-                double a = correct_states[index][i];
-                double b = ens_it->state_background[i];
+                double a = cstate[i];
+                double b = bstate[i];
                 if (std::isnan(a) && std::isnan(b))
                 {
                     continue;
@@ -112,21 +122,21 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
                     continue;
                 }
 
-                min_value = std::min(min_value, correct_states[index][i]);
-                min_value = std::min(min_value, ens_it->state_background[i]);
+                min_value = std::min(min_value, cstate[i]);
+                min_value = std::min(min_value, bstate[i]);
 
-                max_value = std::max(max_value, correct_states[index][i]);
-                max_value = std::max(max_value, ens_it->state_background[i]);
+                max_value = std::max(max_value, cstate[i]);
+                max_value = std::max(max_value, bstate[i]);
 
-                double ndiff = std::abs(correct_states[index][i] -
-                                        ens_it->state_background[i]);
+                double ndiff = std::abs(cstate[i] -
+                                        bstate[i]);
                 max_diff = std::max(ndiff, max_diff);
 
             }
-            for (size_t i = 0; i < correct_states_hidden[index].size(); ++i)
+            for (size_t i = 0; i < correct_states_hidden[index].size() / sizeof(double); ++i)
             {
-                double a = correct_states_hidden[index][i];
-                double b = ens_it->state_hidden[i];
+                double a = cstate_hidden[i];
+                double b = hstate[i];
                 if (std::isnan(a) && std::isnan(b))
                 {
                     continue;
@@ -137,15 +147,15 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
                 }
 
                 min_value = std::min(min_value,
-                                     correct_states_hidden[index][i]);
-                min_value = std::min(min_value, ens_it->state_hidden[i]);
+                                     cstate_hidden[i]);
+                min_value = std::min(min_value, hstate[i]);
 
                 max_value = std::max(max_value,
-                                     correct_states_hidden[index][i]);
-                max_value = std::max(max_value, ens_it->state_hidden[i]);
+                                     cstate_hidden[i]);
+                max_value = std::max(max_value, hstate[i]);
 
-                double ndiff = std::abs(correct_states_hidden[index][i] -
-                                        ens_it->state_hidden[i]);
+                double ndiff = std::abs(cstate_hidden[i] -
+                                        hstate[i]);
                 max_diff = std::max(ndiff, max_diff);
 
             }
@@ -160,9 +170,9 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
                 L(
                     "Error: Vectors are not equal (max diff >%f). Is there some hidden state?",
                     eps);
-                print_vector(ens_it->state_background);
+                //print_vector(bstate);
                 L("!=");
-                print_vector(correct_states[index]);
+                //print_vector(cstate);
                 print_result(false);
                 return -1;      // stop assimilation
             }
@@ -182,10 +192,10 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
 void CheckStatelessAssimilator::store_init_state_part(const int
                                                       ensemble_member_id, const
                                                       Part & part, const
-                                                      double * values,
+                                                      STYPE * values,
                                                       const Part & hidden_part,
                                                       const
-                                                      double * values_hidden)
+                                                      STYPE * values_hidden)
 {
     EnsembleMember & member = field.ensemble_members[ensemble_member_id];
     assert(part.send_count + part.local_offset_server <=
@@ -214,9 +224,9 @@ void CheckStatelessAssimilator::store_init_state_part(const int
 
 void CheckStatelessAssimilator::on_init_state(const int runner_id, const
                                               Part & part, const
-                                              double * values, const
+                                              STYPE * values, const
                                               Part & hidden_part,
-                                              const double * values_hidden)
+                                              const STYPE * values_hidden)
 {
     // let's use this to set the init.
     // you may not have more runners than ensemble members here! Otherwise some

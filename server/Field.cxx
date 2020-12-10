@@ -8,8 +8,9 @@
 #include "Field.h"
 
 Field::Field(const std::string &name_, const int simu_comm_size_, const size_t
-             ensemble_size_)
-    : name(name_), local_vect_size(0), local_vect_size_hidden(0)
+          ensemble_size_, int bytes_per_element_, int bytes_per_element_hidden_)
+    : name(name_), local_vect_size(0), local_vect_size_hidden(0),
+    bytes_per_element(bytes_per_element_), bytes_per_element_hidden(bytes_per_element_hidden_)
 {
     local_vect_sizes_runner.resize(simu_comm_size_);
     local_vect_sizes_runner_hidden.resize(simu_comm_size_);
@@ -20,9 +21,10 @@ Field::Field(const std::string &name_, const int simu_comm_size_, const size_t
 /// simulations
 void Field::calculate_parts(int server_comm_size)
 {
-    parts = calculate_n_to_m(server_comm_size, local_vect_sizes_runner);
+    parts = calculate_n_to_m(server_comm_size, local_vect_sizes_runner, bytes_per_element);
     parts_hidden = calculate_n_to_m(server_comm_size,
-                                    local_vect_sizes_runner_hidden);
+                                    local_vect_sizes_runner_hidden,
+                                    bytes_per_element_hidden);
 
     assert(parts_hidden.size() == 0 || parts_hidden.size() == parts.size());
     auto part_it_hidden = parts_hidden.begin();
@@ -51,13 +53,13 @@ void Field::calculate_parts(int server_comm_size)
          ensemble_members.end(); ens_it++)
     {
 
-        ens_it->set_local_vect_size(local_vect_size, local_vect_size_hidden);          // low: better naming: local state size is in doubles not in bytes!
+        ens_it->set_local_vect_size(local_vect_size, local_vect_size_hidden);          // low: better naming: local state size is in STYPEs not forcibly bytes!
     }
 
     assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too big. (there are more server ranks than field elements. this makes not much sense!
 
-    local_index_map.resize(local_vect_size);
-    local_index_map_hidden.resize(local_vect_size_hidden);
+    local_index_map.resize(local_vect_size / bytes_per_element);
+    local_index_map_hidden.resize(local_vect_size_hidden / bytes_per_element_hidden);
 
     D("Calculated parts");
 }

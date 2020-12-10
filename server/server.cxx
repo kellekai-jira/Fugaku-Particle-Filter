@@ -190,7 +190,7 @@ struct RunnerRankConnection
                               state_id).state_analysis.data() +
                           part.local_offset_server,
                           part.send_count *
-                          sizeof(double), NULL, NULL);
+                          sizeof(STYPE), NULL, NULL);
 
         if (runner_rank == 0)
         {
@@ -200,8 +200,8 @@ struct RunnerRankConnection
         const Part & hidden_part = field->getPartHidden(runner_rank);
         D("-> Server sending %lu + %lu hidden bytes for state %d, timestep=%d",
           part.send_count *
-          sizeof(double),
-          hidden_part.send_count * sizeof(double),
+          sizeof(STYPE),
+          hidden_part.send_count * sizeof(STYPE),
           header[0], header[1]);
         D(
             "local server offset %lu, local runner offset %lu, sendcount=%lu",
@@ -209,7 +209,7 @@ struct RunnerRankConnection
             field->getPart(runner_rank).local_offset_runner,
             field->getPart(runner_rank).send_count);
         // print_vector(field->ensemble_members.at(state_id).state_analysis);
-        D("content=[%f,%f,%f,%f,%f...]",
+        D("content=[%d,%d,%d,%d,%d...]",
           field->ensemble_members.at(
               state_id).state_analysis.data()[0],
           field->ensemble_members.at(
@@ -239,12 +239,12 @@ struct RunnerRankConnection
                                   state_id).state_hidden.data() +
                               hidden_part.local_offset_server,
                               hidden_part.send_count *
-                              sizeof(double), NULL, NULL);
-            double * tmp = field->ensemble_members.at(
+                              sizeof(STYPE), NULL, NULL);
+            STYPE * tmp = field->ensemble_members.at(
                 state_id).state_hidden.data();
             tmp += hidden_part.local_offset_server;
             // D("Hidden values to send:");
-            // print_vector(std::vector<double>(tmp, tmp +
+            // print_vector(std::vector<STYPE>(tmp, tmp +
             // hidden_part.send_count));
             ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
         }
@@ -420,18 +420,20 @@ void register_field(zmq_msg_t &msg, const int * buf,
                     void * configuration_socket)
 {
     assert(phase == PHASE_INIT);              // we accept new fields only if in initialization phase.
-    assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) +
+    assert(zmq_msg_size(&msg) == sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) +
            MPI_MAX_PROCESSOR_NAME * sizeof(char));
     assert(field == nullptr);              // we accept only one field for now.
 
     int runner_comm_size = buf[1];
+    int bytes_per_element = buf[2];
+    int bytes_per_element_hidden = buf[3];
 
     char field_name[MPI_MAX_PROCESSOR_NAME];
-    strcpy(field_name, reinterpret_cast<const char*>(&buf[2]));
+    strncpy(field_name, reinterpret_cast<const char*>(&buf[4]), MPI_MAX_PROCESSOR_NAME);
     zmq_msg_close(&msg);
 
     field = std::make_unique<Field>(field_name, runner_comm_size,
-                                    ENSEMBLE_SIZE);
+                                    ENSEMBLE_SIZE, bytes_per_element, bytes_per_element_hidden);
 
     D("Server registering Field %s, runner_comm_size = %d", field_name,
       runner_comm_size);
@@ -455,7 +457,9 @@ void register_field(zmq_msg_t &msg, const int * buf,
 
 
     // always await global_index_map now
-    global_index_map.resize(sum_vec(field->local_vect_sizes_runner));
+    int global_vect_size = sum_vec(field->local_vect_sizes_runner);
+    assert(global_vect_size % bytes_per_element == 0);
+    global_index_map.resize(global_vect_size / bytes_per_element);
     assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
@@ -464,7 +468,9 @@ void register_field(zmq_msg_t &msg, const int * buf,
             global_index_map.size() * sizeof(int));
     zmq_msg_close(&msg);
 
-    global_index_map_hidden.resize(sum_vec(field->local_vect_sizes_runner_hidden));
+    int global_vect_size_hidden = sum_vec(field->local_vect_sizes_runner_hidden);
+    assert(global_vect_size_hidden % bytes_per_element_hidden == 0);
+    global_index_map_hidden.resize(global_vect_size_hidden / bytes_per_element_hidden);
     assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
@@ -476,6 +482,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
 
     // msg is closed outside by caller...
 
+    D("indexmapsize: %lu", global_index_map.size());
 
     field->name = field_name;
 
@@ -510,11 +517,11 @@ void answer_configuration_message(void * configuration_socket,
     zmq_msg_close(&msg);
 }
 
-void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int global_index_map_data[], int local_index_map_data[])
+void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int global_index_map_data[], int local_index_map_data[], const int bytes_per_element)
 {
     size_t local_vect_sizes_server[comm_size];
     calculate_local_vect_sizes_server(comm_size, global_vect_size,
-            local_vect_sizes_server);
+            local_vect_sizes_server, bytes_per_element);
     int scounts[comm_size];
     // transform size_t to mpi's int
     std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts);
@@ -523,58 +530,75 @@ void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int glob
     for (int i = 0; i < comm_size; ++i)
     {
         displs[i] = last_displ;
+        assert(scounts[i] % bytes_per_element == 0); // FIXME: this will fail if running with an uneven number of elements... need to take indexmap into account when calculating nxm....
+        scounts[i] /= bytes_per_element;
         last_displ += scounts[i];
     }
 
     MPI_Scatterv( global_index_map_data, scounts, displs, MPI_INT,
-            local_index_map_data, local_vect_size, MPI_INT,
+            local_index_map_data, local_vect_size/bytes_per_element, MPI_INT,
             0, mpi.comm());
 }
 
 void broadcast_field_information_and_calculate_parts() {
     char field_name[MPI_MAX_PROCESSOR_NAME];
     int runner_comm_size;      // Very strange bug: if I declare this variable in the if / else scope it does not work!. it gets overwritten by the mpi_bcast for the runner_comm_size
+    int bytes_per_element;
+    int bytes_per_element_hidden;
 
     if (comm_rank == 0)
     {
         strcpy(field_name, field->name.c_str());
         runner_comm_size =
             field->local_vect_sizes_runner.size();
+        bytes_per_element = field->bytes_per_element;
+        bytes_per_element_hidden = field->bytes_per_element_hidden;
     }
+
+
+    // FIXME: see if there is unproper use of comm somewhere or if everywhere mpi.comm() is used!
 
     MPI_Bcast(field_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0,
               mpi.comm());                                                             // 1:fieldname
     MPI_Bcast(&runner_comm_size, 1, MPI_INT, 0,
               mpi.comm());                                                                     // 2:runner_comm_size
 
+    MPI_Bcast(&bytes_per_element, 1, MPI_INT, 0,
+              mpi.comm());                                                                     // 3:runner_comm_size
+
+    MPI_Bcast(&bytes_per_element_hidden, 1, MPI_INT, 0,
+              mpi.comm());                                                                     // 4:runner_comm_size
+
     if (comm_rank != 0)
     {
         field = std::make_unique<Field>(field_name, runner_comm_size,
-                                        ENSEMBLE_SIZE);
+                                        ENSEMBLE_SIZE, bytes_per_element, bytes_per_element_hidden );
     }
 
     D("local_vect_sizes");
-    // print_vector(field->local_vect_sizes_runner);
+    print_vector(field->local_vect_sizes_runner);
 
     MPI_Bcast(field->local_vect_sizes_runner.data(),
               runner_comm_size,
-              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 3:local_vect_sizes_runner
+              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 5:local_vect_sizes_runner
 
     MPI_Bcast(field->local_vect_sizes_runner_hidden.data(),
               runner_comm_size,
-              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 4:local_vect_sizes_runner_hidden
+              my_MPI_SIZE_T, 0, mpi.comm());                                                             // 6:local_vect_sizes_runner_hidden
 
     field->calculate_parts(comm_size);
 
-    // 5 and 6: Scatter the field transform (index_maps)
+    // 7 and 8: Scatter the field transform (index_maps)
     scatter_index_map(field->globalVectSize(), field->local_vect_size,
-            global_index_map.data(), field->local_index_map.data());
+            global_index_map.data(), field->local_index_map.data(),
+            bytes_per_element);
 
     //printf("rank %d index map:", comm_rank);
     //print_vector(field->local_index_map);
 
     scatter_index_map(field->globalVectSizeHidden(), field->local_vect_size_hidden,
-            global_index_map_hidden.data(), field->local_index_map_hidden.data());
+            global_index_map_hidden.data(), field->local_index_map_hidden.data(),
+            bytes_per_element_hidden);
 
     //printf("rank %d hidden index map:", comm_rank);
     //print_vector(field->local_index_map_hidden);
@@ -1049,40 +1073,40 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         assert(field->name == field_name);
         const Part & part = field->getPart(runner_rank);
         assert(zmq_msg_size(&data_msg) == part.send_count *
-               sizeof(double));
+               sizeof(STYPE));
         D(
             "<- Server received %lu/%lu bytes of %s from runner id %d, runner rank %d, state id %d, timestep=%d",
             zmq_msg_size(&data_msg), part.send_count *
-            sizeof(double),
+            sizeof(STYPE),
             field_name, runner_id, runner_rank, runner_state_id,
             runner_timestep);
         D("local server offset %lu, sendcount=%lu",
           part.local_offset_server, part.send_count);
 
 
-        //D("values[0] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+        //D("values[0] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[0]);
-        //D("values[1] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+        //D("values[1] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[1]);
-        //D("values[2] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+        //D("values[2] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[2]);
-        //D("values[3] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+        //D("values[3] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[3]);
-        //D("values[4] = %.3f", reinterpret_cast<double*>(zmq_msg_data(
+        //D("values[4] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[4]);
 
         const Part & hidden_part = field->getPartHidden(runner_rank);
-        double * values_hidden = nullptr;
+        STYPE * values_hidden = nullptr;
 
         if (hidden_part.send_count > 0)
         {
@@ -1090,11 +1114,11 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             zmq_msg_init(&data_msg_hidden);
             zmq_msg_recv(&data_msg_hidden, data_response_socket, 0);
             assert(zmq_msg_size(&data_msg_hidden) == hidden_part.send_count *
-                   sizeof(double));
-            values_hidden = reinterpret_cast<double*>(zmq_msg_data(
+                   sizeof(STYPE));
+            values_hidden = reinterpret_cast<STYPE*>(zmq_msg_data(
                                                           &data_msg_hidden));
             // D("hidden values received:");
-            // print_vector(std::vector<double>(values_hidden, values_hidden +
+            // print_vector(std::vector<STYPE>(values_hidden, values_hidden +
             // hidden_part.send_count));
         }
 
@@ -1109,7 +1133,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
                                         reinterpret_cast
-                                        <double*>(zmq_msg_data(
+                                        <STYPE*>(zmq_msg_data(
                                                       &data_msg)), hidden_part,
                                         values_hidden);
 #ifdef WITH_FTI
@@ -1123,7 +1147,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // Some assimilators depend on something like this.
             // namely the CheckStateless assimilator
             assimilator->on_init_state(runner_id, part, reinterpret_cast
-                                       <double*>(zmq_msg_data(
+                                       <STYPE*>(zmq_msg_data(
                                                      &data_msg)), hidden_part,
                                        values_hidden);
         }

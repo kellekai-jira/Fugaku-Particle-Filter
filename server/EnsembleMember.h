@@ -12,19 +12,21 @@
 
 #include "Part.h"
 
+#include "utils.h"
+
 class EnsembleMember
 {
 public:
-    std::vector<double> state_analysis;
-    std::vector<double> state_background;
+    std::vector<STYPE> state_analysis;
+    std::vector<STYPE> state_background;
 
-    std::vector<double> state_hidden;
+    std::vector<STYPE> state_hidden;
 
     void set_local_vect_size(const int local_vect_size, const int
                              local_vect_size_hidden);
     void store_background_state_part(const Part & part, const
-                                     double * values, const Part & hidden_part,
-                                     const double * hidden_values);
+                                     STYPE * values, const Part & hidden_part,
+                                     const STYPE * hidden_values);
 };
 
 

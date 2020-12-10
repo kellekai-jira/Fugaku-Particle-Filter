@@ -120,32 +120,40 @@ int main(int argc, char * args[])
 #ifdef USE_HIDDEN_STATE
 #ifdef WITH_INDEX_MAP
     melissa_init_with_index_map("variableX",
-                 local_vect_size,
-                 secret_state.size(),
+                 local_vect_size*sizeof(double),
+                 secret_state.size()*sizeof(double),
+                 sizeof(double),
+                 sizeof(double),
                  MPI_COMM_WORLD,
                  local_index_map.data(),
                  local_index_map_hidden.data()
                  );
 #else
     melissa_init("variableX",
-                 local_vect_size,
-                 secret_state.size(),
+                 local_vect_size*sizeof(double),
+                 secret_state.size()*sizeof(double),
+                 sizeof(double),
+                 sizeof(double),
                  MPI_COMM_WORLD
                  );
 #endif
 #else
 #ifdef WITH_INDEX_MAP
     melissa_init_with_index_map("variableX",
-                 local_vect_size,
+                 local_vect_size*sizeof(double),
                  0,
+                 sizeof(double),
+                 sizeof(double),
                  MPI_COMM_WORLD,
                  local_index_map.data(),
                  nullptr
                  );
 #else
     melissa_init("variableX",
-                 local_vect_size,
+                 local_vect_size*sizeof(double),
                  0,
+                 sizeof(double),
+                 sizeof(double),
                  MPI_COMM_WORLD);         // do some crazy shit (dummy mpi implementation?) if we compile without mpi.
 #endif
 #endif
@@ -183,10 +191,10 @@ int main(int argc, char * args[])
         // usleep(1000000);
 
 #ifdef USE_HIDDEN_STATE
-        nsteps = melissa_expose("variableX", state1.data(),
+        nsteps = melissa_expose_d("variableX", state1.data(),
                                 secret_state.data());
 #else
-        nsteps = melissa_expose("variableX", state1.data(), nullptr);
+        nsteps = melissa_expose_d("variableX", state1.data(), nullptr);
 #endif
 
 #ifdef DEADLOCK
