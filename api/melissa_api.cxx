@@ -137,9 +137,9 @@ struct ServerRankConnection
             current_step,
             field_name, bytes_to_send,
             bytes_to_send_hidden);
-        D("values[0]  = %.3f", values[0]);
-        D("values[1]  = %.3f", values[1]);
-        D("values[2]  = %.3f", values[2]);
+        //D("values[0]  = %.3f", values[0]);
+        //D("values[1]  = %.3f", values[1]);
+        //D("values[2]  = %.3f", values[2]);
         // D("hidden values[0]  = %.3f", values_hidden[0]);
         // D("hidden values[1]  = %.3f", values_hidden[1]);
         // D("hidden values[2]  = %.3f", values_hidden[2]);
@@ -234,7 +234,7 @@ struct ServerRankConnection
 
             assert_no_more_zmq_messages(data_request_socket);
         }
-        else if (type == END_RUNNER)
+        else if (type == END_RUNNER) {
                   // TODO: is this really an error?
             printf(
                 "Error: Server decided to end this runner now.\n");

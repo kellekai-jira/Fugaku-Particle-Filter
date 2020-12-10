@@ -9,7 +9,7 @@
 #define API_MELISSA_API_H_
 
 #include <mpi.h>
-#include <melissa_da_stype.h>
+#include "melissa_da_stype.h"
 
 #ifdef __cplusplus
 extern "C" {
