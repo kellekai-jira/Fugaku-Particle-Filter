@@ -19,25 +19,25 @@ class CheckStatelessAssimilator : public Assimilator
 {
     Field & field;
 private:
-    std::vector<std::vector<STYPE> > init_states;
-    std::vector<std::vector<STYPE> > correct_states;
-    std::vector<std::vector<STYPE> > init_states_hidden;
-    std::vector<std::vector<STYPE> > correct_states_hidden;
+    std::vector<std::vector<VEC_T> > init_states;
+    std::vector<std::vector<VEC_T> > correct_states;
+    std::vector<std::vector<VEC_T> > init_states_hidden;
+    std::vector<std::vector<VEC_T> > correct_states_hidden;
 
     void print_result(const bool good);
     void store_init_state_part(const int
                                ensemble_member_id, const
                                Part & part, const
-                               STYPE * values,
+                               VEC_T * values,
                                const Part & hidden_part, const
-                               STYPE * values_hidden);
+                               VEC_T * values_hidden);
 
 public:
     CheckStatelessAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);
     virtual int do_update_step(const int current_step);
     virtual void on_init_state(const int runner_id, const Part & part, const
-                               STYPE * values, const Part & hidden_part,
-                               const STYPE * values_hidden);
+                               VEC_T * values, const Part & hidden_part,
+                               const VEC_T * values_hidden);
 
 };
 

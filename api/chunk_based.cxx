@@ -11,12 +11,12 @@
 struct Chunk {
     const int varid;
     const int * index_map;
-    STYPE * values;
+    VEC_T * values;
     const int size_per_element;
     const int amount;
     const bool is_assimilated;
 
-    Chunk(const int varid, const int * index_map, STYPE * values,
+    Chunk(const int varid, const int * index_map, VEC_T * values,
             const int size_per_element,
             const size_t amount, const bool is_assimilated)
         :  varid(varid), index_map(index_map), values(values),
@@ -30,7 +30,7 @@ template <class T>
 void melissa_add_chunk(const int varid, const int * index_map, T * values,
         const int amount, const bool is_assimilated)
 {
-    chunks.push_back(Chunk(varid, index_map, reinterpret_cast<STYPE *>(values), sizeof(T),
+    chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 amount, is_assimilated));
 }
 
@@ -83,15 +83,15 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     }
 
 
-    std::vector<STYPE> buf_assimilated(assimilated_size);
-    std::vector<STYPE> buf_hidden(hidden_size);
+    std::vector<VEC_T> buf_assimilated(assimilated_size);
+    std::vector<VEC_T> buf_hidden(hidden_size);
 
     // FIXME: for now we are not inplace at ALL! But thats ok as this is a proof of
     // concept!
 
     // Model -> buffer
-    STYPE * pos_hidden = reinterpret_cast<STYPE*>(buf_hidden.data());
-    STYPE * pos_assimilated = reinterpret_cast<STYPE*>(buf_assimilated.data());
+    VEC_T * pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
+    VEC_T * pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
     std::for_each(chunks.cbegin(), chunks.cend(),
             [&pos_assimilated, &pos_hidden](const Chunk& chunk) {
                 const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
@@ -108,8 +108,8 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     melissa_expose("data", buf_assimilated.data(), buf_hidden.data());
 
     // buffer -> model
-    pos_hidden = reinterpret_cast<STYPE*>(buf_hidden.data());
-    pos_assimilated = reinterpret_cast<STYPE*>(buf_assimilated.data());
+    pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
+    pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
     std::for_each(chunks.begin(), chunks.end(),
             [&pos_assimilated, &pos_hidden](const Chunk& chunk) {
                 const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;

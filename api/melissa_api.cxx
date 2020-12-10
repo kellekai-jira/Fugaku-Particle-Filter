@@ -110,8 +110,8 @@ struct ServerRankConnection
         zmq_close(data_request_socket);
     }
 
-    void send(STYPE * values, const size_t bytes_to_send,
-              STYPE * values_hidden, const size_t bytes_to_send_hidden,
+    void send(VEC_T * values, const size_t bytes_to_send,
+              VEC_T * values_hidden, const size_t bytes_to_send_hidden,
               const int
               current_state_id, const int current_step, const
               char * field_name)
@@ -165,8 +165,8 @@ struct ServerRankConnection
         }
     }
 
-    int receive(STYPE * out_values, size_t bytes_expected,
-                STYPE * out_values_hidden, size_t bytes_expected_hidden,
+    int receive(VEC_T * out_values, size_t bytes_expected,
+                VEC_T * out_values_hidden, size_t bytes_expected_hidden,
                 int * out_current_state_id, int *out_current_step)
     {
 // receive a first message that is 1 if we want to change the state, otherwise 0 or 2 if we want to quit.
@@ -202,7 +202,7 @@ struct ServerRankConnection
 
             assert(zmq_msg_size(&msg) == bytes_expected);
 
-            STYPE * buf = reinterpret_cast<STYPE*>(zmq_msg_data(
+            VEC_T * buf = reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                          &msg));
             std::copy(buf, buf + bytes_expected, out_values);
 
@@ -221,7 +221,7 @@ struct ServerRankConnection
                 ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
                 assert(zmq_msg_size(&msg) == bytes_expected_hidden);
 
-                buf = reinterpret_cast<STYPE*>(zmq_msg_data(
+                buf = reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                     &msg));
                 std::copy(buf, buf + bytes_expected_hidden,
                           out_values_hidden);
@@ -368,7 +368,7 @@ struct Field
 
     // TODO: change MPI_INT to size_t where possible, also in server.cxx
     // TODO: this will crash if there are more than two fields? maybe use dealer socket that supports send send recv recv scheme.
-    void putState(STYPE * values, STYPE * hidden_values, const
+    void putState(VEC_T * values, VEC_T * hidden_values, const
                   char * field_name) {
         // send every state part to the right server rank
         for (auto csr = connected_server_ranks.begin(); csr !=
@@ -389,7 +389,7 @@ struct Field
 
     }
 
-    int getState(STYPE * values, STYPE * values_hidden) {
+    int getState(VEC_T * values, VEC_T * values_hidden) {
         int nsteps = -1;
         // TODO: an optimization would be to poll instead of receiving directly. this way we receive first whoever comes first. but as we need to synchronize after it probably does not matter a lot?
         for (auto csr = connected_server_ranks.begin(); csr !=
@@ -745,8 +745,8 @@ void melissa_init_no_mpi(const char *field_name,
 }
 
 
-int melissa_expose(const char *field_name, STYPE *values,
-                   STYPE *hidden_values)
+int melissa_expose(const char *field_name, VEC_T *values,
+                   VEC_T *hidden_values)
 {
     trigger(STOP_PROPAGATE_STATE, field.current_state_id);
     trigger(START_IDLE_RUNNER, getRunnerId());
@@ -858,13 +858,13 @@ void melissa_init_f(const char *field_name,
 
 int melissa_expose_f(const char *field_name, double *values)
 {
-    return melissa_expose(field_name, reinterpret_cast<STYPE*>(values), NULL);
+    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), NULL);
 }
 
 
 /// legacy interface using doubles...
 int melissa_expose_d(const char *field_name, double *values, double *hidden_values)
 {
-    return melissa_expose(field_name, reinterpret_cast<STYPE*>(values),
-            reinterpret_cast<STYPE*>(hidden_values));
+    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values),
+            reinterpret_cast<VEC_T*>(hidden_values));
 }

@@ -17,16 +17,16 @@
 class EnsembleMember
 {
 public:
-    std::vector<STYPE> state_analysis;
-    std::vector<STYPE> state_background;
+    std::vector<VEC_T> state_analysis;
+    std::vector<VEC_T> state_background;
 
-    std::vector<STYPE> state_hidden;
+    std::vector<VEC_T> state_hidden;
 
     void set_local_vect_size(const int local_vect_size, const int
                              local_vect_size_hidden);
     void store_background_state_part(const Part & part, const
-                                     STYPE * values, const Part & hidden_part,
-                                     const STYPE * hidden_values);
+                                     VEC_T * values, const Part & hidden_part,
+                                     const VEC_T * hidden_values);
 };
 
 

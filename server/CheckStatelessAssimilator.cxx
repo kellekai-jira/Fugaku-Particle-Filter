@@ -192,10 +192,10 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
 void CheckStatelessAssimilator::store_init_state_part(const int
                                                       ensemble_member_id, const
                                                       Part & part, const
-                                                      STYPE * values,
+                                                      VEC_T * values,
                                                       const Part & hidden_part,
                                                       const
-                                                      STYPE * values_hidden)
+                                                      VEC_T * values_hidden)
 {
     EnsembleMember & member = field.ensemble_members[ensemble_member_id];
     assert(part.send_count + part.local_offset_server <=
@@ -224,9 +224,9 @@ void CheckStatelessAssimilator::store_init_state_part(const int
 
 void CheckStatelessAssimilator::on_init_state(const int runner_id, const
                                               Part & part, const
-                                              STYPE * values, const
+                                              VEC_T * values, const
                                               Part & hidden_part,
-                                              const STYPE * values_hidden)
+                                              const VEC_T * values_hidden)
 {
     // let's use this to set the init.
     // you may not have more runners than ensemble members here! Otherwise some

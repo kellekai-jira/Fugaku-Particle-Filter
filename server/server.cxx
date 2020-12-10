@@ -190,7 +190,7 @@ struct RunnerRankConnection
                               state_id).state_analysis.data() +
                           part.local_offset_server,
                           part.send_count *
-                          sizeof(STYPE), NULL, NULL);
+                          sizeof(VEC_T), NULL, NULL);
 
         if (runner_rank == 0)
         {
@@ -200,8 +200,8 @@ struct RunnerRankConnection
         const Part & hidden_part = field->getPartHidden(runner_rank);
         D("-> Server sending %lu + %lu hidden bytes for state %d, timestep=%d",
           part.send_count *
-          sizeof(STYPE),
-          hidden_part.send_count * sizeof(STYPE),
+          sizeof(VEC_T),
+          hidden_part.send_count * sizeof(VEC_T),
           header[0], header[1]);
         D(
             "local server offset %lu, local runner offset %lu, sendcount=%lu",
@@ -239,12 +239,12 @@ struct RunnerRankConnection
                                   state_id).state_hidden.data() +
                               hidden_part.local_offset_server,
                               hidden_part.send_count *
-                              sizeof(STYPE), NULL, NULL);
-            STYPE * tmp = field->ensemble_members.at(
+                              sizeof(VEC_T), NULL, NULL);
+            VEC_T * tmp = field->ensemble_members.at(
                 state_id).state_hidden.data();
             tmp += hidden_part.local_offset_server;
             // D("Hidden values to send:");
-            // print_vector(std::vector<STYPE>(tmp, tmp +
+            // print_vector(std::vector<VEC_T>(tmp, tmp +
             // hidden_part.send_count));
             ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
         }
@@ -1073,40 +1073,40 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         assert(field->name == field_name);
         const Part & part = field->getPart(runner_rank);
         assert(zmq_msg_size(&data_msg) == part.send_count *
-               sizeof(STYPE));
+               sizeof(VEC_T));
         D(
             "<- Server received %lu/%lu bytes of %s from runner id %d, runner rank %d, state id %d, timestep=%d",
             zmq_msg_size(&data_msg), part.send_count *
-            sizeof(STYPE),
+            sizeof(VEC_T),
             field_name, runner_id, runner_rank, runner_state_id,
             runner_timestep);
         D("local server offset %lu, sendcount=%lu",
           part.local_offset_server, part.send_count);
 
 
-        //D("values[0] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
+        //D("values[0] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[0]);
-        //D("values[1] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
+        //D("values[1] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[1]);
-        //D("values[2] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
+        //D("values[2] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[2]);
-        //D("values[3] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
+        //D("values[3] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[3]);
-        //D("values[4] = %.3f", reinterpret_cast<STYPE*>(zmq_msg_data(
+        //D("values[4] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                             //&
                                                             //data_msg))
           //[4]);
 
         const Part & hidden_part = field->getPartHidden(runner_rank);
-        STYPE * values_hidden = nullptr;
+        VEC_T * values_hidden = nullptr;
 
         if (hidden_part.send_count > 0)
         {
@@ -1114,11 +1114,11 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             zmq_msg_init(&data_msg_hidden);
             zmq_msg_recv(&data_msg_hidden, data_response_socket, 0);
             assert(zmq_msg_size(&data_msg_hidden) == hidden_part.send_count *
-                   sizeof(STYPE));
-            values_hidden = reinterpret_cast<STYPE*>(zmq_msg_data(
+                   sizeof(VEC_T));
+            values_hidden = reinterpret_cast<VEC_T*>(zmq_msg_data(
                                                           &data_msg_hidden));
             // D("hidden values received:");
-            // print_vector(std::vector<STYPE>(values_hidden, values_hidden +
+            // print_vector(std::vector<VEC_T>(values_hidden, values_hidden +
             // hidden_part.send_count));
         }
 
@@ -1133,7 +1133,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
                                         reinterpret_cast
-                                        <STYPE*>(zmq_msg_data(
+                                        <VEC_T*>(zmq_msg_data(
                                                       &data_msg)), hidden_part,
                                         values_hidden);
 #ifdef WITH_FTI
@@ -1147,7 +1147,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // Some assimilators depend on something like this.
             // namely the CheckStateless assimilator
             assimilator->on_init_state(runner_id, part, reinterpret_cast
-                                       <STYPE*>(zmq_msg_data(
+                                       <VEC_T*>(zmq_msg_data(
                                                      &data_msg)), hidden_part,
                                        values_hidden);
         }

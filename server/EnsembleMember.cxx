@@ -22,9 +22,9 @@ void EnsembleMember::set_local_vect_size(const int local_vect_size, const int
 }
 
 void EnsembleMember::store_background_state_part(const Part & part, const
-                                                 STYPE * values, const
+                                                 VEC_T * values, const
                                                  Part & hidden_part, const
-                                                 STYPE * values_hidden)
+                                                 VEC_T * values_hidden)
 {
     D("before_assert %lu %lu %lu", part.send_count,
       part.local_offset_server, state_background.size());

@@ -58,8 +58,8 @@ void melissa_init_f(const char *field_name,
 /// Exposes data to melissa
 /// returns 0 if simulation should end now.
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
-int melissa_expose(const char *field_name, STYPE *values,
-                   STYPE *hidden_values);
+int melissa_expose(const char *field_name, VEC_T *values,
+                   VEC_T *hidden_values);
 
 /// legacy interface using doubles...
 int melissa_expose_d(const char *field_name, double *values, double *hidden_values);
