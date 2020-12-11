@@ -72,7 +72,7 @@ int main(int argc, char * args[])
     vector<double> state1(local_vect_size);
 
 #ifdef WITH_INDEX_MAP
-    std::vector<int> local_index_map(state1.size());
+    std::vector<INDEX_MAP_T> local_index_map(state1.size());
     int last_entry = 0;
     int entry = 1;
     int new_entry;
@@ -88,14 +88,16 @@ int main(int argc, char * args[])
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
-        it = new_entry;
+        it.index = new_entry;
+        it.varid = 1;
+        cout << "index_map_entry: " << it.varid << ':' << it.index << std::endl;
     }
 
 
 
 
 #ifdef USE_HIDDEN_STATE
-    std::vector<int> local_index_map_hidden(secret_state.size());
+    std::vector<INDEX_MAP_T> local_index_map_hidden(secret_state.size());
     last_entry = 0;
     entry = 1;
     for (int i = 0; i < comm_rank * secret_state.size(); i++) {
@@ -109,7 +111,9 @@ int main(int argc, char * args[])
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
-        it = new_entry;
+        it.index = new_entry;
+        it.varid = 2;
+        cout << "index_map_entry (hidden): " << it.varid << ':' << it.index << std::endl;
     }
 
 #endif

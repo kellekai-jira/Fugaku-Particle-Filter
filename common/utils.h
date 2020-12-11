@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <cassert>
 #include <csignal>
+#include <cstddef>
 #include <zmq.h>
 
 #include <mpi.h>
@@ -89,6 +90,22 @@ enum Phase
 // Functions:
 void check_data_types();
 
+extern MPI_Datatype MPI_MY_INDEX_MAP_T;
+void create_MPI_INDEX_MAP_T();
+
+
+/// sums over a vector
+template <class T>
+T sum_vec(const std::vector<T> &vec) {
+    T res = 0;
+    for (auto &it : vec) {
+        res += it;
+    }
+    return res;
+}
+
+
+// inline Functions:
 template <typename T>
 inline void print_vector (const std::vector<T> &vec)
 {
@@ -103,18 +120,6 @@ inline void print_vector (const std::vector<T> &vec)
     printf("]\n");
 }
 
-/// sums over a vector
-template <class T>
-T sum_vec(const std::vector<T> &vec) {
-    T res = 0;
-    for (auto &it : vec) {
-        res += it;
-    }
-    return res;
-}
-
-
-// inline Functions:
 inline void assert_more_zmq_messages(void * socket)
 {
     int more;
@@ -131,6 +136,13 @@ inline void assert_no_more_zmq_messages(void * socket)
     assert(more == 0);
 }
 
+inline std::ostream& operator<<(std::ostream& os, const INDEX_MAP_T &rhs) {
+    return os << rhs.varid << ": " << rhs.index;
+}
+
+
+
+
 
 // timing:
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
@@ -142,5 +154,14 @@ inline double diff_to_millis(const TimePoint &lhs, const TimePoint &rhs) {
 extern int comm_rank;
 extern int comm_size;
 extern Phase phase;
+
+
+
+// init
+inline void init_utils()
+{
+    check_data_types();
+    create_MPI_INDEX_MAP_T();
+}
 
 #endif

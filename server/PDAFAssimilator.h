@@ -17,6 +17,8 @@ class PDAFAssimilator : public Assimilator
 private:
     Field & field;
     MpiManager & mpi;
+    std::vector<int> index_map_transformed;
+    std::vector<int> index_map_transformed_hidden;
 
     void getAllEnsembleMembers();
 public:

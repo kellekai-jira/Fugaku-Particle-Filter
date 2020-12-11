@@ -547,7 +547,7 @@ ConfigurationConnection *ccon = NULL;
 /// returns true if needs field to be registered on the server. This can only happen on comm_rank 0
 bool first_melissa_init(MPI_Comm comm_)
 {
-    check_data_types();
+    init_utils();
 
     context = zmq_ctx_new ();
     comm = comm_;
@@ -620,7 +620,8 @@ void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T loc
     {
         int i = 0;
         for (auto &e: global_index_map) {
-            e = i++;
+            e.index = i++;
+            e.varid = 0;
         }
     }
     else
@@ -636,7 +637,7 @@ void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T loc
             last_displ += local_vect_sizes[i]/bytes_per_element;
         }
 
-        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_INDEX_MAP_T,
+        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
                 global_index_map.data(), rcounts, displs, MPI_INT, 0, comm);
     }
 }
@@ -711,6 +712,12 @@ void melissa_init_with_index_map(const char *field_name,
     gather_global_index_map(local_hidden_vect_size, local_index_map_hidden,
         global_index_map_hidden, local_hidden_vect_sizes.data(),
         comm_, bytes_per_element_hidden);
+
+    if (comm_rank == 0)
+    {
+        D("Global index map:");
+        print_vector(global_index_map);
+    }
 
     if (register_field)
     {

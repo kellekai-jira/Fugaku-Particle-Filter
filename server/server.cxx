@@ -425,8 +425,8 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert(field == nullptr);              // we accept only one field for now.
 
     int runner_comm_size = buf[1];
-    int bytes_per_element = buf[2];
-    int bytes_per_element_hidden = buf[3];
+    int bytes_per_element = buf[2]; // TODO: rename hidden state into something more useful. hidden can be confused with the hidden state in HMM...
+    int bytes_per_element_hidden = buf[3];  // TODO: testcase where bytes for hidden are different from assimilated state elements
 
     char field_name[MPI_MAX_PROCESSOR_NAME];
     strncpy(field_name, reinterpret_cast<const char*>(&buf[4]), MPI_MAX_PROCESSOR_NAME);
@@ -483,6 +483,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
     // msg is closed outside by caller...
 
     D("indexmapsize: %lu", global_index_map.size());
+    print_vector(global_index_map);
 
     field->name = field_name;
 
@@ -535,8 +536,8 @@ void scatter_index_map(size_t global_vect_size, size_t local_vect_size, INDEX_MA
         last_displ += scounts[i];
     }
 
-    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_INDEX_MAP_T,
-            local_index_map_data, local_vect_size/bytes_per_element, MPI_INDEX_MAP_T,
+    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_MY_INDEX_MAP_T,
+            local_index_map_data, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
             0, mpi.comm());
 }
 
@@ -593,8 +594,8 @@ void broadcast_field_information_and_calculate_parts() {
             global_index_map.data(), field->local_index_map.data(),
             bytes_per_element);
 
-    //printf("rank %d index map:", comm_rank);
-    //print_vector(field->local_index_map);
+    D("rank %d index map:", comm_rank);
+    print_vector(field->local_index_map);
 
     scatter_index_map(field->globalVectSizeHidden(), field->local_vect_size_hidden,
             global_index_map_hidden.data(), field->local_index_map_hidden.data(),
@@ -1394,7 +1395,6 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
 /// to slowdown the CPU usage while e.g. in a GDB session.
 int main(int argc, char * argv[])
 {
-    check_data_types();
 
     assert(argc == 7);
 
@@ -1429,6 +1429,9 @@ int main(int argc, char * argv[])
     assert(ENSEMBLE_SIZE > 0);
 
     mpi.init();
+
+    init_utils();
+
 #ifdef WITH_FTI
     FT.init( mpi, current_step );
 #endif

@@ -84,8 +84,8 @@ void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os,
         last_displ += local_index_map_sizes.at(i);
     }
 
-    MPI_Gatherv( local_index_map.data(), local_index_map.size(), MPI_INDEX_MAP_T,
-            global_index_map.data(), rcounts, displs, MPI_INDEX_MAP_T, 0, mpi.comm());
+    MPI_Gatherv( local_index_map.data(), local_index_map.size(), MPI_MY_INDEX_MAP_T,
+            global_index_map.data(), rcounts, displs, MPI_MY_INDEX_MAP_T, 0, mpi.comm());
 
     if (print_it)
     {

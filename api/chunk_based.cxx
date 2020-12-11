@@ -105,7 +105,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
             });
 
     // expose buffer
-    melissa_expose("data", buf_assimilated.data(), buf_hidden.data());
+    int nsteps = melissa_expose("data", buf_assimilated.data(), buf_hidden.data());
 
     // buffer -> model
     pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
@@ -124,6 +124,8 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
 
     // for now we recreate the chunk list before each expose so we can remove it here:
     chunks.clear();
+
+    return nsteps;
 }
 
 

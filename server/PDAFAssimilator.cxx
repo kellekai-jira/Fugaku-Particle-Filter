@@ -30,9 +30,18 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
 
     const MPI_Fint comm_world = mpi.fortranComm();
 
+    index_map_transformed.reserve(field.local_index_map.size());
+    for (auto &e: field.local_index_map) {
+        index_map_transformed.push_back(e.index);
+    }
+    index_map_transformed_hidden.reserve(field.local_index_map_hidden.size());
+    for (auto &e: field.local_index_map_hidden) {
+        index_map_transformed_hidden.push_back(e.index);
+    }
+
     cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world,
-            &local_vect_size, field.local_index_map.data(),
-            &local_vect_size_hidden, field.local_index_map_hidden.data());
+            &local_vect_size, index_map_transformed.data(),
+            &local_vect_size_hidden, index_map_transformed_hidden.data());
     cwrapper_init_user(&total_steps);
     nsteps = -1;
 
