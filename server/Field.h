@@ -59,8 +59,8 @@ struct Field
     size_t globalVectSize();
     size_t globalVectSizeHidden();
 
-    std::vector<int> local_index_map;
-    std::vector<int> local_index_map_hidden;
+    std::vector<INDEX_MAP_T> local_index_map;
+    std::vector<INDEX_MAP_T> local_index_map_hidden;
 
     int bytes_per_element;
     int bytes_per_element_hidden;

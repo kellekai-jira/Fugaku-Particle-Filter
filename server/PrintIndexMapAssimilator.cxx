@@ -66,14 +66,14 @@ PrintIndexMapAssimilator::PrintIndexMapAssimilator(Field & field_, const int tot
 }
 
 void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os,
-        const std::vector<int> & local_index_map, bool print_it)
+        const std::vector<INDEX_MAP_T> & local_index_map, bool print_it)
 
 {
     std::vector<int> local_index_map_sizes(mpi.size());
     int local_index_map_size = local_index_map.size();
     MPI_Gather(&local_index_map_size, 1, MPI_INT, local_index_map_sizes.data(), 1,
             MPI_INT, 0, mpi.comm());
-    std::vector<int> global_index_map(sum_vec(local_index_map_sizes));
+    std::vector<INDEX_MAP_T> global_index_map(sum_vec(local_index_map_sizes));
     int displs[mpi.size()];
     int last_displ = 0;
     int rcounts [mpi.size()];
@@ -84,8 +84,8 @@ void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os,
         last_displ += local_index_map_sizes.at(i);
     }
 
-    MPI_Gatherv( local_index_map.data(), local_index_map.size(), MPI_INT,
-            global_index_map.data(), rcounts, displs, MPI_INT, 0, mpi.comm());
+    MPI_Gatherv( local_index_map.data(), local_index_map.size(), MPI_INDEX_MAP_T,
+            global_index_map.data(), rcounts, displs, MPI_INDEX_MAP_T, 0, mpi.comm());
 
     if (print_it)
     {

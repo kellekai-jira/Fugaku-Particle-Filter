@@ -18,7 +18,7 @@ private:
     MpiManager & mpi;
 
     void gather_and_print(std::ofstream &os,
-        const std::vector<int> & local_index_map, bool print_it);
+        const std::vector<INDEX_MAP_T> & local_index_map, bool print_it);
     void index_map_to_file();
 public:
     PrintIndexMapAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);

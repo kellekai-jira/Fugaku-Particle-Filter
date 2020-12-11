@@ -493,8 +493,8 @@ struct ConfigurationConnection
 
     // TODO: high water mark and so on?
     void register_field(const char * field_name, size_t local_vect_sizes[],
-                        size_t local_hidden_vect_sizes[], std::vector<int>& global_index_map,
-                        std::vector<int>& global_index_map_hidden,
+                        size_t local_hidden_vect_sizes[], std::vector<INDEX_MAP_T>& global_index_map,
+                        std::vector<INDEX_MAP_T>& global_index_map_hidden,
                         const int bytes_per_element, const int bytes_per_element_hidden)
     {
         zmq_msg_t msg_header, msg_local_vect_sizes, msg_local_hidden_vect_sizes,
@@ -521,11 +521,11 @@ struct ConfigurationConnection
         ZMQ_CHECK(zmq_msg_send(&msg_local_hidden_vect_sizes, socket, ZMQ_SNDMORE));
 
         zmq_msg_init_data(&msg_index_map, global_index_map.data(),
-                          global_index_map.size() * sizeof(int), NULL, NULL);
+                          global_index_map.size() * sizeof(INDEX_MAP_T), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map, socket, ZMQ_SNDMORE));
 
         zmq_msg_init_data(&msg_index_map_hidden, global_index_map_hidden.data(),
-                          global_index_map_hidden.size() * sizeof(int), NULL, NULL);
+                          global_index_map_hidden.size() * sizeof(INDEX_MAP_T), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
 
         zmq_msg_init(&msg_reply);
@@ -612,8 +612,8 @@ void melissa_init(const char *field_name,
 }
 
 // TODO: later one could send the index map over all ranks in parallel!
-void gather_global_index_map(const size_t local_vect_size, const int local_index_map[],
-        std::vector<int> &global_index_map, const size_t local_vect_sizes[],
+void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T local_index_map[],
+        std::vector<INDEX_MAP_T> &global_index_map, const size_t local_vect_sizes[],
         MPI_Comm comm, const int bytes_per_element)
 {
     if (local_index_map == nullptr)
@@ -636,7 +636,7 @@ void gather_global_index_map(const size_t local_vect_size, const int local_index
             last_displ += local_vect_sizes[i]/bytes_per_element;
         }
 
-        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_INT,
+        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_INDEX_MAP_T,
                 global_index_map.data(), rcounts, displs, MPI_INT, 0, comm);
     }
 }
@@ -647,8 +647,8 @@ void melissa_init_with_index_map(const char *field_name,
                   const int bytes_per_element,
                   const int bytes_per_element_hidden,
                   MPI_Comm comm_,
-                  const int local_index_map[],// FIXME for WRF: add varid list!
-                  const int local_index_map_hidden[]
+                  const INDEX_MAP_T local_index_map[],// FIXME for WRF: add varid list!
+                  const INDEX_MAP_T local_index_map_hidden[]
                   )
 {
     // TODO: field_name is actually unneeded. its only used to name the output files in the server side...
@@ -691,8 +691,8 @@ void melissa_init_with_index_map(const char *field_name,
 
 
     // gather the global index map from this
-    std::vector<int> global_index_map; // TODO: use special index map type that can encode the var name as well!!
-    std::vector<int> global_index_map_hidden;
+    std::vector<INDEX_MAP_T> global_index_map; // TODO: use special index map type that can encode the var name as well!!
+    std::vector<INDEX_MAP_T> global_index_map_hidden;
     if (comm_rank == 0)
     {
         int global_vect_size = sum_vec(local_vect_sizes);

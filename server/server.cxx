@@ -413,8 +413,8 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     }
 }
 
-std::vector<int> global_index_map;
-std::vector<int> global_index_map_hidden;
+std::vector<INDEX_MAP_T> global_index_map;
+std::vector<INDEX_MAP_T> global_index_map_hidden;
 
 void register_field(zmq_msg_t &msg, const int * buf,
                     void * configuration_socket)
@@ -463,9 +463,9 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
-    assert(zmq_msg_size(&msg) == global_index_map.size() * sizeof(int));
+    assert(zmq_msg_size(&msg) == global_index_map.size() * sizeof(INDEX_MAP_T));
     memcpy (global_index_map.data(), zmq_msg_data(&msg),
-            global_index_map.size() * sizeof(int));
+            global_index_map.size() * sizeof(INDEX_MAP_T));
     zmq_msg_close(&msg);
 
     int global_vect_size_hidden = sum_vec(field->local_vect_sizes_runner_hidden);
@@ -474,9 +474,9 @@ void register_field(zmq_msg_t &msg, const int * buf,
     assert_more_zmq_messages(configuration_socket);
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
-    assert(zmq_msg_size(&msg) == global_index_map_hidden.size() * sizeof(int));
+    assert(zmq_msg_size(&msg) == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
     memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
-            global_index_map_hidden.size() * sizeof(int));
+            global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
 
     // scatter index map is done in broadcast field info
 
@@ -517,7 +517,7 @@ void answer_configuration_message(void * configuration_socket,
     zmq_msg_close(&msg);
 }
 
-void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int global_index_map_data[], int local_index_map_data[], const int bytes_per_element)
+void scatter_index_map(size_t global_vect_size, size_t local_vect_size, INDEX_MAP_T global_index_map_data[], INDEX_MAP_T local_index_map_data[], const int bytes_per_element)
 {
     size_t local_vect_sizes_server[comm_size];
     calculate_local_vect_sizes_server(comm_size, global_vect_size,
@@ -535,8 +535,8 @@ void scatter_index_map(size_t global_vect_size, size_t local_vect_size, int glob
         last_displ += scounts[i];
     }
 
-    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_INT,
-            local_index_map_data, local_vect_size/bytes_per_element, MPI_INT,
+    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_INDEX_MAP_T,
+            local_index_map_data, local_vect_size/bytes_per_element, MPI_INDEX_MAP_T,
             0, mpi.comm());
 }
 
