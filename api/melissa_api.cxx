@@ -637,8 +637,9 @@ void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T loc
             last_displ += local_vect_sizes[i]/bytes_per_element;
         }
 
+
         MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
-                global_index_map.data(), rcounts, displs, MPI_INT, 0, comm);
+                global_index_map.data(), rcounts, displs, MPI_MY_INDEX_MAP_T, 0, comm);
     }
 }
 
