@@ -40,7 +40,11 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
             CTYPE * values, const int * amount, \
             const int * is_assimilated) \
-        { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); }
+        { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); } \
+    void melissa_add_chunk_##TYPELETTER##_d(const int * varid, const int * index_map, \
+            CTYPE * values, const int * amount, \
+            const int * is_assimilated) \
+        { printf("asdf\n"); melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); }
 
     add_chunk_wrapper(r, float)
     add_chunk_wrapper(i, int)
@@ -56,29 +60,49 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
 
 
     // Calculate size to send
-    std::for_each(chunks.cbegin(), chunks.cend(),
-            [&hidden_size, &assimilated_size](const Chunk& chunk) {
-            // low: one could calculate this only once on the fly while adding chunks...
-                if (chunk.is_assimilated) {
-                    // we converte the assimilated state always into doubles!
-                    assimilated_size += chunk.size_per_element * chunk.amount;
-                } else {
-                    hidden_size += chunk.size_per_element * chunk.amount;
-                }
-            });
+    for (const auto & chunk : chunks) {
+        // low: one could calculate this only once on the fly while adding chunks...
+        if (chunk.is_assimilated) {
+            // we converte the assimilated state always into doubles!
+            assimilated_size += chunk.size_per_element * chunk.amount;
+        } else {
+            hidden_size += chunk.size_per_element * chunk.amount;
+        }
+    }
 
     static bool is_inited = false;
 
     // Init on first expose
     if (!is_inited) {
 
+        // TODO; we might need another approach here! the index map is 8 * as big as the actual data now!
+        std::vector<INDEX_MAP_T> global_index_map;
+        std::vector<INDEX_MAP_T> global_index_map_hidden;
+        for (const auto & c : chunks) {
+            int bytes = c.size_per_element * c.amount;
+            int j = -1;
+            for (int i = 0; i < bytes; i++) {
+                if (i % c.size_per_element == 0) {
+                    j++;
+                }
+                if (c.is_assimilated) {
+                    global_index_map.push_back({c.index_map[j], c.varid});
+                } else {
+                    global_index_map_hidden.push_back({c.index_map[j], c.varid});
+                }
+            }
+        }
+
+
         MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
-        melissa_init("data",  // TODO: actually this is nonsense to give a field name here!
+        melissa_init_with_index_map("data",  // TODO: actually this is nonsense to give a field name here!
                   assimilated_size,
                   hidden_size,
                   1,  // do it with 1 byte per element and write in the index....
                   1,  //  TODO; write a proper index max!
-                  comm);
+                  comm,
+                  global_index_map.data(),
+                  global_index_map_hidden.data());
         is_inited = true;
     }
 
@@ -92,17 +116,16 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     // Model -> buffer
     VEC_T * pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
     VEC_T * pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
-    std::for_each(chunks.cbegin(), chunks.cend(),
-            [&pos_assimilated, &pos_hidden](const Chunk& chunk) {
-                const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
-                if (chunk.is_assimilated) {
-                    memcpy(pos_assimilated, chunk.values, bytes_to_copy);
-                    pos_assimilated += bytes_to_copy;
-                } else {
-                    memcpy(pos_hidden, chunk.values, bytes_to_copy);
-                    pos_hidden += bytes_to_copy;
-                }
-            });
+    for (const auto &chunk : chunks) {
+        const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
+        if (chunk.is_assimilated) {
+            memcpy(pos_assimilated, chunk.values, bytes_to_copy);
+            pos_assimilated += bytes_to_copy;
+        } else {
+            memcpy(pos_hidden, chunk.values, bytes_to_copy);
+            pos_hidden += bytes_to_copy;
+        }
+    }
 
     // expose buffer
     int nsteps = melissa_expose("data", buf_assimilated.data(), buf_hidden.data());
