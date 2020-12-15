@@ -457,7 +457,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
 
 
     // always await global_index_map now
-    int global_vect_size = sum_vec(field->local_vect_sizes_runner);
+    size_t global_vect_size = sum_vec(field->local_vect_sizes_runner);
     assert(global_vect_size % bytes_per_element == 0);
     global_index_map.resize(global_vect_size / bytes_per_element);
     assert_more_zmq_messages(configuration_socket);
@@ -468,7 +468,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
             global_index_map.size() * sizeof(INDEX_MAP_T));
     zmq_msg_close(&msg);
 
-    int global_vect_size_hidden = sum_vec(field->local_vect_sizes_runner_hidden);
+    size_t global_vect_size_hidden = sum_vec(field->local_vect_sizes_runner_hidden);
     assert(global_vect_size_hidden % bytes_per_element_hidden == 0);
     global_index_map_hidden.resize(global_vect_size_hidden / bytes_per_element_hidden);
     assert_more_zmq_messages(configuration_socket);
@@ -483,7 +483,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
     // msg is closed outside by caller...
 
     D("indexmapsize: %lu", global_index_map.size());
-    print_vector(global_index_map);
+    //print_vector(global_index_map);
 
     field->name = field_name;
 
@@ -520,23 +520,22 @@ void answer_configuration_message(void * configuration_socket,
 
 void scatter_index_map(size_t global_vect_size, size_t local_vect_size, INDEX_MAP_T global_index_map_data[], INDEX_MAP_T local_index_map_data[], const int bytes_per_element)
 {
-    size_t local_vect_sizes_server[comm_size];
+    size_t scounts[comm_size];
     calculate_local_vect_sizes_server(comm_size, global_vect_size,
-            local_vect_sizes_server, bytes_per_element);
-    int scounts[comm_size];
+            scounts, bytes_per_element);
+
     // transform size_t to mpi's int
-    std::copy(local_vect_sizes_server, local_vect_sizes_server+comm_size, scounts);
-    int displs [comm_size];
-    int last_displ = 0;
+    size_t displs [comm_size];
+    size_t last_displ = 0;
     for (int i = 0; i < comm_size; ++i)
     {
         displs[i] = last_displ;
-        assert(scounts[i] % bytes_per_element == 0); // FIXME: this will fail if running with an uneven number of elements... need to take indexmap into account when calculating nxm....
+        assert(scounts[i] % bytes_per_element == 0);
         scounts[i] /= bytes_per_element;
         last_displ += scounts[i];
     }
 
-    MPI_Scatterv( global_index_map_data, scounts, displs, MPI_MY_INDEX_MAP_T,
+    slow_MPI_Scatterv( global_index_map_data, scounts, displs, MPI_MY_INDEX_MAP_T,
             local_index_map_data, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
             0, mpi.comm());
 }
@@ -595,7 +594,7 @@ void broadcast_field_information_and_calculate_parts() {
             bytes_per_element);
 
     D("rank %d index map:", comm_rank);
-    print_vector(field->local_index_map);
+    //print_vector(field->local_index_map);
 
     scatter_index_map(field->globalVectSizeHidden(), field->local_vect_size_hidden,
             global_index_map_hidden.data(), field->local_index_map_hidden.data(),

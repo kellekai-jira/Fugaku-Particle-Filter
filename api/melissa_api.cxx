@@ -601,8 +601,8 @@ int melissa_get_current_state_id()
 
 
 void melissa_init(const char *field_name,
-                  const int local_vect_size,
-                  const int local_hidden_vect_size,
+                  const size_t local_vect_size,
+                  const size_t local_hidden_vect_size,
                   const int bytes_per_element,
                   const int bytes_per_element_hidden,
                   MPI_Comm comm_)
@@ -626,9 +626,10 @@ void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T loc
     }
     else
     {
-        int displs[getCommSize()];
-        int last_displ = 0;
-        int rcounts [getCommSize()];
+        size_t displs[getCommSize()];
+        size_t last_displ = 0;
+        size_t rcounts [getCommSize()];
+        // FIXME!!!: this breaks if we have more than INTMAX array elements which is the case...
         // move to int...
         std::copy(local_vect_sizes, local_vect_sizes+getCommSize(), rcounts);
         for (int i=0; i<getCommSize(); ++i) {
@@ -638,18 +639,18 @@ void gather_global_index_map(const size_t local_vect_size, const INDEX_MAP_T loc
         }
 
 
-        MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
+        slow_MPI_Gatherv( local_index_map, local_vect_size/bytes_per_element, MPI_MY_INDEX_MAP_T,
                 global_index_map.data(), rcounts, displs, MPI_MY_INDEX_MAP_T, 0, comm);
     }
 }
 
 void melissa_init_with_index_map(const char *field_name,
-                  const int local_vect_size,
-                  const int local_hidden_vect_size,
+                  const size_t local_vect_size,
+                  const size_t local_hidden_vect_size,
                   const int bytes_per_element,
                   const int bytes_per_element_hidden,
                   MPI_Comm comm_,
-                  const INDEX_MAP_T local_index_map[],// FIXME for WRF: add varid list!
+                  const INDEX_MAP_T local_index_map[],
                   const INDEX_MAP_T local_index_map_hidden[]
                   )
 {
@@ -697,11 +698,11 @@ void melissa_init_with_index_map(const char *field_name,
     std::vector<INDEX_MAP_T> global_index_map_hidden;
     if (comm_rank == 0)
     {
-        int global_vect_size = sum_vec(local_vect_sizes);
+        size_t global_vect_size = sum_vec(local_vect_sizes);
         assert(global_vect_size % bytes_per_element == 0);
         global_index_map.resize(sum_vec(local_vect_sizes)/bytes_per_element);
 
-        int global_vect_size_hidden = sum_vec(local_hidden_vect_sizes);
+        size_t global_vect_size_hidden = sum_vec(local_hidden_vect_sizes);
         assert(global_vect_size_hidden % bytes_per_element_hidden == 0);
         global_index_map_hidden.resize(global_vect_size_hidden/bytes_per_element_hidden);
     }
@@ -714,11 +715,11 @@ void melissa_init_with_index_map(const char *field_name,
         global_index_map_hidden, local_hidden_vect_sizes.data(),
         comm_, bytes_per_element_hidden);
 
-    if (comm_rank == 0)
-    {
-        D("Global index map:");
-        print_vector(global_index_map);
-    }
+    //if (comm_rank == 0)
+    //{
+        //D("Global index map:");
+        //print_vector(global_index_map);
+    //}
 
     if (register_field)
     {
@@ -742,8 +743,8 @@ void melissa_init_with_index_map(const char *field_name,
 bool no_mpi = false;
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const int  *local_doubles_amount,
-                         const int  *local_hidden_doubles_amount) {     // comm is casted into an pointer to an mpi communicaotr if not null.
+                         const size_t *local_doubles_amount,
+                         const size_t *local_hidden_doubles_amount) {     // comm is casted into an pointer to an mpi communicaotr if not null.
     MPI_Init(NULL, NULL);      // TODO: maybe we also do not need to do this? what happens if we clear out this line?
     no_mpi = true;
     melissa_init(field_name, *local_doubles_amount * sizeof(double),
@@ -853,8 +854,8 @@ int melissa_get_current_step()
 
 
 void melissa_init_f(const char *field_name,
-                    int        *local_doubles_amount,
-                    int        *local_hidden_doubles_amount,
+                    const int *local_doubles_amount,
+                    const int *local_hidden_doubles_amount,
                     MPI_Fint   *comm_fortran)
 {
 

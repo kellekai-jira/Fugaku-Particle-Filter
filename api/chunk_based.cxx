@@ -13,7 +13,7 @@ struct Chunk {
     const int * index_map;
     VEC_T * values;
     const int size_per_element;
-    const int amount;
+    const size_t amount;
     const bool is_assimilated;
 
     Chunk(const int varid, const int * index_map, VEC_T * values,
@@ -28,7 +28,7 @@ struct Chunk {
 std::vector<Chunk> chunks;
 template <class T>
 void melissa_add_chunk(const int varid, const int * index_map, T * values,
-        const int amount, const bool is_assimilated)
+        const size_t amount, const bool is_assimilated)
 {
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 amount, is_assimilated));
@@ -38,13 +38,13 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
 // real, integer, double, logical, char
 #define add_chunk_wrapper(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
-            CTYPE * values, const int * amount, \
+            CTYPE * values, const size_t * amount, \
             const int * is_assimilated) \
         { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); } \
     void melissa_add_chunk_##TYPELETTER##_d(const int * varid, const int * index_map, \
-            CTYPE * values, const int * amount, \
+            CTYPE * values, const size_t * amount, \
             const int * is_assimilated) \
-        { printf("asdf\n"); melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); }
+        { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); }
 
     add_chunk_wrapper(r, float)
     add_chunk_wrapper(i, int)
@@ -79,9 +79,9 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         std::vector<INDEX_MAP_T> global_index_map;
         std::vector<INDEX_MAP_T> global_index_map_hidden;
         for (const auto & c : chunks) {
-            int bytes = c.size_per_element * c.amount;
+            size_t bytes = c.size_per_element * c.amount;
             int j = -1;
-            for (int i = 0; i < bytes; i++) {
+            for (size_t i = 0; i < bytes; i++) {
                 if (i % c.size_per_element == 0) {
                     j++;
                 }

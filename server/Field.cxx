@@ -56,7 +56,7 @@ void Field::calculate_parts(int server_comm_size)
         ens_it->set_local_vect_size(local_vect_size, local_vect_size_hidden);          // low: better naming: local state size is in VEC_Ts not forcibly bytes!
     }
 
-    assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too big. (there are more server ranks than field elements. this makes not much sense!
+    assert(connected_runner_ranks.size() > 0);  // if this assert is catching you probably have a field that is too small. (there are more server ranks than field elements. this makes not much sense!
 
     local_index_map.resize(local_vect_size / bytes_per_element);
     local_index_map_hidden.resize(local_vect_size_hidden / bytes_per_element_hidden);
