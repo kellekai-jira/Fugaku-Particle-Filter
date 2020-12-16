@@ -52,7 +52,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    char t[] = "/tmp/melissa_serverXXXXXX";
+    char t[] = "/tmp/melissa_serverXXXXXX";  // FIXME: supposing this path is common for all ranks!
     if (rank == root) {
         mkdtemp(t);
     }
@@ -100,7 +100,7 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    char t[] = "/tmp/melissa_serverXXXXXX";
+    char t[] = "/tmp/melissa_serverXXXXXX";  // FIXME: supposing this path is common for all ranks!
     if (rank == root) {
         mkdtemp(t);
     }

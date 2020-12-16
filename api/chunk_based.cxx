@@ -30,6 +30,7 @@ template <class T>
 void melissa_add_chunk(const int varid, const int * index_map, T * values,
         const size_t amount, const bool is_assimilated)
 {
+    D("Adding Chunk(varid=%d) with amount %lu", varid, amount);
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 amount, is_assimilated));
 }
@@ -79,7 +80,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         std::vector<INDEX_MAP_T> global_index_map;
         std::vector<INDEX_MAP_T> global_index_map_hidden;
         for (const auto & c : chunks) {
-            size_t bytes = c.size_per_element * c.amount;
+            const size_t bytes = c.size_per_element * c.amount;
             int j = -1;
             for (size_t i = 0; i < bytes; i++) {
                 if (i % c.size_per_element == 0) {
@@ -116,6 +117,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     // Model -> buffer
     VEC_T * pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
     VEC_T * pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
+
     for (const auto &chunk : chunks) {
         const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
         if (chunk.is_assimilated) {

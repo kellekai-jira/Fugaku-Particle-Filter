@@ -483,6 +483,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
     // msg is closed outside by caller...
 
     D("indexmapsize: %lu", global_index_map.size());
+    D("hiddenindexmapsize: %lu", global_index_map_hidden.size());
     //print_vector(global_index_map);
 
     field->name = field_name;
