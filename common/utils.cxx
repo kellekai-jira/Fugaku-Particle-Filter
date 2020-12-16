@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <stdlib.h>
+
 void check_data_types() {
     // check that the size_t datatype is the same on the server and on the client side! otherwise the communication might fail.
     // for sure this could be done more intelligently in future!
@@ -37,15 +39,11 @@ Phase phase (PHASE_INIT);
 
 
 
-#define pass MPI_Barrier(comm); return
 void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size_t *displs,
                  MPI_Datatype sendtype, void *recvbuf, size_t recvcount,
                  MPI_Datatype recvtype,
                  int root, MPI_Comm comm)
 {
-    pass;
-
-
     assert(sendtype == recvtype);
 
     int rank, type_size;
@@ -54,7 +52,13 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    std::string base_name("/tmp/gather");
+    char t[] = "/tmp/melissa_serverXXXXXX";
+    if (rank == root) {
+        mkdtemp(t);
+    }
+    MPI_Bcast(t, strlen(t), MPI_CHAR, root, comm);
+
+    std::string base_name(t);
     if (rank == root) {
         const char * p = reinterpret_cast<const char*>(sendbuf);
         size_t cumul_send_counts = 0;
@@ -62,25 +66,26 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
         MPI_Comm_size(comm, &size);
         for (int i = root; i < size; ++i)
         {
-            assert(cumul_send_counts = displs[i]);  // atm displs does not really work
+            assert(cumul_send_counts == displs[i]);  // atm displs does not really work
 
-            std::string name = base_name + std::to_string(i);
+            std::string name = base_name + "/" + std::to_string(i);
             std::ofstream os(name, std::ios::binary | std::ios::app);
-            os.write(p, sendcounts[i]);
-            p += sendcounts[i];
+            os.write(p, sendcounts[i] * type_size);
+            p += sendcounts[i] * type_size;
             cumul_send_counts += sendcounts[i];
         }
     }
     MPI_Barrier(comm);
 
-    std::string name = base_name + std::to_string(rank);
+    std::string name = base_name + "/" + std::to_string(rank);
     std::ifstream is(name, std::ios::ate | std::ios::binary);
 
     std::streamsize read_size = is.tellg();
     is.seekg(0, std::ios::beg);
 
-    assert(read_size == recvcount * type_size);
-    is.read(reinterpret_cast<char*>(recvbuf), read_size);
+    D("readsize %lu, recvcount %lu", read_size, recvcount);
+    assert(static_cast<size_t>(read_size) == recvcount * type_size);
+    is.read(reinterpret_cast<char*>(recvbuf), read_size * type_size);
 }
 
 
@@ -88,7 +93,6 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
                 void *recvbuf, const size_t *recvcounts, const size_t *displs,
                 MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
-    pass;
     assert(sendtype == recvtype);
 
     int rank;
@@ -96,11 +100,17 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    std::string base_name("/tmp/scatter");
+    char t[] = "/tmp/melissa_serverXXXXXX";
+    if (rank == root) {
+        mkdtemp(t);
+    }
+    MPI_Bcast(t, strlen(t), MPI_CHAR, root, comm);
+
+    std::string base_name(t);
     int type_size;
     MPI_Type_size(sendtype, &type_size);
 
-    std::string name = base_name + std::to_string(rank);
+    std::string name = base_name + "/" + std::to_string(rank);
     std::ofstream os(name, std::ios::binary | std::ios::app);
     os.write(reinterpret_cast<const char*>(sendbuf), sendcount * type_size);
     os.close();
@@ -112,7 +122,7 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
         MPI_Comm_size(comm, &size);
         for (int i = root; i < size; ++i)
         {
-            std::string name = base_name + std::to_string(i);
+            std::string name = base_name + "/" + std::to_string(i);
             std::ifstream is(name, std::ios::binary | std::ios::ate);
             std::streamsize read_size = is.tellg();
             is.seekg(0, std::ios::beg);
