@@ -78,6 +78,11 @@ add_chunk_wrapper(c, C_CHAR, character)
 
 #undef add_chunk_wrapper
 
+function melissa_get_current_state_id() bind(c, name = 'melissa_get_current_state_id')
+    use ISO_C_BINDING, only: C_INT
+    integer(kind=C_INT) :: melissa_get_current_state_id
+end function melissa_get_current_state_id
+
 end interface
 
 

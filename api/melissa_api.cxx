@@ -594,8 +594,13 @@ bool first_melissa_init(MPI_Comm comm_)
 
 int melissa_get_current_state_id()
 {
-    assert(phase == PHASE_SIMULATION);
-    return field.current_state_id;
+    //assert(phase == PHASE_SIMULATION);
+    if (phase == PHASE_SIMULATION) {
+        return field.current_state_id;
+    }
+    else {
+        return -2;
+    }
 }
 
 

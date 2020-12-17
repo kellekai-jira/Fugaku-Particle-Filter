@@ -5,6 +5,7 @@ import subprocess
 import random
 import shutil
 import logging
+import threading
 
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
@@ -62,6 +63,11 @@ def logger_function(loglevel):
 
     return l
 
+
+def defer(f):
+    t = threading.Thread(target=f)
+    t.start()
+    return t
 
 debug = logger_function(LOG_LEVEL_DEBUG)
 log   = logger_function(LOG_LEVEL_LOG)

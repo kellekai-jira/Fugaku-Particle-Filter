@@ -203,7 +203,7 @@ public:
         std::ofstream osr("server.run-information.csv", std::ofstream::app);
         assert (osr.is_open());
         osr <<
-            "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,assimilated state size(#doubles),hidden state size(#doubles),iterations,mean bandwidth assimilated (MiB/s),iterations used for means"
+            "cores simulation,number runners(max),cores server,runtime per iteration mean (ms),ensemble members,assimilated state size(#bytes),hidden state size(#bytes),iterations,mean bandwidth assimilated (MiB/s),iterations used for means"
                   << std::endl;
         if (iterations - warmup < 10)    // have at least 10 iterations for stats
         {   // 10 warmup and 10 cooldown ... FIXME: no warmup/cooldown for now!

@@ -53,7 +53,7 @@ void CheckStatelessAssimilator::print_result(const bool good)
     }
     L("**** (at least over one timestep on %lu ensemble members",
       field.ensemble_members.size());
-    L("**** members and inited due to the first received state!");
+    L("**** and inited due to the first received state!)");
 }
 
 int CheckStatelessAssimilator::do_update_step(const int current_step)
@@ -91,10 +91,33 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
     else
     {
         int index = 0;
-        for (auto ens_it = field.ensemble_members.begin(); ens_it !=
-             field.ensemble_members.end(); ens_it++)
+#define BINARY_MODE
+#ifdef BINARY_MODE
+        D("Comparing while assuming all state variables are binary data...");
+#else
+        D("Comparing while casting all state variables into doubles all state variables as doubles...");
+#endif
+        for (auto &ens_it : field.ensemble_members)
         {
+#ifdef BINARY_MODE
+            for (size_t i = 0; i < correct_states.at(index).size(); ++i)
+            {
+                int a = static_cast<int>(correct_states.at(index).at(i));
+                int b = static_cast<int>(ens_it.state_background.at(i));
+
+                int diff = std::abs(a-b);
+
+                if (diff != 0) {
+                    L("Binary data differs");
+                    print_result(false);
+                    return -1;
+                }
+            }
+            index++;
+#else
             // analysis state is enough:
+            //
+
             // calculate max diff
             const double * cstate =
                 reinterpret_cast<const double*>(correct_states[index].data());
@@ -111,6 +134,10 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
             double max_value = cstate[0];
             for (size_t i = 0; i < correct_states[index].size()/sizeof(double); ++i)
             {
+
+                assert(correct_states.size() % sizeof(double) == 0);
+                assert(correct_states_hidden.size() % sizeof(double) == 0);
+
                 double a = cstate[i];
                 double b = bstate[i];
                 if (std::isnan(a) && std::isnan(b))
@@ -178,6 +205,7 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
             }
 
             index++;
+#endif
         }
 
         // we did the check. so quit now!

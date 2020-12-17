@@ -89,6 +89,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
 }
 
 
+constexpr int myintmax = INT_MAX - 10;
 void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendtype,
                 void *recvbuf, const size_t *recvcounts, const size_t *displs,
                 MPI_Datatype recvtype, int root, MPI_Comm comm)

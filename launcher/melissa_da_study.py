@@ -20,7 +20,6 @@ from shutil import copyfile
 import signal
 import sys
 
-import threading
 
 from cluster import *
 
@@ -141,8 +140,7 @@ def run_melissa_da_study(
                 job.cstate = cluster.CheckJobState(job.job_id)
 
             time.sleep(.1)
-    state_refresher = threading.Thread(target=refresh_states)
-    state_refresher.start()
+    state_refresher = defer(refresh_states)
 
 
     MAX_SERVER_STARTS = 3
@@ -274,6 +272,8 @@ def run_melissa_da_study(
             # Check if we need to give a live sign to the server?
             if (time.time() - server.last_msg_to) > 10:
                 melissa_comm4py.send_hello()
+                # send nonblocking? use defer()... but actually zmq_send only queues the message... so even if it cannot be send directly this should not pose any problems. This might fix random bugs when it deadlocks because the server tries to send a message and the launcher tries to send a message to the server at the same time?
+                debug('ping to server after %d s' % (time.time() - server.last_msg_to))
                 server.last_msg_to = time.time()
 
             # Check if some runners are running now, timed out while registration or if
