@@ -94,7 +94,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran);
     add_chunk_wrapper_decl(r, float);
     add_chunk_wrapper_decl(i, int);
     add_chunk_wrapper_decl(d, double);
-    add_chunk_wrapper_decl(l, bool);  // TODO: bool will pose problems in C programs
+    add_chunk_wrapper_decl(l, int);
     add_chunk_wrapper_decl(c, char);
 
 

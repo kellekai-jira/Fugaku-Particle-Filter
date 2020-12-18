@@ -73,7 +73,7 @@ __NL__ end subroutine melissa_add_chunk_##TYPELETTER##_d \
 add_chunk_wrapper(r, C_FLOAT, real)
 add_chunk_wrapper(i, C_INT, integer)
 add_chunk_wrapper(d, C_DOUBLE, real)
-add_chunk_wrapper(l, C_BOOL, LOGICAL)
+add_chunk_wrapper(l, C_INT, LOGICAL)
 add_chunk_wrapper(c, C_CHAR, character)
 
 #undef add_chunk_wrapper

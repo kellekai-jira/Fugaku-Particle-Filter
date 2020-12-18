@@ -50,7 +50,7 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
     add_chunk_wrapper(r, float)
     add_chunk_wrapper(i, int)
     add_chunk_wrapper(d, double)
-    add_chunk_wrapper(l, bool)
+    add_chunk_wrapper(l, int)
     add_chunk_wrapper(c, char)
 
 #undef add_chunk_wrapper
