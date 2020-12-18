@@ -24,12 +24,15 @@ struct Chunk {
         is_assimilated(is_assimilated) {}
 };
 
-// TODO: later have chunk notioin also on server as it might be useful to init everything!
+// TODO: later have chunk notioin also on server as it might be useful to init everything!  PDI>???
 std::vector<Chunk> chunks;
+bool may_add_chunks = true;
+
 template <class T>
 void melissa_add_chunk(const int varid, const int * index_map, T * values,
         const size_t amount, const bool is_assimilated)
 {
+    assert(may_add_chunks);
     D("Adding Chunk(varid=%d) with amount %lu", varid, amount);
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 amount, is_assimilated));
@@ -56,25 +59,22 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
 #undef add_chunk_wrapper
 
 int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
-    size_t hidden_size = 0;
-    size_t assimilated_size = 0;
-
-
-    // Calculate size to send
-    for (const auto & chunk : chunks) {
-        // low: one could calculate this only once on the fly while adding chunks...
-        if (chunk.is_assimilated) {
-            // we converte the assimilated state always into doubles!
-            assimilated_size += chunk.size_per_element * chunk.amount;
-        } else {
-            hidden_size += chunk.size_per_element * chunk.amount;
-        }
-    }
-
+    static size_t hidden_size = 0;
+    static size_t assimilated_size = 0;
     static bool is_inited = false;
 
     // Init on first expose
     if (!is_inited) {
+        // Calculate size to send
+        for (const auto & chunk : chunks) {
+            // low: one could calculate this only once on the fly while adding chunks...
+            if (chunk.is_assimilated) {
+                // we converte the assimilated state always into doubles!
+                assimilated_size += chunk.size_per_element * chunk.amount;
+            } else {
+                hidden_size += chunk.size_per_element * chunk.amount;
+            }
+        }
 
         // TODO; we might need another approach here! the index map is 8 * as big as the actual data now!
         std::vector<INDEX_MAP_T> global_index_map;
@@ -105,6 +105,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
                   global_index_map.data(),
                   global_index_map_hidden.data());
         is_inited = true;
+        may_add_chunks = false;
     }
 
 
@@ -135,20 +136,16 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     // buffer -> model
     pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
     pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
-    std::for_each(chunks.begin(), chunks.end(),
-            [&pos_assimilated, &pos_hidden](const Chunk& chunk) {
-                const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
-                if (chunk.is_assimilated) {
-                    memcpy(chunk.values, pos_assimilated, bytes_to_copy);
-                    pos_assimilated += bytes_to_copy;
-                } else {
-                    memcpy(chunk.values, pos_hidden, bytes_to_copy);
-                    pos_hidden += bytes_to_copy;
-                }
-            });
-
-    // for now we recreate the chunk list before each expose so we can remove it here:
-    chunks.clear();
+    for (const auto &chunk : chunks) {
+        const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
+        if (chunk.is_assimilated) {
+            memcpy(chunk.values, pos_assimilated, bytes_to_copy);
+            pos_assimilated += bytes_to_copy;
+        } else {
+            memcpy(chunk.values, pos_hidden, bytes_to_copy);
+            pos_hidden += bytes_to_copy;
+        }
+    }
 
     return nsteps;
 }
