@@ -19,6 +19,7 @@ import time
 from shutil import copyfile
 import signal
 import sys
+import socket
 
 
 from cluster import *
@@ -364,12 +365,20 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
     error('Simulation %s is stateful and thus cannot be used with melissa-da' % runner_cmd)
     return False
 
+def cluster_selector():
+    hn = socket.gethostname()
+    if 'juwels' in hn or 'jwlogin' in hn:
+        return SlurmJuwelsCluster(account='prcoe03')
+    else:
+        return LocalCluster()
+
+
 # exporting for import * :
-__all__ = ['run_melissa_da_study', 'check_stateless', 'ASSIMILATOR_PDAF',
+__all__ = ['run_melissa_da_study', 'check_stateless', 'cluster_selector',
            'killing_giraffe', 'clean_old_stats',  # utils
            'SlurmCluster', 'LocalCluster', 'SlurmJuwelsCluster',  # cluster
+           'ASSIMILATOR_PDAF',
            'ASSIMILATOR_CHECK_STATELESS',
-           'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_PRINT_INDEX_MAP',

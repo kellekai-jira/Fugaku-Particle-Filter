@@ -72,7 +72,7 @@ target_link_libraries(
 #
 # ELF (Executable and Linkable Format) is a standard file format for executable
 # files, shared libraries, and object files on Linux systems.
-target_compile_options(pdaf PRIVATE -ffunction-sections)
+target_compile_options(pdaf PRIVATE -ffunction-sections)  # TODO: this does not work for ifort
 target_link_libraries(pdaf PRIVATE -Wl,--gc-sections)
 target_link_libraries(pdaf PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libpdaf.ld)
 

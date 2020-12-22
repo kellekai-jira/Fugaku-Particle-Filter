@@ -164,3 +164,4 @@ def killing_giraffe(name):
             pids.append(int(line.split(None, 1)[0]))
     assert len(pids) > 0
     os.kill(random.choice(pids), signal.SIGKILL)
+

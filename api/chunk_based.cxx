@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <cmath>
+#include <cstring>  // for memcpy
 #include <algorithm>
 #include <cassert>
 #include <mpi.h>
