@@ -125,12 +125,13 @@ def run_melissa_da_study(
             self.state = STATE_WAITING
             self.cstate = STATE_WAITING
             Job.jobs.append(self)
+
         def check_state(self):
             return self.cstate
 
         def __del__(self):
             if hasattr(self, 'job_id'):
-                debug("Killing Job job_id=%d" % self.job_id)
+                debug("Killing Job job_id=" % self.job_id)
                 cluster.KillJob(self.job_id)
 
     Job.jobs = []
@@ -261,8 +262,12 @@ def run_melissa_da_study(
                 runners[runner_id] = Runner(runner_id, server.node_name)
 
             # Check if the server did not timeout!
-            if time.time() - server.last_msg_from > server_timeout:
-                error('Server timed out!')
+            if time.time() - server.last_msg_from > server_timeout or \
+                server.check_state() != STATE_RUNNING:
+                if server.check_state() != STATE_RUNNING:
+                    error('Server Job not up anymore!')
+                else:
+                    error('Server timed out!')
                 runners.clear()
                 # clear is sometimes not enough to kill all zombies so we call cleanup
                 del server
