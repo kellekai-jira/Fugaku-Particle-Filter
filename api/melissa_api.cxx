@@ -882,3 +882,14 @@ int melissa_expose_d(const char *field_name, double *values, double *hidden_valu
     return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values),
             reinterpret_cast<VEC_T*>(hidden_values));
 }
+
+
+int melissa_is_runner() {
+    char * melissa_server_master_node = getenv(
+        "MELISSA_SERVER_MASTER_NODE");
+    if (melissa_server_master_node == nullptr) {
+        return 0;
+    } else {
+        return 1;
+    }
+}

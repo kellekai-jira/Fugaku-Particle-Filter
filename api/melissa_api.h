@@ -79,6 +79,10 @@ int melissa_get_current_state_id();
 /// the Melissa-DA server.
 int melissa_get_current_step();
 
+/// Returns a value != 0 if the application linked against libmelissa_api was started as
+/// a melissa runner
+int melissa_is_runner();
+
 /// Chunk stuff
 /// TODO: write doxygen!
 int melissa_commit_chunks_f(MPI_Fint * comm_fortran);

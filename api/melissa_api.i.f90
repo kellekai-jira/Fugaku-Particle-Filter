@@ -83,6 +83,11 @@ function melissa_get_current_state_id() bind(c, name = 'melissa_get_current_stat
     integer(kind=C_INT) :: melissa_get_current_state_id
 end function melissa_get_current_state_id
 
+function melissa_is_runner() bind(c, name='melissa_is_runner')
+    use ISO_C_BINDING, only: C_INT
+    integer(kind=C_INT) :: melissa_is_runner
+end function melissa_is_runner
+
 end interface
 
 
