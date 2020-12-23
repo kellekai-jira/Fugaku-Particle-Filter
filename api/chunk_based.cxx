@@ -37,6 +37,7 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
     D("Adding Chunk(varid=%d) with amount %lu", varid, amount);
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 amount, is_assimilated));
+    //D("Location index_map in melissa_api: %p", index_map);
 }
 
 // chunk adder functions for each fortran data type!
@@ -79,7 +80,9 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
 
         // TODO; we might need another approach here! the index map is 8 * as big as the actual data now!
         std::vector<INDEX_MAP_T> global_index_map;
+        global_index_map.reserve(assimilated_size);
         std::vector<INDEX_MAP_T> global_index_map_hidden;
+        global_index_map_hidden.reserve(hidden_size);
         for (const auto & c : chunks) {
             const size_t bytes = c.size_per_element * c.amount;
             int j = -1;

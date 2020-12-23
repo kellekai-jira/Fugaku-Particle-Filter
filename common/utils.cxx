@@ -56,7 +56,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
     if (rank == root) {
         mkdtemp(t);
     }
-    MPI_Bcast(t, strlen(t), MPI_CHAR, root, comm);
+    MPI_Bcast(t, std::strlen(t), MPI_CHAR, root, comm);
 
     std::string base_name(t);
     if (rank == root) {
@@ -105,7 +105,7 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
     if (rank == root) {
         mkdtemp(t);
     }
-    MPI_Bcast(t, strlen(t), MPI_CHAR, root, comm);
+    MPI_Bcast(t, std::strlen(t), MPI_CHAR, root, comm);
 
     std::string base_name(t);
     int type_size;
