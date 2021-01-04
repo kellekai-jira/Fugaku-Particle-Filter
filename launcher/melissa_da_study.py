@@ -131,7 +131,7 @@ def run_melissa_da_study(
 
         def __del__(self):
             if hasattr(self, 'job_id'):
-                debug("Killing Job job_id=" % self.job_id)
+                debug("Killing Job job_id=%s" % str(self.job_id))
                 cluster.KillJob(self.job_id)
 
     Job.jobs = []
@@ -291,9 +291,8 @@ def run_melissa_da_study(
                         runner.state = STATE_RUNNING
                         debug('Runner %d running now!' % runner_id)
                         runner.start_running_time = time.time()
-                elif runner.state == STATE_RUNNING:
+                if runner.state == STATE_RUNNING:
                     if not runner.server_knows_it and \
-                            runner.start_running_time != -1 and \
                             time.time() - runner.start_running_time > runner_timeout:
                         error(('Runner %d is killed as it did not register at the server'
                               + ' within %d seconds') % (runner_id, runner_timeout))

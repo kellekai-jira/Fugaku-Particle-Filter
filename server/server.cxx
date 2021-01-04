@@ -115,6 +115,9 @@ unsigned int assimilation_cycles = 0;  // only used for logging stats at the end
 /// Will also be checkpointed to restart...
 int current_step = 0;  // will effectively start at 1.
 
+/// current_nsteps is set to -1 if we want to end.
+/// current_nsteps is set to -2 if there was a crash and we want to end all runners
+/// otherwise it is set to the steps >0 each runner shall propagate
 int current_nsteps = 1;  // this is important if there are less model task runners than ensemble members. for every model task runner at the beginning an ensemble state will be generated.
 
 int get_due_date() {
@@ -409,7 +412,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     auto res = launcher_notified_about_runner.emplace(std::pair<int, bool>(runner_id, false));
     if (!res.second) {
         // element existed already. This is probably a runner restart. So renotify launcher when runner ready
-        launcher_notified_about_runner.at(runner_id) = false;
+        launcher_notified_about_runner.at(runner_id) = false;  // TODO: can this really happen in the latest protocol?
     }
 }
 
@@ -788,6 +791,15 @@ void end_all_runners()
          idle_runners.end(); runner_it++)
     {
         runner_it->second->stop(END_RUNNER);
+    }
+}
+
+void kill_all_runners()
+{
+    for (auto runner_it = idle_runners.begin(); runner_it !=
+         idle_runners.end(); runner_it++)
+    {
+        runner_it->second->stop(KILL_RUNNER);
     }
 }
 
@@ -1342,10 +1354,11 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
             L("ERROR: Launcher did not answer. Due date violation. Crashing Server now.");
-            current_nsteps = -1;
-            exit(1);  // better to exit like this Otherwise many errors will come up as
-            // only rank 0 knows about the crashed launcher
+            current_nsteps = -2;
         }
+
+        // Get current_nsteps from rank 0 in case it wants to Crash!
+        MPI_Bcast(&current_nsteps, 1, MPI_INT, 0, mpi.comm());
         assimilation_cycles++;
 
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
@@ -1358,6 +1371,11 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         {
             D("The assimilator decided to end now.");
             end_all_runners();
+            return true;
+        } else if (current_nsteps == -2)
+        {
+            kill_all_runners();
+            exit(1);
             return true;
         }
 

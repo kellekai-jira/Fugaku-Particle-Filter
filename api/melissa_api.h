@@ -70,7 +70,7 @@ int melissa_expose_d(const char *field_name, double *values, double *hidden_valu
 /// transfer between Fortran and C is not trivial
 int melissa_expose_f(const char *field_name, double *values);
 
-/// For debug reasons it sometimes is useful to have the melissa current state id
+/// It sometimes is useful to have the melissa current state id
 /// outside of melissa.
 /// returns -1 if no state is currently calculated.
 int melissa_get_current_state_id();
