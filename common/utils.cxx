@@ -37,6 +37,13 @@ int comm_rank (-1);
 int comm_size (-1);
 Phase phase (PHASE_INIT);
 
+/// option needed for extremely large field vectors as e.g. in WRF
+/// in such cases we need to exchange messages with more than INTMAX elements to be
+/// exchanged between MPI ranks. Even BigMPI is not big enough
+/// (see github.com/jeffhammond/BigMPI)
+/// Since such messages are only exchanged one single time during init for index map
+/// exchange we rely on a file system shared between ranks for them.
+//#define SLOW_MPI
 
 
 void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size_t *displs,
@@ -44,6 +51,17 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
                  MPI_Datatype recvtype,
                  int root, MPI_Comm comm)
 {
+#ifndef SLOW_MPI
+    int sc[comm_size];
+    int di[comm_size];
+    std::copy(sendcounts, sendcounts+comm_size, sc);
+    std::copy(displs, displs+comm_size, di);
+
+    MPI_Scatterv(sendbuf, sc, di, sendtype, recvbuf, recvcount, recvtype, root, comm);
+
+    return;
+#endif
+
     assert(sendtype == recvtype);
 
     int rank, type_size;
@@ -94,6 +112,18 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
                 void *recvbuf, const size_t *recvcounts, const size_t *displs,
                 MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
+#ifndef SLOW_MPI
+    int rc[comm_size];
+    int di[comm_size];
+    std::copy(recvcounts, recvcounts+comm_size, rc);
+    std::copy(displs, displs+comm_size, di);
+
+    MPI_Gatherv(sendbuf, sendcount, sendtype,
+                recvbuf, rc, di,
+                recvtype, root, comm);
+
+    return
+#endif
     assert(sendtype == recvtype);
 
     int rank;
