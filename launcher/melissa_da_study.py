@@ -321,7 +321,7 @@ def run_melissa_da_study(
                 elif msg['type'] == MSG_REGISTERED:
                     runners[msg['runner_id']].server_knows_it = True
                 elif msg['type'] == MSG_PING:
-                    pass
+                    debug('got server ping')
                 elif msg['type'] == MSG_STOP:
                     running = False
                     log('Gracefully ending study now.')

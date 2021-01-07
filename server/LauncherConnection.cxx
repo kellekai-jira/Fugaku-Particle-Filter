@@ -67,7 +67,7 @@ LauncherConnection::~LauncherConnection()
 
 void LauncherConnection::updateLauncherDueDate()
 {
-    due_date_launcher = time(NULL) + LAUNCHER_TIMEOUT * 1000;
+    due_date_launcher = time(NULL) + LAUNCHER_TIMEOUT;
 }
 
 bool LauncherConnection::checkLauncherDueDate()
@@ -99,7 +99,7 @@ void LauncherConnection::receiveText()
 
 void LauncherConnection::updateLauncherNextMessageDate()
 {
-    next_message_date_to_launcher = time(NULL) + LAUNCHER_PING_INTERVAL * 1000;
+    next_message_date_to_launcher = time(NULL) + LAUNCHER_PING_INTERVAL;
 }
 
 void LauncherConnection::ping()

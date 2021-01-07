@@ -19,8 +19,8 @@ private:
     const int LAUNCHER_TIMEOUT=60;  // seconds
     const int LAUNCHER_PING_INTERVAL=8;  // seconds
 
-    int due_date_launcher;
-    int next_message_date_to_launcher;
+    time_t due_date_launcher;  // seconds
+    time_t next_message_date_to_launcher;  // seconds
 
     void updateLauncherDueDate();
     void updateLauncherNextMessageDate();
