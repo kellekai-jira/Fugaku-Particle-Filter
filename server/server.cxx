@@ -405,7 +405,6 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
                       NULL, NULL);
     zmq_msg_send(&msg_reply2, configuration_socket, 0);
 
-    trigger(ADD_RUNNER, runner_id);
     D("Server registering Runner ID %d", runner_id);
 
     // notify launcher on first expose. This way we are sure that then we always have an open connection and we see if the runner breaks if it doesn't respond on this connection.
@@ -413,6 +412,7 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     if (!res.second) {
         // element existed already. This is probably a runner restart. So renotify launcher when runner ready
         launcher_notified_about_runner.at(runner_id) = false;  // TODO: can this really happen in the latest protocol?
+
     }
 }
 
@@ -1048,6 +1048,11 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
         if (launcher_notified == false) {
             launcher->notify(runner_id, RUNNING);
             launcher_notified_about_runner.at(runner_id) = true;
+
+            // Add runner only now for timing and testsuite as now it is really ready
+            // (and only now it can also recognized failing from the server. Runner
+            // crashes before are only recognized by the launcher)
+            trigger(ADD_RUNNER, runner_id);
         }
     }
 
