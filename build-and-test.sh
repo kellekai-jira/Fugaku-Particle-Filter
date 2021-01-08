@@ -108,4 +108,4 @@ cmake \
 	-- "$melissa_da_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
-ctest --output-on-failure --timeout 300
+ctest --stop-on-failure --output-on-failure --timeout 300
