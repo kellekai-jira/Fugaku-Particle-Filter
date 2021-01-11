@@ -10,14 +10,14 @@
 #include "TimingEvent.h"
 
 
-// double get_walltime(const TimingEvent &a, const TimingEvent &b) {
-//// in milliseconds
-// return std::chrono::duration<double, std::milli>(a.time-b.time).count();
-// }
 
 class ApiTiming : public Timing
 {
 public:
+    /// Writes report of simulation run into a csv file that is easily readable by, e.g.,
+    /// pandas. There is one file containing runner information on all assimilation
+    /// cycles (e.g. runner-000.timing-information.csv) and another one having general
+    /// run information for the whole run (runner-000.run-information.csv)
     void report(const int cores_simulation, const size_t state_size, const int runner_id) {
 
         char fname[256];
