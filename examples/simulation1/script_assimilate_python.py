@@ -1,22 +1,17 @@
-from melissa_da_study import *
 import os
 
 
-# import  mpi4py
-# mpi4py.rc(initialize=False, finalize=False)
-# from mpi4py import MPI
+import  mpi4py
+mpi4py.rc(initialize=False, finalize=False)
+from mpi4py import MPI
 
 
-#import numpy as np
-
-
-
-clean_old_stats()
+import numpy as np
 
 def callback(ensemble):
 
-    #rank = MPI.COMM_WORLD.rank
-    #print('my rank:', rank)
+    rank = MPI.COMM_WORLD.rank
+    print('my rank:', rank)
 
     print("in the callback function")
     print("now doing DA update...")
@@ -30,6 +25,8 @@ def callback(ensemble):
 
 
 if __name__ == '__main__':
+    from melissa_da_study import *
+    clean_old_stats()
     run_melissa_da_study(
             runner_cmd='simulation1',
             total_steps=10,
@@ -45,7 +42,7 @@ if __name__ == '__main__':
                 'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_ASSIMILATOR_MODULE': 'script_assimilate_python'
                 },
-            precommand_server='xterm_gdb',
+#            precommand_server='xterm_gdb',
             server_timeout=10000,
             runner_timeout=10000
             )
