@@ -2,6 +2,7 @@ project(Melissa LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.7.2)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 enable_testing()
 
@@ -67,7 +68,9 @@ link_libraries(${ZeroMQ_LIBRARY})
 
 
 
+find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
+find_package(NumPy REQUIRED)
 
 # Melissa submodule #
 find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")

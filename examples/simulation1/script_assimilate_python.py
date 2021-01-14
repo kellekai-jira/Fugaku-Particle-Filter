@@ -42,7 +42,7 @@ if __name__ == '__main__':
                 'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_ASSIMILATOR_MODULE': 'script_assimilate_python'
                 },
-#            precommand_server='xterm_gdb',
+            precommand_server='xterm_gdb',
             server_timeout=10000,
             runner_timeout=10000
             )
