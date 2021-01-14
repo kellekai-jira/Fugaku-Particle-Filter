@@ -386,4 +386,5 @@ __all__ = ['run_melissa_da_study', 'check_stateless', 'cluster_selector',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_PRINT_INDEX_MAP',
-           'ASSIMILATOR_WRF']
+           'ASSIMILATOR_WRF',
+           'ASSIMILATOR_PYTHON']

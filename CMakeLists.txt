@@ -66,6 +66,9 @@ include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 
 
+
+find_package(PythonLibs 3 REQUIRED)
+
 # Melissa submodule #
 find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
 

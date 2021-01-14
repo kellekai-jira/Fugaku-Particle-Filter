@@ -27,6 +27,11 @@ endif(INSTALL_ZMQ)
 
 target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrapper)
 
+# Python
+target_include_directories(melissa_server PRIVATE ${PYTHON_INCLUDE_DIR})
+message("Python ${PYTHON_INCLUDE_DIR} - ${PYTHON_LIBRARY}")
+target_link_libraries(melissa_server ${PYTHON_LIBRARY})
+
 # PDAF:
 target_link_libraries(melissa_server gfortran ${Fortran_MATH_LIBRARIES} m)
 
@@ -42,6 +47,9 @@ target_link_libraries(melissa_server ${MPI_Fortran_LIBRARIES} ${Fortran_MATH_LIB
 
 
 target_link_libraries(melissa_server pdaf_wrapper)
+
+
+
 
 
 INSTALL(TARGETS melissa_server RUNTIME DESTINATION bin)
