@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 
 import  mpi4py
@@ -20,8 +20,9 @@ def callback(ensemble):
     print('input:', ensemble)
     ensemble += 1
     print('output:', ensemble)
+    print('refcount:', sys.getrefcount(ensemble))
 
-    return ensemble
+    # return ensemble return nothing, performs inplace changement
 
 
 if __name__ == '__main__':
@@ -29,7 +30,7 @@ if __name__ == '__main__':
     clean_old_stats()
     run_melissa_da_study(
             runner_cmd='simulation1',
-            total_steps=10,
+            total_steps=3,
             ensemble_size=3,
             assimilator_type=ASSIMILATOR_PYTHON,
             cluster=LocalCluster(),
