@@ -1784,4 +1784,5 @@ int main(int argc, char * argv[])
 #endif
     mpi.finalize();
 
+    L(".");
 }

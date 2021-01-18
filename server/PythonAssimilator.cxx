@@ -29,46 +29,15 @@ PythonAssimilator::PythonAssimilator(Field & field_, const int total_steps_, Mpi
         std::fill(as_double, as_double + len_double, 0.0);
     }
 
-    py::init();
+    py::init(field);
 
 }
 
 int PythonAssimilator::do_update_step(const int current_step) {
     L("Doing python update step...\n");
-    py::callback();
     MPI_Barrier(mpi.comm());
-    int state_id = 0;
-    for (auto ens_it = field.ensemble_members.begin(); ens_it !=
-         field.ensemble_members.end(); ens_it++)
-    {
-        assert(ens_it->state_analysis.size() ==
-               ens_it->state_background.size());
 
-
-        double * as_double = reinterpret_cast<double*>(ens_it->state_analysis.data());
-        size_t len_double = ens_it->state_analysis.size()/sizeof(double);
-
-        double * as_double_bg = reinterpret_cast<double*>(ens_it->state_background.data());
-
-        double * as_double_bg_neighbor;
-        if (ens_it == field.ensemble_members.begin())
-        {
-            as_double_bg_neighbor = reinterpret_cast<double*>((field.ensemble_members.end()-1)->state_background.data());
-        }
-        else
-        {
-            as_double_bg_neighbor = reinterpret_cast<double*>((ens_it-1)->state_background.data());
-        }
-
-
-        for (size_t i = 0; i < len_double; i++)
-        {
-            // pretend to do some da...
-            as_double[i] = as_double_bg[i] + state_id;
-            as_double[i] += as_double_bg_neighbor[i];
-        }
-        state_id++;
-    }
+    py::callback(current_step);
 
     if (current_step >= total_steps)
     {
@@ -84,7 +53,7 @@ PythonAssimilator::~PythonAssimilator() {
     py::finalize();
 }
 
-void py::init() {
+void py::init(Field & field) {
     PyObject *pName = NULL;
 
 
@@ -122,45 +91,53 @@ void py::init() {
     pFunc = PyObject_GetAttrString(pModule, "callback");
 
     py::err(pFunc && PyCallable_Check(pFunc), "could not find callable callback function");
+
+
+
+    if (field.local_vect_size >= LONG_MAX) {
+        L("Error! too large vectsize for python assimilator");
+        exit(EXIT_FAILURE);
+    }
+
+    // init list:
+    py::pEnsemble_list_background = PyList_New(field.ensemble_members.size());
+    py::pEnsemble_list_analysis = PyList_New(field.ensemble_members.size());
+    npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size) };
+    int i = 0;
+    for (auto &member : field.ensemble_members) {
+        PyObject *pBackground = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
+                member.state_background.data());
+        PyList_SetItem(pEnsemble_list_background, i, pBackground);
+
+        PyObject *pAnalysis = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
+                member.state_analysis.data());
+        PyList_SetItem(pEnsemble_list_analysis, i, pAnalysis);
+
+        // Refcount on pAnalysis and pBackground is 2 now. Thus even if the objects does
+        // not exist anymore in the python context, they will stay in memory.
+        // FIXME: is this what we want? Partly: we do not want python to delete the
+        // vectors but it shall destroy the other stuff that is stored with the
+        // pyobjects... See how we handle this.
+
+        ++i;
+    }
 }
 
-void py::callback() {
-    PyObject *pValue;
+void py::callback(const int current_step) {
+    PyObject *pTime = Py_BuildValue("i", current_step);
 
-
-    std::vector<double> vector({1.0 , 2.0});
-    npy_intp dims[1] = { 2 };
-
-
-    //pValue = PyArray_SimpleNew(1, dims, NPY_FLOAT );
-    pValue = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64, vector.data());
-
-    if (!pValue) {
-        Py_DECREF(pModule);
-        L("Error: Cannot create argument");
-        exit(EXIT_FAILURE);
-    }
-
+    py::err(pTime != NULL, "Error: Cannot create argument");
 
     D("callback input parameter:");
-    print_vector(vector);
 
     //Py_INCREF(pValue);
-    PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pValue, NULL);
-    if (pReturn != NULL) {
-        D("Back from callback:");
-        print_vector(vector);
-        Py_DECREF(pReturn);
-    }
-    else {
-        //Py_DECREF(pValue);
-        Py_DECREF(pFunc);
-        Py_DECREF(pModule);
-        PyErr_Print();
-        L("Error! Call failed");
-        exit(EXIT_FAILURE);
-    }
+    PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
+            pEnsemble_list_background, pEnsemble_list_analysis, NULL);
+    py::err(pReturn != NULL, "Error: no return value");
 
+    D("Back from callback:");
+
+    Py_DECREF(pReturn);
 }
 
 void py::finalize() {
@@ -169,6 +146,7 @@ void py::finalize() {
     D("h2");
     Py_DECREF(pModule);
     D("h3");
+    // FIXME decref list??
     PyMem_RawFree(program);
     D("h4");
 }

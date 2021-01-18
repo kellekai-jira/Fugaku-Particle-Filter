@@ -8,19 +8,22 @@ from mpi4py import MPI
 
 import numpy as np
 
-def callback(ensemble):
+def callback(t, ensemble_list_background, ensemble_list_analysis):
 
     rank = MPI.COMM_WORLD.rank
     print('my rank:', rank)
 
     print("in the callback function")
-    print("now doing DA update...")
+    print("now doing DA update for t=%d..." % t)
+    print("lens:", len(ensemble_list_background), len(ensemble_list_analysis))
 
-    #print(np.array(ensemble).shape)
-    print('input:', ensemble)
-    ensemble += 1
-    print('output:', ensemble)
-    print('refcount:', sys.getrefcount(ensemble))
+    ii = ensemble_list_background[0]
+    oo = ensemble_list_analysis[0]
+    print(np.array(ii).shape)
+    print('input:', ii)
+    oo = ii + 1
+    print('output:', oo)
+    print('refcount:', sys.getrefcount(ii), sys.getrefcount(oo))
 
     # return ensemble return nothing, performs inplace changement
 
@@ -43,7 +46,7 @@ if __name__ == '__main__':
                 'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_ASSIMILATOR_MODULE': 'script_assimilate_python'
                 },
-            precommand_server='xterm_gdb',
+            #precommand_server='xterm_gdb',
             server_timeout=10000,
             runner_timeout=10000
             )

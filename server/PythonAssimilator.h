@@ -17,9 +17,11 @@ namespace py {
     static PyObject *pFunc;
     static PyObject *pModule;
     static wchar_t *program;
+    static PyObject *pEnsemble_list_background;
+    static PyObject *pEnsemble_list_analysis;
 
-    void init();
-    void callback();  // FIXME: add parameters
+    void init(Field &field);
+    void callback(const int current_step);
     void finalize();
     void err(bool no_fail, const char * error_str);
 }
