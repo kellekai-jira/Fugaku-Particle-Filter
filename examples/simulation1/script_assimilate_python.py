@@ -36,7 +36,7 @@ if __name__ == '__main__':
             total_steps=3,
             ensemble_size=3,
             assimilator_type=ASSIMILATOR_PYTHON,
-            cluster=LocalCluster(),
+            # cluster is now auto selected
             procs_server=2,
             procs_runner=3,
             n_runners=1,
@@ -48,5 +48,6 @@ if __name__ == '__main__':
                 },
             #precommand_server='xterm_gdb',
             server_timeout=10000,
-            runner_timeout=10000
+            runner_timeout=10000,
+            walltime='00:05:00'
             )

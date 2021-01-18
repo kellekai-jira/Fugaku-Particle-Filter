@@ -36,13 +36,21 @@ melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
 assert melissa_da_datadir
 
 
+def cluster_selector():
+    hn = socket.gethostname()
+    print('hostname:', hn)
+    if 'juwels' in hn or 'jwlogin' in hn:
+        return SlurmJuwelsCluster(account='prcoe03')
+    else:
+        return LocalCluster()
+
 
 def run_melissa_da_study(
         runner_cmd='simulation1',
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
-        cluster=LocalCluster(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
+        cluster=cluster_selector(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
         procs_server=1,
         procs_runner=1,
         n_runners=1,
@@ -368,13 +376,6 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
 
     error('Simulation %s is stateful and thus cannot be used with melissa-da' % runner_cmd)
     return False
-
-def cluster_selector():
-    hn = socket.gethostname()
-    if 'juwels' in hn or 'jwlogin' in hn:
-        return SlurmJuwelsCluster(account='prcoe03')
-    else:
-        return LocalCluster()
 
 
 # exporting for import * :

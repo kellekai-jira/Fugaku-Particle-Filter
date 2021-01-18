@@ -56,15 +56,16 @@ PythonAssimilator::~PythonAssimilator() {
 void py::init(Field & field) {
     PyObject *pName = NULL;
 
-
-
-
-
-
-
-
     py::program = Py_DecodeLocale("melissa_server", NULL);
-    Py_Initialize();
+
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+
+    config.buffered_stdio = 0;  // equals to python -u
+
+    PyStatus status = Py_InitializeFromConfig(&config);
+    err(!PyStatus_Exception(status), "Could not init python");
+
     _import_array();  // init numpy
 
     if (NPY_VERSION != PyArray_GetNDArrayCVersion()) {
@@ -87,10 +88,10 @@ void py::init(Field & field) {
     pModule = PyImport_Import(pName);
     Py_DECREF(pName);
 
-    py::err(pModule != NULL, "Cannot find the module file. Is its path in PYTHONPATH?");  // Could not find module
+    err(pModule != NULL, "Cannot find the module file. Is its path in PYTHONPATH?");  // Could not find module
     pFunc = PyObject_GetAttrString(pModule, "callback");
 
-    py::err(pFunc && PyCallable_Check(pFunc), "could not find callable callback function");
+    err(pFunc && PyCallable_Check(pFunc), "Could not find callable callback function");
 
 
 
@@ -100,17 +101,27 @@ void py::init(Field & field) {
     }
 
     // init list:
+    L("Creating Python object for background states");
+
     py::pEnsemble_list_background = PyList_New(field.ensemble_members.size());
+    err(pEnsemble_list_background != NULL, "Cannot create background state list");
+
     py::pEnsemble_list_analysis = PyList_New(field.ensemble_members.size());
-    npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size) };
+    err(pEnsemble_list_analysis != NULL, "Cannot create analysis state list");
+
+    npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size / sizeof(double)) };
+    D("dims[0]=%d", dims[0]);
+
     int i = 0;
     for (auto &member : field.ensemble_members) {
         PyObject *pBackground = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
                 member.state_background.data());
+        err(pBackground != NULL, "Cannot generate numpy array with dims");
         PyList_SetItem(pEnsemble_list_background, i, pBackground);
 
         PyObject *pAnalysis = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
                 member.state_analysis.data());
+        err(pAnalysis != NULL, "Cannot generate numpy array with dims");
         PyList_SetItem(pEnsemble_list_analysis, i, pAnalysis);
 
         // Refcount on pAnalysis and pBackground is 2 now. Thus even if the objects does
@@ -126,14 +137,14 @@ void py::init(Field & field) {
 void py::callback(const int current_step) {
     PyObject *pTime = Py_BuildValue("i", current_step);
 
-    py::err(pTime != NULL, "Error: Cannot create argument");
+    err(pTime != NULL, "Cannot create argument");
 
     D("callback input parameter:");
 
     //Py_INCREF(pValue);
     PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
             pEnsemble_list_background, pEnsemble_list_analysis, NULL);
-    py::err(pReturn != NULL, "Error: no return value");
+    err(pReturn != NULL, "No return value");
 
     D("Back from callback:");
 
@@ -141,14 +152,13 @@ void py::callback(const int current_step) {
 }
 
 void py::finalize() {
-    D("h1");
     Py_XDECREF(pFunc);
-    D("h2");
     Py_DECREF(pModule);
-    D("h3");
-    // FIXME decref list??
+    Py_DECREF(pEnsemble_list_background);
+    Py_DECREF(pEnsemble_list_analysis);
+    // FIXME decref listelements?
     PyMem_RawFree(program);
-    D("h4");
+    D("Freed python context.");
 }
 
 void py::err(bool no_fail, const char * error_str) {
