@@ -56,15 +56,21 @@ PythonAssimilator::~PythonAssimilator() {
 void py::init(Field & field) {
     PyObject *pName = NULL;
 
-    py::program = Py_DecodeLocale("melissa_server", NULL);
+    program = Py_DecodeLocale("melissa_server", NULL);
+    // TODO: maybe remove this line to not have memory bug at end?
+    Py_SetProgramName(program);
 
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+// This works only in python 3.8 and higher:
+//    PyConfig config;
+//    PyConfig_InitPythonConfig(&config);
 
-    config.buffered_stdio = 0;  // equals to python -u
+//    config.buffered_stdio = 0;  // equals to python -u
 
-    PyStatus status = Py_InitializeFromConfig(&config);
-    err(!PyStatus_Exception(status), "Could not init python");
+//    PyStatus status = Py_InitializeFromConfig(&config);
+//    err(!PyStatus_Exception(status), "Could not init python");
+//    So we do the workaround: sys.stdout.reconfigure(line_buffering=True)
+
+    Py_Initialize();
 
     _import_array();  // init numpy
 
@@ -75,6 +81,11 @@ void py::init(Field & field) {
 
     //PyRun_SimpleString("import sys");
     //PyRun_SimpleString("sys.path.append(\"/home/friese/tmp/test-c-mpi4py\")");
+    //
+    // workaround for unbuffered stdout/ stderr:
+    PyRun_SimpleString("import sys");
+    PyRun_SimpleString("sys.stdout.reconfigure(line_buffering=True)");
+    PyRun_SimpleString("sys.stderr.reconfigure(line_buffering=True)");
 
     char *module_name = getenv("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE");
     if (!module_name) {
@@ -83,7 +94,7 @@ void py::init(Field & field) {
     }
 
     pName = PyUnicode_DecodeFSDefault(module_name);
-    /* Error checking of pName left out */ // =FIXME!
+    err(pName != NULL, "Invalid module name");
 
     pModule = PyImport_Import(pName);
     Py_DECREF(pName);
@@ -103,14 +114,18 @@ void py::init(Field & field) {
     // init list:
     L("Creating Python object for background states");
 
-    py::pEnsemble_list_background = PyList_New(field.ensemble_members.size());
+    pEnsemble_list_background = PyList_New(field.ensemble_members.size());
     err(pEnsemble_list_background != NULL, "Cannot create background state list");
 
-    py::pEnsemble_list_analysis = PyList_New(field.ensemble_members.size());
+    pEnsemble_list_analysis = PyList_New(field.ensemble_members.size());
     err(pEnsemble_list_analysis != NULL, "Cannot create analysis state list");
 
+    pEnsemble_list_hidden_inout = PyList_New(field.ensemble_members.size());
+    err(pEnsemble_list_hidden_inout != NULL, "Cannot create analysis state list");
+
+
     npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size / sizeof(double)) };
-    D("dims[0]=%d", dims[0]);
+    npy_intp dims_hidden[1] = { static_cast<npy_intp>(field.local_vect_size_hidden / sizeof(double)) };
 
     int i = 0;
     for (auto &member : field.ensemble_members) {
@@ -123,6 +138,11 @@ void py::init(Field & field) {
                 member.state_analysis.data());
         err(pAnalysis != NULL, "Cannot generate numpy array with dims");
         PyList_SetItem(pEnsemble_list_analysis, i, pAnalysis);
+
+        PyObject *pHidden = PyArray_SimpleNewFromData(1, dims_hidden, NPY_FLOAT64,
+                member.state_hidden.data());
+        err(pHidden != NULL, "Cannot generate numpy array with dims_hidden");
+        PyList_SetItem(pEnsemble_list_hidden_inout, i, pHidden);
 
         // Refcount on pAnalysis and pBackground is 2 now. Thus even if the objects does
         // not exist anymore in the python context, they will stay in memory.
@@ -143,7 +163,8 @@ void py::callback(const int current_step) {
 
     //Py_INCREF(pValue);
     PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
-            pEnsemble_list_background, pEnsemble_list_analysis, NULL);
+            pEnsemble_list_background, pEnsemble_list_analysis,
+            pEnsemble_list_hidden_inout, NULL);
     err(pReturn != NULL, "No return value");
 
     D("Back from callback:");

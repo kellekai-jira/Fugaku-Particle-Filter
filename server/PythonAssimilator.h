@@ -19,6 +19,7 @@ namespace py {
     static wchar_t *program;
     static PyObject *pEnsemble_list_background;
     static PyObject *pEnsemble_list_analysis;
+    static PyObject *pEnsemble_list_hidden_inout;
 
     void init(Field &field);
     void callback(const int current_step);
