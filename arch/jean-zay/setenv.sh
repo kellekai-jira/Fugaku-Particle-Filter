@@ -8,7 +8,6 @@ module load intel-all/2019.4
 module load zeromq/4.2.5
 module load intel-mkl/2019.4
 module load intel-mpi/2019.4
-module load intel-vtune/2019.4
 #module load python/3.7.5                        # don't have this while compiling! (it will hide intels libmpi with the anaconda libmpi :/ )
 module load intel-advisor/2019.4
 module load cmake/3.14.4

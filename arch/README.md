@@ -5,6 +5,5 @@ All instructions in the cluster folders (jean-zay and juwels) are rather points 
 off. As the moduling systems on some super comuters changes rather fast, version numbers
 may need to be adapted.
 
-To compile locally on e.g.\ ubuntu please have a look into
-- https://gitlab.inria.fr/melissa/melissa-test/-/tree/master
-- https://gitlab.inria.fr/melissa/melissa-da/-/blob/master/Dockerfile
+To compile locally on e.g.\ ubuntu please have a look into our ci setup:
+https://gitlab.inria.fr/melissa/melissa-test/-/tree/master

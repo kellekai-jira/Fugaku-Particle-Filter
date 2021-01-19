@@ -32,21 +32,28 @@ run_melissa_da_study(
 
 
 ## 1. Install
-- install dependencies (see `Dockerfile` for a more up to date list).
-  On ubuntu this can be done like this:
+- install dependencies. There are multiple resources to figure out which dependencies
+are necessary on your system and how to set them up. Examples which modules to load on
+the Juwels and the jean-zay supercomputer can be found in the
+[`arch/`](https://gitlab.inria.fr/melissa/melissa-da/-/tree/master/arch) directory
+
+On ubuntu this can be done like this:
 ```sh
 apt install \
+	pkg-config \
 	build-essential \
-	cmake \
-	gfortran \
-	git \
+	make cmake autoconf \
+  gcc g++ gfortran \
+  bc psmisc git \
 	libhdf5-openmpi-dev \
-	libopenblas-dev \
+	libopenblas-dev libblas-dev liblapack-dev \
+  libssl-dev \
 	libopenmpi-dev \
 	libzmq5-dev \
-	pkg-config \
-	python python-numpy \
-	python3 python3-pandas
+	python3.6 \
+  libpython3.6-dev \
+  libpython3.6 \
+  python3-numpy python3-pandas
 ```
 
 - download PDAF-D V1.15
@@ -173,9 +180,9 @@ Copies of the licenses can be found in the folder [`licenses`](licenses).
 ## Comparison with Melissa-SA: a distant branch of Melissa-SA...
 This is a rather distant branch of Melissa (https://melissa-sa.github.io/) for data assimilation:
 The biggest part is written in C++ as:
-- to interact with Jobs, ensemble members we depend on different containers (maps, vectors...) implemented in the C++ stl,
+- to interact with Jobs and ensemble members we depend on different containers (maps, vectors...) implemented in the C++ stl,
   reimplementing them in C would be a hassle
-- melissa_send is becoming 2-way - now called melissa_expose
+- `melissa_send` is becoming 2-way - now called `melissa_expose`
 - it is hard to define how different fields should interact in a DA cycle. e.g. melissa first sends all fields, then the update steps are performed on then? Why not just having one big field that contains all variables? Data assimilation is only well defined on one such field (Other wise one must define what to assimilate in which order and so on....)
   - thus we only allow one at the moment
 - In the vanilla melissa C code are some optimizations done that would have to be reversed to stay compatible with Melissa-DA's data flow
@@ -185,4 +192,4 @@ The biggest part is written in C++ as:
 
 ### But
   - launcher interface and the api base as well as many dev-ops things are common between
-  the different melissa version
+  the different melissa versions
