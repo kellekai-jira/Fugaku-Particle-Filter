@@ -46,7 +46,7 @@ apt install \
   gcc g++ gfortran \
   bc psmisc git \
 	libhdf5-openmpi-dev \
-	libopenblas-dev libblas-dev liblapack-dev \
+	libopenblas-dev \
   libssl-dev \
 	libopenmpi-dev \
 	libzmq5-dev \
