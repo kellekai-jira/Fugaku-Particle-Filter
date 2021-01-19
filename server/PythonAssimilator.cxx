@@ -177,17 +177,16 @@ void py::finalize() {
     Py_DECREF(pModule);
     Py_DECREF(pEnsemble_list_background);
     Py_DECREF(pEnsemble_list_analysis);
+    Py_DECREF(pEnsemble_list_hidden_inout);
     // FIXME decref listelements?
     PyMem_RawFree(program);
     D("Freed python context.");
 }
 
 void py::err(bool no_fail, const char * error_str) {
-    if (!no_fail) {
-        if (PyErr_Occurred()) {
-            PyErr_Print();
-        }
+    if (!no_fail || PyErr_Occurred()) {
         L("Error! %s", error_str);
+        PyErr_Print();
         assert(false);
         exit(1);
     }
