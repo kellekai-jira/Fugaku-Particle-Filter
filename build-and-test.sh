@@ -108,4 +108,8 @@ cmake \
 	-- "$melissa_da_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
-ctest --stop-on-failure --output-on-failure --timeout 300
+#ctest --stop-on-failure --output-on-failure --timeout 300
+# stop on failre for cmake < 3.18 :
+ctest --show-only | head -n -2 | sed 1d | awk '{print $3}' | \
+    xargs -n1 -I testname \
+    -- sh -c "ctest --output-on-failure --timeout 300 -R testname || exit 255"
