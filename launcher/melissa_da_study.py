@@ -335,7 +335,6 @@ def run_melissa_da_study(
                     log('Gracefully ending study now.')
                     runners.clear()
                     del server
-                    # cluster.CleanUp(EXECUTABLE)
                     break
 
 

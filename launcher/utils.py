@@ -9,6 +9,7 @@ import threading
 
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
+
 melissa_install_prefix = os.getenv('MELISSA_INSTALL_PREFIX')
 assert(melissa_install_prefix)
 
@@ -161,7 +162,7 @@ def killing_giraffe(name):
     out, _ = p.communicate()
     pids = []
     for line in out.splitlines():
-        if ' %s' % name in line.decode():
+        if ' %s' % name in line.decode() and not 'mpi' in name:
             pids.append(int(line.split(None, 1)[0]))
     assert len(pids) > 0
     os.kill(random.choice(pids), signal.SIGKILL)

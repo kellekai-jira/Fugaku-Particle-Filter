@@ -1,7 +1,17 @@
 from melissa_da_testing import *
 
+import os
+
+# for diagnostics of https://gitlab.inria.fr/melissa/melissa-da/-/issues/45
+os.system('ps aux')
+
+
+
+
 PROCS_SERVER = 3
 N_RUNNERS = 5
+
+
 
 class RunnerTester(FifoThread):
     def __init__(self):
