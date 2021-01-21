@@ -116,9 +116,7 @@ public:
             }
             default:
             {
-                L(
-                    "ERROR: Wrong timing event (%d) found! this should never ever happen!", it->type);
-                exit(1);
+                E("Wrong timing event (%d) found! this should never ever happen!", it->type);
                 break;
             }
             }

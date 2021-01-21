@@ -75,8 +75,7 @@ void py::init(Field & field) {
     _import_array();  // init numpy
 
     if (NPY_VERSION != PyArray_GetNDArrayCVersion()) {
-        L("Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
-        exit(EXIT_FAILURE);
+        E("Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
     }
 
     //PyRun_SimpleString("import sys");
@@ -107,8 +106,7 @@ void py::init(Field & field) {
 
 
     if (field.local_vect_size >= LONG_MAX) {
-        L("Error! too large vectsize for python assimilator");
-        exit(EXIT_FAILURE);
+        E("too large vectsize for python assimilator");
     }
 
     // init list:

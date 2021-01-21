@@ -1041,9 +1041,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             launcher_notified = launcher_notified_about_runner.at(runner_id);
         }
         catch (const std::out_of_range& oor) {
-            std::cerr << "Out of Range error: " << oor.what() << '\n';
-            L("Error: a different runner (id=%d) that never registered connected. Probably this is some zombie runner after a server restart", runner_id);
-            exit(1);
+            std::cerr << "Out of Range error?" << oor.what() << '\n';
+            E("a different runner (id=%d) that never registered connected. Probably this is some zombie runner after a server restart", runner_id);
         }
         if (launcher_notified == false) {
             launcher->notify(runner_id, RUNNING);
@@ -1593,8 +1592,7 @@ int main(int argc, char * argv[])
                 // (There are probably none in the queue neither as there is no launcher...)
                 if (scheduled_sub_tasks.size() + running_sub_tasks.size() == 0)
                 {
-                    L("Error! There are no runners and also the Launcher does not respond. Ending the server now!");
-                    exit(1);
+                    E("There are no runners and also the Launcher does not respond. Ending the server now!");
                 }
             }
 
