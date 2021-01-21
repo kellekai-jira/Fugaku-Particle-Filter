@@ -40,20 +40,29 @@ the Juwels and the jean-zay supercomputer can be found in the
 On ubuntu this can be done like this:
 ```sh
 apt install \
-	pkg-config \
+  autoconf \
 	build-essential \
-	make cmake autoconf \
-  gcc g++ gfortran \
-  bc psmisc git \
+	cmake \
+  gcc \
+  gfortran \
+  g++ \
+  bc \
+  psmisc
+  git \
 	libhdf5-openmpi-dev \
 	libopenblas-dev \
-  libssl-dev \
 	libopenmpi-dev \
+  libpython3-dev-all \
+  libssl-dev \
 	libzmq5-dev \
-	python3.6 \
-  libpython3.6-dev \
-  libpython3.6 \
-  python3-numpy python3-pandas
+  make \
+	pkg-config \
+  python \
+  python-numpy \
+	python3 \
+  python3-mpi4py \
+  python3-numpy \
+  python3-pandas
 ```
 
 - download PDAF-D V1.15
