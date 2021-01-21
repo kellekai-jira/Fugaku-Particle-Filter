@@ -112,4 +112,4 @@ cmake --build . --target install
 # stop on failre for cmake < 3.18 :
 ctest --show-only | head -n -2 | sed 1d | awk '{print $3}' | \
     xargs -n1 -I testname \
-    -- sh -c "ctest --output-on-failure --timeout 300 -R testname || exit 255"
+    -- sh -c "ps aux; ctest --output-on-failure --timeout 300 -R testname || exit 255"

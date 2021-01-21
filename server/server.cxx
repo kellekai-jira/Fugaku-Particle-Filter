@@ -392,7 +392,9 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
 
     assert(found == killed.end());  // runner was not dead yet
 
-    // At the moment we request field registration from runner id 0. TODO! be fault tollerant during server init too? - actually we do not want to. faults during init may make it crashing...
+    // At the moment we request field registration from the runner who connects first.
+    // Be fault tollerant during server init too? - actually we do not want to. Faults
+    // during init may make it crashing...
 
     int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
     out_buf[0] = (register_field ? 1 : 0);
