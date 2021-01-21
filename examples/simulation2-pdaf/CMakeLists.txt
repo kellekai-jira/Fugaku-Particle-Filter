@@ -16,7 +16,7 @@ target_link_libraries(simulation2-pdaf ${MPI_Fortran_LIBRARIES})
 
 target_link_libraries(simulation2-pdaf melissa_api)
 
-target_include_directories(simulation2-pdaf PRIVATE BEFORE ${CMAKE_BINARY_DIR}/include)
+target_include_directories(simulation2-pdaf PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 
 INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
