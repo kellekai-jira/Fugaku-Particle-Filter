@@ -51,13 +51,15 @@ int PythonAssimilator::do_update_step(const int current_step) {
 
 PythonAssimilator::~PythonAssimilator() {
     py::finalize();
+
+    // even after calling Py_DECREF on the numpy arrays the vectors's content is still in
+    // memory.
 }
 
 void py::init(Field & field) {
     PyObject *pName = NULL;
 
     program = Py_DecodeLocale("melissa_server", NULL);
-    // TODO: maybe remove this line to not have memory bug at end?
     Py_SetProgramName(program);
 
 // This works only in python 3.8 and higher:
@@ -78,10 +80,7 @@ void py::init(Field & field) {
         E("Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
     }
 
-    //PyRun_SimpleString("import sys");
-    //PyRun_SimpleString("sys.path.append(\"/home/friese/tmp/test-c-mpi4py\")");
-    //
-    // workaround for unbuffered stdout/ stderr:
+    // workaround for unbuffered stdout/ stderr (working also with <i python3.8):
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.stdout.reconfigure(line_buffering=True)");
     PyRun_SimpleString("sys.stderr.reconfigure(line_buffering=True)");
@@ -142,11 +141,7 @@ void py::init(Field & field) {
         err(pHidden != NULL, "Cannot generate numpy array with dims_hidden");
         PyList_SetItem(pEnsemble_list_hidden_inout, i, pHidden);
 
-        // Refcount on pAnalysis and pBackground is 2 now. Thus even if the objects does
-        // not exist anymore in the python context, they will stay in memory.
-        // FIXME: is this what we want? Partly: we do not want python to delete the
-        // vectors but it shall destroy the other stuff that is stored with the
-        // pyobjects... See how we handle this.
+        // PyList_SetItem steals the reference so no need to call Py_DECREF
 
         ++i;
     }
@@ -171,13 +166,17 @@ void py::callback(const int current_step) {
 }
 
 void py::finalize() {
-    Py_XDECREF(pFunc);
+    Py_DECREF(pFunc);
     Py_DECREF(pModule);
+
+    // this will also decref list members.
     Py_DECREF(pEnsemble_list_background);
     Py_DECREF(pEnsemble_list_analysis);
     Py_DECREF(pEnsemble_list_hidden_inout);
-    // FIXME decref listelements?
+
     PyMem_RawFree(program);
+
+    Py_Finalize();
     D("Freed python context.");
 }
 
@@ -185,7 +184,7 @@ void py::err(bool no_fail, const char * error_str) {
     if (!no_fail || PyErr_Occurred()) {
         L("Error! %s", error_str);
         PyErr_Print();
-        assert(false);
+        std::raise(SIGINT);
         exit(1);
     }
 }
