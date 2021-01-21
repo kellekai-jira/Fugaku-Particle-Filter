@@ -9,6 +9,10 @@
 
 #include <stdlib.h>
 
+
+
+#include "melissa-da_config.h"  // for SLOW_MPI
+
 void check_data_types() {
     // check that the size_t datatype is the same on the server and on the client side! otherwise the communication might fail.
     // for sure this could be done more intelligently in future!

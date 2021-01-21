@@ -3,3 +3,4 @@
 #cmakedefine REPORT_MEMORY
 #cmakedefine REPORT_WORKLOAD
 #cmakedefine RUNNERS_MAY_CRASH
+#cmakedefine SLOW_MPI

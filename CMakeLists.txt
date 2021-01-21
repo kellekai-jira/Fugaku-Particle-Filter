@@ -118,6 +118,10 @@ option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) e
 option(REPORT_WORKLOAD "Will print every second to stdout how many cycles server (rank 0) did in the last second" ON)
 option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_server.RANK.csv filel" OFF)
 
+# Trick MPI
+option(SLOW_MPI "Activate mpiscatter and gather through files for arrays with element_count > INTMAX" OFF)
+
+
 # Testing convenience:                                                      $0 in the -c environment, not a part of $@
 set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
 
