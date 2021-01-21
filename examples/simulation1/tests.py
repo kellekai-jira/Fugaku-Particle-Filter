@@ -56,6 +56,7 @@ def run(server_slowdown_factor_=1):
             False,
             False,
             server_slowdown_factor=server_slowdown_factor_,
+            runner_timeout=10,
             precommand_server='')
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
