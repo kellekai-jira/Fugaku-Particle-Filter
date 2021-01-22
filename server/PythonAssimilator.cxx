@@ -19,18 +19,42 @@ PythonAssimilator::PythonAssimilator(Field & field_, const int total_steps_, Mpi
 {
     nsteps = 1;
 
-    // otherwise release mode will make problems!
-    for (auto ens_it = field.ensemble_members.begin(); ens_it !=
-         field.ensemble_members.end(); ens_it++)
-    {
-        // analysis state is enough:
-        double * as_double = reinterpret_cast<double*>(ens_it->state_analysis.data());
-        size_t len_double = ens_it->state_analysis.size()/sizeof(double);
-        std::fill(as_double, as_double + len_double, 0.0);
-    }
-
     py::init(field);
+}
 
+void PythonAssimilator::on_init_state(const int runner_id, const
+                                              Part & part, const
+                                              VEC_T * values, const
+                                              Part & hidden_part,
+                                              const VEC_T * values_hidden)
+{
+    static bool is_first = true;
+
+    assert(runner_id == 0);  // be sure to collect data only from one runner!
+
+    // let's use this to set the init.
+    // you may not have more runners than ensemble members here! Otherwise some
+    // would stay uninitialized!
+
+    // For now we copy the first received ensemble state everywhere.... I know this is a rather stupid way to init the ensemble!
+    // TODO: later we should at least perturb all members a bit using the index map and so on...
+    for (auto & member : field.ensemble_members) {
+        member.store_background_state_part(part,
+                                    values, hidden_part, values_hidden);
+
+        assert(part.send_count + part.local_offset_server <=
+               member.state_background.size());
+
+        // copy into analysis state to send it back right again!
+        std::copy(values, values + part.send_count,
+                  member.state_analysis.data() +
+                  part.local_offset_server);
+
+        // copy into field's hidden state to send it back right again!
+        std::copy(values_hidden, values_hidden + hidden_part.send_count,
+                  member.state_hidden.data() +
+                  hidden_part.local_offset_server);
+    }
 }
 
 int PythonAssimilator::do_update_step(const int current_step) {
@@ -80,10 +104,10 @@ void py::init(Field & field) {
         E("Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
     }
 
-    // workaround for unbuffered stdout/ stderr (working also with <i python3.8):
-    PyRun_SimpleString("import sys");
-    PyRun_SimpleString("sys.stdout.reconfigure(line_buffering=True)");
-    PyRun_SimpleString("sys.stderr.reconfigure(line_buffering=True)");
+    // workaround for unbuffered stdout/ stderr (working also with > python3.7 ... < python3.8):
+    //PyRun_SimpleString("import sys");
+    //PyRun_SimpleString("sys.stdout.reconfigure(line_buffering=True)");
+    //PyRun_SimpleString("sys.stderr.reconfigure(line_buffering=True)");
 
     char *module_name = getenv("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE");
     if (!module_name) {

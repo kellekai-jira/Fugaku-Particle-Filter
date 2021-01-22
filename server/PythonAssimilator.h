@@ -35,6 +35,13 @@ private:
     MpiManager & mpi;
 public:
     PythonAssimilator(Field & field_, const int total_steps, MpiManager & mpi_);
+
+    virtual void on_init_state(const int runner_id, const
+                                              Part & part, const
+                                              VEC_T * values, const
+                                              Part & hidden_part,
+                                              const VEC_T * values_hidden);
+
     virtual int do_update_step(const int current_step);
     virtual ~PythonAssimilator();
 };
