@@ -84,11 +84,13 @@ int main(int argc, char * args[])
     }
 
     // now fill vector elements:
+//    int i = offsets[comm_rank];
     for (auto &it : local_index_map) {
         new_entry = last_entry + entry;
         last_entry = entry;
         entry = new_entry;
         it.index = new_entry;
+//        it.index = i++;
         it.varid = 1;
         cout << "index_map_entry: " << it.varid << ':' << it.index << std::endl;
     }

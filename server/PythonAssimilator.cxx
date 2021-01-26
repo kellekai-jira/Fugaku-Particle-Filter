@@ -144,7 +144,6 @@ void py::init(Field & field) {
     pEnsemble_list_hidden_inout = PyList_New(field.ensemble_members.size());
     err(pEnsemble_list_hidden_inout != NULL, "Cannot create analysis state list");
 
-
     npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size / sizeof(double)) };
     npy_intp dims_hidden[1] = { static_cast<npy_intp>(field.local_vect_size_hidden / sizeof(double)) };
 
@@ -169,6 +168,24 @@ void py::init(Field & field) {
 
         ++i;
     }
+
+
+    npy_intp dims_index_map[1] = {static_cast<npy_intp>(field.local_index_map.size())};
+    std::cout << "dims_index_map=" << dims_index_map[0] << std::endl;
+    // jump over second int. See https://stackoverflow.com/questions/53097952/how-to-understand-numpy-strides-for-layman
+    npy_intp strides[1] = {static_cast<npy_intp>(2*sizeof(int))};
+
+    //assert(PyArray_CheckStrides(sizeof(int), 1, 2*sizeof(int), dims_index_map, strides));
+
+    // FIXME: assuming memory is aligned linear for index_map_s struct....
+    pArray_assimilated_index =
+        PyArray_New(&PyArray_Type, 1, dims_index_map, NPY_INT32, strides,
+                field.local_index_map.data(), 0, NULL, NULL);
+    pArray_assimilated_varid =
+        PyArray_New(&PyArray_Type, 1, dims_index_map, NPY_INT32, strides,
+                reinterpret_cast<char*>(field.local_index_map.data()) +
+                sizeof(int), 0, NULL, NULL);
+    assert(sizeof(index_map_t) == 2*sizeof(int));
 }
 
 void py::callback(const int current_step) {
@@ -181,7 +198,8 @@ void py::callback(const int current_step) {
     //Py_INCREF(pValue);
     PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
             pEnsemble_list_background, pEnsemble_list_analysis,
-            pEnsemble_list_hidden_inout, NULL);
+            pEnsemble_list_hidden_inout,
+            pArray_assimilated_index, pArray_assimilated_varid, NULL);
     err(pReturn != NULL, "No return value");
 
     D("Back from callback:");

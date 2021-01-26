@@ -71,7 +71,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         for (const auto & chunk : chunks) {
             // low: one could calculate this only once on the fly while adding chunks...
             if (chunk.is_assimilated) {
-                // we converte the assimilated state always into doubles!
+                // we convert the assimilated state always into bytes!
                 assimilated_size += chunk.size_per_element * chunk.amount;
             } else {
                 hidden_size += chunk.size_per_element * chunk.amount;

@@ -21,6 +21,9 @@ namespace py {
     static PyObject *pEnsemble_list_analysis;
     static PyObject *pEnsemble_list_hidden_inout;
 
+    static PyObject *pArray_assimilated_index;
+    static PyObject *pArray_assimilated_varid;
+
     void init(Field &field);
     void callback(const int current_step);
     void finalize();
