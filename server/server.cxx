@@ -1341,6 +1341,10 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // FIXME: shortcut to here if recovering (do not do first background state calculation!)
         FT.recover();
 #endif
+        bool launcher_ok = true;
+        if (comm_rank == 0) {
+            launcher_ok = launcher->checkLauncherDueDate();  // did the launcher already timeout before the long update step?
+        }
         // get new analysis states from update step
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
@@ -1353,15 +1357,15 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.flushCP();  // TODO: put into one function
         FT.finalizeCP();
 #endif
-
-
-        if (comm_rank == 0 && !launcher->checkLauncherDueDate()) {
+        if (comm_rank == 0 && !launcher_ok) {
             // Launcher died! Wait for next update step and send back to all
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
             L("ERROR: Launcher did not answer. Due date violation. Crashing Server now.");
             current_nsteps = -2;
         }
+
+
 
         // Get current_nsteps from rank 0 in case it wants to Crash!
         MPI_Bcast(&current_nsteps, 1, MPI_INT, 0, mpi.comm());

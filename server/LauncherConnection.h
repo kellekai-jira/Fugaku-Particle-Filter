@@ -22,7 +22,6 @@ private:
     time_t due_date_launcher;  // seconds
     time_t next_message_date_to_launcher;  // seconds
 
-    void updateLauncherDueDate();
     void updateLauncherNextMessageDate();
 public:
     LauncherConnection(void * context, std::string launcher_host);
@@ -35,6 +34,8 @@ public:
     bool checkLauncherDueDate();
     void ping();
     void notify(const int runner_id, const int status);
+
+    void updateLauncherDueDate();
 };
 
 #endif /* LAUNCHERCONNECTION_H_ */
