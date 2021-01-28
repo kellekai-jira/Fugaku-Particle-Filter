@@ -51,6 +51,8 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
     assert t in range(1, TOTAL_STEPS+1)
     for a, b in zip(ensemble_list_background, ensemble_list_analysis):
         assert(a.shape == b.shape)
+        assert(a.shape[0] == assimilated_index.shape[0] * 8)
+        assert(len(a.shape) == len(assimilated_index.shape) == 1)
 
 
     print('assimilated_index', assimilated_index)
@@ -60,8 +62,8 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
     #print('assimilated_varid', assimilated_varid)
 
     #assert((assimilated_index < 40).all())
-    print('Stuff:', len(assimilated_index), len(set(assimilated_index)))
     assert(len(set(assimilated_index)) == len(assimilated_index))
+    assert(assimilated_index.shape == assimilated_varid.shape)
     assert((assimilated_varid == 1).all())
 
     # make use of index statemap... implement functions to access?
@@ -76,32 +78,38 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
     print("now doing DA update for t=%d..." % t)
     print("lens:", len(ensemble_list_background), len(ensemble_list_analysis))
 
-    ii = ensemble_list_background[0]
-    oo = ensemble_list_analysis[1]
-    hh = ensemble_list_hidden_inout[2]
+    # BytesToDouble:
+    def btd(arr):
+        # 8 bytes per double
+        assert arr.shape[0] % 8 == 0
+        return np.frombuffer(arr, dtype='float64', offset=0, count=arr.shape[0] // 8)
+
+    ii = btd(ensemble_list_background[0])
+    oo = btd(ensemble_list_analysis[1])
+    hh = btd(ensemble_list_hidden_inout[2])
     # load observation orresponding to time
     # somehow compare them with ensemble_list_background to generate ensemble_list_analysis
     print(np.array(ii).shape)
     print('input:', ii)
-    oo = ii + 1
+    oo = ii + 1.
     print('output:', oo)
     print('refcount:', sys.getrefcount(ii), sys.getrefcount(oo), sys.getrefcount(hh))
     assert(sys.getrefcount(ii) < 5)
     assert(sys.getrefcount(oo) < 5)
     assert(sys.getrefcount(hh) < 5)
 
-    hh = hh - 1
+    hh = hh - 1.
     print('hidden:', ensemble_list_hidden_inout)
 
 
     if t == TOTAL_STEPS:
         if rank == 1:
             print('backgound')
-            print(ensemble_list_background)
+            print(list(map(btd, ensemble_list_background)))
             print('analysis')
-            print(ensemble_list_analysis)
+            print(list(map(btd, ensemble_list_analysis)))
             print('hidden')
-            print(ensemble_list_hidden_inout)
+            print(list(map(btd, ensemble_list_hidden_inout)))
 
             from numpy import array
 
@@ -120,9 +128,9 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
             # 33033, each runner rank has 330 in its hidden state at the end.
 
 
-            assert (background == array(ensemble_list_background)).all()
-            assert (analysis == array(ensemble_list_analysis)).all()
-            assert (hidden == array(ensemble_list_hidden_inout)).all()
+            assert (background == array(list(map(btd, ensemble_list_background)))).all()
+            assert (analysis == array(list(map(btd, ensemble_list_analysis)))).all()
+            assert (hidden == array(list(map(btd, ensemble_list_hidden_inout)))).all()
 
 
             # tell test script about success!

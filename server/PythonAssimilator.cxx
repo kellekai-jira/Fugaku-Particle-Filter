@@ -105,9 +105,8 @@ void py::init(Field & field) {
     }
 
     // workaround for unbuffered stdout/ stderr (working also with > python3.7 ... < python3.8):
-    //PyRun_SimpleString("import sys");
-    //PyRun_SimpleString("sys.stdout.reconfigure(line_buffering=True)");
-    //PyRun_SimpleString("sys.stderr.reconfigure(line_buffering=True)");
+    PyRun_SimpleString("import sys");
+    PyRun_SimpleString("if sys.version_info < (3,7):\n    print('Please use a newer Python version (>3.7) for more verbose error log')\nelse:\n    sys.stdout.reconfigure(line_buffering=True)\n    sys.stderr.reconfigure(line_buffering=True)");
 
     char *module_name = getenv("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE");
     if (!module_name) {
@@ -126,8 +125,6 @@ void py::init(Field & field) {
 
     err(pFunc && PyCallable_Check(pFunc), "Could not find callable callback function");
 
-
-
     if (field.local_vect_size >= LONG_MAX) {
         E("too large vectsize for python assimilator");
     }
@@ -144,22 +141,22 @@ void py::init(Field & field) {
     pEnsemble_list_hidden_inout = PyList_New(field.ensemble_members.size());
     err(pEnsemble_list_hidden_inout != NULL, "Cannot create analysis state list");
 
-    npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size / sizeof(double)) };
-    npy_intp dims_hidden[1] = { static_cast<npy_intp>(field.local_vect_size_hidden / sizeof(double)) };
+    npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size) };
+    npy_intp dims_hidden[1] = { static_cast<npy_intp>(field.local_vect_size_hidden) };
 
     int i = 0;
     for (auto &member : field.ensemble_members) {
-        PyObject *pBackground = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
+        PyObject *pBackground = PyArray_SimpleNewFromData(1, dims, NPY_UINT8,
                 member.state_background.data());
         err(pBackground != NULL, "Cannot generate numpy array with dims");
         PyList_SetItem(pEnsemble_list_background, i, pBackground);
 
-        PyObject *pAnalysis = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT64,
+        PyObject *pAnalysis = PyArray_SimpleNewFromData(1, dims, NPY_UINT8,
                 member.state_analysis.data());
         err(pAnalysis != NULL, "Cannot generate numpy array with dims");
         PyList_SetItem(pEnsemble_list_analysis, i, pAnalysis);
 
-        PyObject *pHidden = PyArray_SimpleNewFromData(1, dims_hidden, NPY_FLOAT64,
+        PyObject *pHidden = PyArray_SimpleNewFromData(1, dims_hidden, NPY_UINT8,
                 member.state_hidden.data());
         err(pHidden != NULL, "Cannot generate numpy array with dims_hidden");
         PyList_SetItem(pEnsemble_list_hidden_inout, i, pHidden);
@@ -168,7 +165,6 @@ void py::init(Field & field) {
 
         ++i;
     }
-
 
     npy_intp dims_index_map[1] = {static_cast<npy_intp>(field.local_index_map.size())};
     std::cout << "dims_index_map=" << dims_index_map[0] << std::endl;

@@ -29,7 +29,12 @@ target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrappe
 
 # Python
 target_include_directories(melissa_server PRIVATE ${PYTHON_INCLUDE_DIR})
-message("Python ${PYTHON_INCLUDE_DIR} - ${PYTHON_LIBRARY}")
+
+# get numpy include dir:
+execute_process(COMMAND  ${PYTHON_EXECUTABLE} "-c" "import numpy; print(numpy.get_include())" OUTPUT_VARIABLE NUMPY_INCLUDE_DIR)
+target_include_directories(melissa_server PRIVATE ${NUMPY_INCLUDE_DIR})
+
+
 target_link_libraries(melissa_server ${PYTHON_LIBRARY})
 
 # PDAF:
