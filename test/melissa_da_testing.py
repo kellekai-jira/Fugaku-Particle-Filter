@@ -106,3 +106,8 @@ class FifoThread(Thread):
 
             os.remove(self.fifo_name_server)
             os.rmdir(self.tmpdir)
+
+def clean_up_tests():
+    # since some problems occured on debian regarding cleanup after kills (kills do not
+    # work at the first time)
+    os.system('pkill melissa_server; pkill  simulation1; pkill  simulation1-deadlock; pkill  simulation1-hidden; pkill  simulation1-hidden-index-map; pkill  simulation1-index-map; pkill  simulation1-stateful; pkill  simulation2-pdaf; pkill  simulation3-empty')

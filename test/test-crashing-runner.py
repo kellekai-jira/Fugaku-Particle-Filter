@@ -96,4 +96,7 @@ assert rt.iterations_after_kills >= 3*PROCS_SERVER
 
 compare_subset(os.environ['MELISSA_DA_SOURCE_PATH'] + '/test/reference-1000.txt')
 
+
+os.system('ps aux')
+
 print("passed!")
