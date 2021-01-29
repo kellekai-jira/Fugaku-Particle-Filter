@@ -53,6 +53,7 @@ function(add_python_test test_name test_script)
     list(APPEND LD_LIBRARY_PATH_LIST ${FTI_PATH}/lib)
     string(REPLACE ";" ":" LD_LIBRARY_PATH_ "${LD_LIBRARY_PATH_LIST}")
 
+    clean_up_test()
     set_property(
         TEST ${test_name}
         APPEND PROPERTY ENVIRONMENT
@@ -69,7 +70,7 @@ function(add_python_test test_name test_script)
             "LD_LIBRARY_PATH=${LD_LIBRARY_PATH_}"
             "PATH=${PATH_}"
     )
-
+    clean_up_test()
 endfunction()
 
 

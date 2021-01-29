@@ -67,7 +67,7 @@ include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 
 
-
+# depend on python 3 where unbuffered stdout and stderr can be easily configured!
 find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 find_package(NumPy REQUIRED)
@@ -126,6 +126,9 @@ option(SLOW_MPI "Activate mpiscatter and gather through files for arrays with el
 set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
 
 
+function(clean_up_test)
+    execute_process(COMMAND bash "-c" "pkill melissa_server; pkill  simulation1; pkill  simulation1-deadlock; pkill  simulation1-hidden; pkill  simulation1-hidden-index-map; pkill  simulation1-index-map; pkill  simulation1-stateful; pkill  simulation2-pdaf; pkill  simulation3-empty")
+endfunction()
 
 # Start doing stuff actually...
 configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)
