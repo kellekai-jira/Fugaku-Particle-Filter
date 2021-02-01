@@ -480,8 +480,10 @@ void register_field(zmq_msg_t &msg, const int * buf,
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
     assert(zmq_msg_size(&msg) == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
-    memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
-            global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
+    if (global_index_map_hidden.data()) {  // only copy if we have a non zero index map!
+        memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
+                global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
+    }
 
     // scatter index map is done in broadcast field info
 
@@ -1080,7 +1082,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // only if we are not in timestep  0:
             finished_sub_tasks.push_back(*running_sub_task);
 
-            running_sub_tasks.remove(*running_sub_task);
+            running_sub_tasks.erase(running_sub_task);
         }
 
         // good timestep? There are 2 cases: timestep 0 or good timestep...
@@ -1196,7 +1198,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             csr.launch_sub_task(runner_rank, (*found)->state_id);
             // don't need to delete from connected runner as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
             running_sub_tasks.push_back(*found);
-            scheduled_sub_tasks.remove(*found);
+            scheduled_sub_tasks.erase(found);
 
         }
         else

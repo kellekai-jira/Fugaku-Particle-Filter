@@ -176,11 +176,11 @@ void py::init(Field & field) {
     // FIXME: assuming memory is aligned linear for index_map_s struct....
     pArray_assimilated_index =
         PyArray_New(&PyArray_Type, 1, dims_index_map, NPY_INT32, strides,
-                field.local_index_map.data(), 0, NULL, NULL);
+                field.local_index_map.data(), 0, 0, NULL);
     pArray_assimilated_varid =
         PyArray_New(&PyArray_Type, 1, dims_index_map, NPY_INT32, strides,
                 reinterpret_cast<char*>(field.local_index_map.data()) +
-                sizeof(int), 0, NULL, NULL);
+                sizeof(int), 0, 0, NULL);
     assert(sizeof(index_map_t) == 2*sizeof(int));
 }
 

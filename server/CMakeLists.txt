@@ -32,8 +32,6 @@ target_include_directories(melissa_server PRIVATE ${PYTHON_INCLUDE_DIR})
 
 # get numpy include dir:
 target_include_directories(melissa_server PRIVATE ${NUMPY_INCLUDE_DIRS})
-message("numpy ${NUMPY_INCLUDE_DIRS}")
-
 
 target_link_libraries(melissa_server ${PYTHON_LIBRARY})
 
