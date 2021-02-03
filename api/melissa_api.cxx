@@ -130,6 +130,7 @@ struct ServerRankConnection
         D("sending on socket %p", data_request_socket);
         ZMQ_CHECK(zmq_msg_send(&msg_header, data_request_socket,
                                ZMQ_SNDMORE));
+        zmq_msg_close(&msg_header);
 
         D(
             "-> Simulation runnerid %d, rank %d sending stateid %d current_step=%d fieldname=%s, %lu+%lu hidden bytes",
@@ -156,12 +157,14 @@ struct ServerRankConnection
         }
 
         ZMQ_CHECK(zmq_msg_send(&msg_data, data_request_socket, flag));
+        zmq_msg_close(&msg_data);
 
         if (bytes_to_send_hidden > 0)
         {
             zmq_msg_init_data(&msg_data_hidden, values_hidden,
                               bytes_to_send_hidden, NULL, NULL);
             ZMQ_CHECK(zmq_msg_send(&msg_data_hidden, data_request_socket, 0));
+            zmq_msg_close(&msg_data_hidden);
         }
     }
 
@@ -458,6 +461,7 @@ struct ConfigurationConnection
 
         L("registering runner_id %d at server", runner_id);
         ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
+        zmq_msg_close(&msg_request);
 
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);
@@ -511,22 +515,27 @@ struct ConfigurationConnection
         header[3] = bytes_per_element_hidden;
         strncpy(reinterpret_cast<char*>(&header[4]), field_name, MPI_MAX_PROCESSOR_NAME);
         ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
+        zmq_msg_close(&msg_header);
 
         zmq_msg_init_data(&msg_local_vect_sizes, local_vect_sizes,
                           getCommSize() * sizeof(size_t), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, ZMQ_SNDMORE));
+        zmq_msg_close(&msg_local_vect_sizes);
 
         zmq_msg_init_data(&msg_local_hidden_vect_sizes, local_hidden_vect_sizes,
                           getCommSize() * sizeof(size_t), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_local_hidden_vect_sizes, socket, ZMQ_SNDMORE));
+        zmq_msg_close(&msg_local_hidden_vect_sizes);
 
         zmq_msg_init_data(&msg_index_map, global_index_map.data(),
                           global_index_map.size() * sizeof(INDEX_MAP_T), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map, socket, ZMQ_SNDMORE));
+        zmq_msg_close(&msg_index_map);
 
         zmq_msg_init_data(&msg_index_map_hidden, global_index_map_hidden.data(),
                           global_index_map_hidden.size() * sizeof(INDEX_MAP_T), NULL, NULL);
         ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
+        zmq_msg_close(&msg_index_map_hidden);
 
         zmq_msg_init(&msg_reply);
         zmq_msg_recv(&msg_reply, socket, 0);

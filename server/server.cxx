@@ -173,9 +173,11 @@ struct RunnerRankConnection
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
         zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&identity_msg);
 
         zmq_msg_init(&empty_msg);
         zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&empty_msg);
 
         ZMQ_CHECK(zmq_msg_init_size(&header_msg, 4 * sizeof(int)));
         int * header = reinterpret_cast<int*>(zmq_msg_data(
@@ -185,6 +187,7 @@ struct RunnerRankConnection
         header[2] = CHANGE_STATE;
         header[3] = current_nsteps;
         zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&header_msg);
         // we do not know when it will really send. send is non blocking!
 
         const Part & part = field->getPart(runner_rank);
@@ -234,6 +237,7 @@ struct RunnerRankConnection
             flag = 0;
         }
         ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
+        zmq_msg_close(&data_msg);
 
         if (flag == ZMQ_SNDMORE)
         {
@@ -250,6 +254,7 @@ struct RunnerRankConnection
             // print_vector(std::vector<VEC_T>(tmp, tmp +
             // hidden_part.send_count));
             ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
+            zmq_msg_close(&data_msg_hidden);
         }
 
         // close connection:
@@ -270,9 +275,11 @@ struct RunnerRankConnection
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
         zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&identity_msg);
 
         zmq_msg_init(&empty_msg);
         zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&empty_msg);
 
         zmq_msg_init_size(&header_msg, 4 * sizeof(int));
 
@@ -284,6 +291,7 @@ struct RunnerRankConnection
         header[3] = 0;          // nsteps
 
         zmq_msg_send(&header_msg, data_response_socket, 0);
+        zmq_msg_close(&header_msg);
 
         D("Send end message");
 
@@ -401,11 +409,13 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     register_field = false;
     out_buf[1] = comm_size;
     zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
+    zmq_msg_close(&msg_reply1);
 
     zmq_msg_init_data(&msg_reply2, data_response_port_names,
                       comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char),
                       NULL, NULL);
     zmq_msg_send(&msg_reply2, configuration_socket, 0);
+    zmq_msg_close(&msg_reply2);
 
     D("Server registering Runner ID %d", runner_id);
 
@@ -499,6 +509,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
     zmq_msg_t msg_reply;
     zmq_msg_init(&msg_reply);
     zmq_msg_send(&msg_reply, configuration_socket, 0);
+    zmq_msg_close(&msg_reply);
 }
 
 void answer_configuration_message(void * configuration_socket,
