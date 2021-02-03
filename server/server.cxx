@@ -1151,12 +1151,14 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             }
             D("storing this timestep!...");
             // zero copy is unfortunately for send only. so copy internally...
+            // TODO at the same time we might try to keep the msg data structure in tact and sen dit back when needed.
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
                                         reinterpret_cast
                                         <VEC_T*>(zmq_msg_data(
                                                       &data_msg)), hidden_part,
                                         values_hidden);
+            zmq_msg_close(&data_msg_hidden);
 #ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
             // FIXME: store hidden state here too!
