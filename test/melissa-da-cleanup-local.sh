@@ -10,4 +10,7 @@ do
             sleep 0.1
         done
     done
+    sleep 0.5
 done
+sleep 0.5
+ps aux
