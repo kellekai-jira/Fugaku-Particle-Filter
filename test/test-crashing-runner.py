@@ -56,7 +56,7 @@ class RunnerTester(FifoThread):
 
                     if self.iterations_after_kills >= 3 * PROCS_SERVER and \
                             (self.runners == N_RUNNERS or (self.runners < self.runner_max \
-                            and self.runner_max > N_RUNNERS)):
+                            and self.runners > N_RUNNERS)):
                         # we check that the server saw at least one of the 2 runners that
                         # crashed this improves the changes that the test passes on debian
                         # where the server sometimes does not see before the study end

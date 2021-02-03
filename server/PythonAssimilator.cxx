@@ -139,7 +139,7 @@ void py::init(Field & field) {
     err(pEnsemble_list_analysis != NULL, "Cannot create analysis state list");
 
     pEnsemble_list_hidden_inout = PyList_New(field.ensemble_members.size());
-    err(pEnsemble_list_hidden_inout != NULL, "Cannot create analysis state list");
+    err(pEnsemble_list_hidden_inout != NULL, "Cannot create hidden state list");
 
     npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size) };
     npy_intp dims_hidden[1] = { static_cast<npy_intp>(field.local_vect_size_hidden) };
@@ -167,7 +167,8 @@ void py::init(Field & field) {
     }
 
     npy_intp dims_index_map[1] = {static_cast<npy_intp>(field.local_index_map.size())};
-    std::cout << "dims_index_map=" << dims_index_map[0] << std::endl;
+    //std::cout << "dims_index_map=" << dims_index_map[0] << std::endl;
+
     // jump over second int. See https://stackoverflow.com/questions/53097952/how-to-understand-numpy-strides-for-layman
     npy_intp strides[1] = {static_cast<npy_intp>(2*sizeof(int))};
 
