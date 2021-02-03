@@ -11,6 +11,7 @@ had_checkpoint = False
 was_unfinished = False
 
 def run(server_slowdown_factor_=1):
+    LocalCluster.clean_up_test()
     run_melissa_da_study(
             runner_cmd='simulation2-pdaf',
             total_steps=18,
@@ -24,9 +25,11 @@ def run(server_slowdown_factor_=1):
             show_simulation_log = False,
             config_fti_path='./config.fti',
             server_slowdown_factor=server_slowdown_factor_)
-
+    LocalCluster.clean_up_test()
 if sys.argv[1] == 'test-example-simulation2':
+    LocalCluster.clean_up_test()
     run()
+    LocalCluster.clean_up_test()
 else:
     assert False  # Testcase not implemented
 

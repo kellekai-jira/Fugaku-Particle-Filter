@@ -127,7 +127,7 @@ set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin
 
 
 function(clean_up_test)
-    execute_process(COMMAND bash "-c" "pkill melissa_server; pkill  simulation1; pkill  simulation1-deadlock; pkill  simulation1-hidden; pkill  simulation1-hidden-index-map; pkill  simulation1-index-map; pkill  simulation1-stateful; pkill  simulation2-pdaf; pkill  simulation3-empty")
+    execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/test/melissa-da-cleanup-local.sh)
 endfunction()
 
 # Start doing stuff actually...

@@ -38,6 +38,7 @@ function(add_python_test test_name test_script)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation1)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation2-pdaf)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation3-empty)
+    list(APPEND PATH_LIST ${CMAKE_SOURCE_DIR}/test)
     string(REPLACE ";" ":" PATH_ "${PATH_LIST}")
 
     set(PYTHONPATH_LIST $ENV{PYTHONPATH})
@@ -95,3 +96,5 @@ add_python_test("test-python-assimilator"
 # Should be the last test!
 add_python_test("test-cleanup"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-cleanup.py")
+
+INSTALL(PROGRAMS melissa-da-cleanup-local.sh DESTINATION bin)
