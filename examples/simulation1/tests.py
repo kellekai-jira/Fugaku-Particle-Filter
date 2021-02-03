@@ -105,8 +105,22 @@ if testcase == 'test-crashing-launcher':
 
 elif testcase == 'test-check-stateless':
     assert check_stateless('simulation1')
+
+    print('performing kill again as sometimes uninterruptible sleep hinder the first kill')
+    os.system('ps aux')
+    os.system('pkill melissa_server; pkill simulation1')
+
     assert check_stateless('simulation1-stateful') == False
+
+    print('performing kill again as sometimes uninterruptible sleep hinder the first kill')
+    os.system('ps aux')
+    os.system('pkill melissa_server; pkill simulation1')
+
     assert check_stateless('simulation1-hidden')
+
+    print('performing kill again as sometimes uninterruptible sleep hinder the first kill')
+    os.system('ps aux')
+    os.system('pkill melissa_server; pkill simulation1')
 
 elif testcase == 'test-index-map':
     test_index_map('simulation1-index-map')
