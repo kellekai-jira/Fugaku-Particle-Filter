@@ -54,5 +54,7 @@ target_link_libraries(melissa_server pdaf_wrapper)
 
 
 
+#set(CMAKE_C_FLAGS "-fsanitize=address -fsanitize=undefined")
+#set(CMAKE_CXX_FLAGS "-fsanitize=address -fsanitize=undefined")
 
 INSTALL(TARGETS melissa_server RUNTIME DESTINATION bin)

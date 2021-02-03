@@ -59,7 +59,8 @@ function(add_python_test test_name test_script)
         APPEND PROPERTY ENVIRONMENT
             MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
             MELISSA_DA_DATADIR=${CMAKE_SOURCE_DIR}/share
-            MELISSA_DA_WITH_FTI=TRUE
+            MELISSA_DA_WITH_FTI=${WITH_FTI}
+            MELISSA_DA_REPORT_TIMING=${REPORT_TIMING}
             MELISSA_DA_SOURCE_PATH=${CMAKE_SOURCE_DIR}
             MELISSA_INSTALL_PREFIX=${Melissa_PATH}
             MELISSA_DA_DATASET_PATH=${PDAF_PATH}/tutorial/inputs_online/

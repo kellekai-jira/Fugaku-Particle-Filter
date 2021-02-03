@@ -64,10 +64,10 @@ class FifoThread(Thread):
         # count runners
         if what == Event.ADD_RUNNER:
             self.runners += 1
-            print('runners:', self.runners)
+            print('# runners:', self.runners)
         if what == Event.REMOVE_RUNNER:
             self.runners -= 1
-            print('runners:', self.runners)
+            print('# runners:', self.runners)
         # count assimilation cycles
         if what == Event.STOP_ITERATION:
             self.iterations += 1
@@ -83,6 +83,9 @@ class FifoThread(Thread):
         self.running = True
         self.runners = 0
         self.iterations = 0
+
+        assert os.getenv('MELISSA_DA_REPORT_TIMING') == 'ON'
+
 
     def run(self):
         try:

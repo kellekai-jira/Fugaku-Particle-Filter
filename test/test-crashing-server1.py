@@ -5,6 +5,11 @@ from melissa_da_testing import *
 PROCS_SERVER = 2
 N_RUNNERS = 2
 
+
+import os
+assert os.getenv('MELISSA_DA_WITH_FTI') == 'ON' or \
+        os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE'
+
 class ServerTester(FifoThread):
     def __init__(self):
         super().__init__()
