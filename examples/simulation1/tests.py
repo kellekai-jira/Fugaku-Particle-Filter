@@ -80,6 +80,11 @@ def test_index_map(executable_):
     n_runners = 2
     clean_old_stats()
     run()
+
+    print('performing kill again as sometimes uninterruptible sleep hinder the first kill')
+    os.system('ps aux')
+    os.system('pkill melissa_server; pkill ' + executable_)
+
     os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     shutil.copyfile('STATS/index-map.csv', ref_file)
     n_runners = 1

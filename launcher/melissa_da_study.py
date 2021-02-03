@@ -58,7 +58,7 @@ def run_melissa_da_study(
         show_simulation_log = True,
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
-        runner_timeout=5,
+        runner_timeout=10,
         server_timeout=30,
         additional_server_env={},
         create_runner_dir=False,

@@ -116,8 +116,10 @@ def get_server_messages():
                 state = int(message[2])
                 if state == 1:  # RUNNING in melissa_messages.h  TODO: unify with the enums used here!
                     msg['type'] = MSG_REGISTERED
+                    debug('-> 1 = registered')
                 elif state == 4:  # TIMEOUT in melissa_messages.h  TODO: unify with the enums used here!
                     msg['type'] = MSG_TIMEOUT
+                    debug('-> 4 = timeout')
                 else:
                     raise ValueError("Unexpected state %d", state)
 
