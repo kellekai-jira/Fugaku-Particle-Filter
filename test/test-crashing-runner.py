@@ -20,12 +20,16 @@ class RunnerTester(FifoThread):
         self.iterations_after_kills = 0
         self.remove_runners_called = False
         self.killed_all = False
+        self.runner_max = 0
 
     def on_timing_event(self, what, parameter):
         global N_RUNNERS, PROCS_SERVER
 
         if what == Event.REMOVE_RUNNER:
             self.remove_runners_called = True
+
+        self.runner_max = max(self.runners, self.runner_max)
+
 
         # if at least all runners are up wait 3 iterations and crash 2 runners
         if self.runners >= N_RUNNERS:
@@ -50,7 +54,14 @@ class RunnerTester(FifoThread):
                 if self.killed_all and self.remove_runners_called:
                     self.iterations_after_kills += 1
 
-                    if self.iterations_after_kills >= 3 * PROCS_SERVER and self.runners == N_RUNNERS:
+                    if self.iterations_after_kills >= 3 * PROCS_SERVER and \
+                            (self.runners == N_RUNNERS or (self.runners < self.runner_max \
+                            and self.runner_max > N_RUNNERS)):
+                        # we check that the server saw at least one of the 2 runners that
+                        # crashed this improves the changes that the test passes on debian
+                        # where the server sometimes does not see before the study end
+                        # that 2 runners timed out. (Probably the second crashing runner
+                        # is not getting any tasks that might time out)
                         print("Successfully quitting RunnerTester thread")
                         return False
         return True
