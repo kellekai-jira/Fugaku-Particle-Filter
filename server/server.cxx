@@ -400,6 +400,17 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
 
     assert(found == killed.end());  // runner was not dead yet
 
+
+    D("Server registering Runner ID %d", runner_id);
+
+    // notify launcher on first expose. This way we are sure that then we always have an open connection and we see if the runner breaks if it doesn't respond on this connection.
+    auto res = launcher_notified_about_runner.emplace(std::pair<int, bool>(runner_id, false));
+    if (!res.second) {
+        // element existed already. This is probably a runner restart. So renotify launcher when runner ready
+        launcher_notified_about_runner.at(runner_id) = false;  // TODO: can this really happen in the latest protocol?
+
+    }
+
     // At the moment we request field registration from the runner who connects first.
     // Be fault tollerant during server init too? - actually we do not want to. Faults
     // during init may make it crashing...
@@ -417,15 +428,6 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
     zmq_msg_send(&msg_reply2, configuration_socket, 0);
     zmq_msg_close(&msg_reply2);
 
-    D("Server registering Runner ID %d", runner_id);
-
-    // notify launcher on first expose. This way we are sure that then we always have an open connection and we see if the runner breaks if it doesn't respond on this connection.
-    auto res = launcher_notified_about_runner.emplace(std::pair<int, bool>(runner_id, false));
-    if (!res.second) {
-        // element existed already. This is probably a runner restart. So renotify launcher when runner ready
-        launcher_notified_about_runner.at(runner_id) = false;  // TODO: can this really happen in the latest protocol?
-
-    }
 }
 
 std::vector<INDEX_MAP_T> global_index_map;
