@@ -1,28 +1,32 @@
 # Melissa-DA
 
-
 At the moment the code is in a rather living state with many parts being under heavy
-development. Many parts of dead code and unnecessary comments are still in there.
+development.
+Feel free to create merge requests ;)
 
-Feel free to create refactoring merge requests ;)
-
-## TLDR how to run a DA Example:
-1. [install Melissa-DA & dependencies](#1.-Install)
-2. [instrument and link your model against Melissa-DA](TODO) (or use one of the example models to
-start)
+## TLDR - How to run a DA Study:
+1. [Install Melissa-DA & dependencies](#1.-Install)
+2. [Instrument and link your model against Melissa-DA](#2.-Instrument-and-link-a-model-against-Melissa-DA) (or use one of the example models to
+    start)
 3. [Configure your assimilator by writing a new assimilator or writing a new
-pdaf-wrapper library to be preloaded at runtime](TODO) (or use one of the existing assimilators
-for the beginning)
-4. launch your simulation from within a simple python script:
+    pdaf-wrapper library to be preloaded at runtime](#3.-Configure-the-Assimilation-Update-Phase) (or use one of the existing Assimilators
+    for the beginning)
+4. Launch your simulation from within a simple python script:
 ```python
 from melissa_da_study import *
 
 run_melissa_da_study(
         runner_cmd='simulation1',               # which model code to use
         total_steps=3,                          # how many assimilation cycles to run
-        ensemble_size=3,                        # Ensemble size
-        assimilator_type=ASSIMILATOR_DUMMY,     # which assimilator to chose during DA update phase Further options must be specified using environment variables passed to the server (see additional_server_env)
-        cluster=LocalCluster(),                 # on which cluster to execute, LocalClsuter will run on localhost, default: empty. it will try to select the cluster automatically
+        ensemble_size=3,                        # ensemble size
+        assimilator_type=ASSIMILATOR_DUMMY,     # which assimilator to chose during DA update phase. 
+    											# Often further options must be specified using environment 
+    											# variables passed to the server to configure the assimilator 
+    											# further (see additional_server_env parameter)
+    
+        cluster=LocalCluster(),                 # on which cluster to execute, LocalClsuter will run on localhost,
+    											# default: empty. it will try to select the cluster automatically
+    
         procs_server=2,                         # server paralelism
         procs_runner=3,                         # model paralelism
         n_runners=2)                            # how many runners
@@ -30,16 +34,13 @@ run_melissa_da_study(
 
 have a look into [melissa-da/launcher/melissa-da/launcher/melissa_da_study.py](https://gitlab.inria.fr/melissa/melissa-da/-/blob/master/launcher/melissa_da_study.py) to check the arguments that `run_melissa_da_study` supports.
 
-further examples can be found in the [examples/](examples/) directory
+Further examples can be found in the [examples/](examples/) directory.
 
 
 ## 1. Install
-- install dependencies. There are multiple resources to figure out which dependencies
-are necessary on your system and how to set them up. Examples which modules to load on
-the Juwels and the jean-zay supercomputer can be found in the
-[`arch/`](https://gitlab.inria.fr/melissa/melissa-da/-/tree/master/arch) directory
+- install dependencies: There are multiple resources to figure out how to set up dependencies on your system. Examples which modules to load on the Juwels and the Jean-Zay supercomputer can be found in the [`arch/`](https://gitlab.inria.fr/melissa/melissa-da/-/tree/master/arch) directory
 
-On Ubuntu this can be done like this:
+On Ubuntu 18.04 dependency installation can be done like this:
 ```sh
 apt install \
     autoconf \
@@ -102,10 +103,15 @@ cd build
 cmake .. -DPDAF_PATH=$PDAF_PATH -DCMAKE_INSTALL_PREFIX=install
 make install
 ```
-- this will install it into build/install which is rather convenient for development and testing
+- this will install it into `build/install` which is rather convenient for development and testing
 
 - if you get some dependency problems as some paths are not found. Go to `build/` and fix them using `ccmake ..`
 
+- Before running any Melissa-DA study make sure to
+
+```sh
+source build/install/bin/melissa-da_set_env.sh
+```
 - **Congratulations!** you just installed Melissa-DA
 
 *The following steps are optional:*
@@ -126,22 +132,24 @@ ctest
 
 ### Install with FTI
 To enable server checkpointing which is needed by some test cases install hdf5
-(`apt install libhdf5-openmpi-dev`, checkpoints are stored in hdf5 file format) and use the following cmake line:
+(`apt install libhdf5-openmpi-dev`) and use the following cmake line:
 
 ```
 cmake .. -DPDAF_PATH=$PDAF_PATH -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
          -DWITH_FTI_THREADS=ON
 ```
 `HDF5_ROOT` needs to be specified as cmake does not find the parallel hdf5 version if
-working with Ubuntu bionic
+working with Ubuntu 18.04 .
+
+Checkpoints are stored in hdf5 file format. This allows using them also directly as model output in some cases.
 
 ## 2. Instrument and link a model against Melissa-DA
 
-## Concept
+### Concept
 
 To permit load balancing through online state migration (the way how Melissa-DA works), the model must be transformed into a runner. Thus the model must expose all its state (the full state theoretically necessary for a model restart, containing the assimilated part of the state vector, but not necessarily containing the part of the state vector that is the same on all members and constant over time) at the right place where Melissa-DA will intercept and change all this state to the state according to the ensemble member it wants to propagate next.
 
-A simple model
+A simple model pseudocode:
 
 ```python
 x = Model_Init()
@@ -151,7 +159,7 @@ for t < t_end:
 Model_Finalize(x)
 ```
 
-Performs the following algorithm after instrumentation:
+Looks like this after instrumentation:
 
 ```python
 x = Model_Init()
@@ -162,9 +170,9 @@ while melissa_expose(x) != 0:
 Model_Finalize(x)
 ```
 
-## Melissa-API
+### Melissa-API
 
-The Melissa-API exports functions to C/C++ and Fortran.
+The Melissa-API exports functions to model code written in C/C++ and Fortran so far.
 
 To instrument your model simply the following 2 functions must be inserted in your model code to transform it into a *runner* that can take work from the *melissa_server*.
 
@@ -181,7 +189,7 @@ int melissa_expose(const char *field_name, VEC_T *values,
                    VEC_T *hidden_values);
 ```
 
-- The `field_name` parameter defines the name of the field that is exposed through melissa. For the moment in Melissa-DA only one field is allowed. Thus `field_name` must be the same in each `melissa_init` and `melissa_expose` call for Melissa-DA.
+- The `field_name` parameter defines the name of the field that is exposed through Melissa-DA. For the moment in Melissa-DA only one field is allowed. Thus `field_name` must be the same in each `melissa_init` and `melissa_expose` call per Melissa-DA study.
 
 - `local_vect_size` is the size in bytes of the assimilated state
 
@@ -193,13 +201,13 @@ int melissa_expose(const char *field_name, VEC_T *values,
 
 - `comm_` The  MPI-Communicator of which each rank will build a connection to the melissa_server. In the most cases this can be set to `MPI_COMM_WORLD`
 
-- `values`, `hidden_values` pointers to the raw data buffer saving the assimilated state and hidden state respectively. These variables are in-out, meaning that `melissa_expose` will change them inplace to avoid memory copies.
+- `values`, `hidden_values` pointers to the raw data buffer saving the assimilated state and hidden state respectively. Up to the current Melissa-DA version the user must ensure that each of them (`values` and `hidden_values`) are aligned linear in memory, i.e., as an arbitrary C array. These variables are in-out, meaning that `melissa_expose` will change them inplace to avoid memory copies.
 
 The Fortran API is quite similar. For more detail have a look into [api/melissa_api.i.f90](api/melissa_api.i.f90) or the `build_prefix/include/melissa_api.f90` which is created during building.
 
 There are also different other API functions considering index maps (to map multiple variables in the assimilated or hidden state) or to expose multiple chunks of data stored on different places in the memory. As they are not vital for simple study runs and their API is not completely fixed yet they are only documented in the source code ([api/melissa_api.h](api/melissa_api.h)).
 
-### Linking against the Melissa-API
+### Linking against the Melissa-DA-API
 If you are using CMake it is as simple as
 
 ```cmake
@@ -210,13 +218,15 @@ target_include_directories(Model.exe PUBLIC ${MELISSA_INCLUDE_DIR})
 target_link_libraries(Model.exe ${MELISSA_LIBRARY})
 ```
 
+*Note that for now the Melissa-DA cmake package still is called Melissa. This is going to change soon.*
 
 ### Examples
+
 Examples how to instrument models and how to link against the Melissa-DA Api (using CMake) can be found in the [examples/](examples/) directory.
 
 
 
-## 3. Configure your assimilator by writing a new assimilator or writing a new
+## 3. Configure the Assimilation Update Phase
 
 ### The Python Assimilator
 
@@ -229,7 +239,7 @@ run_melissa_da_study(
             ...)
 ```
 
- This exposes the whole ensemble of state variables to the user:
+ This exposes the whole ensemble of state variables to the user who has to write a callback function:
 
 ```python
 import mpi4py
@@ -265,13 +275,13 @@ It is the responsibility of the user to transform the transfered lists of numpy 
 
 It is probable that this API will still change in the future to e.g. expose the hidden state too.
 
-For an example please refer to [test/test_python_assimilator.py](test/test_python_assimilator.py).
+For an example and to learn how to tell the melissa_server in which python module to find this callback function please refer to [test/test_python_assimilator.py](test/test_python_assimilator.py).
 
 ### Different Methods
 
 Alternative ways are inheriting [server/Assimilator.h](server/Assimilator.h) to define a new assimilation update step in C++.
 
-Another approach permitting [PDAF](http://pdaf.awi.de/) based DA is to use the `LD_PRELOAD` functionality to inject a bunch of  user defined functions for analysis, postprocessing, observation loading ... (see [http://pdaf.awi.de/trac/wiki/ImplementationGuide](http://pdaf.awi.de/trac/wiki/ImplementationGuide))
+Another approach permitting [PDAF](http://pdaf.awi.de/) based DA is to use the `LD_PRELOAD` functionality to inject a bunch of  user defined functions for analysis, postprocessing, observation loading ... (see [http://pdaf.awi.de/trac/wiki/ImplementationGuide](http://pdaf.awi.de/trac/wiki/ImplementationGuide) and the [`pdaf-wrapper`](pdaf-wrapper) and [`examples/simulation2-pdaf`](examples/simulation2-pdaf) folders)
 
 
 ## Dependencies
@@ -287,17 +297,13 @@ Copies of the licenses can be found in the folder [`licenses`](licenses).
 
 ## More in depth documentation
 For more in depth documentation we refer to [doc/implementation.md](doc/implementation.md) and to [this](https://hal.archives-ouvertes.fr/hal-03017033v2).
+
 ## TODO
 - Handle Timing for parflow...
 - better interface to zerocopy add structured data.
 - void pointer to add hidden state variables, state variables important to restart a timestep but which are not assimilated.
-- refactor global variables in server.cxx. Do we really need ENSEMBLE_SIZE for example?
+- refactor global variables in server.cxx. Do we really need `ENSEMBLE_SIZE` for example?
 - in code todos
-
-
-
-
-
 
 ## Comparison with Melissa-SA: a distant branch of Melissa-SA...
 This is a rather distant branch of Melissa (https://melissa-sa.github.io/) for data assimilation:
