@@ -20,12 +20,12 @@ run_melissa_da_study(
         total_steps=3,                          # how many assimilation cycles to run
         ensemble_size=3,                        # ensemble size
         assimilator_type=ASSIMILATOR_DUMMY,     # which assimilator to chose during DA update phase. 
-    											# Often further options must be specified using environment 
-    											# variables passed to the server to configure the assimilator 
-    											# further (see additional_server_env parameter)
+    	                                        # Often further options must be specified using environment 
+    	                                        # variables passed to the server to configure the assimilator 
+    	                                        # further (see additional_server_env parameter)
     
         cluster=LocalCluster(),                 # on which cluster to execute, LocalClsuter will run on localhost,
-    											# default: empty. it will try to select the cluster automatically
+                                                # default: empty. it will try to select the cluster automatically
     
         procs_server=2,                         # server paralelism
         procs_runner=3,                         # model paralelism
