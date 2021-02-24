@@ -42,6 +42,7 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
 
 // chunk adder functions for each fortran data type!
 // real, integer, double, logical, char
+// amount is amount of array entries and not of bytes!
 #define add_chunk_wrapper(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
             CTYPE * values, const size_t * amount, \
@@ -85,7 +86,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         global_index_map_hidden.reserve(hidden_size);
         for (const auto & c : chunks) {
             const size_t bytes = c.size_per_element * c.amount;
-            int j = -1;
+            int j = -1;  // counts at max up to c.amount which is an integer too!
             for (size_t i = 0; i < bytes; i++) {
                 if (i % c.size_per_element == 0) {
                     j++;

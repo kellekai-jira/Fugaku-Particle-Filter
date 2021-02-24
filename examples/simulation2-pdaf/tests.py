@@ -26,6 +26,7 @@ def run(server_slowdown_factor_=1):
             config_fti_path='./config.fti',
             server_slowdown_factor=server_slowdown_factor_)
     LocalCluster.clean_up_test()
+
 if sys.argv[1] == 'test-example-simulation2':
     LocalCluster.clean_up_test()
     run()

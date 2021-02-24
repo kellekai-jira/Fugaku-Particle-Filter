@@ -33,6 +33,7 @@ function(add_python_test test_name test_script)
         NAME ${test_name}
         COMMAND python3 -u ${test_script}
     )
+    # TODO: call clean_up_test() within testcase and not during build
     set(PATH_LIST $ENV{PATH})
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/server)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation1)
@@ -54,7 +55,6 @@ function(add_python_test test_name test_script)
     list(APPEND LD_LIBRARY_PATH_LIST ${FTI_PATH}/lib)
     string(REPLACE ";" ":" LD_LIBRARY_PATH_ "${LD_LIBRARY_PATH_LIST}")
 
-    clean_up_test()
     set_property(
         TEST ${test_name}
         APPEND PROPERTY ENVIRONMENT
@@ -72,7 +72,6 @@ function(add_python_test test_name test_script)
             "LD_LIBRARY_PATH=${LD_LIBRARY_PATH_}"
             "PATH=${PATH_}"
     )
-    clean_up_test()
 endfunction()
 
 
