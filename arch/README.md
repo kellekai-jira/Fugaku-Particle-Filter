@@ -6,4 +6,4 @@ off. As the moduling systems on some super comuters changes rather fast, version
 may need to be adapted.
 
 To compile locally on e.g.\ ubuntu please have a look into our ci setup:
-https://gitlab.inria.fr/melissa/melissa-test/-/tree/master
+https://gitlab.inria.fr/melissa/melissa-ci/-/tree/master

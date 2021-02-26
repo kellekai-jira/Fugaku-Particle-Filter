@@ -19,14 +19,14 @@ run_melissa_da_study(
         runner_cmd='simulation1',               # which model code to use
         total_steps=3,                          # how many assimilation cycles to run
         ensemble_size=3,                        # ensemble size
-        assimilator_type=ASSIMILATOR_DUMMY,     # which assimilator to chose during DA update phase. 
-    	                                        # Often further options must be specified using environment 
-    	                                        # variables passed to the server to configure the assimilator 
+        assimilator_type=ASSIMILATOR_DUMMY,     # which assimilator to chose during DA update phase.
+    	                                        # Often further options must be specified using environment
+    	                                        # variables passed to the server to configure the assimilator
     	                                        # further (see additional_server_env parameter)
-    
+
         cluster=LocalCluster(),                 # on which cluster to execute, LocalClsuter will run on localhost,
                                                 # default: empty. it will try to select the cluster automatically
-    
+
         procs_server=2,                         # server paralelism
         procs_runner=3,                         # model paralelism
         n_runners=2)                            # how many runners
@@ -43,12 +43,9 @@ Further examples can be found in the [examples/](examples/) directory.
 On Ubuntu 18.04 dependency installation can be done like this:
 ```sh
 apt install \
-    autoconf \
     build-essential \
     cmake \
-    gcc \
     gfortran \
-    g++ \
     bc \
     psmisc
     git \
@@ -112,6 +109,9 @@ make install
 ```sh
 source build/install/bin/melissa-da_set_env.sh
 ```
+
+Alternatively add this line to your .bashrc so it is sourced after each login.
+
 - **Congratulations!** you just installed Melissa-DA
 
 *The following steps are optional:*
@@ -213,9 +213,9 @@ If you are using CMake it is as simple as
 ```cmake
 project(Model LANGUAGES ...)
 find_package(Melissa)
-add_executable(Model.exe ...)
-target_include_directories(Model.exe PUBLIC ${MELISSA_INCLUDE_DIR})
-target_link_libraries(Model.exe ${MELISSA_LIBRARY})
+add_executable(Model ...)
+target_include_directories(Model PUBLIC ${MELISSA_INCLUDE_DIR})
+target_link_libraries(Model ${MELISSA_LIBRARY})
 ```
 
 *Note that for now the Melissa-DA cmake package still is called Melissa. This is going to change soon.*
