@@ -47,12 +47,12 @@ void melissa_init_with_index_map(const char *field_name,
 // REM: Fortran api calls still with doubles!
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const size_t  *local_doubles_amount,
+                         const size_t  *local_doubles_count,
                          const size_t  *local_hidden_vect_size);      // comm is casted into an pointer to an mpi communicaotr if not null.
 
 void melissa_init_f(const char *field_name,
-                    const int *local_doubles_amount,
-                    const int *local_hidden_doubles_amount,
+                    const int *local_doubles_count,
+                    const int *local_hidden_doubles_count,
                     MPI_Fint   *comm_fortran);
 
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)
@@ -89,10 +89,10 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran);
 
 #define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
-            CTYPE * values, const size_t * amount, \
+            CTYPE * values, const size_t * count, \
             const int * is_assimilated); \
     void melissa_add_chunk_##TYPELETTER##_d(const int * varid, const int * index_map, \
-            CTYPE * values, const size_t * amount, \
+            CTYPE * values, const size_t * count, \
             const int * is_assimilated)
 
     add_chunk_wrapper_decl(r, float);

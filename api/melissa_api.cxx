@@ -757,12 +757,12 @@ void melissa_init_with_index_map(const char *field_name,
 bool no_mpi = false;
 // can be called from fortran or if no mpi is used (set NULL as the mpi communicator) TODO: check if null is not already used by something else!
 void melissa_init_no_mpi(const char *field_name,
-                         const size_t *local_doubles_amount,
-                         const size_t *local_hidden_doubles_amount) {     // comm is casted into an pointer to an mpi communicaotr if not null.
+                         const size_t *local_doubles_count,
+                         const size_t *local_hidden_doubles_count) {     // comm is casted into an pointer to an mpi communicaotr if not null.
     MPI_Init(NULL, NULL);      // TODO: maybe we also do not need to do this? what happens if we clear out this line?
     no_mpi = true;
-    melissa_init(field_name, *local_doubles_amount * sizeof(double),
-            *local_hidden_doubles_amount * sizeof(double),
+    melissa_init(field_name, *local_doubles_count * sizeof(double),
+            *local_hidden_doubles_count * sizeof(double),
             sizeof(double), sizeof(double),
                  MPI_COMM_WORLD);
 }
@@ -868,13 +868,13 @@ int melissa_get_current_step()
 
 
 void melissa_init_f(const char *field_name,
-                    const int *local_doubles_amount,
-                    const int *local_hidden_doubles_amount,
+                    const int *local_doubles_count,
+                    const int *local_hidden_doubles_count,
                     MPI_Fint   *comm_fortran)
 {
 
     MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
-    melissa_init(field_name, *local_doubles_amount * sizeof(double), *local_hidden_doubles_amount * sizeof(double),
+    melissa_init(field_name, *local_doubles_count * sizeof(double), *local_hidden_doubles_count * sizeof(double),
             sizeof(double), sizeof(double), comm);
 }
 

@@ -48,23 +48,23 @@ end function melissa_commit_chunks_f
 
 
 #define add_chunk_wrapper(TYPELETTER, CTYPE, FORTRANTYPE) \
-__NL__ subroutine melissa_add_chunk_##TYPELETTER(varid, index_map, values, amount, is_assimilated)& \
+__NL__ subroutine melissa_add_chunk_##TYPELETTER(varid, index_map, values, count, is_assimilated)& \
 __NL__     bind(c, name = __s__melissa_add_chunk_##TYPELETTER##__s__) \
 __NL__     use ISO_C_BINDING, only: CTYPE, C_INT, C_SIZE_T \
 __NL__     integer(kind=C_INT), intent(in) :: varid \
 __NL__     integer(kind=C_INT), dimension(*), intent(in) :: index_map \
 __NL__     FORTRANTYPE(kind=CTYPE), intent(inout), dimension(*) :: values \
-__NL__     integer(kind=C_SIZE_T), intent(in) :: amount \
+__NL__     integer(kind=C_SIZE_T), intent(in) :: count \
 __NL__     integer(kind=C_INT), intent(in) :: is_assimilated \
 __NL__ end subroutine melissa_add_chunk_##TYPELETTER \
 __NL__ \
-__NL__ subroutine melissa_add_chunk_##TYPELETTER##_d(varid, index_map, values, amount, is_assimilated)& \
+__NL__ subroutine melissa_add_chunk_##TYPELETTER##_d(varid, index_map, values, count, is_assimilated)& \
 __NL__     bind(c, name = __s__melissa_add_chunk_##TYPELETTER##_d__s__) \
 __NL__     use ISO_C_BINDING, only: CTYPE, C_INT, C_SIZE_T \
 __NL__     integer(kind=C_INT), intent(in) :: varid \
 __NL__     integer(kind=C_INT), dimension(*), intent(in) :: index_map \
 __NL__     FORTRANTYPE(kind=CTYPE), intent(inout) :: values \
-__NL__     integer(kind=C_SIZE_T), intent(in) :: amount \
+__NL__     integer(kind=C_SIZE_T), intent(in) :: count \
 __NL__     integer(kind=C_INT), intent(in) :: is_assimilated \
 __NL__ end subroutine melissa_add_chunk_##TYPELETTER##_d \
 
