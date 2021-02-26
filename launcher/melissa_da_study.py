@@ -36,13 +36,21 @@ melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
 assert melissa_da_datadir
 
 
+def cluster_selector():
+    hn = socket.gethostname()
+    print('hostname:', hn)
+    if 'juwels' in hn or 'jwlogin' in hn:
+        return SlurmJuwelsCluster(account='prcoe03')
+    else:
+        return LocalCluster()
+
 
 def run_melissa_da_study(
         runner_cmd='simulation1',
         total_steps=3,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
-        cluster=LocalCluster(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
+        cluster=cluster_selector(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
         procs_server=1,
         procs_runner=1,
         n_runners=1,
@@ -50,7 +58,7 @@ def run_melissa_da_study(
         show_simulation_log = True,
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
-        runner_timeout=5,
+        runner_timeout=10,
         server_timeout=30,
         additional_server_env={},
         create_runner_dir=False,
@@ -327,7 +335,6 @@ def run_melissa_da_study(
                     log('Gracefully ending study now.')
                     runners.clear()
                     del server
-                    # cluster.CleanUp(EXECUTABLE)
                     break
 
 
@@ -369,13 +376,6 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
     error('Simulation %s is stateful and thus cannot be used with melissa-da' % runner_cmd)
     return False
 
-def cluster_selector():
-    hn = socket.gethostname()
-    if 'juwels' in hn or 'jwlogin' in hn:
-        return SlurmJuwelsCluster(account='prcoe03')
-    else:
-        return LocalCluster()
-
 
 # exporting for import * :
 __all__ = ['run_melissa_da_study', 'check_stateless', 'cluster_selector',
@@ -386,4 +386,5 @@ __all__ = ['run_melissa_da_study', 'check_stateless', 'cluster_selector',
            'ASSIMILATOR_EMPTY',
            'ASSIMILATOR_DUMMY',
            'ASSIMILATOR_PRINT_INDEX_MAP',
-           'ASSIMILATOR_WRF']
+           'ASSIMILATOR_WRF',
+           'ASSIMILATOR_PYTHON']

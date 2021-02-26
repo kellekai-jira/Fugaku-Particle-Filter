@@ -17,6 +17,7 @@ import random
 
 clean_old_stats()
 
+
 executable='simulation1'
 total_steps=3
 ensemble_size=3
@@ -44,6 +45,7 @@ def get_timing_information():
 
 def run(server_slowdown_factor_=1):
     start = time.time()
+    LocalCluster.clean_up_test()
     run_melissa_da_study(
             executable,
             total_steps,
@@ -56,7 +58,9 @@ def run(server_slowdown_factor_=1):
             False,
             False,
             server_slowdown_factor=server_slowdown_factor_,
+            runner_timeout=10,
             precommand_server='')
+    LocalCluster.clean_up_test()
     diff = time.time() - start
     print("This took %.3f seconds" % diff)
 
@@ -79,6 +83,7 @@ def test_index_map(executable_):
     n_runners = 2
     clean_old_stats()
     run()
+
     os.system('cat STATS/index-map-hidden.csv >> STATS/index-map.csv')
     shutil.copyfile('STATS/index-map.csv', ref_file)
     n_runners = 1
@@ -99,7 +104,9 @@ if testcase == 'test-crashing-launcher':
 
 elif testcase == 'test-check-stateless':
     assert check_stateless('simulation1')
+
     assert check_stateless('simulation1-stateful') == False
+
     assert check_stateless('simulation1-hidden')
 
 elif testcase == 'test-index-map':

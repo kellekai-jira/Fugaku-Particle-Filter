@@ -14,14 +14,14 @@ struct Chunk {
     const int * index_map;
     VEC_T * values;
     const int size_per_element;
-    const size_t amount;
+    const size_t count;
     const bool is_assimilated;
 
     Chunk(const int varid, const int * index_map, VEC_T * values,
             const int size_per_element,
-            const size_t amount, const bool is_assimilated)
+            const size_t count, const bool is_assimilated)
         :  varid(varid), index_map(index_map), values(values),
-        size_per_element(size_per_element), amount(amount),
+        size_per_element(size_per_element), count(count),
         is_assimilated(is_assimilated) {}
 };
 
@@ -31,26 +31,27 @@ bool may_add_chunks = true;
 
 template <class T>
 void melissa_add_chunk(const int varid, const int * index_map, T * values,
-        const size_t amount, const bool is_assimilated)
+        const size_t count, const bool is_assimilated)
 {
     assert(may_add_chunks);
-    D("Adding Chunk(varid=%d) with amount %lu", varid, amount);
+    D("Adding Chunk(varid=%d) with count %lu", varid, count);
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
-                amount, is_assimilated));
+                count, is_assimilated));
     //D("Location index_map in melissa_api: %p", index_map);
 }
 
 // chunk adder functions for each fortran data type!
 // real, integer, double, logical, char
+// count is count of array entries and not of bytes!
 #define add_chunk_wrapper(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
-            CTYPE * values, const size_t * amount, \
+            CTYPE * values, const size_t * count, \
             const int * is_assimilated) \
-        { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); } \
+        { melissa_add_chunk(*varid, index_map, values, *count, (*is_assimilated) != 0); } \
     void melissa_add_chunk_##TYPELETTER##_d(const int * varid, const int * index_map, \
-            CTYPE * values, const size_t * amount, \
+            CTYPE * values, const size_t * count, \
             const int * is_assimilated) \
-        { melissa_add_chunk(*varid, index_map, values, *amount, (*is_assimilated) != 0); }
+        { melissa_add_chunk(*varid, index_map, values, *count, (*is_assimilated) != 0); }
 
     add_chunk_wrapper(r, float)
     add_chunk_wrapper(i, int)
@@ -71,10 +72,10 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         for (const auto & chunk : chunks) {
             // low: one could calculate this only once on the fly while adding chunks...
             if (chunk.is_assimilated) {
-                // we converte the assimilated state always into doubles!
-                assimilated_size += chunk.size_per_element * chunk.amount;
+                // we convert the assimilated state always into bytes!
+                assimilated_size += chunk.size_per_element * chunk.count;
             } else {
-                hidden_size += chunk.size_per_element * chunk.amount;
+                hidden_size += chunk.size_per_element * chunk.count;
             }
         }
 
@@ -84,8 +85,8 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
         std::vector<INDEX_MAP_T> global_index_map_hidden;
         global_index_map_hidden.reserve(hidden_size);
         for (const auto & c : chunks) {
-            const size_t bytes = c.size_per_element * c.amount;
-            int j = -1;
+            const size_t bytes = c.size_per_element * c.count;
+            int j = -1;  // counts at max up to c.count which is an integer too!
             for (size_t i = 0; i < bytes; i++) {
                 if (i % c.size_per_element == 0) {
                     j++;
@@ -124,7 +125,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     VEC_T * pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
 
     for (const auto &chunk : chunks) {
-        const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
+        const size_t bytes_to_copy = chunk.size_per_element * chunk.count;
         if (chunk.is_assimilated) {
             memcpy(pos_assimilated, chunk.values, bytes_to_copy);
             pos_assimilated += bytes_to_copy;
@@ -141,7 +142,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());
     pos_assimilated = reinterpret_cast<VEC_T*>(buf_assimilated.data());
     for (const auto &chunk : chunks) {
-        const size_t bytes_to_copy = chunk.size_per_element * chunk.amount;
+        const size_t bytes_to_copy = chunk.size_per_element * chunk.count;
         if (chunk.is_assimilated) {
             memcpy(chunk.values, pos_assimilated, bytes_to_copy);
             pos_assimilated += bytes_to_copy;

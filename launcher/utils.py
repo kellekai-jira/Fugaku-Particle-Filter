@@ -9,6 +9,7 @@ import threading
 
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
+
 melissa_install_prefix = os.getenv('MELISSA_INSTALL_PREFIX')
 assert(melissa_install_prefix)
 
@@ -48,6 +49,7 @@ ASSIMILATOR_EMPTY = 2
 ASSIMILATOR_CHECK_STATELESS = 3
 ASSIMILATOR_PRINT_INDEX_MAP = 4
 ASSIMILATOR_WRF = 5
+ASSIMILATOR_PYTHON = 6
 
 LOG_LEVEL_DEBUG = 3
 LOG_LEVEL_LOG   = 2
@@ -114,8 +116,10 @@ def get_server_messages():
                 state = int(message[2])
                 if state == 1:  # RUNNING in melissa_messages.h  TODO: unify with the enums used here!
                     msg['type'] = MSG_REGISTERED
+                    debug('-> 1 = registered')
                 elif state == 4:  # TIMEOUT in melissa_messages.h  TODO: unify with the enums used here!
                     msg['type'] = MSG_TIMEOUT
+                    debug('-> 4 = timeout')
                 else:
                     raise ValueError("Unexpected state %d", state)
 
@@ -160,7 +164,7 @@ def killing_giraffe(name):
     out, _ = p.communicate()
     pids = []
     for line in out.splitlines():
-        if ' %s' % name in line.decode():
+        if ' %s' % name in line.decode() and not 'mpi' in name:
             pids.append(int(line.split(None, 1)[0]))
     assert len(pids) > 0
     os.kill(random.choice(pids), signal.SIGKILL)

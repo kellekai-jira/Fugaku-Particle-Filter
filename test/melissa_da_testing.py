@@ -64,10 +64,10 @@ class FifoThread(Thread):
         # count runners
         if what == Event.ADD_RUNNER:
             self.runners += 1
-            print('runners:', self.runners)
+            print('# runners:', self.runners)
         if what == Event.REMOVE_RUNNER:
             self.runners -= 1
-            print('runners:', self.runners)
+            print('# runners:', self.runners)
         # count assimilation cycles
         if what == Event.STOP_ITERATION:
             self.iterations += 1
@@ -83,6 +83,9 @@ class FifoThread(Thread):
         self.running = True
         self.runners = 0
         self.iterations = 0
+
+        assert os.getenv('MELISSA_DA_REPORT_TIMING') == 'ON'
+
 
     def run(self):
         try:
@@ -106,3 +109,8 @@ class FifoThread(Thread):
 
             os.remove(self.fifo_name_server)
             os.rmdir(self.tmpdir)
+
+def clean_up_tests():
+    # since some problems occured on debian regarding cleanup after kills (kills do not
+    # work at the first time)
+    os.system('pkill melissa_server; pkill  simulation1; pkill  simulation1-deadlock; pkill  simulation1-hidden; pkill  simulation1-hidden-index-map; pkill  simulation1-index-map; pkill  simulation1-stateful; pkill  simulation2-pdaf; pkill  simulation3-empty')

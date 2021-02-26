@@ -2,6 +2,7 @@ project(Melissa LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.7.2)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 enable_testing()
 
@@ -66,6 +67,11 @@ include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})
 
 
+# depend on python 3 where unbuffered stdout and stderr can be easily configured!
+find_package(PythonInterp 3 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
+find_package(NumPy REQUIRED)
+
 # Melissa submodule #
 find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
 
@@ -112,10 +118,17 @@ option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) e
 option(REPORT_WORKLOAD "Will print every second to stdout how many cycles server (rank 0) did in the last second" ON)
 option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_server.RANK.csv filel" OFF)
 
+# Trick MPI
+option(SLOW_MPI "Activate mpiscatter and gather through files for arrays with element_count > INTMAX" OFF)
+
+
 # Testing convenience:                                                      $0 in the -c environment, not a part of $@
 set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
 
 
+function(clean_up_test)
+    execute_process(COMMAND bash ${CMAKE_SOURCE_DIR}/test/melissa-da-cleanup-local.sh)
+endfunction()
 
 # Start doing stuff actually...
 configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)

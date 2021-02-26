@@ -3,6 +3,10 @@ import shutil
 from melissa_da_testing import *
 
 
+import os
+assert os.getenv('MELISSA_DA_WITH_FTI') == 'ON' or \
+        os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE'
+
 PROCS_SERVER = 2
 N_RUNNERS = 2
 class ServerTester(FifoThread):

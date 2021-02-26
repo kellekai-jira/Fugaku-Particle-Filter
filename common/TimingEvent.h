@@ -96,6 +96,8 @@ public:
                     stderr, "connected to fifo %s\n",
                     fifo_file
                     );
+
+            D("connected to fifo %s", fifo_file);
         }
 
         this->trigger_event(INIT, 0); // == trigger(INIT, 0)

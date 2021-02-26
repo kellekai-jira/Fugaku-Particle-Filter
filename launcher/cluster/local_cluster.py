@@ -157,3 +157,15 @@ class LocalCluster(cluster.Cluster):
             os.system("pkill -9 {:s}".format(executable))
 
         os.system("pkill -9 melissa_server")
+
+
+        # even after this we still see zombie processes. Now we react with an extern
+        # kill script:
+        LocalCluster.clean_up_test()
+
+    @staticmethod
+    def clean_up_test():
+        """ an extremely rigorous method of cleanup to fix some process kill issues in the
+        debian CI"""
+        os.system('melissa-da-cleanup-local.sh')
+

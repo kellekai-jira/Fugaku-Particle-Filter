@@ -5,7 +5,9 @@ run_melissa_da_study(
         total_steps=10,
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_DUMMY,
-        cluster=LocalCluster(),
+        # not necessary to add cluster. By default an automatic selection for the cluster
+        # is done. See the cluster_selector() method.
+        #cluster=LocalCluster(),
         procs_server=2,
         procs_runner=3,
         n_runners=1,

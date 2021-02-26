@@ -27,6 +27,14 @@ endif(INSTALL_ZMQ)
 
 target_include_directories(melissa_server PUBLIC ${CMAKE_SOURCE_DIR}/pdaf-wrapper)
 
+# Python
+target_include_directories(melissa_server PRIVATE ${PYTHON_INCLUDE_DIR})
+
+# get numpy include dir:
+target_include_directories(melissa_server PRIVATE ${NUMPY_INCLUDE_DIRS})
+
+target_link_libraries(melissa_server ${PYTHON_LIBRARY})
+
 # PDAF:
 target_link_libraries(melissa_server gfortran ${Fortran_MATH_LIBRARIES} m)
 
@@ -43,5 +51,10 @@ target_link_libraries(melissa_server ${MPI_Fortran_LIBRARIES} ${Fortran_MATH_LIB
 
 target_link_libraries(melissa_server pdaf_wrapper)
 
+
+
+
+#set(CMAKE_C_FLAGS "-fsanitize=address -fsanitize=undefined")
+#set(CMAKE_CXX_FLAGS "-fsanitize=address -fsanitize=undefined")
 
 INSTALL(TARGETS melissa_server RUNTIME DESTINATION bin)

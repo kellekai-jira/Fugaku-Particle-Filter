@@ -173,9 +173,11 @@ struct RunnerRankConnection
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
         zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&identity_msg);
 
         zmq_msg_init(&empty_msg);
         zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&empty_msg);
 
         ZMQ_CHECK(zmq_msg_init_size(&header_msg, 4 * sizeof(int)));
         int * header = reinterpret_cast<int*>(zmq_msg_data(
@@ -185,6 +187,7 @@ struct RunnerRankConnection
         header[2] = CHANGE_STATE;
         header[3] = current_nsteps;
         zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&header_msg);
         // we do not know when it will really send. send is non blocking!
 
         const Part & part = field->getPart(runner_rank);
@@ -234,6 +237,7 @@ struct RunnerRankConnection
             flag = 0;
         }
         ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
+        zmq_msg_close(&data_msg);
 
         if (flag == ZMQ_SNDMORE)
         {
@@ -250,6 +254,7 @@ struct RunnerRankConnection
             // print_vector(std::vector<VEC_T>(tmp, tmp +
             // hidden_part.send_count));
             ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
+            zmq_msg_close(&data_msg_hidden);
         }
 
         // close connection:
@@ -270,9 +275,11 @@ struct RunnerRankConnection
         zmq_msg_init_data(&identity_msg, connection_identity,
                           IDENTITY_SIZE, my_free, NULL);
         zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&identity_msg);
 
         zmq_msg_init(&empty_msg);
         zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
+        zmq_msg_close(&empty_msg);
 
         zmq_msg_init_size(&header_msg, 4 * sizeof(int));
 
@@ -284,6 +291,7 @@ struct RunnerRankConnection
         header[3] = 0;          // nsteps
 
         zmq_msg_send(&header_msg, data_response_socket, 0);
+        zmq_msg_close(&header_msg);
 
         D("Send end message");
 
@@ -392,18 +400,6 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
 
     assert(found == killed.end());  // runner was not dead yet
 
-    // At the moment we request field registration from runner id 0. TODO! be fault tollerant during server init too? - actually we do not want to. faults during init may make it crashing...
-
-    int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-    out_buf[0] = (register_field ? 1 : 0);
-    register_field = false;
-    out_buf[1] = comm_size;
-    zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
-
-    zmq_msg_init_data(&msg_reply2, data_response_port_names,
-                      comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char),
-                      NULL, NULL);
-    zmq_msg_send(&msg_reply2, configuration_socket, 0);
 
     D("Server registering Runner ID %d", runner_id);
 
@@ -414,6 +410,24 @@ void register_runner_id(zmq_msg_t &msg, const int * buf,
         launcher_notified_about_runner.at(runner_id) = false;  // TODO: can this really happen in the latest protocol?
 
     }
+
+    // At the moment we request field registration from the runner who connects first.
+    // Be fault tollerant during server init too? - actually we do not want to. Faults
+    // during init may make it crashing...
+
+    int * out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
+    out_buf[0] = (register_field ? 1 : 0);
+    register_field = false;
+    out_buf[1] = comm_size;
+    zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
+    zmq_msg_close(&msg_reply1);
+
+    zmq_msg_init_data(&msg_reply2, data_response_port_names,
+                      comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char),
+                      NULL, NULL);
+    zmq_msg_send(&msg_reply2, configuration_socket, 0);
+    zmq_msg_close(&msg_reply2);
+
 }
 
 std::vector<INDEX_MAP_T> global_index_map;
@@ -478,8 +492,10 @@ void register_field(zmq_msg_t &msg, const int * buf,
     zmq_msg_init(&msg);
     zmq_msg_recv(&msg, configuration_socket, 0);
     assert(zmq_msg_size(&msg) == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
-    memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
-            global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
+    if (global_index_map_hidden.data()) {  // only copy if we have a non zero index map!
+        memcpy (global_index_map_hidden.data(), zmq_msg_data(&msg),
+                global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
+    }
 
     // scatter index map is done in broadcast field info
 
@@ -495,6 +511,7 @@ void register_field(zmq_msg_t &msg, const int * buf,
     zmq_msg_t msg_reply;
     zmq_msg_init(&msg_reply);
     zmq_msg_send(&msg_reply, configuration_socket, 0);
+    zmq_msg_close(&msg_reply);
 }
 
 void answer_configuration_message(void * configuration_socket,
@@ -1041,9 +1058,8 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             launcher_notified = launcher_notified_about_runner.at(runner_id);
         }
         catch (const std::out_of_range& oor) {
-            std::cerr << "Out of Range error: " << oor.what() << '\n';
-            L("Error: a different runner (id=%d) that never registered connected. Probably this is some zombie runner after a server restart", runner_id);
-            exit(1);
+            std::cerr << "Out of Range error?" << oor.what() << '\n';
+            E("a different runner (id=%d) that never registered connected. Probably this is some zombie runner after a server restart", runner_id);
         }
         if (launcher_notified == false) {
             launcher->notify(runner_id, RUNNING);
@@ -1079,7 +1095,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             // only if we are not in timestep  0:
             finished_sub_tasks.push_back(*running_sub_task);
 
-            running_sub_tasks.remove(*running_sub_task);
+            running_sub_tasks.erase(running_sub_task);
         }
 
         // good timestep? There are 2 cases: timestep 0 or good timestep...
@@ -1148,12 +1164,14 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             }
             D("storing this timestep!...");
             // zero copy is unfortunately for send only. so copy internally...
+            // TODO at the same time we might try to keep the msg data structure intact and send it back when needed.
             field->ensemble_members[runner_state_id].
             store_background_state_part(part,
                                         reinterpret_cast
                                         <VEC_T*>(zmq_msg_data(
                                                       &data_msg)), hidden_part,
                                         values_hidden);
+            zmq_msg_close(&data_msg_hidden);
 #ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
             // FIXME: store hidden state here too!
@@ -1195,7 +1213,7 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
             csr.launch_sub_task(runner_rank, (*found)->state_id);
             // don't need to delete from connected runner as we were never in there...  TODO: do this somehow else. probably not csr.send but another function taking csr as parameter...
             running_sub_tasks.push_back(*found);
-            scheduled_sub_tasks.remove(*found);
+            scheduled_sub_tasks.erase(found);
 
         }
         else
@@ -1340,6 +1358,10 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         // FIXME: shortcut to here if recovering (do not do first background state calculation!)
         FT.recover();
 #endif
+        bool launcher_ok = true;
+        if (comm_rank == 0) {
+            launcher_ok = launcher->checkLauncherDueDate();  // did the launcher already timeout before the long update step?
+        }
         // get new analysis states from update step
         L("====> Update step %d", current_step);
         trigger(START_FILTER_UPDATE, current_step);
@@ -1352,15 +1374,15 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator)
         FT.flushCP();  // TODO: put into one function
         FT.finalizeCP();
 #endif
-
-
-        if (comm_rank == 0 && !launcher->checkLauncherDueDate()) {
+        if (comm_rank == 0 && !launcher_ok) {
             // Launcher died! Wait for next update step and send back to all
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
             L("ERROR: Launcher did not answer. Due date violation. Crashing Server now.");
             current_nsteps = -2;
         }
+
+
 
         // Get current_nsteps from rank 0 in case it wants to Crash!
         MPI_Bcast(&current_nsteps, 1, MPI_INT, 0, mpi.comm());
@@ -1593,8 +1615,7 @@ int main(int argc, char * argv[])
                 // (There are probably none in the queue neither as there is no launcher...)
                 if (scheduled_sub_tasks.size() + running_sub_tasks.size() == 0)
                 {
-                    L("Error! There are no runners and also the Launcher does not respond. Ending the server now!");
-                    exit(1);
+                    E("There are no runners and also the Launcher does not respond. Ending the server now!");
                 }
             }
 
@@ -1784,4 +1805,5 @@ int main(int argc, char * argv[])
 #endif
     mpi.finalize();
 
+    L(".");
 }

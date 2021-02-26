@@ -33,11 +33,13 @@ function(add_python_test test_name test_script)
         NAME ${test_name}
         COMMAND python3 -u ${test_script}
     )
+    # TODO: call clean_up_test() within testcase and not during build
     set(PATH_LIST $ENV{PATH})
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/server)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation1)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation2-pdaf)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation3-empty)
+    list(APPEND PATH_LIST ${CMAKE_SOURCE_DIR}/test)
     string(REPLACE ";" ":" PATH_ "${PATH_LIST}")
 
     set(PYTHONPATH_LIST $ENV{PYTHONPATH})
@@ -58,7 +60,8 @@ function(add_python_test test_name test_script)
         APPEND PROPERTY ENVIRONMENT
             MELISSA_DA_PATH=${CMAKE_BINARY_DIR}
             MELISSA_DA_DATADIR=${CMAKE_SOURCE_DIR}/share
-            MELISSA_DA_WITH_FTI=TRUE
+            MELISSA_DA_WITH_FTI=${WITH_FTI}
+            MELISSA_DA_REPORT_TIMING=${REPORT_TIMING}
             MELISSA_DA_SOURCE_PATH=${CMAKE_SOURCE_DIR}
             MELISSA_INSTALL_PREFIX=${Melissa_PATH}
             MELISSA_DA_DATASET_PATH=${PDAF_PATH}/tutorial/inputs_online/
@@ -69,7 +72,6 @@ function(add_python_test test_name test_script)
             "LD_LIBRARY_PATH=${LD_LIBRARY_PATH_}"
             "PATH=${PATH_}"
     )
-
 endfunction()
 
 
@@ -87,7 +89,11 @@ add_python_test("test-never-connecting-runner"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-never-connecting-runner.py")
 add_python_test("test-unresponsive-runner"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-unresponsive-runner.py")
+add_python_test("test-python-assimilator"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_python_assimilator.py")
 
 # Should be the last test!
 add_python_test("test-cleanup"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-cleanup.py")
+
+INSTALL(PROGRAMS melissa-da-cleanup-local.sh DESTINATION bin)

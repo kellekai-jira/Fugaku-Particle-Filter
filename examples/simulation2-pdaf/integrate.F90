@@ -21,7 +21,7 @@ SUBROUTINE integrate()
   USE mod_model, &
        ONLY: ny, nx_p, field_p, melissa_field_name
   USE mod_parallel_model, &
-       ONLY: mype_world, COMM_model
+       ONLY: mype_world
 
   USE iso_c_binding
 
@@ -37,7 +37,6 @@ SUBROUTINE integrate()
 
 ! *** local variables ***
   INTEGER :: step, i, j, counter        ! Counters
-  CHARACTER(len=2) :: stepstr  ! String for time step
   REAL :: store                ! Store single field element
 
   REAL(kind=C_DOUBLE) :: field_double(nx_p * ny)

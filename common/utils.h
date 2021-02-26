@@ -22,8 +22,10 @@
 #include <execinfo.h>
 #include <signal.h>
 #include <stdlib.h>
+
 #include <unistd.h>
 #include <chrono>
+
 
 
 #include "melissa_da_stype.h"
@@ -63,8 +65,15 @@ enum Phase
 #define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
                                       printf("\n");}
 
+#define E(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
+                                      printf("\n"); \
+                                      fprintf(stderr, "[melissa_server,%d] ", comm_rank); \
+                                      fprintf(stderr, x); fprintf(stderr, "\n"); \
+                                      std::raise(SIGINT); \
+                                      exit(EXIT_FAILURE);}
 
-#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); D( \
+
+#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); E( \
                                         "zmq error(%d, errno=%d): %s", err, \
                                         err2, zmq_strerror(err)); \
                                     std::raise(SIGINT); }

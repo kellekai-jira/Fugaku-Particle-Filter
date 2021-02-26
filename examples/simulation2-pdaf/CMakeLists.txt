@@ -16,11 +16,12 @@ target_link_libraries(simulation2-pdaf ${MPI_Fortran_LIBRARIES})
 
 target_link_libraries(simulation2-pdaf melissa_api)
 
-target_include_directories(simulation2-pdaf PRIVATE BEFORE ${CMAKE_BINARY_DIR}/include)
+target_include_directories(simulation2-pdaf PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 
 INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
 #${CMAKE_CURRENT_SOURCE_DIR}/test.sh
+
 add_test(NAME simulation2-pdaf
     COMMAND ${in_env} python3 ./script.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
