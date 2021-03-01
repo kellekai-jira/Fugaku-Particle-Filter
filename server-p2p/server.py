@@ -23,9 +23,11 @@ LAUNCHER_NODE_NAME = sys.argv[6]
 
 
 print('Melissa Server started with %d particles for %d cycles' % (PARTICLES , CYCLES))
+print("RUNNER_TIMEOUT:", RUNNER_TIMEOUT)
 
 # TODO: dirty! install properly
 sys.path.append('%s/melissa/utility/melissa4py' % os.getenv('MELISSA_DA_SOURCE_PATH'))
+import ctypes
 #from melissa4py import message
 from melissa4py.message import MessageType
 from melissa4py.message import ServerNodeName
@@ -303,7 +305,7 @@ def do_update_step():
 
     this_cycle = filter(lambda x: x[0] == assimilation_cycle, state_weights.keys())
 
-    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[:-10]
+    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
 
     assimilation_cycle += 1
 
@@ -324,8 +326,8 @@ def check_due_date_violations():
     """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
     for job_id in running_jobs:
         due_date, runner_id, parent_state_id = running_jobs[job_id]
-        if due_date > time.time():
-            faulty_runners.add(runner_id),
+        if time.time() > due_date:
+            faulty_runners.add(runner_id)
             launcher.notify(runner_id, SimulationStatus.TIMEOUT)
 
 

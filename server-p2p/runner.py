@@ -17,7 +17,8 @@ print("Starting runner with id %d" % RUNNER_ID)
 
 # 2 user functions:
 def integrate(x):
-    time.sleep(random.randint(1,50)/100)  # simulate some calculation
+    #time.sleep(random.randint(1,50)/100)  # simulate some calculation
+    time.sleep(0.001)
     new_x = map(lambda x: x + 42, x)
     return new_x
 
@@ -82,9 +83,13 @@ def get_job(state_cache):
 
 def fetch_state(state_id):
     # FIXME At the moment we assume no horizontal state transport
-    assert state_id in state_cache
+    #assert state_id in state_cache
+    it  = state_id
+    if not it in state_cache:
+        it = random.choice(list(state_cache.keys()))
 
-    return state_cache[state_id]
+
+    return state_cache[it]
         # if state_id in state_cache:
             # return state_cache[state_id]
         # else:

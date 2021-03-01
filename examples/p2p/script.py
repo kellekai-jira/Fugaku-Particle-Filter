@@ -9,7 +9,7 @@ run_melissa_da_study(
         ensemble_size=30,
         procs_server=1,
         procs_runner=1,
-        n_runners=1,
+        n_runners=3,
         show_server_log=False,
         show_simulation_log=False,
         runner_timeout=60*60,  # 60 seconds time for debugging!
