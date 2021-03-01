@@ -67,7 +67,8 @@ def run_melissa_da_study(
         nodes_runner=1,
         walltime='xxxx01:00:00',
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
-        additional_env={}):
+        additional_env={},
+        server_cmd='melissa_da_server'):
 
     assert isinstance(cluster, Cluster)
 
@@ -99,10 +100,6 @@ def run_melissa_da_study(
     RUNNER_CMD = runner_cmd
     # split away arguments and take only the last bit of the path.
     EXECUTABLE = runner_cmd.split(' ')[0].split('/')[-1]
-
-
-
-
 
     running = True
 
@@ -178,8 +175,9 @@ def run_melissa_da_study(
             debug('filling: %s' % str(options))
             cmd_opt = '%d %d %d %d %d %s' % tuple(options)
 
-            cmd = '%s melissa_da_server %s' % (
+            cmd = '%s %s %s' % (
                     precommand_server,
+                    server_cmd,
                     cmd_opt
                     )
 

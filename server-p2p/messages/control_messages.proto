@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+
+/**
+ * This file contains all messages that are used in the melissa_p2p context.
+ */
+
+package melissa_p2p;
+
+// Types
+
+message StateId {
+    uint32 t = 1;
+    uint32 id = 2;
+}
+
+message Socket {
+    string ip = 1;
+    uint32 port = 2;
+}
+
+message StateServer {
+    repeated Socket ranks = 1;
+}
+
+
+// Messages:
+
+message Ping { }
+
+message Pong { }
+
+message Weight {
+    StateId state_id = 1;
+    uint32 runner_id = 2;
+    double weight = 3;
+}
+
+message JobRequest {
+    repeated StateId cached_states = 1;
+    uint32 runner_id = 2;
+}
+
+message JobResponse {
+    StateId job = 1;
+    StateId parent = 2;
+    repeated StateServer clients = 3;
+}
+
+message StateRequest {
+    StateId state_id = 1;
+}
+
+message StateResponse {
+    StateId state_id = 1;
+    // append another message contianing the acutal data
+}
+
+message RunnerCrashed {
+    uint32 runner_id = 1;
+}
+
+message RunnerUp {
+    uint32 runner_id = 1;
+}
+
+message StopStudy {
+    enum ExitCode {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+
+    ExitCode exit_code = 1;
+}
+
+
+
+// Wrapper message
+message Message {
+    oneof content {
+        Ping ping = 1;
+        Pong  pong = 2;
+
+        // Messages Server - Runner
+        JobRequest job_request = 3;
+        JobResponse job_response = 4;
+        Weight weight = 5;
+
+        // Messages Runner - Runner
+        StateRequest state_request = 6;
+        StateResponse state_response = 7;
+
+        // Messages Server - Launcher
+        RunnerCrashed runner_crashed = 8;
+        RunnerUp runner_up = 9;
+        StopStudy stop_study = 10;
+    }
+}

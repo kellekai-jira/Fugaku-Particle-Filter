@@ -291,6 +291,7 @@ Melissa is published under the [3-clause BSD License](LICENSE)
 | [Parallel Data Assimilation Framework](http://pdaf.awi.de/trac/wiki) (PDAF) | [GNU Lesser General Public License version 3](https://www.gnu.org/licenses/lgpl-3.0.en.html) |
 | [Fault Tolerance Interface](https://github.com/leobago/fti) (FTI) | [3-clause BSD](https://github.com/leobago/fti/blob/master/LICENSE) |
 | [repex scripts](https://gitlab.inria.fr/sfriedem/repex) | [3-clause BSD](https://gitlab.inria.fr/sfriedem/repex/-/blob/master/LICENSE) |
+| [protobuf](TODO) | BSD LICENSE TODO |
 
 Copies of the licenses can be found in the folder [`licenses`](licenses).
 
