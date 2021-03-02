@@ -17,16 +17,13 @@ RUNNER_TIMEOUT = int(sys.argv[4])
 # 5 Server slowdown factor
 LAUNCHER_NODE_NAME = sys.argv[6]
 
-
-
-
-
-
-print('Melissa Server started with %d particles for %d cycles' % (PARTICLES , CYCLES))
+print('Melissa Server started with %d particles for %d cycles' %
+      (PARTICLES, CYCLES))
 print("RUNNER_TIMEOUT:", RUNNER_TIMEOUT)
 
 # TODO: dirty! install properly
-sys.path.append('%s/melissa/utility/melissa4py' % os.getenv('MELISSA_DA_SOURCE_PATH'))
+sys.path.append('%s/melissa/utility/melissa4py' %
+                os.getenv('MELISSA_DA_SOURCE_PATH'))
 import ctypes
 #from melissa4py import message
 from melissa4py.message import MessageType
@@ -43,28 +40,25 @@ from utils import get_node_name
 
 context = zmq.Context()
 
+
 # Tuning melissa4py adding messages needed in Melissa-DA context
 class Alive:
     def encode(self):
         return bytes(ctypes.c_int32(7))  # Alive is 7, see melissa_messages.h
-SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
 
+
+SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
 
 from common import parse
 
-
 assimilation_cycle = 1
-
 """List of runners that are considered faulty. If they send data it is ignored."""
 faulty_runners = set()
-
 """
 State ids in general
 
 consist of 2 parts: the assimilation cycle and the state id it self.
 """
-
-
 """
 Weights of states.
 
@@ -72,8 +66,6 @@ Example:
     {(1, 41): 1023, (1,40): 512}
 """
 state_weights = {}
-
-
 """
 Unscheduled jobs. They represent particles that will be needed to propagate for this
 iteration.
@@ -85,7 +77,6 @@ Example:
     {(2,50): (1,42), (2,60): (1,43)}
 """
 unscheduled_jobs = {}
-
 """
 Jobs currently running on some runner.
 
@@ -96,7 +87,6 @@ Example:
     (2,55): (100001347, runner, (1,43))
 """
 running_jobs = {}
-
 """
 Contains all entries of state data and from when they are.
 
@@ -105,6 +95,7 @@ Format:
 """
 state_server_dns_data = {}
 
+
 def bind_socket(t, addr):
     socket = context.socket(t)
     socket.bind(addr)
@@ -112,6 +103,7 @@ def bind_socket(t, addr):
     port = port.decode().split(':')[-1]
     port = int(port)
     return socket, port
+
 
 # Socket for job requests and launcher requests
 addr = "tcp://127.0.0.1:6666"  # TODO: make ports changeable, maybe even select them automatically!
@@ -126,6 +118,7 @@ weight_socket, port_weight_socket = \
         bind_socket(zmq.PULL, addr)
 print('weight port:', port_weight_socket)
 
+
 def can_do_update_step():
     """simplest case where we wait that all particles were propagated always"""
     return len(unscheduled_jobs) == 0
@@ -136,6 +129,7 @@ for p in range(PARTICLES):
     unscheduled_jobs[(assimilation_cycle, p)] = (0, p)
 
 print('Server up now')
+
 
 def accept_weights():
     """remove jobs from the running_jobs list where we receive the weights"""
@@ -163,7 +157,8 @@ def accept_weights():
         # store result
         state_weights[state_id] = weight
         print("Received weight", weight, "for", state_id, ".",
-            len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
+              len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
+
 
 def accept_job_requests(launcher):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
@@ -180,7 +175,6 @@ def accept_job_requests(launcher):
         msg = parse(msg)
         assert msg.WhichOneof('content') == 'job_request'
 
-
         if msg.job_request.runner_id in faulty_runners:
             print("Ignoring faulty runners weight message:", msg.weight)
             return
@@ -188,8 +182,10 @@ def accept_job_requests(launcher):
         if len(msg.job_request.client.ranks) > 0:
             print("got ranks:", msg.job_request.client.ranks)
             # refresh dns entry:
-            state_server_dns_data[msg.job_request.runner_id] = (time.time(),
-                [(rank.node_name, rank.port) for rank in msg.job_request.client.ranks])
+            state_server_dns_data[msg.job_request.runner_id] = (time.time(), [
+                (rank.node_name, rank.port)
+                for rank in msg.job_request.client.ranks
+            ])
 
         launcher.notify_runner_connect(msg.job_request.runner_id)
 
@@ -202,7 +198,6 @@ def accept_job_requests(launcher):
                 if cj in unscheduled_jobs:
                     the_job = cj
                     break
-
 
         reply = cm.Message()
 
@@ -224,10 +219,8 @@ def accept_job_requests(launcher):
 
         job_rep_socket.send(reply.SerializeToString())
 
-
-        running_job = (time.time()+RUNNER_TIMEOUT,
-                msg.job_request.runner_id,
-                unscheduled_jobs[the_job])
+        running_job = (time.time() + RUNNER_TIMEOUT, msg.job_request.runner_id,
+                       unscheduled_jobs[the_job])
         print("Scheduling", running_job)
         running_jobs[the_job] = running_job
         del unscheduled_jobs[the_job]
@@ -242,29 +235,25 @@ class LauncherConnection:
         self.text_push_port = 5555
         self.text_request_port = 5554
 
-
         # Launcher (PUB) -> Server (SUB)
         self.text_puller = context.socket(zmq.SUB)
         self.text_puller.setsockopt(zmq.SUBSCRIBE, b"")
         self.text_puller.setsockopt(zmq.LINGER, self.linger)
         self.text_puller_port_name = "tcp://{}:{}".format(
-            self.launcher_node_name, self.text_pull_port
-        )
+            self.launcher_node_name, self.text_pull_port)
         self.text_puller.connect(self.text_puller_port_name)
 
         # Server (PUSH) -> Launcher (PULL)
         self.text_pusher = context.socket(zmq.PUSH)
         self.text_pusher.setsockopt(zmq.LINGER, self.linger)
-        addr = "tcp://{}:{}".format(
-            self.launcher_node_name, self.text_push_port
-        )
+        addr = "tcp://{}:{}".format(self.launcher_node_name,
+                                    self.text_push_port)
         self.text_pusher.connect(addr)
         # Server (REQ) <-> Launcher (REP)
         self.text_requester = context.socket(zmq.REQ)
         self.text_requester.setsockopt(zmq.LINGER, self.linger)
         self.text_requester.connect("tcp://{}:{}".format(
-            self.launcher_node_name, self.text_request_port)
-        )
+            self.launcher_node_name, self.text_request_port))
 
         # Send node name to the launcher, get options and recover if necesary
         msg = ServerNodeName(0, node_name)
@@ -276,7 +265,8 @@ class LauncherConnection:
         self.known_runners = set()
 
     def update_next_message_due_date(self):
-        self.next_message_date_to_launcher = time.time() + LAUNCHER_PING_INTERVAL
+        self.next_message_date_to_launcher = time.time(
+        ) + LAUNCHER_PING_INTERVAL
 
     def __del__(self):
         self.text_pusher.send(Stop().encode())
@@ -295,13 +285,14 @@ class LauncherConnection:
             # could not poll anything
             return False
         if msg:
-            print("Launcher message recieved %s" % msg);
+            print("Launcher message recieved %s" % msg)
             self.update_launcher_due_date()
             return True
             # ATM We do not care what the launcher sends us. We only check if it is still alive
 
     def update_launcher_next_message_date(self):
-        self.next_message_date_to_launcher = time.time() + LAUNCHER_PING_INTERVAL
+        self.next_message_date_to_launcher = time.time(
+        ) + LAUNCHER_PING_INTERVAL
 
     def ping(self):
         if time.time() > self.next_message_date_to_launcher:
@@ -317,8 +308,10 @@ class LauncherConnection:
 
     def notify_runner_connect(self, runner_id):
         if not runner_id in self.known_runners:
-            self.notify(runner_id, SimulationStatus.RUNNING)  # notify that running
+            self.notify(runner_id,
+                        SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
+
 
 def do_update_step():
     """Does actual update step with resampling. Is required to fill the unscheduled_jobs
@@ -327,7 +320,8 @@ def do_update_step():
     # Sort by weights. Then take 10 best particles for next generation
     global assimilation_cycle
 
-    this_cycle = filter(lambda x: x[0] == assimilation_cycle, state_weights.keys())
+    this_cycle = filter(lambda x: x[0] == assimilation_cycle,
+                        state_weights.keys())
 
     best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
 
@@ -337,13 +331,11 @@ def do_update_step():
     job_id = 0
     for it in best_10:
         for _ in range(4):
-            unscheduled_jobs[(assimilation_cycle, job_id)] = it  # TODO: maybe we need a copy?
+            unscheduled_jobs[(assimilation_cycle,
+                              job_id)] = it  # TODO: maybe we need a copy?
             job_id += 1
 
-
     return assimilation_cycle < CYCLES
-
-
 
 
 def check_due_date_violations():
@@ -353,7 +345,6 @@ def check_due_date_violations():
         if time.time() > due_date:
             faulty_runners.add(runner_id)
             launcher.notify(runner_id, SimulationStatus.TIMEOUT)
-
 
             del running_jobs[job_id]
             unscheduled_jobs[job_id] = parent_state_id
