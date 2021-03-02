@@ -15,7 +15,7 @@ message StateId {
 }
 
 message Socket {
-    string ip = 1;
+    string node_name = 1;
     uint32 port = 2;
 }
 
@@ -24,7 +24,7 @@ message StateServer {
 }
 
 
-// Messages:
+// Messages
 
 message Ping { }
 
@@ -39,6 +39,7 @@ message Weight {
 message JobRequest {
     repeated StateId cached_states = 1;
     uint32 runner_id = 2;
+    StateServer client = 3;
 }
 
 message JobResponse {
@@ -53,7 +54,7 @@ message StateRequest {
 
 message StateResponse {
     StateId state_id = 1;
-    // append another message contianing the acutal data
+    // TODO: Append another message containing the acutal data
 }
 
 message RunnerCrashed {
@@ -76,10 +77,11 @@ message StopStudy {
 
 
 // Wrapper message
+
 message Message {
     oneof content {
         Ping ping = 1;
-        Pong  pong = 2;
+        Pong pong = 2;
 
         // Messages Server - Runner
         JobRequest job_request = 3;

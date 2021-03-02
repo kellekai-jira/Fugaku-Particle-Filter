@@ -97,6 +97,14 @@ Example:
 """
 running_jobs = {}
 
+"""
+Contains all entries of state data and from when they are.
+
+Format:
+    {runner_id: (time, [(node_name_rank0, port_rank0), (node_name_rank1, port_rank1))}
+"""
+state_server_dns_data = {}
+
 def bind_socket(t, addr):
     socket = context.socket(t)
     socket.bind(addr)
@@ -177,6 +185,12 @@ def accept_job_requests(launcher):
             print("Ignoring faulty runners weight message:", msg.weight)
             return
 
+        if len(msg.job_request.client.ranks) > 0:
+            print("got ranks:", msg.job_request.client.ranks)
+            # refresh dns entry:
+            state_server_dns_data[msg.job_request.runner_id] = (time.time(),
+                [(rank.node_name, rank.port) for rank in msg.job_request.client.ranks])
+
         launcher.notify_runner_connect(msg.job_request.runner_id)
 
         the_job = random.choice(list(unscheduled_jobs.keys()))
@@ -197,6 +211,16 @@ def accept_job_requests(launcher):
 
         reply.job_response.parent.t = unscheduled_jobs[the_job][0]
         reply.job_response.parent.id = unscheduled_jobs[the_job][1]
+
+        for runner_id in state_server_dns_data:
+            ti, ranks = state_server_dns_data[runner_id]
+            if ti > time.time() - RUNNER_TIMEOUT:
+                # add this entry as it is up to date.
+                client = reply.job_response.clients.add()
+                for it in ranks:
+                    rank = client.ranks.add()
+                    rank.node_name = it[0]
+                    rank.port = it[1]
 
         job_rep_socket.send(reply.SerializeToString())
 

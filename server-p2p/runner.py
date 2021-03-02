@@ -43,6 +43,10 @@ print('connect weight puhser to', addr)
 weight_push_socket.connect(addr)
 
 
+# Get all open state server sockets belonging to this runner on rank 0:
+state_server_sockets = [("dummy%d"%RUNNER_ID, 1234), ("dummy%d"%RUNNER_ID, 1235)]
+
+
 # a state id is always a tuple:
 # (assimilation_cycle, id),
 # job id's too obviously as they are the state id of the resulting state
@@ -59,21 +63,29 @@ for i in range(100):
 
 def get_job(state_cache):
     """Request a job from the server that is possibly already in the state cache"""
+    #assert mpirank == 0
     msg = cm.Message()
     for t, iid in state_cache.keys():
         it = msg.job_request.cached_states.add()
         it.t = t
         it.id = iid
     msg.job_request.runner_id = RUNNER_ID
+    for s in state_server_sockets:
+        rank = msg.job_request.client.ranks.add()
+        rank.node_name = s[0]
+        rank.port = s[1]
 
     job_req_socket.send(msg.SerializeToString())
     print("Sent request to server")
 
     reply = job_req_socket.recv()
     reply = parse(reply)
-    print("Got response")
 
     assert reply.WhichOneof('content') == 'job_response'
+
+    print("Got response")
+    print("dns update:", reply.job_response.clients)
+
     # let it raise an exceotion if it cannot fetch any job for now..
     return (reply.job_response.job.t, reply.job_response.job.id), \
         (reply.job_response.parent.t, reply.job_response.parent.id)
