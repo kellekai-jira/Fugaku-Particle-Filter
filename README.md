@@ -72,7 +72,7 @@ export PDAF_PATH=$PWD
 ```
 
 - clone Melissa-DA (To get access ask
-  `sebastian [dot] friedemann [at] indria [dot] fr` for permissions):
+  `sebastian [dot] friedemann [at] inria [dot] fr` for permission):
 ```
 cd <where you want to clone melissa-da>
 git clone git@gitlab.inria.fr:melissa/melissa-da.git
