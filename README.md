@@ -107,7 +107,7 @@ make install
 - Before running any Melissa-DA study make sure to
 
 ```sh
-source build/install/bin/melissa-da_set_env.sh
+source build/install/bin/melissa_da_set_env.sh
 ```
 
 Alternatively add this line to your .bashrc so it is sourced after each login.
@@ -119,7 +119,7 @@ Alternatively add this line to your .bashrc so it is sourced after each login.
 ### Run one of the existing examples
 ```
 cd examples/<example-dir>
-source ../../build/install/bin/melissa-da_set_env.sh
+source ../../build/install/bin/melissa_da_set_env.sh
 python3 script.py
 ```
 
@@ -203,26 +203,24 @@ int melissa_expose(const char *field_name, VEC_T *values,
 
 - `values`, `hidden_values` pointers to the raw data buffer saving the assimilated state and hidden state respectively. Up to the current Melissa-DA version the user must ensure that each of them (`values` and `hidden_values`) are aligned linear in memory, i.e., as an arbitrary C array. These variables are in-out, meaning that `melissa_expose` will change them inplace to avoid memory copies.
 
-The Fortran API is quite similar. For more detail have a look into [api/melissa_api.i.f90](api/melissa_api.i.f90) or the `build_prefix/include/melissa_api.f90` which is created during building.
+The Fortran API is quite similar. For more detail have a look into [api/melissa_da_api.i.f90](api/melissa_da_api.i.f90) or the `build_prefix/include/melissa_api.f90` which is created during building.
 
-There are also different other API functions considering index maps (to map multiple variables in the assimilated or hidden state) or to expose multiple chunks of data stored on different places in the memory. As they are not vital for simple study runs and their API is not completely fixed yet they are only documented in the source code ([api/melissa_api.h](api/melissa_api.h)).
+There are also different other API functions considering index maps (to map multiple variables in the assimilated or hidden state) or to expose multiple chunks of data stored on different places in the memory. As they are not vital for simple study runs and their API is not completely fixed yet they are only documented in the source code ([api/melissa_da_api.h](api/melissa_da_api.h)).
 
 ### Linking against the Melissa-DA-API
 If you are using CMake it is as simple as
 
 ```cmake
 project(Model LANGUAGES ...)
-find_package(Melissa)
+find_package(MelissaDA)
 add_executable(Model ...)
-target_include_directories(Model PUBLIC ${MELISSA_INCLUDE_DIR})
-target_link_libraries(Model ${MELISSA_LIBRARY})
+target_include_directories(Model PUBLIC ${MelissaDA_INCLUDE_DIR})
+target_link_libraries(Model ${MelissaDA_LIBRARY})
 ```
-
-*Note that for now the Melissa-DA cmake package still is called Melissa. This is going to change soon.*
 
 ### Examples
 
-Examples how to instrument models and how to link against the Melissa-DA Api (using CMake) can be found in the [examples/](examples/) directory.
+Examples how to instrument models and how to link against the Melissa-DA API (using CMake) can be found in the [examples/](examples/) directory.
 
 
 
@@ -321,3 +319,4 @@ The biggest part is written in C++ as:
 ### But
   - launcher interface and the api base as well as many dev-ops things are common between
     the different melissa versions
+

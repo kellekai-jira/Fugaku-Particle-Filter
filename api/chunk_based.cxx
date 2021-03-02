@@ -6,7 +6,7 @@
 #include <cassert>
 #include <mpi.h>
 #include <array>
-#include "melissa_api.h"
+#include "melissa_da_api.h"
 #include "utils.h"
 
 struct Chunk {

@@ -11,7 +11,7 @@
 
 
 
-#include "melissa-da_config.h"  // for SLOW_MPI
+#include "melissa_da_config.h"  // for SLOW_MPI
 
 void check_data_types() {
     // check that the size_t datatype is the same on the server and on the client side! otherwise the communication might fail.
@@ -74,7 +74,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    char t[] = "/tmp/melissa_serverXXXXXX";  // FIXME: supposing this path is common for all ranks!
+    char t[] = "/tmp/melissa_da_serverXXXXXX";  // FIXME: supposing this path is common for all ranks!
     if (rank == root) {
         mkdtemp(t);
     }

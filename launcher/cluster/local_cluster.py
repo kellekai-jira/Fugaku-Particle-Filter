@@ -156,7 +156,7 @@ class LocalCluster(cluster.Cluster):
         if executable is not None:
             os.system("pkill -9 {:s}".format(executable))
 
-        os.system("pkill -9 melissa_server")
+        os.system("pkill -9 melissa_da_server")
 
 
         # even after this we still see zombie processes. Now we react with an extern

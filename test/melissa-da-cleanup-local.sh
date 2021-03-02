@@ -1,7 +1,7 @@
 #!/bin/bash
 for run in 1 2
 do
-    for procname in melissa_server simulation1 simulation1-deadlock simulation1-hidden simulation1-hidden-index-map simulation1-index-map simulation1-stateful simulation2-pdaf simulation3-empty
+    for procname in melissa_da_server simulation1 simulation1-deadlock simulation1-hidden simulation1-hidden-index-map simulation1-index-map simulation1-stateful simulation2-pdaf simulation3-empty
     do
         while pgrep $procname;
         do

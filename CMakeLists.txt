@@ -1,4 +1,4 @@
-project(Melissa LANGUAGES CXX Fortran C)
+project(MelissaDA LANGUAGES CXX Fortran C)
 cmake_minimum_required(VERSION 3.7.2)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
@@ -18,7 +18,7 @@ add_definitions(${MPI_C_COMPILE_FLAGS})
 link_libraries(${MPI_LIBRARIES})
 
 # FTI #
-option(WITH_FTI "FTI is needed for automatic recovery from melissa_server crashes" OFF)
+option(WITH_FTI "FTI is needed for automatic recovery from melissa_da_server crashes" OFF)
 if (WITH_FTI)
     option(WITH_FTI_THREADS "Threads will perform server checkpoints in the background. Activation increases the performance when using FTI." OFF)
     option(INSTALL_FTI OFF)
@@ -116,14 +116,14 @@ option(RUNNERS_MAY_CRASH "If activated model task runners may crash. This adds a
 option(REPORT_TIMING "Will collect and report timing and bandwidth information on the server side at the end" ON)
 option(REPORT_MEMORY "Will collect RAM information on the server side (rank 0) every 5s and log them to stdout" OFF)
 option(REPORT_WORKLOAD "Will print every second to stdout how many cycles server (rank 0) did in the last second" ON)
-option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_server.RANK.csv filel" OFF)
+option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timing information and each writes a trace_melissa_da_server.RANK.csv filel" OFF)
 
 # Trick MPI
 option(SLOW_MPI "Activate mpiscatter and gather through files for arrays with element_count > INTMAX" OFF)
 
 
 # Testing convenience:                                                      $0 in the -c environment, not a part of $@
-set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa-da_set_env.sh\; $@" /bin/sh)
+set(in_env sh -c ". ${CMAKE_INSTALL_PREFIX}/bin/melissa_da_set_env.sh\; $@" /bin/sh)
 
 
 function(clean_up_test)
@@ -131,7 +131,7 @@ function(clean_up_test)
 endfunction()
 
 # Start doing stuff actually...
-configure_file(common/melissa-da_config.h.in include/melissa-da_config.h)
+configure_file(common/melissa_da_config.h.in include/melissa_da_config.h)
 
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/common)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
@@ -159,8 +159,8 @@ set(DATADIR_INSTALL "${CMAKE_INSTALL_PREFIX}/share/melissa-da")
 add_subdirectory(share)
 
 
-configure_file(melissa-da_set_env.sh.in melissa-da_set_env.sh @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+configure_file(melissa_da_set_env.sh.in melissa_da_set_env.sh @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/melissa_da_set_env.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
     PERMISSIONS OWNER_WRITE
                 OWNER_READ
                 OWNER_EXECUTE
@@ -172,7 +172,7 @@ install(FILES ${CMAKE_BINARY_DIR}/melissa-da_set_env.sh DESTINATION ${CMAKE_INST
 include(CMakePackageConfigHelpers)
 
 # TODO: rename the package to melissa-da see issue melissa-da#5 !
-set(MELISSA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaConfig.cmake")
+set(MELISSA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaDAConfig.cmake")
 configure_package_config_file(${PROJECT_NAME}Config.cmake.in
                               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
                               INSTALL_DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})

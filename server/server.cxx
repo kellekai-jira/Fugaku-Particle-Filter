@@ -28,7 +28,7 @@
 
 #include "zmq.h"
 
-#include "melissa-da_config.h"
+#include "melissa_da_config.h"
 
 #include "Field.h"
 #ifdef WITH_FTI

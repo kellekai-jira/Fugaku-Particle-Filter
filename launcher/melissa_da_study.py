@@ -176,7 +176,7 @@ def run_melissa_da_study(
             debug('filling: %s' % str(options))
             cmd_opt = '%d %d %d %d %d %s' % tuple(options)
 
-            cmd = '%s melissa_server %s' % (
+            cmd = '%s melissa_da_server %s' % (
                     precommand_server,
                     cmd_opt
                     )
@@ -193,7 +193,7 @@ def run_melissa_da_study(
 
             logfile = '' if show_server_log else '%s/server.log.%d' % (WORKDIR, Server.starts)
 
-            job_id = cluster.ScheduleJob('melissa_server',
+            job_id = cluster.ScheduleJob('melissa_da_server',
                     walltime,  procs_server, nodes_server, cmd, envs, logfile, is_server=True)
             Job.__init__(self, job_id)
 

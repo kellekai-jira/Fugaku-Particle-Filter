@@ -14,7 +14,7 @@ target_link_libraries(simulation2-pdaf gfortran ${Fortran_MATH_LIBRARIES} m)
 # To link against pdaf stuff:
 target_link_libraries(simulation2-pdaf ${MPI_Fortran_LIBRARIES})
 
-target_link_libraries(simulation2-pdaf melissa_api)
+target_link_libraries(simulation2-pdaf melissa_da_api)
 
 target_include_directories(simulation2-pdaf PRIVATE ${CMAKE_BINARY_DIR}/include)
 

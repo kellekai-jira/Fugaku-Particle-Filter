@@ -67,7 +67,7 @@ enum Phase
 
 #define E(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
                                       printf("\n"); \
-                                      fprintf(stderr, "[melissa_server,%d] ", comm_rank); \
+                                      fprintf(stderr, "[melissa_da_server,%d] ", comm_rank); \
                                       fprintf(stderr, x); fprintf(stderr, "\n"); \
                                       std::raise(SIGINT); \
                                       exit(EXIT_FAILURE);}
