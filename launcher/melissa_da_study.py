@@ -163,6 +163,8 @@ def run_melissa_da_study(
             assert Server.starts < 2 or melissa_with_fti  # can't restart server without fti!
 
             if Server.starts > MAX_SERVER_STARTS:
+                print('Tail of server logs for diagnostics:')
+                os.system('tail server.log.1')
                 raise Exception("Too many server restarts!")
 
 
