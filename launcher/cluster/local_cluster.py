@@ -139,8 +139,10 @@ class LocalCluster(cluster.Cluster):
 
     def CleanUp(self, executable):
         pid = os.getpid()
-        for job_id in self.jobs:
+        for job_id in list(self.jobs):
             job = self.jobs[job_id]
+            if not job:  # sometimes the CheckState deletes it in the mean time
+                continue
 
             if job.poll() is None:
                 msg = 'pid={:d}: LocalCluster terminating process {:d}'
