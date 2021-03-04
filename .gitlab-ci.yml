@@ -1,14 +1,14 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-debian/9/amd64:
-  image: datamove/debian/9/amd64
-  tags:
-    - lxd
-  script:
-    - mkdir build
-    - cd build
-    - bash ../build-and-test.sh .. ~/PDAF-D_V1.15 ~/fti
+#debian/9/amd64:
+  #image: datamove/debian/9/amd64
+  #tags:
+    #- lxd
+  #script:
+    #- mkdir build
+    #- cd build
+    #- bash ../build-and-test.sh .. ~/PDAF-D_V1.15 ~/fti
 
 ubuntu/20.04:
   image: datamove/ubuntu/20.04
