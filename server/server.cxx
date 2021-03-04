@@ -1527,11 +1527,11 @@ int main(int argc, char * argv[])
     }
 
     data_response_socket = zmq_socket(context, ZMQ_ROUTER);
-    char data_response_port_name[MPI_MAX_PROCESSOR_NAME];
-    snprintf(data_response_port_name, MPI_MAX_PROCESSOR_NAME, "tcp://*:%d", 5000+comm_rank);
+    char data_response_port_name[MPI_MAX_PROCESSOR_NAME + 32] = {0};
+    snprintf(data_response_port_name, sizeof(data_response_port_name), "tcp://*:%d", 5000+comm_rank);
     ZMQ_CHECK(zmq_bind(data_response_socket, data_response_port_name));
 
-    snprintf(data_response_port_name, MPI_MAX_PROCESSOR_NAME, "tcp://%s:%d", hostname, 5000+
+    snprintf(data_response_port_name, sizeof(data_response_port_name), "tcp://%s:%d", hostname, 5000+
             comm_rank);
 
     char data_response_port_names[MPI_MAX_PROCESSOR_NAME * comm_size];
