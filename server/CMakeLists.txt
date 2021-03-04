@@ -1,12 +1,23 @@
-file(GLOB
-     ALL_SERVER
-     RELATIVE
-     ${CMAKE_CURRENT_SOURCE_DIR}
-     *.cxx
-     *.c
-     )
-
-add_executable(melissa_da_server ${ALL_SERVER} $<TARGET_OBJECTS:melissa_common>)
+add_executable(melissa_da_server
+    Assimilator.cxx
+    CheckStatelessAssimilator.cxx
+    DummyAssimilator.cxx
+    EmptyAssimilator.cxx
+    EnsembleMember.cxx
+    FTmodule.cxx
+    FTthreadManager.cxx
+    Field.cxx
+    LauncherConnection.cxx
+    MpiManager.cxx
+    PDAFAssimilator.cxx
+    PrintIndexMapAssimilator.cxx
+    PythonAssimilator.cxx
+    WrfAssimilator.cxx
+    ZeroMQ.cxx
+    melissa_messages.c
+    server.cxx
+    $<TARGET_OBJECTS:melissa_common>
+)
 
 if(INSTALL_FTI)
     add_dependencies(melissa_da_server FTI)
@@ -51,10 +62,5 @@ target_link_libraries(melissa_da_server ${MPI_Fortran_LIBRARIES} ${Fortran_MATH_
 
 target_link_libraries(melissa_da_server pdaf_wrapper)
 
-
-
-
-#set(CMAKE_C_FLAGS "-fsanitize=address -fsanitize=undefined")
-#set(CMAKE_CXX_FLAGS "-fsanitize=address -fsanitize=undefined")
 
 INSTALL(TARGETS melissa_da_server RUNTIME DESTINATION bin)
