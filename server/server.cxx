@@ -1557,7 +1557,6 @@ int main(int argc, char * argv[])
 
 #ifdef REPORT_WORKLOAD
     // for memory benchmarking:
-    int last_seconds_workload = 0;
     int cycles = 0;
 #endif
 

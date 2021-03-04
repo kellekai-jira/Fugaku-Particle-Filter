@@ -44,8 +44,6 @@ void PythonAssimilator::on_init_state(const int runner_id, const
                                       Part & hidden_part,
                                       const VEC_T * values_hidden)
 {
-    static bool is_first = true;
-
     assert(runner_id == 0);  // be sure to collect data only from one runner!
 
     // let's use this to set the init.
