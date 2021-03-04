@@ -20,7 +20,7 @@ message Socket {
 }
 
 message StateServer {
-    repeated Socket ranks = 1;
+    repeated Socket head_ranks = 1;
 }
 
 
@@ -52,10 +52,31 @@ message StateRequest {
     StateId state_id = 1;
 }
 
+
 message StateResponse {
     StateId state_id = 1;
-    // TODO: Append another message containing the acutal data
+    repeated string filenames = 2; // TODO: now we could simply use scp in a first test ;)
+    // TODO: OR: Append another message containing the acutal data
+    // if state not there will just  send back emnpty file names list
 }
+
+
+
+// when runner fti heads have nothing to do they can do a prefetch
+// the server will send back things that are worth prefetching
+// Runner to server what might be useful to prefetch:
+message PrefetchRequest { // the same as job request
+    repeated StateId cached_states = 1;
+    uint32 runner_id = 2;
+    StateServer client = 3;
+}
+
+message PrefetchResponse {
+    StateId state_id = 1;
+    repeated StateServer clients = 2;
+}
+
+
 
 message RunnerCrashed {
     uint32 runner_id = 1;
@@ -87,14 +108,16 @@ message Message {
         JobRequest job_request = 3;
         JobResponse job_response = 4;
         Weight weight = 5;
+        PrefetchRequest = 6;
+        PrefetchResponse = 7;
 
         // Messages Runner - Runner
-        StateRequest state_request = 6;
-        StateResponse state_response = 7;
+        StateRequest state_request = 8;
+        StateResponse state_response = 9;
 
         // Messages Server - Launcher
-        RunnerCrashed runner_crashed = 8;
-        RunnerUp runner_up = 9;
-        StopStudy stop_study = 10;
+        RunnerCrashed runner_crashed = 10;
+        RunnerUp runner_up = 11;
+        StopStudy stop_study = 12;
     }
 }
