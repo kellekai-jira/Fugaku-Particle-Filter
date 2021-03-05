@@ -330,16 +330,20 @@ SubTaskList finished_sub_tasks; // TODO: why do we need to store this? actually
 // TODO: extract fault tolerant n to m code to use it elsewhere?
 
 void register_runner_id(
-    zmq_msg_t& msg, const int* buf, void* configuration_socket,
+    zmq::Message& msg, void* configuration_socket,
     char* data_response_port_names) {
-    static bool register_field = true;
     assert(zmq_msg_size(&msg) == 2 * sizeof(int));
+
+    static bool register_field = true;
 
     zmq_msg_t msg_reply1, msg_reply2;
     zmq_msg_init_size(&msg_reply1, 2 * sizeof(int));
 
-    int runner_id = buf[1];
+    int int_buffer[] = {-1, -1};
 
+    std::memcpy(int_buffer, zmq::msg_data(msg), zmq::msg_size(msg));
+
+    auto runner_id = int_buffer[1];
     auto found = std::find_if(
         killed.begin(), killed.end(),
         [runner_id](const Task& task) { return task.runner_id == runner_id; });
@@ -384,29 +388,29 @@ void register_runner_id(
 std::vector<INDEX_MAP_T> global_index_map;
 std::vector<INDEX_MAP_T> global_index_map_hidden;
 
-void register_field(
-    zmq_msg_t& msg, const int* buf, void* configuration_socket) {
-    assert(phase == PHASE_INIT); // we accept new fields only if in
-                                 // initialization phase.
-    assert(
-        zmq_msg_size(&msg)
-        == sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int)
-            + MPI_MAX_PROCESSOR_NAME * sizeof(char));
+void register_field(zmq::Message& msg, void* configuration_socket) {
+    // we accept new fields only if in initialization phase.
+    assert(phase == PHASE_INIT);
+    assert(zmq::msg_size(msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
     assert(field == nullptr); // we accept only one field for now.
 
-    int runner_comm_size = buf[1];
-    int bytes_per_element = buf[2]; // TODO: rename hidden state into something
-                                    // more useful. hidden can be confused with
-                                    // the hidden state in HMM...
-    int bytes_per_element_hidden = buf[3]; // TODO: testcase where bytes for
-                                           // hidden are different from
-                                           // assimilated state elements
+    int buf[4] = {0};
 
-    char field_name[MPI_MAX_PROCESSOR_NAME];
-    strncpy(
-        field_name, reinterpret_cast<const char*>(&buf[4]),
-        MPI_MAX_PROCESSOR_NAME);
-    zmq_msg_close(&msg);
+    std::memcpy(buf, zmq::msg_data(msg), sizeof(buf));
+
+    int runner_comm_size = buf[1];
+    // TODO: rename hidden state into something more useful. hidden can be
+    // confused with the hidden state in HMM...
+    int bytes_per_element = buf[2];
+    // TODO: testcase where bytes for hidden are different from assimilated
+    // state elements
+    int bytes_per_element_hidden = buf[3];
+    char field_name[MPI_MAX_PROCESSOR_NAME + 1] = {0};
+
+    std::strncpy(
+        field_name,
+        reinterpret_cast<const char*>(zmq::msg_data(msg)) + 4 * sizeof(int),
+        sizeof(field_name) - 1);
 
     field = std::make_unique<Field>(
         field_name, runner_comm_size, ENSEMBLE_SIZE, bytes_per_element,
@@ -485,23 +489,36 @@ void register_field(
 
 void answer_configuration_message(
     void* configuration_socket, char* data_response_port_names) {
-    zmq_msg_t msg;
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, configuration_socket, 0);
-    int* buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-    if (buf[0] == REGISTER_RUNNER_ID) {
-        register_runner_id(
-            msg, buf, configuration_socket, data_response_port_names);
+    assert(configuration_socket);
+    assert(data_response_port_names);
+
+    auto msg = zmq::msg_recv(configuration_socket);
+
+    if (zmq::msg_size(*msg) < sizeof(int)) {
+        std::fprintf(
+            stderr,
+            "expected configuration message with at least four bytes, got %zu "
+            "bytes\n",
+            zmq::msg_size(*msg));
+        std::_Exit(EXIT_FAILURE);
     }
-    else if (buf[0] == REGISTER_FIELD) {
-        register_field(msg, buf, configuration_socket);
+
+    auto task = -1;
+
+    std::memcpy(&task, zmq::msg_data(*msg), sizeof(int));
+
+    if (task == REGISTER_RUNNER_ID) {
+        register_runner_id(
+            *msg, configuration_socket, data_response_port_names);
+    }
+    else if (task == REGISTER_FIELD) {
+        register_field(*msg, configuration_socket);
     }
     else {
         // Bad message type
         assert(false);
         exit(1);
     }
-    zmq_msg_close(&msg);
 }
 
 void scatter_index_map(
