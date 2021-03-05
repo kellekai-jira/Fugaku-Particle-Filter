@@ -18,6 +18,7 @@
 #include "MpiManager.h"
 #include "Part.h"
 #include "ServerTiming.h"
+#include "ZeroMQ.h"
 #include "melissa_da_config.h"
 #include "memory.h"
 #include "messages.h"
@@ -26,7 +27,6 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 
 #include <algorithm>
 #include <list>
@@ -35,6 +35,7 @@
 // one could also use an set which might be faster but we would need to
 // define hash functions for all the classes we puit in this container.
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -44,8 +45,6 @@
 
 #include "melissa_messages.h"
 #include "melissa_utils.h" // melissa_utils from melissa-sa for melissa_get_node_name
-
-#include "zmq.h"
 
 
 // Activate this include manually before build if you need score-p  user regions
@@ -92,6 +91,7 @@ std::map<int, bool> launcher_notified_about_runner;
 int highest_sent_task_id = 0;
 
 size_t IDENTITY_SIZE = 0;
+using ConnectionIdentity = std::unique_ptr<char[]>;
 
 void* context;
 void* data_response_socket;
@@ -140,52 +140,34 @@ std::unique_ptr<Field> field(nullptr);
 std::unique_ptr<ServerTiming> timing(nullptr);
 #endif
 
-void my_free(void* data, void* hint) {
-    free(data);
-}
 
 struct RunnerRankConnection {
-    void* connection_identity;
+    ConnectionIdentity identity_;
 
-    RunnerRankConnection(void* identity) {
-        connection_identity = identity;
+    RunnerRankConnection(ConnectionIdentity&& id)
+        : identity_(std::move(id)) {
+        assert(identity_);
     }
 
     void launch_sub_task(const int runner_rank, const int state_id) {
         // get state and send it to the runner rank...
-        assert(connection_identity != NULL);
+        assert(identity_);
 
-        zmq_msg_t identity_msg;
-        zmq_msg_t empty_msg;
-        zmq_msg_t header_msg;
-        zmq_msg_t data_msg;
-        zmq_msg_t data_msg_hidden;
+        zmq::send_n(
+            data_response_socket, identity_.get(), IDENTITY_SIZE, ZMQ_SNDMORE);
+        zmq::send_empty(data_response_socket, ZMQ_SNDMORE);
 
-        zmq_msg_init_data(
-            &identity_msg, connection_identity, IDENTITY_SIZE, my_free, NULL);
-        zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
-        zmq_msg_close(&identity_msg);
+        int header[4] = {state_id, current_step, CHANGE_STATE, current_nsteps};
 
-        zmq_msg_init(&empty_msg);
-        zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
-        zmq_msg_close(&empty_msg);
-
-        ZMQ_CHECK(zmq_msg_init_size(&header_msg, 4 * sizeof(int)));
-        int* header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
-        header[0] = state_id;
-        header[1] = current_step;
-        header[2] = CHANGE_STATE;
-        header[3] = current_nsteps;
-        zmq_msg_send(&header_msg, data_response_socket, ZMQ_SNDMORE);
-        zmq_msg_close(&header_msg);
+        zmq::send_n(data_response_socket, header, 4, ZMQ_SNDMORE);
         // we do not know when it will really send. send is non blocking!
 
+        zmq_msg_t data_msg_hidden;
         const Part& part = field->getPart(runner_rank);
-        zmq_msg_init_data(
-            &data_msg,
+        auto data_msg = zmq::msg_init_n(
             field->ensemble_members.at(state_id).state_analysis.data()
                 + part.local_offset_server,
-            part.send_count * sizeof(VEC_T), NULL, NULL);
+            part.send_count);
 
         if (runner_rank == 0) {
             trigger(START_PROPAGATE_STATE, state_id);
@@ -214,8 +196,9 @@ struct RunnerRankConnection {
         else {
             flag = 0;
         }
-        ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
-        zmq_msg_close(&data_msg);
+        zmq::msg_send(*data_msg, data_response_socket, flag);
+        // ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
+        // zmq_msg_close(&data_msg);
 
         if (flag == ZMQ_SNDMORE) {
             zmq_msg_init_data(
@@ -235,7 +218,7 @@ struct RunnerRankConnection {
 
         // close connection:
         // but do not free it. send is going to free it.
-        connection_identity = NULL;
+        identity_ = nullptr;
     }
 
     // TODO: clean up error messages in the case of ending runners on the api
@@ -243,37 +226,22 @@ struct RunnerRankConnection {
     void stop(const int end_flag = END_RUNNER) {
         // some connection_identities will be 0 if some runner ranks are
         // connected to another server rank at the moment.
-        if (connection_identity == NULL)
+        if (!identity_) {
             return;
+        }
 
-        zmq_msg_t identity_msg;
-        zmq_msg_t empty_msg;
-        zmq_msg_t header_msg;
+        zmq::send_n(data_response_socket, identity_.get(), IDENTITY_SIZE);
+        zmq::send_empty(data_response_socket, ZMQ_SNDMORE);
 
-        zmq_msg_init_data(
-            &identity_msg, connection_identity, IDENTITY_SIZE, my_free, NULL);
-        zmq_msg_send(&identity_msg, data_response_socket, ZMQ_SNDMORE);
-        zmq_msg_close(&identity_msg);
+        auto nsteps = 0;
+        int header[] = {-1, current_step, end_flag, nsteps};
 
-        zmq_msg_init(&empty_msg);
-        zmq_msg_send(&empty_msg, data_response_socket, ZMQ_SNDMORE);
-        zmq_msg_close(&empty_msg);
-
-        zmq_msg_init_size(&header_msg, 4 * sizeof(int));
-
-        int* header = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
-        header[0] = -1;
-        header[1] = current_step;
-        header[2] = end_flag;
-        header[3] = 0; // nsteps
-
-        zmq_msg_send(&header_msg, data_response_socket, 0);
-        zmq_msg_close(&header_msg);
+        zmq::send_n(data_response_socket, header, 4);
 
         D("Send end message");
 
         // but don't delete it. this is done in the zmq_msg_send.
-        connection_identity = NULL;
+        identity_ = nullptr;
     }
 };
 
@@ -297,8 +265,8 @@ struct Runner // Server perspective of a Model task runner
     }
 };
 
-std::map<int, std::shared_ptr<Runner>> idle_runners; // might also contain half
-                                                     // empty stuff
+// might also contain half empty stuff
+std::map<int, std::shared_ptr<Runner>> idle_runners;
 
 std::map<int, std::shared_ptr<Runner>>::iterator get_completely_idle_runner() {
     // finds a runner that is completely idle. Returns idle_runners.end() if
@@ -1010,8 +978,11 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
 
     IDENTITY_SIZE = zmq_msg_size(&identity_msg);
 
-    void* identity = malloc(IDENTITY_SIZE);
-    memcpy(identity, zmq_msg_data(&identity_msg), zmq_msg_size(&identity_msg));
+    auto identity = ConnectionIdentity(new char[IDENTITY_SIZE]);
+
+    std::memcpy(
+        identity.get(), zmq_msg_data(&identity_msg),
+        zmq_msg_size(&identity_msg));
 
     assert(
         zmq_msg_size(&header_msg)
@@ -1057,7 +1028,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         }
     }
 
-    RunnerRankConnection csr(identity);
+    RunnerRankConnection csr(std::move(identity));
     auto found =
         std::find_if(killed.begin(), killed.end(), [runner_id](Task p) {
             return p.runner_id == runner_id;
@@ -1208,7 +1179,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
                 trigger(START_IDLE_RUNNER, runner_id);
             }
 
-            runner->connected_runner_ranks.emplace(runner_rank, csr);
+            runner->connected_runner_ranks.emplace(runner_rank, std::move(csr));
             D("save connection runner_id %d, runner rank %d", runner_id,
               runner_rank);
 
