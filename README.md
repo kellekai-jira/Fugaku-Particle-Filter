@@ -281,6 +281,8 @@ Alternative ways are inheriting [server/Assimilator.h](server/Assimilator.h) to 
 
 Another approach permitting [PDAF](http://pdaf.awi.de/) based DA is to use the `LD_PRELOAD` functionality to inject a bunch of  user defined functions for analysis, postprocessing, observation loading ... (see [http://pdaf.awi.de/trac/wiki/ImplementationGuide](http://pdaf.awi.de/trac/wiki/ImplementationGuide) and the [`pdaf-wrapper`](pdaf-wrapper) and [`examples/simulation2-pdaf`](examples/simulation2-pdaf) folders)
 
+## License
+Melissa is published under the [3-clause BSD License](LICENSE)
 
 ## Dependencies
 
@@ -289,7 +291,7 @@ Another approach permitting [PDAF](http://pdaf.awi.de/) based DA is to use the `
 | [ØMQ](https://zeromq.org/) (ZeroMQ) | [GNU Lesser General Public License version 3 with static linking exception](http://wiki.zeromq.org/area:licensing) |
 | [Parallel Data Assimilation Framework](http://pdaf.awi.de/trac/wiki) (PDAF) | [GNU Lesser General Public License version 3](https://www.gnu.org/licenses/lgpl-3.0.en.html) |
 | [Fault Tolerance Interface](https://github.com/leobago/fti) (FTI) | [3-clause BSD](https://github.com/leobago/fti/blob/master/LICENSE) |
-| [repex scripts](https://gitlab.inria.fr/sfriedem/repex) | [MIT License](https://gitlab.inria.fr/sfriedem/repex/-/blob/master/LICENSE) |
+| [repex scripts](https://gitlab.inria.fr/sfriedem/repex) | [3-clause BSD](https://gitlab.inria.fr/sfriedem/repex/-/blob/master/LICENSE) |
 
 Copies of the licenses can be found in the folder [`licenses`](licenses).
 
