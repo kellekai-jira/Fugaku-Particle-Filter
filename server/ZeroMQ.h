@@ -3,24 +3,63 @@
 
 #include <cstddef>
 #include <memory>
+#include <type_traits>
 
 struct zmq_msg_t;
 
 
 namespace zmq {
+namespace impl {
+    void send(void* socket, const void* data, std::size_t size, int flags = 0);
+}
+
 using Message = zmq_msg_t;
 using MessageRef = std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>;
 using FreeFn = void (*)(void*, void*);
 
-void* msg_data(Message* p_msg);
+void* msg_data(Message& msg);
 zmq::MessageRef msg_init();
 zmq::MessageRef msg_init(std::size_t size);
 zmq::MessageRef msg_init(
-    char* data, std::size_t size, FreeFn free = nullptr, void* hints = nullptr);
+    void* data, std::size_t size, FreeFn free = nullptr, void* hints = nullptr);
+
+template <typename T>
+zmq::MessageRef msg_init_n(
+    T* data, std::size_t count, FreeFn free = nullptr, void* hints = nullptr) {
+    static_assert(std::is_trivial<T>::value);
+
+    return msg_init(data, sizeof(T) * count, free, hints);
+}
+
+
 zmq::MessageRef msg_recv(void* socket, int flags = 0);
-void msg_recv(Message* p_msg, void* socket, int flags = 0);
-void msg_send(Message* p_msg, void* socket, int flags = 0);
-std::size_t msg_size(Message* p_msg);
+void msg_recv(Message& msg, void* socket, int flags = 0);
+void msg_send(Message& msg, void* socket, int flags = 0);
+std::size_t msg_size(Message& msg);
+
+template <typename T>
+void send(void* socket, const T* first, const T* last, int flags = 0) {
+    static_assert(std::is_trivial<T>::value);
+
+    assert(last >= first);
+
+    auto count = last - first;
+
+    impl::send(socket, first, count * sizeof(T), flags);
+}
+
+template <typename T>
+void send_n(void* socket, const T* data, std::size_t count, int flags = 0) {
+    static_assert(std::is_trivial<T>::value);
+
+    impl::send(socket, data, count * sizeof(T), flags);
+}
+
+inline void send_empty(void* socket, int flags) {
+    impl::send(socket, nullptr, 0, flags);
+}
+
+
 }
 
 #endif /* ZeroMQ_H_ */

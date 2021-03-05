@@ -3,29 +3,44 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstring>
+
 #include <new>
 
 #include <zmq.h>
 
 
+namespace zmq {
 namespace impl {
-std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>
-make_uninitialized_zmq_message() {
-    auto f = [](zmq_msg_t* p) {
-        zmq_msg_close(p);
-        delete p;
-    };
-    auto p_raw = new zmq_msg_t;
+    std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>
+    make_uninitialized_zmq_message() {
+        auto f = [](zmq_msg_t* p) {
+            zmq_msg_close(p);
+            delete p;
+        };
+        auto p_raw = new zmq_msg_t;
 
-    return std::unique_ptr<zmq_msg_t, decltype(f)>(p_raw, f);
+        return std::unique_ptr<zmq_msg_t, decltype(f)>(p_raw, f);
+    }
+
+
+    void send(void* socket, const void* data, std::size_t size, int flags) {
+        assert(data || size == 0);
+
+        auto msg = zmq_msg_t {};
+
+        // do not use zmq_msg_init_data because it does not copy the data
+        ZMQ_CHECK(zmq_msg_init_size(&msg, size));
+        std::memcpy(zmq_msg_data(&msg), data, size);
+        ZMQ_CHECK(zmq_msg_send(&msg, socket, flags));
+        ZMQ_CHECK(zmq_msg_close(&msg));
+    }
 }
 }
 
 
-void* zmq::msg_data(Message* p_msg) {
-    assert(p_msg);
-
-    return zmq_msg_data(p_msg);
+void* zmq::msg_data(Message& msg) {
+    return zmq_msg_data(&msg);
 }
 
 
@@ -50,7 +65,7 @@ zmq::MessageRef zmq::msg_init(std::size_t size) {
 
 
 zmq::MessageRef
-zmq::msg_init(char* data, std::size_t size, zmq::FreeFn free, void* hints) {
+zmq::msg_init(void* data, std::size_t size, zmq::FreeFn free, void* hints) {
     auto p = impl::make_uninitialized_zmq_message();
 
     if (zmq_msg_init_data(p.get(), data, size, free, hints) < 0) {
@@ -64,28 +79,25 @@ zmq::msg_init(char* data, std::size_t size, zmq::FreeFn free, void* hints) {
 zmq::MessageRef zmq::msg_recv(void* socket, int flags) {
     auto msg = zmq::msg_init();
 
-    msg_recv(msg.get(), socket, flags);
+    msg_recv(*msg, socket, flags);
 
     return msg;
 }
 
 
-void zmq::msg_recv(zmq::Message* p_msg, void* socket, int flags) {
-    assert(p_msg);
+void zmq::msg_recv(zmq::Message& msg, void* socket, int flags) {
     assert(socket);
 
-    ZMQ_CHECK(zmq_msg_recv(p_msg, socket, flags));
+    ZMQ_CHECK(zmq_msg_recv(&msg, socket, flags));
 }
 
 
-void zmq::msg_send(zmq::Message* p_msg, void* p, int n) {
-    assert(p_msg);
+void zmq::msg_send(zmq::Message& msg, void* p, int n) {
     assert(p);
-    ZMQ_CHECK(zmq_msg_send(p_msg, p, n));
+    ZMQ_CHECK(zmq_msg_send(&msg, p, n));
 }
 
 
-std::size_t zmq::msg_size(zmq::Message* p_msg) {
-    assert(p_msg);
-    return zmq_msg_size(p_msg);
+std::size_t zmq::msg_size(zmq::Message& msg) {
+    return zmq_msg_size(&msg);
 }
