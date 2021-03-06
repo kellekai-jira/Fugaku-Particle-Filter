@@ -162,7 +162,6 @@ struct RunnerRankConnection {
         zmq::send_n(data_response_socket, header, 4, ZMQ_SNDMORE);
         // we do not know when it will really send. send is non blocking!
 
-        zmq_msg_t data_msg_hidden;
         const Part& part = field->getPart(runner_rank);
         auto data_msg = zmq::msg_init_n(
             field->ensemble_members.at(state_id).state_analysis.data()
@@ -197,23 +196,20 @@ struct RunnerRankConnection {
             flag = 0;
         }
         zmq::msg_send(*data_msg, data_response_socket, flag);
-        // ZMQ_CHECK(zmq_msg_send(&data_msg, data_response_socket, flag));
-        // zmq_msg_close(&data_msg);
 
         if (flag == ZMQ_SNDMORE) {
-            zmq_msg_init_data(
-                &data_msg_hidden,
+            auto data_msg_hidden = zmq::msg_init_n(
                 field->ensemble_members.at(state_id).state_hidden.data()
                     + hidden_part.local_offset_server,
-                hidden_part.send_count * sizeof(VEC_T), NULL, NULL);
-            VEC_T* tmp =
-                field->ensemble_members.at(state_id).state_hidden.data();
-            tmp += hidden_part.local_offset_server;
+                hidden_part.send_count);
+            // VEC_T* tmp =
+            //    field->ensemble_members.at(state_id).state_hidden.data();
+            // tmp += hidden_part.local_offset_server;
             // D("Hidden values to send:");
             // print_vector(std::vector<VEC_T>(tmp, tmp +
             // hidden_part.send_count));
-            ZMQ_CHECK(zmq_msg_send(&data_msg_hidden, data_response_socket, 0));
-            zmq_msg_close(&data_msg_hidden);
+
+            zmq::msg_send(*data_msg_hidden, data_response_socket);
         }
 
         // close connection:
@@ -240,7 +236,6 @@ struct RunnerRankConnection {
 
         D("Send end message");
 
-        // but don't delete it. this is done in the zmq_msg_send.
         identity_ = nullptr;
     }
 };
@@ -336,9 +331,6 @@ void register_runner_id(
 
     static bool register_field = true;
 
-    zmq_msg_t msg_reply1, msg_reply2;
-    zmq_msg_init_size(&msg_reply1, 2 * sizeof(int));
-
     int int_buffer[] = {-1, -1};
 
     std::memcpy(int_buffer, zmq::msg_data(msg), zmq::msg_size(msg));
@@ -371,32 +363,28 @@ void register_runner_id(
     // first. Be fault tollerant during server init too? - actually we do not
     // want to. Faults during init may make it crashing...
 
-    int* out_buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply1));
-    out_buf[0] = (register_field ? 1 : 0);
-    register_field = false;
-    out_buf[1] = comm_size;
-    zmq_msg_send(&msg_reply1, configuration_socket, ZMQ_SNDMORE);
-    zmq_msg_close(&msg_reply1);
+	int output[] = {register_field ? 1 : 0, comm_size};
+	zmq::send_n(configuration_socket, output, 2, ZMQ_SNDMORE);
 
-    zmq_msg_init_data(
-        &msg_reply2, data_response_port_names,
-        comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char), NULL, NULL);
-    zmq_msg_send(&msg_reply2, configuration_socket, 0);
-    zmq_msg_close(&msg_reply2);
+    register_field = false;
+
+	auto msg_reply2 = zmq::msg_init_n(
+		data_response_port_names, comm_size * MPI_MAX_PROCESSOR_NAME);
+	zmq::msg_send(*msg_reply2, configuration_socket);
 }
 
 std::vector<INDEX_MAP_T> global_index_map;
 std::vector<INDEX_MAP_T> global_index_map_hidden;
 
-void register_field(zmq::Message& msg, void* configuration_socket) {
+void register_field(zmq::Message& field_msg, void* configuration_socket) {
     // we accept new fields only if in initialization phase.
     assert(phase == PHASE_INIT);
-    assert(zmq::msg_size(msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
+    assert(zmq::msg_size(field_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
     assert(field == nullptr); // we accept only one field for now.
 
     int buf[4] = {0};
 
-    std::memcpy(buf, zmq::msg_data(msg), sizeof(buf));
+    std::memcpy(buf, zmq::msg_data(field_msg), sizeof(buf));
 
     int runner_comm_size = buf[1];
     // TODO: rename hidden state into something more useful. hidden can be
@@ -409,7 +397,7 @@ void register_field(zmq::Message& msg, void* configuration_socket) {
 
     std::strncpy(
         field_name,
-        reinterpret_cast<const char*>(zmq::msg_data(msg)) + 4 * sizeof(int),
+        reinterpret_cast<const char*>(zmq::msg_data(field_msg)) + 4 * sizeof(int),
         sizeof(field_name) - 1);
 
     field = std::make_unique<Field>(
@@ -420,23 +408,20 @@ void register_field(zmq::Message& msg, void* configuration_socket) {
       runner_comm_size);
 
     assert_more_zmq_messages(configuration_socket);
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, configuration_socket, 0);
-    assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
-    memcpy(
-        field->local_vect_sizes_runner.data(), zmq_msg_data(&msg),
+
+	auto msg = zmq::msg_recv(configuration_socket);
+    assert(zmq::msg_size(*msg) == runner_comm_size * sizeof(size_t));
+    std::memcpy(
+        field->local_vect_sizes_runner.data(), zmq::msg_data(*msg),
         runner_comm_size * sizeof(size_t));
-    zmq_msg_close(&msg);
 
     // always await a hidden state
     assert_more_zmq_messages(configuration_socket);
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, configuration_socket, 0);
-    assert(zmq_msg_size(&msg) == runner_comm_size * sizeof(size_t));
-    memcpy(
-        field->local_vect_sizes_runner_hidden.data(), zmq_msg_data(&msg),
+	msg = zmq::msg_recv(configuration_socket);
+    assert(zmq::msg_size(*msg) == runner_comm_size * sizeof(size_t));
+    std::memcpy(
+        field->local_vect_sizes_runner_hidden.data(), zmq::msg_data(*msg),
         runner_comm_size * sizeof(size_t));
-    zmq_msg_close(&msg);
 
 
     // always await global_index_map now
@@ -444,13 +429,11 @@ void register_field(zmq::Message& msg, void* configuration_socket) {
     assert(global_vect_size % bytes_per_element == 0);
     global_index_map.resize(global_vect_size / bytes_per_element);
     assert_more_zmq_messages(configuration_socket);
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, configuration_socket, 0);
-    assert(zmq_msg_size(&msg) == global_index_map.size() * sizeof(INDEX_MAP_T));
-    memcpy(
-        global_index_map.data(), zmq_msg_data(&msg),
+	msg = zmq::msg_recv(configuration_socket);
+    assert(zmq::msg_size(*msg) == global_index_map.size() * sizeof(INDEX_MAP_T));
+    std::memcpy(
+        global_index_map.data(), zmq::msg_data(*msg),
         global_index_map.size() * sizeof(INDEX_MAP_T));
-    zmq_msg_close(&msg);
 
     size_t global_vect_size_hidden =
         sum_vec(field->local_vect_sizes_runner_hidden);
@@ -458,20 +441,19 @@ void register_field(zmq::Message& msg, void* configuration_socket) {
     global_index_map_hidden.resize(
         global_vect_size_hidden / bytes_per_element_hidden);
     assert_more_zmq_messages(configuration_socket);
-    zmq_msg_init(&msg);
-    zmq_msg_recv(&msg, configuration_socket, 0);
+	msg = zmq::msg_recv(configuration_socket);
     assert(
-        zmq_msg_size(&msg)
+        zmq::msg_size(*msg)
         == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
-    if (global_index_map_hidden.data()) { // only copy if we have a non zero
-                                          // index map!
-        memcpy(
-            global_index_map_hidden.data(), zmq_msg_data(&msg),
+
+	// only copy if we have a non zero index map!
+    if (global_index_map_hidden.data()) {
+        std::memcpy(
+            global_index_map_hidden.data(), zmq::msg_data(*msg),
             global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
     }
 
     // scatter index map is done in broadcast field info
-
     // msg is closed outside by caller...
 
     D("indexmapsize: %lu", global_index_map.size());
@@ -481,10 +463,7 @@ void register_field(zmq::Message& msg, void* configuration_socket) {
     field->name = field_name;
 
     // ack
-    zmq_msg_t msg_reply;
-    zmq_msg_init(&msg_reply);
-    zmq_msg_send(&msg_reply, configuration_socket, 0);
-    zmq_msg_close(&msg_reply);
+	zmq::send_empty(configuration_socket, 0);
 }
 
 void answer_configuration_message(
