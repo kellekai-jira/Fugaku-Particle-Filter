@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "utils.h"
+#include "melissa_da_config.h"
 
 
 enum TimingEventType
