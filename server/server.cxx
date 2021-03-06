@@ -195,7 +195,7 @@ struct RunnerRankConnection {
         else {
             flag = 0;
         }
-        zmq::msg_send(*data_msg, data_response_socket, flag);
+        zmq::send(*data_msg, data_response_socket, flag);
 
         if (flag == ZMQ_SNDMORE) {
             auto data_msg_hidden = zmq::msg_init_n(
@@ -209,7 +209,7 @@ struct RunnerRankConnection {
             // print_vector(std::vector<VEC_T>(tmp, tmp +
             // hidden_part.send_count));
 
-            zmq::msg_send(*data_msg_hidden, data_response_socket);
+            zmq::send(*data_msg_hidden, data_response_socket);
         }
 
         // close connection:
@@ -333,7 +333,7 @@ void register_runner_id(
 
     int int_buffer[] = {-1, -1};
 
-    std::memcpy(int_buffer, zmq::msg_data(msg), zmq::msg_size(msg));
+    std::memcpy(int_buffer, zmq_msg_data(&msg), zmq_msg_size(&msg));
 
     auto runner_id = int_buffer[1];
     auto found = std::find_if(
@@ -363,14 +363,14 @@ void register_runner_id(
     // first. Be fault tollerant during server init too? - actually we do not
     // want to. Faults during init may make it crashing...
 
-	int output[] = {register_field ? 1 : 0, comm_size};
-	zmq::send_n(configuration_socket, output, 2, ZMQ_SNDMORE);
+    int output[] = {register_field ? 1 : 0, comm_size};
+    zmq::send_n(configuration_socket, output, 2, ZMQ_SNDMORE);
 
     register_field = false;
 
-	auto msg_reply2 = zmq::msg_init_n(
-		data_response_port_names, comm_size * MPI_MAX_PROCESSOR_NAME);
-	zmq::msg_send(*msg_reply2, configuration_socket);
+    auto msg_reply2 = zmq::msg_init_n(
+        data_response_port_names, comm_size * MPI_MAX_PROCESSOR_NAME);
+    zmq::send(*msg_reply2, configuration_socket);
 }
 
 std::vector<INDEX_MAP_T> global_index_map;
@@ -379,12 +379,13 @@ std::vector<INDEX_MAP_T> global_index_map_hidden;
 void register_field(zmq::Message& field_msg, void* configuration_socket) {
     // we accept new fields only if in initialization phase.
     assert(phase == PHASE_INIT);
-    assert(zmq::msg_size(field_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
+    assert(
+        zmq_msg_size(&field_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
     assert(field == nullptr); // we accept only one field for now.
 
     int buf[4] = {0};
 
-    std::memcpy(buf, zmq::msg_data(field_msg), sizeof(buf));
+    std::memcpy(buf, zmq::data(field_msg), sizeof(buf));
 
     int runner_comm_size = buf[1];
     // TODO: rename hidden state into something more useful. hidden can be
@@ -397,7 +398,7 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
 
     std::strncpy(
         field_name,
-        reinterpret_cast<const char*>(zmq::msg_data(field_msg)) + 4 * sizeof(int),
+        reinterpret_cast<const char*>(zmq::data(field_msg)) + 4 * sizeof(int),
         sizeof(field_name) - 1);
 
     field = std::make_unique<Field>(
@@ -409,18 +410,18 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
 
     assert_more_zmq_messages(configuration_socket);
 
-	auto msg = zmq::msg_recv(configuration_socket);
-    assert(zmq::msg_size(*msg) == runner_comm_size * sizeof(size_t));
+    auto msg = zmq::recv(configuration_socket);
+    assert(zmq::size(*msg) == runner_comm_size * sizeof(size_t));
     std::memcpy(
-        field->local_vect_sizes_runner.data(), zmq::msg_data(*msg),
+        field->local_vect_sizes_runner.data(), zmq::data(*msg),
         runner_comm_size * sizeof(size_t));
 
     // always await a hidden state
     assert_more_zmq_messages(configuration_socket);
-	msg = zmq::msg_recv(configuration_socket);
-    assert(zmq::msg_size(*msg) == runner_comm_size * sizeof(size_t));
+    msg = zmq::recv(configuration_socket);
+    assert(zmq::size(*msg) == runner_comm_size * sizeof(size_t));
     std::memcpy(
-        field->local_vect_sizes_runner_hidden.data(), zmq::msg_data(*msg),
+        field->local_vect_sizes_runner_hidden.data(), zmq::data(*msg),
         runner_comm_size * sizeof(size_t));
 
 
@@ -429,10 +430,10 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
     assert(global_vect_size % bytes_per_element == 0);
     global_index_map.resize(global_vect_size / bytes_per_element);
     assert_more_zmq_messages(configuration_socket);
-	msg = zmq::msg_recv(configuration_socket);
-    assert(zmq::msg_size(*msg) == global_index_map.size() * sizeof(INDEX_MAP_T));
+    msg = zmq::recv(configuration_socket);
+    assert(zmq::size(*msg) == global_index_map.size() * sizeof(INDEX_MAP_T));
     std::memcpy(
-        global_index_map.data(), zmq::msg_data(*msg),
+        global_index_map.data(), zmq::data(*msg),
         global_index_map.size() * sizeof(INDEX_MAP_T));
 
     size_t global_vect_size_hidden =
@@ -441,15 +442,15 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
     global_index_map_hidden.resize(
         global_vect_size_hidden / bytes_per_element_hidden);
     assert_more_zmq_messages(configuration_socket);
-	msg = zmq::msg_recv(configuration_socket);
+    msg = zmq::recv(configuration_socket);
     assert(
-        zmq::msg_size(*msg)
+        zmq::size(*msg)
         == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
 
-	// only copy if we have a non zero index map!
+    // only copy if we have a non zero index map!
     if (global_index_map_hidden.data()) {
         std::memcpy(
-            global_index_map_hidden.data(), zmq::msg_data(*msg),
+            global_index_map_hidden.data(), zmq::data(*msg),
             global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
     }
 
@@ -463,7 +464,7 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
     field->name = field_name;
 
     // ack
-	zmq::send_empty(configuration_socket, 0);
+    zmq::send_empty(configuration_socket);
 }
 
 void answer_configuration_message(
@@ -471,20 +472,20 @@ void answer_configuration_message(
     assert(configuration_socket);
     assert(data_response_port_names);
 
-    auto msg = zmq::msg_recv(configuration_socket);
+    auto msg = zmq::recv(configuration_socket);
 
-    if (zmq::msg_size(*msg) < sizeof(int)) {
+    if (zmq::size(*msg) < sizeof(int)) {
         std::fprintf(
             stderr,
             "expected configuration message with at least four bytes, got %zu "
             "bytes\n",
-            zmq::msg_size(*msg));
+            zmq::size(*msg));
         std::_Exit(EXIT_FAILURE);
     }
 
     auto task = -1;
 
-    std::memcpy(&task, zmq::msg_data(*msg), sizeof(int));
+    std::memcpy(&task, zmq::data(*msg), sizeof(int));
 
     if (task == REGISTER_RUNNER_ID) {
         register_runner_id(

@@ -17,7 +17,7 @@ using Message = zmq_msg_t;
 using MessageRef = std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>;
 using FreeFn = void (*)(void*, void*);
 
-void* msg_data(Message& msg);
+void* data(Message& msg);
 zmq::MessageRef msg_init();
 zmq::MessageRef msg_init(std::size_t size);
 zmq::MessageRef msg_init(
@@ -32,10 +32,10 @@ zmq::MessageRef msg_init_n(
 }
 
 
-zmq::MessageRef msg_recv(void* socket, int flags = 0);
-void msg_recv(Message& msg, void* socket, int flags = 0);
-void msg_send(Message& msg, void* socket, int flags = 0);
-std::size_t msg_size(Message& msg);
+zmq::MessageRef recv(void* socket, int flags = 0);
+void recv(Message& msg, void* socket, int flags = 0);
+void send(Message& msg, void* socket, int flags = 0);
+std::size_t size(Message& msg);
 
 template <typename T>
 void send(void* socket, const T* first, const T* last, int flags = 0) {
@@ -55,7 +55,7 @@ void send_n(void* socket, const T* data, std::size_t count, int flags = 0) {
     impl::send(socket, data, count * sizeof(T), flags);
 }
 
-inline void send_empty(void* socket, int flags) {
+inline void send_empty(void* socket, int flags = 0) {
     impl::send(socket, nullptr, 0, flags);
 }
 

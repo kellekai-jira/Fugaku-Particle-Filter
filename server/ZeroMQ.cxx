@@ -39,7 +39,7 @@ namespace impl {
 }
 
 
-void* zmq::msg_data(Message& msg) {
+void* zmq::data(Message& msg) {
     return zmq_msg_data(&msg);
 }
 
@@ -76,28 +76,28 @@ zmq::msg_init(void* data, std::size_t size, zmq::FreeFn free, void* hints) {
 }
 
 
-zmq::MessageRef zmq::msg_recv(void* socket, int flags) {
+zmq::MessageRef zmq::recv(void* socket, int flags) {
     auto msg = zmq::msg_init();
 
-    msg_recv(*msg, socket, flags);
+    recv(*msg, socket, flags);
 
     return msg;
 }
 
 
-void zmq::msg_recv(zmq::Message& msg, void* socket, int flags) {
+void zmq::recv(zmq::Message& msg, void* socket, int flags) {
     assert(socket);
 
     ZMQ_CHECK(zmq_msg_recv(&msg, socket, flags));
 }
 
 
-void zmq::msg_send(zmq::Message& msg, void* p, int n) {
+void zmq::send(zmq::Message& msg, void* p, int n) {
     assert(p);
     ZMQ_CHECK(zmq_msg_send(&msg, p, n));
 }
 
 
-std::size_t zmq::msg_size(zmq::Message& msg) {
+std::size_t zmq::size(zmq::Message& msg) {
     return zmq_msg_size(&msg);
 }
