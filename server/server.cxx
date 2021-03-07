@@ -32,8 +32,8 @@
 #include <list>
 #include <map>
 #include <memory>
-// one could also use an set which might be faster but we would need to
-// define hash functions for all the classes we puit in this container.
+// one could also use an unordered set which might be faster but we would need
+// to define hash functions for all the classes we puit in this container.
 #include <set>
 #include <string>
 #include <utility>
