@@ -956,41 +956,41 @@ void check_kill_requests() {
 void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
     // TODO: move to send and receive function as on api side... maybe use
     // zproto library?
-    zmq_msg_t identity_msg, empty_msg, header_msg, data_msg, data_msg_hidden;
-    zmq_msg_init(&identity_msg);
-    zmq_msg_init(&empty_msg);
-    zmq_msg_init(&header_msg);
-    zmq_msg_init(&data_msg);
-
-    zmq_msg_recv(&identity_msg, data_response_socket, 0);
-
+    auto identity_msg = zmq::recv(data_response_socket);
     assert_more_zmq_messages(data_response_socket);
-    zmq_msg_recv(&empty_msg, data_response_socket, 0);
+    auto empty_msg = zmq::recv(data_response_socket);
     assert_more_zmq_messages(data_response_socket);
-    zmq_msg_recv(&header_msg, data_response_socket, 0);
+    auto header_msg = zmq::recv(data_response_socket);
     assert_more_zmq_messages(data_response_socket);
-    zmq_msg_recv(&data_msg, data_response_socket, 0);
+    auto data_msg = zmq::recv(data_response_socket);
 
-    assert(IDENTITY_SIZE == 0 || IDENTITY_SIZE == zmq_msg_size(&identity_msg));
+    assert(IDENTITY_SIZE == 0 || IDENTITY_SIZE == zmq::size(*identity_msg));
 
-    IDENTITY_SIZE = zmq_msg_size(&identity_msg);
+    IDENTITY_SIZE = zmq::size(*identity_msg);
 
     auto identity = ConnectionIdentity(new char[IDENTITY_SIZE]);
 
     std::memcpy(
-        identity.get(), zmq_msg_data(&identity_msg),
-        zmq_msg_size(&identity_msg));
+        identity.get(), zmq::data(*identity_msg), zmq::size(*identity_msg));
 
     assert(
-        zmq_msg_size(&header_msg)
+        zmq::size(*header_msg)
         == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME * sizeof(char));
-    int* header_buf = reinterpret_cast<int*>(zmq_msg_data(&header_msg));
-    int runner_id = header_buf[0];
-    int runner_rank = header_buf[1];
-    int runner_state_id = header_buf[2]; // = ensemble_member_id;
-    int runner_timestep = header_buf[3];
-    char field_name[MPI_MAX_PROCESSOR_NAME];
-    strcpy(field_name, reinterpret_cast<char*>(&header_buf[4]));
+
+    int header[4] = {0};
+
+    std::memcpy(header, zmq::data(*header_msg), sizeof(header));
+
+    int runner_id = header[0];
+    int runner_rank = header[1];
+    int runner_state_id = header[2]; // = ensemble_member_id;
+    int runner_timestep = header[3];
+    char field_name[MPI_MAX_PROCESSOR_NAME + 1] = {0};
+
+    std::strncpy(
+        field_name,
+        reinterpret_cast<char*>(zmq::data(*header_msg)) + 4 * sizeof(int),
+        sizeof(field_name) - 1);
 
     // good runner_rank, good state id?
     auto running_sub_task = std::find_if(
@@ -1056,10 +1056,10 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         // Save state part in background_states.
         assert(field->name == field_name);
         const Part& part = field->getPart(runner_rank);
-        assert(zmq_msg_size(&data_msg) == part.send_count * sizeof(VEC_T));
+        assert(zmq::size(*data_msg) == part.send_count * sizeof(VEC_T));
         D("<- Server received %lu/%lu bytes of %s from runner id %d, runner "
           "rank %d, state id %d, timestep=%d",
-          zmq_msg_size(&data_msg), part.send_count * sizeof(VEC_T), field_name,
+          zmq::size(*data_msg), part.send_count * sizeof(VEC_T), field_name,
           runner_id, runner_rank, runner_state_id, runner_timestep);
         D("local server offset %lu, sendcount=%lu", part.local_offset_server,
           part.send_count);
@@ -1089,15 +1089,16 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         const Part& hidden_part = field->getPartHidden(runner_rank);
         VEC_T* values_hidden = nullptr;
 
+        auto data_msg_hidden = zmq::MessageRef(nullptr, nullptr);
+
         if (hidden_part.send_count > 0) {
             assert_more_zmq_messages(data_response_socket);
-            zmq_msg_init(&data_msg_hidden);
-            zmq_msg_recv(&data_msg_hidden, data_response_socket, 0);
+            data_msg_hidden = zmq::recv(data_response_socket);
             assert(
-                zmq_msg_size(&data_msg_hidden)
+                zmq::size(*data_msg_hidden)
                 == hidden_part.send_count * sizeof(VEC_T));
             values_hidden =
-                reinterpret_cast<VEC_T*>(zmq_msg_data(&data_msg_hidden));
+                reinterpret_cast<VEC_T*>(zmq::data(*data_msg_hidden));
             // D("hidden values received:");
             // print_vector(std::vector<VEC_T>(values_hidden, values_hidden +
             // hidden_part.send_count));
@@ -1113,17 +1114,13 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             }
             D("storing this timestep!...");
             // zero copy is unfortunately for send only. so copy internally...
-            // TODO at the same time we might try to keep the msg data structure intact and send it back when needed.
-            field->ensemble_members[runner_state_id].
-            store_background_state_part(part,
-                                        reinterpret_cast
-                                        <VEC_T*>(zmq_msg_data(
-                                                      &data_msg)), hidden_part,
-                                        values_hidden);
-			// check if zmq_msg_init(hidden-msg) was called
-            if(hidden_part.send_count > 0) {
-                zmq_msg_close(&data_msg_hidden);
-            }
+            // TODO at the same time we might try to keep the msg data structure
+            // intact and send it back when needed.
+            field->ensemble_members[runner_state_id]
+                .store_background_state_part(
+                    part, reinterpret_cast<VEC_T*>(zmq::data(*data_msg)),
+                    hidden_part, values_hidden);
+            data_msg_hidden.reset();
 #ifdef WITH_FTI
             FT.store_subset(field, runner_state_id, runner_rank);
             // FIXME: store hidden state here too!
@@ -1134,9 +1131,8 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             // Some assimilators depend on something like this.
             // namely the CheckStateless assimilator
             assimilator->on_init_state(
-                runner_id, part,
-                reinterpret_cast<VEC_T*>(zmq_msg_data(&data_msg)), hidden_part,
-                values_hidden);
+                runner_id, part, reinterpret_cast<VEC_T*>(zmq::data(*data_msg)),
+                hidden_part, values_hidden);
         }
         // otherwise we throw away timestep 0 as we want to init the simulation!
         // One could indeed try to generate ensemble members from the initial
@@ -1193,11 +1189,6 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             }
         }
     }
-
-    zmq_msg_close(&identity_msg);
-    zmq_msg_close(&empty_msg);
-    zmq_msg_close(&header_msg);
-    zmq_msg_close(&data_msg);
 }
 
 // returns true if the whole assimilation (all time steps) finished
