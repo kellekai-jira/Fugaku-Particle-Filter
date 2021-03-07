@@ -50,7 +50,7 @@ zmq::MessageRef zmq::msg_init() {
 zmq::MessageRef zmq::msg_init(std::size_t size) {
     auto p = impl::make_uninitialized_zmq_message();
 
-    if (zmq_msg_init_size(p.get(), size) < 0) {
+    if(zmq_msg_init_size(p.get(), size) < 0) {
         throw std::bad_alloc();
     }
 
@@ -62,7 +62,7 @@ zmq::MessageRef
 zmq::msg_init(void* data, std::size_t size, zmq::FreeFn free, void* hints) {
     auto p = impl::make_uninitialized_zmq_message();
 
-    if (zmq_msg_init_data(p.get(), data, size, free, hints) < 0) {
+    if(zmq_msg_init_data(p.get(), data, size, free, hints) < 0) {
         throw std::bad_alloc();
     }
 
