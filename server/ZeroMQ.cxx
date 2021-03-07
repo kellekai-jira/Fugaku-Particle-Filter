@@ -27,13 +27,7 @@ namespace impl {
     void send(void* socket, const void* data, std::size_t size, int flags) {
         assert(data || size == 0);
 
-        auto msg = zmq_msg_t {};
-
-        // do not use zmq_msg_init_data because it does not copy the data
-        ZMQ_CHECK(zmq_msg_init_size(&msg, size));
-        std::memcpy(zmq_msg_data(&msg), data, size);
-        ZMQ_CHECK(zmq_msg_send(&msg, socket, flags));
-        ZMQ_CHECK(zmq_msg_close(&msg));
+        ZMQ_CHECK(zmq_send(socket, data, size, flags));
     }
 }
 }
