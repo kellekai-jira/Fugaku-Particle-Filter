@@ -1,77 +1,38 @@
 #include "melissa_p2p.h"
 
-int fti_init( MPI_Comm & comm_ )
+int fti_init( int runner_id, MPI_Comm & comm_ )
 {
     assert( !fti_is_init && "FTI must not have been initialized before!");
-
     fti_cfg_path = GetEnv( "FTI_CFG_PATH" );
-
     assert( fti_cfg_path != "" && "FTI config path is not set!");
-
     std::string cfg = fti_cfg_path + "/config-" + std::to_string(runner_id) + ".fti";
-
     FTI_Init(cfg.c_str(), comm_);
-
-    MPI_Comm_dup(FTI_COMM_WORLD, &comm);
-
-    fti_master = (getCommRank() == 0);
-
     fti_is_init = true;
 }
 
-int fti_protect( int local_vect_size )
+int fti_protect( int* step, int* state_id, double* state_buffer, size_t buffer_count )
 {
     assert( fti_is_init && "FTI must be initialized before!");
-
-    init_fti_parameters( local_vect_size );
-
-    hsize_t dim = 1;
-    hsize_t offset = 0;
-    hsize_t count = 1;
-
-    FTI_DefineGlobalDataset( 0, 1, &dim, "epoch", NULL, FTI_INTG );
-    FTI_Protect( 0, &fti_current_step, 1, FTI_INTG );
-    FTI_AddSubset( 0, 1, &offset, &count, 0 );
-
-    FTI_DefineGlobalDataset( 1, 1, &dim, "state_id", NULL, FTI_INTG );
-    FTI_Protect( 1, &fti_current_state_id, 1, FTI_INTG );
-    FTI_AddSubset( 1, 1, &offset, &count, 1 );
-
-    FTI_DefineGlobalDataset(2, 1, &global_field_dim_hsize_t, "forecast", NULL, FTI_DBLE);
-    FTI_Protect( 2, ckp, field.local_vect_size, FTI_DBLE );
-    FTI_AddSubset(2, 1, &offset_hsize_t, &local_field_dim_hsize_t, 2);
+    FTI_Protect( 0, step, 1, FTI_INTG );
+    FTI_Protect( 1, state_id, 1, FTI_INTG );
+    FTI_Protect( 2, state_buffer, buffer_count, FTI_DBLE );
 }
 
 int fti_finalize()
 {
     assert( fti_is_init && "FTI must be initialized before!");
-
     FTI_Finalize();
-
-    //if( getCommRank() == 0 ) {
-    //    std::stringstream ss;
-    //    ss << "Global/VPR-FORECAST-" << state_id << "-ID";
-    //    ss << std::setw(8) << std::setfill('0') << step-1;
-    //    ss << ".h5";
-    //    std::string fn = ss.str();
-    //    std::remove(fn.c_str());
-    //}
-
     fti_is_init = false;
 }
 
-int fti_checkpoint()  // FIXME: why int?
+int fti_checkpoint( int id )  // FIXME: why int?
 {
   assert( fti_is_init && "FTI must be initialized before!");
-  FTI_Protect( 2, ckp, field.local_vect_size, FTI_DBLE );
-  std::string prefix("VPR-FORECAST-");
-  prefix += std::to_string(fti_current_state_id);  // FIXME: can't we just use the current_state_id as defined in melissa_da_api.cxx ?
-  FTI_SetHdf5FileName( 0, prefix.c_str() , FTI_H5SF_PREFIX );
-  std::cout << "prefix set to: " << prefix << " current state id: " << fti_current_state_id << std::endl;
-  FTI_Checkpoint(fti_current_step, FTI_L4_H5_SINGLE);// FIXME: can't we just use the current_step as defined in melissa_da_api.cxx ?
-  //FTI_Checkpoint(fti_ckpt_counter++, FTI_L1);
+  FTI_Checkpoint( id , FTI_L1 );
 }
 
+// PROBABLY NOT NEEDED ANYMORE
+/*
 void init_fti_parameters( int local_vector_size) {
   // add local data chunk
   size_t global_field_dim;
@@ -90,7 +51,7 @@ void init_fti_parameters( int local_vector_size) {
   }
   local_field_dim_hsize_t = local_vector_size;
 }
-
+*/
 
 
 std::vector<INDEX_MAP_T> local_index_map;
@@ -117,10 +78,10 @@ void melissa_p2p_init(const char *field_name,
     // exchanged at the beginning
     phase = PHASE_SIMULATION;
 
-    fti_init(comm_);
+    fti_init(runner_id, comm_);
 
 
-    fti_protect(local_vect_size);  // FIXME: also checkpoint hidden or remove hidden
+    fti_protect( &step, &state_id, state_buffer, buffer_count);  // FIXME: also checkpoint hidden or remove hidden
     // assuming the pointer to the data to checkpoint doesn't change...
 
     // open sockets to server on rank 0:
@@ -188,10 +149,17 @@ int melissa_p2p_expose(VEC_T *values,
 
         // 4. ask server for more work
         int parent_t, parent_id;
+        
+        // [KAI] FIXME I think we should also ask this from the heads
         nsteps = request_work_from_server(&parent_t, &parent_id);
         FTI_ID_T checkpoint_id;
 
         if (nsteps > 0) {
+            
+            // [KAI] FIXME I think it is better to let the heads check if the state is in local.
+            // I think we should commubnicate with the heads in any case, so that the heads know
+            // that the runner has finished working on the state. 
+            
             // 5. check if job's parent state in memory. if not tell fti head to organize it
             checkpoint_id = hash_fti_id(parent_t, parent_id);
             FTIT_stat st;
@@ -201,17 +169,22 @@ int melissa_p2p_expose(VEC_T *values,
             } else {
                 // TODO: pack message with protobuf
                 size_t len = 42;
+                /* [KAI] replaced by FTI API functions
                 MPI_Send(&len, 1, my_MPI_SIZE_T, fti_head_rank_0,
                         MELISSA_USER_MESSAGE, MPI_COMM_WORLD);
                 // send packed protobuf message
                 MPI_Send(&msg_serialized, len, MPI_BYTE, fti_head_rank_0,
                         MELISSA_USER_MESSAGE, MPI_COMM_WORLD);
-
+                */
+                FTI_AppSend( &len, sizeof(size_t), MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
+                FTI_AppSend( &msg_serialized, len, MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
 
                 // 6. wait until parent state is ready
                 int response = 0;  // FIXME: wait for a protobuf message here too??!!
+                /*
                 MPI_Recv(&response, 1, MPI_INT, fti_head_rank_0, MELISSA_USER_MESSAGE,
-                        MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_COMM_WORLD, MPI_STATUS_IGNORE);*/
+                FTI_AppRecv( &response, sizeof(int), MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
 
                 if (response == 1) {
                     D("Parent state was retrieved p2p");
