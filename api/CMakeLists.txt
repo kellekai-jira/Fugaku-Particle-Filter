@@ -5,7 +5,11 @@ file(GLOB
      *.cxx
      )
 
-add_library(melissa_da_api SHARED ${ALL_API} $<TARGET_OBJECTS:melissa_common>)
+add_library(melissa_da_api SHARED ${ALL_API}
+    "../../server-p2p/messages/cpp/control_messages.pb.cc"
+    $<TARGET_OBJECTS:melissa_common>)
+
+# TODO add lib dependencie -lprotobuf
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)

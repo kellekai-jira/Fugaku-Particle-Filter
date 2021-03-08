@@ -212,6 +212,7 @@ def run_melissa_da_study(
                     )
 
             melissa_server_master_node = 'tcp://%s:4000' % server_node_name
+            melissa_server_master_weight_node = 'tcp://%s:4001' % server_node_name
 
             logfile = ''
             if not show_simulation_log:
@@ -226,6 +227,8 @@ def run_melissa_da_study(
 
             additional_runner_env = {
                     "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
+                    "MELISSA_SERVER_MASTER_WEIGHT_NODE":
+                        melissa_server_master_weight_node,
                     "MELISSA_TIMING_NULL": str(start_time),
                     "MELISSA_DA_RUNNER_ID": str(runner_id)
                     }

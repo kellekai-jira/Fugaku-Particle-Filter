@@ -23,13 +23,13 @@
 // types?? but the asserts are doing this already at the beginning as we receive
 // exactly 2 ints.... Forward declarations:
 #include "melissa_p2p.h"
+#include "api_common.h"
 
 void melissa_finalize();
 
-// zmq context:
-void* context;
-
 int runner_id = -1;
+
+void* context;
 
 int getRunnerId() {
     assert(runner_id != -1); // must be inited

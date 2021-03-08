@@ -36,12 +36,12 @@ if MELISSA_SERVER_MASTER_NODE == get_node_name():
     MELISSA_SERVER_MASTER_NODE = "127.0.0.1"
 
 job_req_socket = context.socket(zmq.REQ)
-addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 6666)
+addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 4000)
 print('connect to melissa server at', addr)
 job_req_socket.connect(addr)
 
 weight_push_socket = context.socket(zmq.PUSH)
-addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 6667)
+addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 4001)
 print('connect weight puhser to', addr)
 weight_push_socket.connect(addr)
 

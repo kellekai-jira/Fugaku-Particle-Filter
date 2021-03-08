@@ -39,13 +39,14 @@ message Weight {
 message JobRequest {
     repeated StateId cached_states = 1;
     uint32 runner_id = 2;
-    StateServer client = 3;
+    StateServer runner = 3;
 }
 
 message JobResponse {
     StateId job = 1;
     StateId parent = 2;
-    repeated StateServer clients = 3;
+    repeated StateServer runners = 3;
+    uint32 nsteps = 4;
 }
 
 message StateRequest {
@@ -68,12 +69,12 @@ message StateResponse {
 message PrefetchRequest { // the same as job request
     repeated StateId cached_states = 1;
     uint32 runner_id = 2;
-    StateServer client = 3;
+    StateServer runner = 3;
 }
 
 message PrefetchResponse {
     StateId state_id = 1;
-    repeated StateServer clients = 2;
+    repeated StateServer runners = 2;
 }
 
 
@@ -108,8 +109,8 @@ message Message {
         JobRequest job_request = 3;
         JobResponse job_response = 4;
         Weight weight = 5;
-        PrefetchRequest = 6;
-        PrefetchResponse = 7;
+        PrefetchRequest prefetch_request = 6;
+        PrefetchResponse prefetch_response = 7;
 
         // Messages Runner - Runner
         StateRequest state_request = 8;
@@ -120,4 +121,10 @@ message Message {
         RunnerUp runner_up = 11;
         StopStudy stop_study = 12;
     }
+}
+
+// MPI Messages within the API:
+message DownloadState {
+    StateId parent = 1;
+    repeated StateServer runners = 2;
 }
