@@ -19,6 +19,7 @@ void melissa_p2p_init(const char *field_name,
 int melissa_p2p_expose(VEC_T *values,
                    VEC_T *hidden_values);
 
-
+const int MELISSA_USER_MESSAGE = 42;  // reserve a tag that hopefully is not in use by
+// FTI already to communicate with head rank
 
 #endif
