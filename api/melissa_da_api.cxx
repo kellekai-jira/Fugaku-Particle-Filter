@@ -22,6 +22,8 @@
 // TODO ensure sizeof(size_t is the same on server and api... also for other
 // types?? but the asserts are doing this already at the beginning as we receive
 // exactly 2 ints.... Forward declarations:
+#include "melissa_p2p.h"
+
 void melissa_finalize();
 
 // zmq context:
@@ -79,6 +81,12 @@ int getCommSize() {
     int size;
     MPI_Comm_size(comm, &size);
     return size;
+}
+
+bool is_p2p()
+{
+    // FIXME: check an env variable here!
+    return true;
 }
 
 
@@ -534,6 +542,12 @@ bool first_melissa_init(MPI_Comm comm_) {
     trigger(START_ITERATION, last_step);
 #endif
 
+    runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+    if (is_p2p())
+    {
+        return false;
+    }
+
     bool register_field = false;
     if(getCommRank() == 0)
     {
@@ -643,6 +657,23 @@ void melissa_init_with_index_map(
     field.current_step = 0;
     field.local_vect_size = local_vect_size;
     field.local_hidden_vect_size = local_hidden_vect_size;
+
+    if (is_p2p())
+    {
+        melissa_p2p_init(field_name,
+                  local_vect_size,
+                  local_hidden_vect_size,
+                  bytes_per_element,
+                  bytes_per_element_hidden,
+                  comm_,
+                  local_index_map,
+                  local_index_map_hidden
+                  );
+
+        trigger(START_PROPAGATE_STATE, field.current_state_id);
+        return;
+    }
+
     std::vector<size_t> local_vect_sizes(getCommSize());
     // synchronize local_vect_sizes and
     MPI_Allgather(
@@ -747,13 +778,20 @@ int melissa_expose(
     // Now Send data to the melissa server
     assert(field.name == field_name);
 
-    field.putState(values, hidden_values, field_name);
+    int nsteps;
+    if (is_p2p())
+    {
+         nsteps = melissa_p2p_expose(values, hidden_values);
+    } else {
 
-    // @Kai: here we could checkpoint the values variable ! using fti. The
-    // server than could recover from such a checkpoint.
+        field.putState(values, hidden_values, field_name);
 
-    // and request new data
-    int nsteps = field.getState(values, hidden_values);
+        // @Kai: here we could checkpoint the values variable ! using fti. The server than could recover from such a checkpoint.
+
+        // and request new data
+        nsteps = field.getState(values, hidden_values);
+    }
+
     trigger(STOP_IDLE_RUNNER, getRunnerId());
 
     if(nsteps > 0)
@@ -766,6 +804,10 @@ int melissa_expose(
         }
         trigger(START_PROPAGATE_STATE, field.current_state_id);
         trigger(NSTEPS, nsteps);
+    }
+    else if (nsteps == 0)
+    {
+        melissa_finalize();
     }
 
     // TODO: this will block other fields!
