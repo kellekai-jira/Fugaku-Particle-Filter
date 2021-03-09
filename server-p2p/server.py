@@ -52,7 +52,7 @@ SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
 from common import parse
 
 assimilation_cycle = 1
-"""List of runners that are considered faulty. If they send data it is ignored."""
+"""List of runner ids that are considered faulty. If they send data it is ignored."""
 faulty_runners = set()
 """
 State ids in general
@@ -95,6 +95,14 @@ Format:
 """
 state_server_dns_data = {}
 
+"""
+Contains all runners and which states they have prefetched
+
+Format:
+    {runner_id: [(,),...]}
+"""
+prefetched_jobs = {}
+
 
 def bind_socket(t, addr):
     socket = context.socket(t)
@@ -105,18 +113,18 @@ def bind_socket(t, addr):
     return socket, port
 
 
-# Socket for job requests and launcher requests
-addr = "tcp://127.0.0.1:6666"  # TODO: make ports changeable, maybe even select them automatically!
+# Socket for job requests
+addr = "tcp://127.0.0.1:4000"  # TODO: make ports changeable, maybe even select them automatically!
 print('binding to', addr)
-job_rep_socket, port_job_rep_socket = \
+job_socket, port_job_socket = \
         bind_socket(zmq.REP, addr)
 
-# Socket accepting pulled weights
-addr = "tcp://127.0.0.1:6667"
+# Socket for general purpose requests
+addr = "tcp://127.0.0.1:4001"
 print('binding to', addr)
-weight_socket, port_weight_socket = \
-        bind_socket(zmq.PULL, addr)
-print('weight port:', port_weight_socket)
+gp_socket, port_gp_socket = \
+        bind_socket(zmq.REP, addr)
+print('general purpose port:', port_gp_socket)
 
 
 def can_do_update_step():
@@ -131,11 +139,58 @@ for p in range(PARTICLES):
 print('Server up now')
 
 
-def accept_weights():
+def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
+
+    assert msg.WhichOneof('content') == 'weight'
+
+    if msg.weight.runner_id in faulty_runners:
+        print("Ignoring faulty runners weight message:", msg.weight)
+        return
+
+    state_id = (msg.weight.state_id.t, msg.weight.state_id.id)
+
+    del running_jobs[state_id]
+    weight = msg.weight.weight
+
+    # store result
+    state_weights[state_id] = weight
+    print("Received weight", weight, "for", state_id, ".",
+          len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
+
+    gp_socket.send(0)  # send an empty ack. Check this works like this.
+
+"""
+DNS list of runners
+
+Fromat:
+    {runner_id: [('frog1', 8080), ('frog2', 8080) ...]}
+
+"""
+runners = {}
+def accept_runner_request(msg):
+    # store request
+    runner_id = msg.runner_request.runner_id
+    runners[runner_id] = []
+    for it in msg.runner_request.runner.head_ranks:
+        runners[runner_id].append((it.node_name, it.port))
+
+    # remove all faulty runners
+    for rid in faulty_runners:
+        del runners[rid]
+
+    # generate reply:
+    reply = cm.Message()
+    reply.runner_response.runners.add.....
+
+    gp_socket.send(reply.SerializeToString())
+
+
+
+def handle_general_purpose():
     msg = None
     try:
-        msg = weight_socket.recv(flags=zmq.NOBLOCK)  # only polling
+        msg = gp_socket.recv(flags=zmq.NOBLOCK)  # only polling
     except zmq.error.Again:
         # could not poll anything
         pass
@@ -143,30 +198,27 @@ def accept_weights():
     if msg:
         msg = parse(msg)
 
-        assert msg.WhichOneof('content') == 'weight'
-
-        if msg.weight.runner_id in faulty_runners:
-            print("Ignoring faulty runners weight message:", msg.weight)
-            return
-
-        state_id = (msg.weight.state_id.t, msg.weight.state_id.id)
-
-        del running_jobs[state_id]
-        weight = msg.weight.weight
-
-        # store result
-        state_weights[state_id] = weight
-        print("Received weight", weight, "for", state_id, ".",
-              len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
+        ty = msg.WhichOneof('content')
+        if ty == 'weight':
+            accept_weight(msg)
+        elif ty == 'delete_request':
+            gp_socket.send()  # TODO
+        elif ty == 'prefetch_request':
+            gp_socket.send()  # TODO
+        elif ty == 'runner_request':
+            accept_runner_request(msg)
+        else:
+            print("Wrong message type received!")
+            assert False
 
 
-def accept_job_requests(launcher):
+def hanlde_job_requests(launcher):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
     msg = None
     try:
-        msg = job_rep_socket.recv(flags=zmq.NOBLOCK)  # only polling
+        msg = job_socket.recv(flags=zmq.NOBLOCK)  # only polling
     except zmq.error.Again:
         # could not poll anything
         pass
@@ -217,7 +269,7 @@ def accept_job_requests(launcher):
                     rank.node_name = it[0]
                     rank.port = it[1]
 
-        job_rep_socket.send(reply.SerializeToString())
+        job_socket.send(reply.SerializeToString())
 
         running_job = (time.time() + RUNNER_TIMEOUT, msg.job_request.runner_id,
                        unscheduled_jobs[the_job])
@@ -356,7 +408,7 @@ if __name__ == '__main__':
 
     while True:
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
-        accept_weights()
+        handle_general_purpose()
         if can_do_update_step():
             if not do_update_step():  # will populate unscheduled jobs
                 # end: tell launcher to kill everything
@@ -367,7 +419,7 @@ if __name__ == '__main__':
             # not necessary since we only answer job requests if job is there... answer_open_job_requests()
 
         if len(unscheduled_jobs) > 0:
-            accept_job_requests(launcher)
+            hanlde_job_requests(launcher)
 
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():

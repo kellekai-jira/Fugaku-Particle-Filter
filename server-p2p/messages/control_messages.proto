@@ -63,12 +63,12 @@ message StateResponse {
 
 
 // fti headranks to general purpose request socket
-message RequestRunners {
+message RunnerRequest {
     uint32 runner_id = 1;
     StateServer runner = 2;
 }
 
-message RespondRunners {
+message RunnerResponse {
     repeated StateServer runners = 1;
 } // replies empty list if there are no others. if no others: look on pfs...
 
@@ -119,30 +119,35 @@ message StopStudy {
 // Wrapper message
 
 message Message {
-    oneof content {
+    oneof content {  // one could optimize out pingpong and have smaller message numbers...
         Ping ping = 1;
         Pong pong = 2;
 
-        // Messages Server - Runner
+        // Messages Runner - Server-Job socket
         JobRequest job_request = 3;
         JobResponse job_response = 4;
+
+        // Messages Runner - Server-General-Purpose socket
         Weight weight = 5;
         PrefetchRequest prefetch_request = 6;
         PrefetchResponse prefetch_response = 7;
+        DeleteRequest delete_request = 8;
+        DeleteResponse delete_response = 9;
+        RunnerRequest runner_request = 10;
+        RunnerResponse runner_response = 11;
 
         // Messages Runner - Runner
-        StateRequest state_request = 8;
-        StateResponse state_response = 9;
+        StateRequest state_request = 12;
+        StateResponse state_response = 13;
 
         // Messages Server - Launcher
-        RunnerCrashed runner_crashed = 10;
-        RunnerUp runner_up = 11;
-        StopStudy stop_study = 12;
+        RunnerCrashed runner_crashed = 14;
+        RunnerUp runner_up = 15;
+        StopStudy stop_study = 16;
     }
 }
 
-// MPI Messages within the API:
-message DownloadState {
-    StateId parent = 1;
-    repeated StateServer runners = 2;
-}
+// MPI Messages App core to server:
+/*message DownloadState {*/
+    /*StateId parent = 1;*/
+/*}*/

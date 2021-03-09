@@ -1,4 +1,4 @@
-#include "melissa_p2p.h"
+#include "melissa_p2p_app_core.h"
 #include "../../server-p2p/messages/cpp/control_messages.pb.h"
 
 #include "api_common.h"
@@ -35,8 +35,8 @@ int fti_checkpoint( int id )  // FIXME: why int?
 }
 
 
-void* job_req_socket;
-void* weight_push_socket;
+void* job_socket;
+void* gp_socket;
 
 std::vector<INDEX_MAP_T> local_index_map;
 std::vector<INDEX_MAP_T> local_index_map_hidden;
@@ -85,24 +85,24 @@ void melissa_p2p_init(const char *field_name,
             assert(false);
         }
         char * melissa_server_master_weight_node = getenv(
-            "MELISSA_SERVER_MASTER_WEIGHT_NODE");
+            "MELISSA_SERVER_MASTER_GP_NODE");
         if (melissa_server_master_node == nullptr)
         {
             L(
-                "you must set the MELISSA_SERVER_MASTER_WEIGHT_NODE environment variable before running!");
+                "you must set the MELISSA_SERVER_MASTER_GP_NODE environment variable before running!");
             assert(false);
         }
 
-        job_req_socket = zmq_socket(context, zmq_REQ);
+        job_socket = zmq_socket(context, zmq_REQ);
         std::string addr = "tcp://" + melissa_server_master_node;
         D("connect to job request server at %s", addr);
-        int req = zmq_connect(job_req_socket, addr.c_str());
+        int req = zmq_connect(job_socket, addr.c_str());
         assert(req == 0);
 
-        job_req_socket = zmq_socket(context, zmq_PUSH);
+        job_socket = zmq_socket(context, zmq_PUSH);
         addr = "tcp://" + melissa_server_master_node;
         D("connect to weight push server at %s", addr);
-        req = zmq_connect(job_req_socket, addr.c_str());
+        req = zmq_connect(job_socket, addr.c_str());
         assert(req == 0);
 
 
@@ -144,7 +144,7 @@ void push_weight_to_server(double weight)
     zmq_msg_t msg;
     zmq_msg_init_size(&msg, m.ByteSize());
     m.SerializeToArray(zmq_msg_data(&msg), m.ByteSize());
-    ZMQ_CHECK(zmq_msg_send(&msg, weight_push_socket, 0));  // TODO: use new api!
+    ZMQ_CHECK(zmq_msg_send(&msg, gp_socket, 0));  // TODO: use new api!
 }
 
 ::melissa_p2p::StateServer my_state_server_ranks;
@@ -158,10 +158,10 @@ void push_weight_to_server(double weight)
     zmq_msg_t req, res;
     zmq_msg_init_size(&req, m.ByteSize());
     m.SerializeToArray(zmq_msg_data(&req), m.ByteSize());
-    ZMQ_CHECK(zmq_msg_send(m, job_req_socket, 0));  // TODO: use new api
+    ZMQ_CHECK(zmq_msg_send(m, job_socket, 0));  // TODO: use new api
 
     zmq_msg_init(&res);
-    ZMQ_CHECK(zmq_recv(&res, job_req_socket, 0));
+    ZMQ_CHECK(zmq_recv(&res, job_socket, 0));
     ::melissa_p2p::Message r;
     r.ParseFromArray(zmq_msg_data(&res), zmq_msg_size(&r));
 
