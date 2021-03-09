@@ -28,11 +28,13 @@ void EnsembleMember::store_background_state_part(const Part & part, const
 {
     D("before_assert %lu %lu %lu", part.send_count,
       part.local_offset_server, state_background.size());
+	assert(values || part.send_count == 0);
     assert(part.send_count + part.local_offset_server <=
            state_background.size());
     std::copy(values, values + part.send_count, state_background.data() +
               part.local_offset_server);
 
+	assert(values_hidden || hidden_part.send_count == 0);
     assert(hidden_part.send_count + hidden_part.local_offset_server <=
            state_hidden.size());
     std::copy(values_hidden, values_hidden + hidden_part.send_count,
