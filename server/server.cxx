@@ -1171,7 +1171,10 @@ void handle_data_response(std::shared_ptr<Assimilator> & assimilator) {
                                         <VEC_T*>(zmq_msg_data(
                                                       &data_msg)), hidden_part,
                                         values_hidden);
-            zmq_msg_close(&data_msg_hidden);
+			// check if zmq_msg_init(hidden-msg) was called
+            if(hidden_part.send_count > 0) {
+                zmq_msg_close(&data_msg_hidden);
+            }
 #ifdef WITH_FTI
             FT.store_subset( field, runner_state_id, runner_rank );
             // FIXME: store hidden state here too!
