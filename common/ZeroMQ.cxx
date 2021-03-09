@@ -10,31 +10,35 @@
 #include <zmq.h>
 
 
-namespace zmq {
-namespace impl {
-    std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>
-    make_uninitialized_zmq_message() {
-        auto f = [](zmq_msg_t* p) {
-            zmq_msg_close(p);
-            delete p;
-        };
-        auto p_raw = new zmq_msg_t;
+namespace zmq
+{
+namespace impl
+{
+std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>
+make_uninitialized_zmq_message() {
+    auto f = [](zmq_msg_t* p) {
+                 zmq_msg_close(p);
+                 delete p;
+             };
+    auto p_raw = new zmq_msg_t;
 
-        return std::unique_ptr<zmq_msg_t, decltype(f)>(p_raw, f);
-    }
-
-
-    void send(void* socket, const void* data, std::size_t size, int flags) {
-        assert(data || size == 0);
-
-        ZMQ_CHECK(zmq_send(socket, data, size, flags));
-    }
-}
+    return std::unique_ptr<zmq_msg_t, decltype(f)>(p_raw, f);
 }
 
 
-void* zmq::data(Message& msg) {
-    return zmq_msg_data(&msg);
+void send(void* socket, const void* data, std::size_t size, int flags) {
+    assert(data || size == 0);
+
+    ZMQ_CHECK(zmq_send(socket, data, size, flags));
+}
+}
+}
+
+
+char* zmq::data(Message& msg) {
+    static_assert(sizeof(char*) == sizeof(void*), "");
+
+    return reinterpret_cast<char*>(zmq_msg_data(&msg));
 }
 
 
@@ -50,7 +54,8 @@ zmq::MessageRef zmq::msg_init() {
 zmq::MessageRef zmq::msg_init(std::size_t size) {
     auto p = impl::make_uninitialized_zmq_message();
 
-    if(zmq_msg_init_size(p.get(), size) < 0) {
+    if(zmq_msg_init_size(p.get(), size) < 0)
+    {
         throw std::bad_alloc();
     }
 
@@ -62,7 +67,8 @@ zmq::MessageRef
 zmq::msg_init(void* data, std::size_t size, zmq::FreeFn free, void* hints) {
     auto p = impl::make_uninitialized_zmq_message();
 
-    if(zmq_msg_init_data(p.get(), data, size, free, hints) < 0) {
+    if(zmq_msg_init_data(p.get(), data, size, free, hints) < 0)
+    {
         throw std::bad_alloc();
     }
 

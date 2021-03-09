@@ -8,16 +8,18 @@
 struct zmq_msg_t;
 
 
-namespace zmq {
-namespace impl {
-    void send(void* socket, const void* data, std::size_t size, int flags = 0);
+namespace zmq
+{
+namespace impl
+{
+void send(void* socket, const void* data, std::size_t size, int flags = 0);
 }
 
 using Message = zmq_msg_t;
 using MessageRef = std::unique_ptr<zmq_msg_t, void (*)(zmq_msg_t*)>;
 using FreeFn = void (*)(void*, void*);
 
-void* data(Message& msg);
+char* data(Message& msg);
 zmq::MessageRef msg_init();
 zmq::MessageRef msg_init(std::size_t size);
 zmq::MessageRef msg_init(

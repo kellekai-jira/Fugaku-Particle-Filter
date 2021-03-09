@@ -121,7 +121,7 @@ struct ServerRankConnection
         std::memset(zmq::data(*msg_header), 0, zmq::size(*msg_header));
         std::memcpy(zmq::data(*msg_header), header, sizeof(header));
         std::strncpy(
-            static_cast<char*>(zmq::data(*msg_header)) + sizeof(header),
+            zmq::data(*msg_header) + sizeof(header),
             field_name, MPI_MAX_PROCESSOR_NAME);
 
         D("sending on socket %p", data_request_socket);

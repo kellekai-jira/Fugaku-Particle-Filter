@@ -118,14 +118,15 @@ int get_due_date() {
     return static_cast<int>(seconds + MAX_RUNNER_TIMEOUT);
 }
 
-struct Task {
+struct Task
+{
     int state_id;
     int runner_id;
 };
 
 bool operator<(const Task& lhs, const Task& rhs) {
     return lhs.state_id < rhs.state_id
-        || (lhs.state_id == rhs.state_id && lhs.runner_id < rhs.runner_id);
+           || (lhs.state_id == rhs.state_id && lhs.runner_id < rhs.runner_id);
 }
 
 std::set<Task> killed; // when a runner from this list connects we thus respond
@@ -141,7 +142,8 @@ std::unique_ptr<ServerTiming> timing(nullptr);
 #endif
 
 
-struct RunnerRankConnection {
+struct RunnerRankConnection
+{
     ConnectionIdentity identity_;
 
     RunnerRankConnection(ConnectionIdentity&& id)
@@ -165,10 +167,11 @@ struct RunnerRankConnection {
         const Part& part = field->getPart(runner_rank);
         auto data_msg = zmq::msg_init_n(
             field->ensemble_members.at(state_id).state_analysis.data()
-                + part.local_offset_server,
+            + part.local_offset_server,
             part.send_count);
 
-        if (runner_rank == 0) {
+        if (runner_rank == 0)
+        {
             trigger(START_PROPAGATE_STATE, state_id);
         }
 
@@ -189,18 +192,21 @@ struct RunnerRankConnection {
           field->ensemble_members.at(state_id).state_analysis.data()[4]);
 
         int flag;
-        if (hidden_part.send_count > 0) {
+        if (hidden_part.send_count > 0)
+        {
             flag = ZMQ_SNDMORE;
         }
-        else {
+        else
+        {
             flag = 0;
         }
         zmq::send(*data_msg, data_response_socket, flag);
 
-        if (flag == ZMQ_SNDMORE) {
+        if (flag == ZMQ_SNDMORE)
+        {
             auto data_msg_hidden = zmq::msg_init_n(
                 field->ensemble_members.at(state_id).state_hidden.data()
-                    + hidden_part.local_offset_server,
+                + hidden_part.local_offset_server,
                 hidden_part.send_count);
             // VEC_T* tmp =
             //    field->ensemble_members.at(state_id).state_hidden.data();
@@ -222,7 +228,8 @@ struct RunnerRankConnection {
     void stop(const int end_flag = END_RUNNER) {
         // some connection_identities will be 0 if some runner ranks are
         // connected to another server rank at the moment.
-        if (!identity_) {
+        if (!identity_)
+        {
             return;
         }
 
@@ -248,7 +255,8 @@ struct Runner // Server perspective of a Model task runner
 
     void stop(int end_flag) {
         for (auto cs = connected_runner_ranks.begin();
-             cs != connected_runner_ranks.end(); cs++) {
+             cs != connected_runner_ranks.end(); cs++)
+        {
             D("xxx end connected runner rank...");
             cs->second.stop(end_flag);
         }
@@ -261,17 +269,17 @@ struct Runner // Server perspective of a Model task runner
 };
 
 // might also contain half empty stuff
-std::map<int, std::shared_ptr<Runner>> idle_runners;
+std::map<int, std::shared_ptr<Runner> > idle_runners;
 
-std::map<int, std::shared_ptr<Runner>>::iterator get_completely_idle_runner() {
+std::map<int, std::shared_ptr<Runner> >::iterator get_completely_idle_runner() {
     // finds a runner that is completely idle. Returns idle_runners.end() if
     // none was found.
     auto result = std::find_if(
         idle_runners.begin(), idle_runners.end(),
-        [](std::pair<int, std::shared_ptr<Runner>> elem) {
-            return elem.second->connected_runner_ranks.size()
-                == field->connected_runner_ranks.size();
-        });
+        [](std::pair<int, std::shared_ptr<Runner> > elem) {
+        return elem.second->connected_runner_ranks.size()
+        == field->connected_runner_ranks.size();
+    });
     return result;
 }
 
@@ -284,7 +292,8 @@ std::vector<int> failcount;
 int finished_ranks = -1;
 
 /// Used to link states to runner id's
-struct NewTask {
+struct NewTask
+{
     int runner_id;
     int state_id;
     int due_date;
@@ -295,7 +304,8 @@ struct NewTask {
 /// used to transmit new tasks to clients. A subtask is the state part whih is
 /// sent / expected to be received by this server rank from a single simulation
 /// rank
-struct SubTask {
+struct SubTask
+{
     int runner_id;
     int runner_rank;
     int state_id;
@@ -314,7 +324,7 @@ struct SubTask {
 // the order.) fifo with tasks that are running, running already on some model
 // task runner ranks or not these are checked for the due dates! if we get
 // results for the whole task we remove it from the scheduled_tasks list.
-typedef std::list<std::shared_ptr<SubTask>> SubTaskList;
+typedef std::list<std::shared_ptr<SubTask> > SubTaskList;
 SubTaskList scheduled_sub_tasks; // could be ordered sets! this prevents us from
                                  // adding 2 the same!? No would not work as
                                  // (ordered) sets order by key and not by time
@@ -338,7 +348,9 @@ void register_runner_id(
     auto runner_id = int_buffer[1];
     auto found = std::find_if(
         killed.begin(), killed.end(),
-        [runner_id](const Task& task) { return task.runner_id == runner_id; });
+        [runner_id](const Task& task) {
+        return task.runner_id == runner_id;
+    });
 
     assert(found == killed.end()); // runner was not dead yet
 
@@ -350,7 +362,8 @@ void register_runner_id(
     // respond on this connection.
     auto res = launcher_notified_about_runner.emplace(
         std::pair<int, bool>(runner_id, false));
-    if (!res.second) {
+    if (!res.second)
+    {
         // element existed already. This is probably a runner restart. So
         // renotify launcher when runner ready
         launcher_notified_about_runner.at(runner_id) = false; // TODO: can this
@@ -398,7 +411,7 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
 
     std::strncpy(
         field_name,
-        reinterpret_cast<const char*>(zmq::data(field_msg)) + 4 * sizeof(int),
+        zmq::data(field_msg) + 4 * sizeof(int),
         sizeof(field_name) - 1);
 
     field = std::make_unique<Field>(
@@ -448,7 +461,8 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
         == global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
 
     // only copy if we have a non zero index map!
-    if (global_index_map_hidden.data()) {
+    if (global_index_map_hidden.data())
+    {
         std::memcpy(
             global_index_map_hidden.data(), zmq::data(*msg),
             global_index_map_hidden.size() * sizeof(INDEX_MAP_T));
@@ -474,7 +488,8 @@ void answer_configuration_message(
 
     auto msg = zmq::recv(configuration_socket);
 
-    if (zmq::size(*msg) < sizeof(int)) {
+    if (zmq::size(*msg) < sizeof(int))
+    {
         std::fprintf(
             stderr,
             "expected configuration message with at least four bytes, got %zu "
@@ -487,14 +502,17 @@ void answer_configuration_message(
 
     std::memcpy(&task, zmq::data(*msg), sizeof(int));
 
-    if (task == REGISTER_RUNNER_ID) {
+    if (task == REGISTER_RUNNER_ID)
+    {
         register_runner_id(
             *msg, configuration_socket, data_response_port_names);
     }
-    else if (task == REGISTER_FIELD) {
+    else if (task == REGISTER_FIELD)
+    {
         register_field(*msg, configuration_socket);
     }
-    else {
+    else
+    {
         // Bad message type
         assert(false);
         exit(1);
@@ -512,7 +530,8 @@ void scatter_index_map(
     // transform size_t to mpi's int
     size_t displs[comm_size];
     size_t last_displ = 0;
-    for (int i = 0; i < comm_size; ++i) {
+    for (int i = 0; i < comm_size; ++i)
+    {
         displs[i] = last_displ;
         assert(scounts[i] % bytes_per_element == 0);
         scounts[i] /= bytes_per_element;
@@ -534,7 +553,8 @@ void broadcast_field_information_and_calculate_parts() {
     int bytes_per_element;
     int bytes_per_element_hidden;
 
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         strcpy(field_name, field->name.c_str());
         runner_comm_size = field->local_vect_sizes_runner.size();
         bytes_per_element = field->bytes_per_element;
@@ -560,7 +580,8 @@ void broadcast_field_information_and_calculate_parts() {
         &bytes_per_element_hidden, 1, MPI_INT, 0,
         mpi.comm()); // 4:runner_comm_size
 
-    if (comm_rank != 0) {
+    if (comm_rank != 0)
+    {
         field = std::make_unique<Field>(
             field_name, runner_comm_size, ENSEMBLE_SIZE, bytes_per_element,
             bytes_per_element_hidden);
@@ -601,14 +622,16 @@ void broadcast_field_information_and_calculate_parts() {
 bool try_launch_subtask(std::shared_ptr<SubTask>& sub_task) {
     // tries to send this task.
     auto found_runner = idle_runners.find(sub_task->runner_id);
-    if (found_runner == idle_runners.end()) {
+    if (found_runner == idle_runners.end())
+    {
         D("could not send: Did not find idle runner");
         return false;
     }
 
     auto found_rank = found_runner->second->connected_runner_ranks.find(
         sub_task->runner_rank);
-    if (found_rank == found_runner->second->connected_runner_ranks.end()) {
+    if (found_rank == found_runner->second->connected_runner_ranks.end())
+    {
         D("could not send: Did not find rank");
         return false;
     }
@@ -619,11 +642,13 @@ bool try_launch_subtask(std::shared_ptr<SubTask>& sub_task) {
         sub_task->runner_rank, sub_task->state_id);
 
     found_runner->second->connected_runner_ranks.erase(found_rank);
-    if (found_runner->second->connected_runner_ranks.empty()) {
+    if (found_runner->second->connected_runner_ranks.empty())
+    {
         idle_runners.erase(found_runner);
     }
 
-    if (sub_task->runner_rank == 0) {
+    if (sub_task->runner_rank == 0)
+    {
         trigger(STOP_IDLE_RUNNER, sub_task->runner_id);
     }
 
@@ -636,8 +661,9 @@ void kill_task(Task t) {
     idle_runners.erase(t.runner_id);
     killed.emplace(t);
     auto f = [&t](std::shared_ptr<SubTask>& task) {
-        return task->state_id == t.state_id && task->runner_id == t.runner_id;
-    };
+                 return task->state_id == t.state_id && task->runner_id ==
+                        t.runner_id;
+             };
     running_sub_tasks.remove_if(f);
     finished_sub_tasks.remove_if(f);
     scheduled_sub_tasks.remove_if(f);
@@ -657,14 +683,17 @@ void add_sub_tasks(NewTask& new_task) {
     assert(ret == 1);
     auto& csr = field->connected_runner_ranks;
     assert(csr.size() > 0); // connectd runner ranks must be initialized...
-    for (auto it = csr.begin(); it != csr.end(); it++) {
+    for (auto it = csr.begin(); it != csr.end(); it++)
+    {
         std::shared_ptr<SubTask> sub_task(new SubTask(new_task, *it));
         D("Adding subtask for runner rank %d", *it);
 
-        if (try_launch_subtask(sub_task)) {
+        if (try_launch_subtask(sub_task))
+        {
             running_sub_tasks.push_back(sub_task);
         }
-        else {
+        else
+        {
             scheduled_sub_tasks.push_back(sub_task);
         }
     }
@@ -676,7 +705,8 @@ static int task_id = 1; // low: aftrer each update step one could reset the task
                         // never get overflows!
 bool schedule_new_task(const int runner_id) {
     assert(comm_rank == 0);
-    if (unscheduled_tasks.size() <= 0) {
+    if (unscheduled_tasks.size() <= 0)
+    {
         return false;
     }
     task_id++;
@@ -694,7 +724,8 @@ bool schedule_new_task(const int runner_id) {
     // Send new scheduled task to all server ranks! This makes sure that
     // everybody receives it!
     MPI_Request requests[comm_size - 1];
-    for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++) {
+    for (int receiving_rank = 1; receiving_rank < comm_size; receiving_rank++)
+    {
         // REM: MPI_Ssend to be sure that all messages are received!
         // MPI_Ssend(&new_task, sizeof(NewTask), MPI_BYTE, receiving_rank,
         // TAG_NEW_TASK, mpi.comm());
@@ -735,25 +766,30 @@ void check_schedule_new_tasks() {
     // REM: we assume that we receive new_task messages in the right order! This
     // is done by ISend on rank 0 and the wait all behind ;)
     auto f = [&new_task](std::shared_ptr<SubTask> st) {
-        if (st->state_id == new_task.state_id) {
-            bool is_new =
-                killed.emplace(Task({st->state_id, st->runner_id})).second;
-            if (is_new) {
-                L("The state %d was before scheduled on runner id %d as we "
-                  "reschedule now we know that this runnerid was killed.",
-                  st->state_id, st->runner_id);
-                // REM: not necessary to resend. rank0 should already know it
-                // from its own!
-                unscheduled_tasks.insert(st->state_id);
-                idle_runners.erase(st->runner_id);
-                killed.insert(Task({st->state_id, st->runner_id}));
-            }
-            return true;
-        }
-        else {
-            return false;
-        }
-    };
+                 if (st->state_id == new_task.state_id)
+                 {
+                     bool is_new =
+                         killed.emplace(Task({st->state_id,
+                                              st->runner_id})).second;
+                     if (is_new)
+                     {
+                         L(
+                             "The state %d was before scheduled on runner id %d as we "
+                             "reschedule now we know that this runnerid was killed.",
+                             st->state_id, st->runner_id);
+                         // REM: not necessary to resend. rank0 should already know it
+                         // from its own!
+                         unscheduled_tasks.insert(st->state_id);
+                         idle_runners.erase(st->runner_id);
+                         killed.insert(Task({st->state_id, st->runner_id}));
+                     }
+                     return true;
+                 }
+                 else
+                 {
+                     return false;
+                 }
+             };
 
     scheduled_sub_tasks.remove_if(f);
     running_sub_tasks.remove_if(f);
@@ -765,14 +801,16 @@ void check_schedule_new_tasks() {
 
 void end_all_runners() {
     for (auto runner_it = idle_runners.begin(); runner_it != idle_runners.end();
-         runner_it++) {
+         runner_it++)
+    {
         runner_it->second->stop(END_RUNNER);
     }
 }
 
 void kill_all_runners() {
     for (auto runner_it = idle_runners.begin(); runner_it != idle_runners.end();
-         runner_it++) {
+         runner_it++)
+    {
         runner_it->second->stop(KILL_RUNNER);
     }
 }
@@ -795,13 +833,15 @@ void init_new_timestep() {
     current_step += current_nsteps;
 
     trigger(START_ITERATION, current_step);
-    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+    for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+    {
         trigger(START_IDLE_RUNNER, it->first);
     }
 
     assert(unscheduled_tasks.size() == 0);
 
-    for (int i = 0; i < ENSEMBLE_SIZE; i++) {
+    for (int i = 0; i < ENSEMBLE_SIZE; i++)
+    {
         unscheduled_tasks.insert(i);
     }
     std::fill(failcount.begin(), failcount.end(), 0);
@@ -811,7 +851,8 @@ void fail_state(int state_id) {
     assert(comm_rank == 0);
     failcount.at(state_id)++;
     int failed = failcount.at(state_id);
-    if (failed > MAX_FAIL_COUNT) {
+    if (failed > MAX_FAIL_COUNT)
+    {
         L("Propagating ensemble member %d failed %d times in a row on "
           "different runners. Go fix your ensemble. Checkpointing now and "
           "quitting.",
@@ -825,8 +866,8 @@ void fail_state(int state_id) {
 
 void reset_due_dates() {
     auto reset_date = [&](std::shared_ptr<SubTask>& it) {
-        it->due_date = get_due_date();
-    };
+                          it->due_date = get_due_date();
+                      };
 
     std::for_each(
         scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), reset_date);
@@ -839,35 +880,41 @@ void check_due_dates() {
     std::set<Task> to_kill;
 
     auto check_date = [&now, &to_kill](std::shared_ptr<SubTask>& it) {
-        if (now > it->due_date) {
-            to_kill.emplace(Task({it->state_id, it->runner_id}));
-        }
-    };
+                          if (now > it->due_date)
+                          {
+                              to_kill.emplace(Task({it->state_id,
+                                                    it->runner_id}));
+                          }
+                      };
 
     std::for_each(
         scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(), check_date);
     std::for_each(
         running_sub_tasks.begin(), running_sub_tasks.end(), check_date);
 
-    if (to_kill.size() > 0) {
+    if (to_kill.size() > 0)
+    {
         L("Need to redo %lu states", to_kill.size());
     }
 
 
-    for (auto it = to_kill.begin(); it != to_kill.end(); it++) {
+    for (auto it = to_kill.begin(); it != to_kill.end(); it++)
+    {
         L("Due date passed for state id %d , runner_id %d at %lu s ",
           it->state_id, it->runner_id, now);
 
         kill_task(*it);
 
-        if (comm_rank == 0) {
+        if (comm_rank == 0)
+        {
             trigger(REMOVE_RUNNER, it->runner_id);
             launcher->notify(it->runner_id, TIMEOUT);
 
             fail_state(it->state_id);
 
             // reschedule directly if possible
-            if (get_completely_idle_runner() != idle_runners.end()) {
+            if (get_completely_idle_runner() != idle_runners.end())
+            {
                 L("Rescheduling after due date violation detected by rank 0");
                 // REM: schedule only once as there is only on more task after
                 // the kill it. later we might want to schedule multiple times
@@ -876,7 +923,8 @@ void check_due_dates() {
                 schedule_new_task(idle_runners.begin()->first);
             }
         }
-        else {
+        else
+        {
             // Send to rank 0 that the runner that calcultated this state is to
             // kill
 
@@ -895,7 +943,8 @@ void check_due_dates() {
 
 void check_kill_requests() {
     assert(comm_rank == 0);
-    for (int detector_rank = 1; detector_rank < comm_size; detector_rank++) {
+    for (int detector_rank = 1; detector_rank < comm_size; detector_rank++)
+    {
         int received;
         MPI_Iprobe(
             detector_rank, TAG_KILL_RUNNER, mpi.comm(), &received,
@@ -917,19 +966,22 @@ void check_kill_requests() {
         // will be emplaced 2 times (with different task state_ids on killed.)
         auto found =
             std::find_if(killed.begin(), killed.end(), [&t](const Task& task) {
-                return task.runner_id == t.runner_id;
-            });
-        if (found == killed.end()) {
+            return task.runner_id == t.runner_id;
+        });
+        if (found == killed.end())
+        {
             trigger(REMOVE_RUNNER, t.runner_id);
             launcher->notify(t.runner_id, TIMEOUT);
         }
 #endif
 
         bool is_new = killed.emplace(t).second;
-        if (is_new) {
+        if (is_new)
+        {
             fail_state(t.state_id);
         }
-        else {
+        else
+        {
             // don't kill it a second time!
             L("I already knew this");
             continue;
@@ -940,7 +992,8 @@ void check_kill_requests() {
         kill_task(t);
 
         // reschedule directly if possible
-        if (get_completely_idle_runner() != idle_runners.end()) {
+        if (get_completely_idle_runner() != idle_runners.end())
+        {
             L("Rescheduling after due date violation detected by detector_rank "
               "%d",
               detector_rank);
@@ -988,8 +1041,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
     char field_name[MPI_MAX_PROCESSOR_NAME + 1] = {0};
 
     std::strncpy(
-        field_name,
-        reinterpret_cast<char*>(zmq::data(*header_msg)) + 4 * sizeof(int),
+        field_name, zmq::data(*header_msg) + 4 * sizeof(int),
         sizeof(field_name) - 1);
 
     // good runner_rank, good state id?
@@ -997,23 +1049,27 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         running_sub_tasks.begin(), running_sub_tasks.end(),
         [runner_id, runner_rank,
          runner_state_id](std::shared_ptr<SubTask>& st) {
-            return st->runner_id == runner_id && st->state_id == runner_state_id
-                && st->runner_rank == runner_rank;
-        });
+        return st->runner_id == runner_id && st->state_id == runner_state_id
+        && st->runner_rank == runner_rank;
+    });
 
 
     // notify launcher about newly connected runner.
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         bool launcher_notified = true;
-        try {
+        try
+        {
             launcher_notified = launcher_notified_about_runner.at(runner_id);
-        } catch (const std::out_of_range& oor) {
+        } catch (const std::out_of_range& oor)
+        {
             std::cerr << "Out of Range error?" << oor.what() << '\n';
             E("a different runner (id=%d) that never registered connected. "
               "Probably this is some zombie runner after a server restart",
               runner_id);
         }
-        if (launcher_notified == false) {
+        if (launcher_notified == false)
+        {
             launcher->notify(runner_id, RUNNING);
             launcher_notified_about_runner.at(runner_id) = true;
 
@@ -1028,21 +1084,24 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
     RunnerRankConnection csr(std::move(identity));
     auto found =
         std::find_if(killed.begin(), killed.end(), [runner_id](Task p) {
-            return p.runner_id == runner_id;
-        });
-    if (found != killed.end()) {
+        return p.runner_id == runner_id;
+    });
+    if (found != killed.end())
+    {
         L("Ending Model Task Runner killed by timeout violation runner=%d",
           runner_id);
         csr.stop(KILL_RUNNER);
     }
-    else {
+    else
+    {
         assert(
             runner_timestep == 0
             || running_sub_task != running_sub_tasks.end());
 
         // This is necessary if a task was finished on rank 0. then it crashes
         // on another rank. so rank 0 needs to undo this!
-        if (running_sub_task != running_sub_tasks.end()) {
+        if (running_sub_task != running_sub_tasks.end())
+        {
             // only if we are not in timestep  0:
             finished_sub_tasks.push_back(*running_sub_task);
 
@@ -1066,32 +1125,33 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
 
 
         // D("values[0] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        //&
+        // &
         // data_msg))
-        //[0]);
+        // [0]);
         // D("values[1] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        //&
+        // &
         // data_msg))
-        //[1]);
+        // [1]);
         // D("values[2] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        //&
+        // &
         // data_msg))
-        //[2]);
+        // [2]);
         // D("values[3] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        //&
+        // &
         // data_msg))
-        //[3]);
+        // [3]);
         // D("values[4] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        //&
+        // &
         // data_msg))
-        //[4]);
+        // [4]);
 
         const Part& hidden_part = field->getPartHidden(runner_rank);
         VEC_T* values_hidden = nullptr;
 
         auto data_msg_hidden = zmq::MessageRef(nullptr, nullptr);
 
-        if (hidden_part.send_count > 0) {
+        if (hidden_part.send_count > 0)
+        {
             assert_more_zmq_messages(data_response_socket);
             data_msg_hidden = zmq::recv(data_response_socket);
             assert(
@@ -1105,8 +1165,10 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         }
 
 
-        if (runner_timestep == current_step) {
-            if (runner_rank == 0) {
+        if (runner_timestep == current_step)
+        {
+            if (runner_rank == 0)
+            {
                 trigger(STOP_PROPAGATE_STATE, runner_state_id); // will trigger
                                                                 // for
                                                                 // runnerrank
@@ -1117,16 +1179,17 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             // TODO at the same time we might try to keep the msg data structure
             // intact and send it back when needed.
             field->ensemble_members[runner_state_id]
-                .store_background_state_part(
-                    part, reinterpret_cast<VEC_T*>(zmq::data(*data_msg)),
-                    hidden_part, values_hidden);
+            .store_background_state_part(
+                part, reinterpret_cast<VEC_T*>(zmq::data(*data_msg)),
+                hidden_part, values_hidden);
             data_msg_hidden.reset();
 #ifdef WITH_FTI
             FT.store_subset(field, runner_state_id, runner_rank);
             // FIXME: store hidden state here too!
 #endif
         }
-        else if (runner_state_id == -1) {
+        else if (runner_state_id == -1)
+        {
             // we are getting the very first timestep here!
             // Some assimilators depend on something like this.
             // namely the CheckStateless assimilator
@@ -1145,11 +1208,12 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         auto found = std::find_if(
             scheduled_sub_tasks.begin(), scheduled_sub_tasks.end(),
             [runner_id, runner_rank](std::shared_ptr<SubTask>& st) {
-                return st->runner_id == runner_id
-                    && st->runner_rank == runner_rank;
-            });
+            return st->runner_id == runner_id
+            && st->runner_rank == runner_rank;
+        });
 
-        if (found != scheduled_sub_tasks.end()) {
+        if (found != scheduled_sub_tasks.end())
+        {
             // Found a new task. Send back directly!
 
             D("send after receive! to runner rank %d on runner_id %d",
@@ -1161,14 +1225,16 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             running_sub_tasks.push_back(*found);
             scheduled_sub_tasks.erase(found);
         }
-        else {
+        else
+        {
             // Save connection - basically copy identity pointer...
             auto& runner =
                 idle_runners
-                    .emplace(runner_id, std::shared_ptr<Runner>(new Runner()))
-                    .first->second;
+                .emplace(runner_id, std::shared_ptr<Runner>(new Runner()))
+                .first->second;
 
-            if (runner_rank == 0) {
+            if (runner_rank == 0)
+            {
                 trigger(START_IDLE_RUNNER, runner_id);
             }
 
@@ -1176,14 +1242,16 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             D("save connection runner_id %d, runner rank %d", runner_id,
               runner_rank);
 
-            if (comm_rank == 0) {
+            if (comm_rank == 0)
+            {
                 // If we could not start a new model task try to schedule a new
                 // one. This is initiated by server rank 0 ( no new model task
                 // means that at least this rank is finished. so the others will
                 // finish soon too as we assum synchronism in the simulaitons)
                 // check if there is no other task running on this runner
                 if (idle_runners[runner_id]->connected_runner_ranks.size()
-                    == field->connected_runner_ranks.size()) {
+                    == field->connected_runner_ranks.size())
+                {
                     schedule_new_task(runner_id);
                 }
             }
@@ -1201,9 +1269,12 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
     bool finished;
     // would this rank finish?
     bool would_finish = unscheduled_tasks.size() == 0
-        && scheduled_sub_tasks.size() == 0 && running_sub_tasks.size() == 0
-        && finished_sub_tasks.size() == ENSEMBLE_SIZE * connections;
-    if (!would_finish) {
+                        && scheduled_sub_tasks.size() == 0 &&
+                        running_sub_tasks.size() == 0
+                        && finished_sub_tasks.size() == ENSEMBLE_SIZE *
+                        connections;
+    if (!would_finish)
+    {
         return false;
     }
 #ifdef RUNNERS_MAY_CRASH // This needs refactoring I guess
@@ -1211,18 +1282,21 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
     {
         // I would finish. So now lets probe the others
         // try to know if somebody else finished
-        for (int rank = 1; rank < comm_size; rank++) {
+        for (int rank = 1; rank < comm_size; rank++)
+        {
             int received;
 
             MPI_Iprobe(
                 rank, TAG_RANK_FINISHED, mpi.comm(), &received,
                 MPI_STATUS_IGNORE);
-            if (received) {
+            if (received)
+            {
                 int highest_task_id;
                 MPI_Recv(
                     &highest_task_id, 1, MPI_INT, rank, TAG_RANK_FINISHED,
                     mpi.comm(), MPI_STATUS_IGNORE);
-                if (highest_task_id == task_id) {
+                if (highest_task_id == task_id)
+                {
                     // this message was up to date....
                     finished_ranks++;
                 }
@@ -1231,18 +1305,21 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         // comm size without rank 0 ... the others would finish too...
         finished = would_finish && finished_ranks == comm_size - 1;
 
-        if (finished) {
+        if (finished)
+        {
             L("Sending tag all finished message for timestep %d to %d other "
               "server ranks",
               current_step, comm_size - 1);
             // tell everybody that everybody finished!
-            for (int rank = 1; rank < comm_size; rank++) {
+            for (int rank = 1; rank < comm_size; rank++)
+            {
                 MPI_Send(
                     nullptr, 0, MPI_BYTE, rank, TAG_ALL_FINISHED, mpi.comm());
             }
         }
     }
-    else {
+    else
+    {
         // rank != 0:
         finished = false;
 
@@ -1251,7 +1328,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         // ensemble members need to be repeated due to failing runner.
 
 
-        if (highest_sent_task_id < highest_received_task_id) {
+        if (highest_sent_task_id < highest_received_task_id)
+        {
             // only send once when we finished a new task that was received
             // later.  REM: using Bsend as faster as buffere, buffering not
             // necessary here...
@@ -1267,7 +1345,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         int received;
         MPI_Iprobe(
             0, TAG_ALL_FINISHED, mpi.comm(), &received, MPI_STATUS_IGNORE);
-        if (received) {
+        if (received)
+        {
             L("receiving tag all finished message");
             MPI_Recv(
                 nullptr, 0, MPI_BYTE, 0, TAG_ALL_FINISHED, mpi.comm(),
@@ -1281,14 +1360,16 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
     finished = would_finish;
 #endif
 
-    if (finished) {
+    if (finished)
+    {
 #ifdef WITH_FTI
         // FIXME: shortcut to here if recovering (do not do first background
         // state calculation!)
         FT.recover();
 #endif
         bool launcher_ok = true;
-        if (comm_rank == 0) {
+        if (comm_rank == 0)
+        {
             launcher_ok = launcher->checkLauncherDueDate(); // did the launcher
                                                             // already timeout
                                                             // before the long
@@ -1311,7 +1392,8 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         FT.flushCP(); // TODO: put into one function
         FT.finalizeCP();
 #endif
-        if (comm_rank == 0 && !launcher_ok) {
+        if (comm_rank == 0 && !launcher_ok)
+        {
             // Launcher died! Wait for next update step and send back to all
             // simulations to shut themselves down. This way we are sure to send
             // to all and we can finish the current update step gracefully.
@@ -1325,17 +1407,20 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         MPI_Bcast(&current_nsteps, 1, MPI_INT, 0, mpi.comm());
         assimilation_cycles++;
 
-        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++) {
+        for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
+        {
             trigger(STOP_IDLE_RUNNER, it->first);
         }
         trigger(STOP_ITERATION, current_step);
 
-        if (current_nsteps == -1) {
+        if (current_nsteps == -1)
+        {
             D("The assimilator decided to end now.");
             end_all_runners();
             return true;
         }
-        else if (current_nsteps == -2) {
+        else if (current_nsteps == -2)
+        {
             kill_all_runners();
             exit(1);
             return true;
@@ -1345,12 +1430,14 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
         // After update step: rank 0 loops over all runner_id's sending them a
         // new state vector part they have to propagate.
-        if (comm_rank == 0) {
+        if (comm_rank == 0)
+        {
             // As in this loop we might erase some idle runners from the list we
             // may not do a simple for loop.
             auto runner_it = get_completely_idle_runner();
             while (runner_it != idle_runners.end()
-                   && unscheduled_tasks.size() > 0) {
+                   && unscheduled_tasks.size() > 0)
+            {
                 L("Rescheduling after update step for timestep %d",
                   current_step);
                 schedule_new_task(runner_it->first);
@@ -1368,7 +1455,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 /// Call:
 ///
 /// melissa_server <total steps> <ensemble size> <assimilator type id> \
-///     <max runner timeout in s> <server slowdown factor> <launcher host name>
+// ///     <max runner timeout in s> <server slowdown factor> <launcher host name>
 ///
 /// The Server slowdown factor is only taken into account for debug builds. It
 /// is useful to slowdown the CPU usage while e.g. in a GDB session.
@@ -1380,19 +1467,24 @@ int main(int argc, char* argv[]) {
     int server_slowdown_factor = 1;
 
     // Read in configuration from command line
-    if (argc >= 2) {
+    if (argc >= 2)
+    {
         param_total_steps = atoi(argv[1]);
     }
-    if (argc >= 3) {
+    if (argc >= 3)
+    {
         ENSEMBLE_SIZE = atoi(argv[2]);
     }
-    if (argc >= 4) {
+    if (argc >= 4)
+    {
         ASSIMILATOR_TYPE = static_cast<AssimilatorType>(atoi(argv[3]));
     }
-    if (argc >= 5) {
+    if (argc >= 5)
+    {
         MAX_RUNNER_TIMEOUT = atoi(argv[4]);
     }
-    if (argc >= 6) {
+    if (argc >= 6)
+    {
         server_slowdown_factor = atoi(argv[5]); // will wait this time * 10
                                                 // useconds every server
                                                 // mainloop...
@@ -1432,7 +1524,8 @@ int main(int argc, char* argv[]) {
 
     // Start sockets:
     void* configuration_socket = NULL;
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         configuration_socket = zmq_socket(context, ZMQ_REP);
         const char* configuration_socket_addr =
             "tcp://*:4000"; // to be put
@@ -1443,7 +1536,8 @@ int main(int argc, char* argv[]) {
                             // on simulation
                             // start
         int rc = zmq_bind(configuration_socket, configuration_socket_addr);
-        if (rc != 0 && errno == 98) {
+        if (rc != 0 && errno == 98)
+        {
             // Address already in use. Try once more...
             L("Address %s already in use. Retrying ONCE again to bind in 5s...",
               configuration_socket_addr);
@@ -1500,7 +1594,8 @@ int main(int argc, char* argv[]) {
 
 
     int items_to_poll = 1;
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         // poll configuration socket
         items_to_poll += 2;
     }
@@ -1508,7 +1603,8 @@ int main(int argc, char* argv[]) {
     SCOREP_USER_REGION_DEFINE(zmq_poll_region_handle)
 
     // Server main loop:
-    while (true) {
+    while (true)
+    {
 #ifdef NDEBUG
         // usleep(1);
 #else
@@ -1524,7 +1620,8 @@ int main(int argc, char* argv[]) {
             zmq_poll_region_handle, "zmq_poll", SCOREP_USER_REGION_TYPE_COMMON)
         zmq_pollitem_t items[items_to_poll];
         items[0] = {data_response_socket, 0, ZMQ_POLLIN, 0};
-        if (comm_rank == 0) {
+        if (comm_rank == 0)
+        {
             items[1] = {configuration_socket, 0, ZMQ_POLLIN, 0};
             items[2] = {launcher->getTextPuller(), 0, ZMQ_POLLIN, 0};
         }
@@ -1538,21 +1635,26 @@ int main(int argc, char* argv[]) {
         SCOREP_USER_REGION_END(zmq_poll_region_handle)
 
         // answer requests
-        if (comm_rank == 0) {
-            if (items[1].revents & ZMQ_POLLIN) {
+        if (comm_rank == 0)
+        {
+            if (items[1].revents & ZMQ_POLLIN)
+            {
                 answer_configuration_message(
                     configuration_socket, data_response_port_names);
             }
 
-            if (items[2].revents & ZMQ_POLLIN) {
+            if (items[2].revents & ZMQ_POLLIN)
+            {
                 launcher->receiveText();
             }
-            else if (!launcher->checkLauncherDueDate()) {
+            else if (!launcher->checkLauncherDueDate())
+            {
                 // if we know no runners end here already!
                 // (There are probably none in the queue neither as there is no
                 // launcher...)
                 if (scheduled_sub_tasks.size() + running_sub_tasks.size()
-                    == 0) {
+                    == 0)
+                {
                     E("There are no runners and also the Launcher does not "
                       "respond. Ending the server now!");
                 }
@@ -1562,8 +1664,10 @@ int main(int argc, char* argv[]) {
         }
 
         // coming from fresh init...
-        if (phase == PHASE_INIT) {
-            if ((comm_rank == 0 && field != nullptr) || comm_rank != 0) {
+        if (phase == PHASE_INIT)
+        {
+            if ((comm_rank == 0 && field != nullptr) || comm_rank != 0)
+            {
                 // check if initialization on rank 0 finished
                 // (rank 0 does some more intitialization than the other server
                 // ranks) other ranks will just Wait for rank 0 to finish field
@@ -1600,7 +1704,8 @@ int main(int argc, char* argv[]) {
 
         int seconds = static_cast<int>(time(NULL));
 
-        if (phase == PHASE_SIMULATION) {
+        if (phase == PHASE_SIMULATION)
+        {
             // X     if simulation requests work see if work in list. if so
             // launch it. if not save connection X     if scheduling message
             // from rank 0: try to run message. if the state was before
@@ -1629,12 +1734,14 @@ int main(int argc, char* argv[]) {
 
 
 #ifdef REPORT_WORKLOAD
-            if (comm_rank == 0) {
+            if (comm_rank == 0)
+            {
                 cycles++;
             }
 #endif
 
-            if (last_seconds_checks < seconds) {
+            if (last_seconds_checks < seconds)
+            {
                 last_seconds_checks = seconds;
 
 #ifdef RUNNERS_MAY_CRASH
@@ -1643,25 +1750,29 @@ int main(int argc, char* argv[]) {
                 // not respond. This can Send a kill request to rank 0
                 check_due_dates();
 
-                if (comm_rank == 0) {
+                if (comm_rank == 0)
+                {
                     check_kill_requests();
                 }
 #endif
 
 #ifdef REPORT_WORKLOAD
-                if (comm_rank == 0) {
+                if (comm_rank == 0)
+                {
                     L("Cycles last second: %d", cycles);
                     cycles = 0;
                 }
 #endif
             }
 
-            if (comm_rank != 0) {
+            if (comm_rank != 0)
+            {
                 // check if rank 0 wants us to schedule some new tasks.
                 check_schedule_new_tasks();
             }
 
-            if (items[0].revents & ZMQ_POLLIN) {
+            if (items[0].revents & ZMQ_POLLIN)
+            {
                 handle_data_response(assimilator);
                 // REM: We try to schedule new data after the server rank 0 gave
                 // new tasks and after receiving new data. It does not make
@@ -1669,7 +1780,8 @@ int main(int argc, char* argv[]) {
                 // more fault tollerance this needs to be changed.
             }
 
-            if (check_finished(assimilator)) {
+            if (check_finished(assimilator))
+            {
                 break; // all runners finished.
             }
 
@@ -1690,22 +1802,24 @@ int main(int argc, char* argv[]) {
             assert(
                 unscheduled_tasks.size() * connections + // scale on amount of
                                                          // subtasks.
-                    scheduled_sub_tasks.size() + running_sub_tasks.size()
-                    + finished_sub_tasks.size()
+                scheduled_sub_tasks.size() + running_sub_tasks.size()
+                + finished_sub_tasks.size()
                 == connections * ENSEMBLE_SIZE);
         }
 
 
 #ifdef REPORT_MEMORY
 
-        if (comm_rank == 0 && (seconds - 5 > last_seconds_memory)) {
+        if (comm_rank == 0 && (seconds - 5 > last_seconds_memory))
+        {
             MemoryReportValue();
             last_seconds_memory = seconds;
         }
 #endif
     }
 
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         L("Executed %d assimilation cycles with %d ensemble members each, with "
           "a runner timeout of %lli seconds",
           assimilation_cycles, ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
@@ -1720,7 +1834,8 @@ int main(int argc, char* argv[]) {
     D("Ending Server.");
     // TODO: check if we need to delete some more stuff!
 
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         // send stop message, close the launcher sockets before the context is
         // destroyed!
         launcher.reset();
@@ -1730,16 +1845,18 @@ int main(int argc, char* argv[]) {
 #ifdef REPORT_TIMING_ALL_RANKS
     const std::array<EventTypeTranslation, 4> event_type_translations = {
         {{START_ITERATION, STOP_ITERATION, "Iteration"},
-         {START_FILTER_UPDATE, STOP_FILTER_UPDATE, "Filter Update"},
-         {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
-         {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "State propagation"}}};
+            {START_FILTER_UPDATE, STOP_FILTER_UPDATE, "Filter Update"},
+            {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+            {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE,
+             "State propagation"}}};
     timing->write_region_csv(
         event_type_translations, "melissa_server", comm_rank);
 #endif
 #endif
 
     zmq_close(data_response_socket);
-    if (comm_rank == 0) {
+    if (comm_rank == 0)
+    {
         zmq_close(configuration_socket);
     }
     zmq_ctx_destroy(context);
