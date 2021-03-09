@@ -420,48 +420,42 @@ struct ConfigurationConnection
 
     /// returns true if field registering is requested by the server
     bool register_runner_id(Server* out_server) {
-        zmq_msg_t msg_request, msg_reply;
-        zmq_msg_init_size(&msg_request, 2 * sizeof(int));
-        int* header = reinterpret_cast<int*>(zmq_msg_data(&msg_request));
+        assert(std::getenv("MELISSA_DA_RUNNER_ID"));
 
         runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+        int header[] = {REGISTER_RUNNER_ID, runner_id};
 
-        header[0] = REGISTER_RUNNER_ID;
-        header[1] = runner_id;
+        zmq::send_n(socket, header, 2);
 
         L("registering runner_id %d at server", runner_id);
-        ZMQ_CHECK(zmq_msg_send(&msg_request, socket, 0));
-        zmq_msg_close(&msg_request);
 
-        zmq_msg_init(&msg_reply);
-        zmq_msg_recv(&msg_reply, socket, 0);
-        assert(zmq_msg_size(&msg_reply) == 2 * sizeof(int));
-        int* buf = reinterpret_cast<int*>(zmq_msg_data(&msg_reply));
+        auto msg_reply = zmq::recv(socket);
 
-        bool request_register_field = (buf[0] != 0);
+        assert(zmq::size(*msg_reply) == 2 * sizeof(int));
 
-        L("Registering field? %d", buf[0]);
+        int reply[2] = {0};
 
-        out_server->comm_size = buf[1];
-        zmq_msg_close(&msg_reply);
+        std::memcpy(reply, zmq::data(*msg_reply), sizeof(reply));
+
+        bool request_register_field = reply[0] != 0;
+
+        L("Registering field? %d", reply[0]);
+
+        out_server->comm_size = reply[1];
 
         size_t port_names_size =
             out_server->comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(char);
 
         assert_more_zmq_messages(socket);
-        zmq_msg_init(&msg_reply);
-        zmq_msg_recv(&msg_reply, socket, 0);
+        msg_reply = zmq::recv(socket);
 
-        assert(zmq_msg_size(&msg_reply) == port_names_size);
+        assert(zmq::size(*msg_reply) == port_names_size);
 
-        out_server->port_names.resize(port_names_size);
+        out_server->port_names.resize(zmq::size(*msg_reply));
 
-        copy(
-            reinterpret_cast<char*>(zmq_msg_data(&msg_reply)),
-            reinterpret_cast<char*>(zmq_msg_data(&msg_reply)) + port_names_size,
-            out_server->port_names.begin());
-
-        zmq_msg_close(&msg_reply);
+        std::memcpy(
+            out_server->port_names.data(),
+            zmq::data(*msg_reply), zmq::size(*msg_reply));
 
         return request_register_field;
     }
