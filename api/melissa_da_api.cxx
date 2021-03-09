@@ -162,61 +162,55 @@ struct ServerRankConnection
         // otherwise 0 or 2 if we want to quit. the first message also contains
         // out_current_state_id and out_current_step the 2nd message just
         // consists of bytes that will be put into out_values
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
-        D("Received message size = %lu", zmq_msg_size(&msg));
-        assert(zmq_msg_size(&msg) == 4 * sizeof(int));
-        int* buf = reinterpret_cast<int*>(zmq_msg_data(&msg));
-        *out_current_state_id = buf[0];
-        *out_current_step = buf[1];
-        int type = buf[2];
-        int nsteps = buf[3];
-        zmq_msg_close(&msg);
+
+        auto msg = zmq::recv(data_request_socket);
+        D("Received message size = %lu", zmq::size(*msg));
+        assert(zmq::size(*msg) == 4 * sizeof(int));
+
+        int state[4] = {0};
+
+        std::memcpy(state, zmq::data(*msg), sizeof(state));
+
+        *out_current_state_id = state[0];
+        *out_current_step = state[1];
+        int type = state[2];
+        int nsteps = state[3];
 
         if(type == CHANGE_STATE)
         {
             assert_more_zmq_messages(data_request_socket);
 
             // zero copy is for sending only!
-            zmq_msg_init(&msg);
-
-            ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
+            msg = zmq::recv(data_request_socket);
 
             D("<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... "
               "for state %d, current_step=%d, nsteps=%d (socket=%p)",
-              zmq_msg_size(&msg), bytes_expected, bytes_expected_hidden,
+              zmq::size(*msg), bytes_expected, bytes_expected_hidden,
               *out_current_state_id, *out_current_step, nsteps,
               data_request_socket);
 
-            assert(zmq_msg_size(&msg) == bytes_expected);
+            assert(zmq::size(*msg) == bytes_expected);
 
-            VEC_T* buf = reinterpret_cast<VEC_T*>(zmq_msg_data(&msg));
-            std::copy(buf, buf + bytes_expected, out_values);
+            std::memcpy(out_values, zmq::data(*msg), bytes_expected);
 
             // print_vector(std::vector<double>(out_values,
             //                                 out_values +
             //                                 doubles_expected));
-            zmq_msg_close(&msg);
 
             if(bytes_expected_hidden > 0)
             {
                 assert_more_zmq_messages(data_request_socket);
 
                 // zero copy is for sending only!
-                zmq_msg_init(&msg);
+                msg = zmq::recv(data_request_socket);
 
-                ZMQ_CHECK(zmq_msg_recv(&msg, data_request_socket, 0));
-                assert(zmq_msg_size(&msg) == bytes_expected_hidden);
-
-                buf = reinterpret_cast<VEC_T*>(zmq_msg_data(&msg));
-                std::copy(buf, buf + bytes_expected_hidden, out_values_hidden);
+                assert(zmq::size(*msg) == bytes_expected_hidden);
+                std::memcpy(out_values_hidden, zmq::data(*msg),
+                            bytes_expected_hidden);
 
                 // print_vector(std::vector<double>(out_values_hidden,
                 // out_values_hidden +
                 // doubles_expected_hidden));
-                zmq_msg_close(&msg); // TODO; should work all with the same
-                                     // message!
             }
 
             assert_no_more_zmq_messages(data_request_socket);
