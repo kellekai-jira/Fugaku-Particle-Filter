@@ -36,32 +36,41 @@ message Weight {
     double weight = 3;
 }
 
+// application ranks to job socket on weight server
 message JobRequest {
-    repeated StateId cached_states = 1;
-    uint32 runner_id = 2;
-    StateServer runner = 3;
+    uint32 runner_id = 1;
 }
 
 message JobResponse {
     StateId job = 1;
     StateId parent = 2;
-    repeated StateServer runners = 3;
-    uint32 nsteps = 4;
+    uint32 nsteps = 3;
 }
 
+// headrank <-> headrank
 message StateRequest {
     StateId state_id = 1;
 }
-
 
 message StateResponse {
     StateId state_id = 1;
     repeated string filenames = 2; // TODO: now we could simply use scp in a first test ;)
     // TODO: OR: Append another message containing the acutal data
+    // TODO: check that we don't delete anything what is about to be sent to anothe runner atm
     // if state not there will just  send back emnpty file names list
 }
 
 
+
+// fti headranks to general purpose request socket
+message RequestRunners {
+    uint32 runner_id = 1;
+    StateServer runner = 2;
+}
+
+message RespondRunners {
+    repeated StateServer runners = 1;
+} // replies empty list if there are no others. if no others: look on pfs...
 
 // when runner fti heads have nothing to do they can do a prefetch
 // the server will send back things that are worth prefetching
@@ -69,12 +78,21 @@ message StateResponse {
 message PrefetchRequest { // the same as job request
     repeated StateId cached_states = 1;
     uint32 runner_id = 2;
-    StateServer runner = 3;
 }
 
 message PrefetchResponse {
     StateId state_id = 1;
-    repeated StateServer runners = 2;
+}
+
+
+message DeleteRequest { // the same as job request
+    repeated StateId cached_states = 1;
+    uint32 runner_id = 2;
+}
+
+message DeleteResponse { // the same as job request
+    repeated StateId cached_states = 1;
+    uint32 runner_id = 2;
 }
 
 

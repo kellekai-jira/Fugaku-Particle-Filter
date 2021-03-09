@@ -26,6 +26,7 @@ void handle_application_state_request() {
 void handle_state_server_requests() {
         if state_server.recv.......
             see if state is there and send to state server...
+                // !! important to check again if state can be retrieved locally. (it might be possible that the state server was about to prefetch tehe state anyway ;))
 
 
 
