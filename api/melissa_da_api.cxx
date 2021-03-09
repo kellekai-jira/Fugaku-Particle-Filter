@@ -467,54 +467,39 @@ struct ConfigurationConnection
         std::vector<INDEX_MAP_T>& global_index_map,
         std::vector<INDEX_MAP_T>& global_index_map_hidden,
         const int bytes_per_element, const int bytes_per_element_hidden) {
-        zmq_msg_t msg_header, msg_local_vect_sizes, msg_local_hidden_vect_sizes,
-                  msg_index_map, msg_index_map_hidden, msg_reply;
-        zmq_msg_init_size(
-            &msg_header,
-            sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int)
-            + MPI_MAX_PROCESSOR_NAME * sizeof(char));
-        int* header = reinterpret_cast<int*>(zmq_msg_data(&msg_header));
+
         int type = REGISTER_FIELD;
-        header[0] = type;
-        header[1] = getCommSize();
-        header[2] = bytes_per_element;
-        header[3] = bytes_per_element_hidden;
-        strncpy(
-            reinterpret_cast<char*>(&header[4]), field_name,
+        int header[] = {
+            type, getCommSize(), bytes_per_element, bytes_per_element_hidden
+        };
+        auto msg_header = zmq::msg_init(sizeof(header) +
+                                        MPI_MAX_PROCESSOR_NAME);
+
+        std::memcpy(zmq::data(*msg_header), header, sizeof(header));
+        std::strncpy(
+            zmq::data(*msg_header) + sizeof(header),
+            field_name,
             MPI_MAX_PROCESSOR_NAME);
-        ZMQ_CHECK(zmq_msg_send(&msg_header, socket, ZMQ_SNDMORE));
-        zmq_msg_close(&msg_header);
+        zmq::send(*msg_header, socket, ZMQ_SNDMORE);
+        zmq::send_n(
+            socket, local_vect_sizes, getCommSize(), ZMQ_SNDMORE);
+        zmq::send_n(
+            socket, local_hidden_vect_sizes, getCommSize(), ZMQ_SNDMORE);
 
-        zmq_msg_init_data(
-            &msg_local_vect_sizes, local_vect_sizes,
-            getCommSize() * sizeof(size_t), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_local_vect_sizes, socket, ZMQ_SNDMORE));
-        zmq_msg_close(&msg_local_vect_sizes);
+        auto msg_index_map = zmq::msg_init_n(
+            global_index_map.data(), global_index_map.size());
 
-        zmq_msg_init_data(
-            &msg_local_hidden_vect_sizes, local_hidden_vect_sizes,
-            getCommSize() * sizeof(size_t), NULL, NULL);
-        ZMQ_CHECK(
-            zmq_msg_send(&msg_local_hidden_vect_sizes, socket, ZMQ_SNDMORE));
-        zmq_msg_close(&msg_local_hidden_vect_sizes);
+        zmq::send(*msg_index_map, socket, ZMQ_SNDMORE);
 
-        zmq_msg_init_data(
-            &msg_index_map, global_index_map.data(),
-            global_index_map.size() * sizeof(INDEX_MAP_T), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_index_map, socket, ZMQ_SNDMORE));
-        zmq_msg_close(&msg_index_map);
+        auto msg_index_map_hidden = zmq::msg_init_n(
+            global_index_map_hidden.data(), global_index_map_hidden.size());
 
-        zmq_msg_init_data(
-            &msg_index_map_hidden, global_index_map_hidden.data(),
-            global_index_map_hidden.size() * sizeof(INDEX_MAP_T), NULL, NULL);
-        ZMQ_CHECK(zmq_msg_send(&msg_index_map_hidden, socket, 0));
-        zmq_msg_close(&msg_index_map_hidden);
+        zmq::send(*msg_index_map_hidden, socket);
 
-        zmq_msg_init(&msg_reply);
-        zmq_msg_recv(&msg_reply, socket, 0);
-        // ack
-        assert(zmq_msg_size(&msg_reply) == 0);
-        zmq_msg_close(&msg_reply);
+        auto msg_reply = zmq::recv(socket);
+        (void)msg_reply;
+
+        assert(zmq::size(*msg_reply) == 0);
     }
 
 
