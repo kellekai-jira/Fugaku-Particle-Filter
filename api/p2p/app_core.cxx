@@ -1,4 +1,4 @@
-#include "melissa_p2p_app_core.h"
+#include "app_core.h"
 #include "../../server-p2p/messages/cpp/control_messages.pb.h"
 
 #include "api_common.h"

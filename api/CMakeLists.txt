@@ -5,7 +5,14 @@ file(GLOB
      *.cxx
      )
 
-add_library(melissa_da_api SHARED ${ALL_API}
+file(GLOB
+     ALL_P2P
+     RELATIVE
+     ${CMAKE_CURRENT_SOURCE_DIR}/p2p
+     *.cxx
+     )
+
+ add_library(melissa_da_api SHARED ${ALL_API} ${ALL_P2P}
     "../../server-p2p/messages/cpp/control_messages.pb.cc"
     $<TARGET_OBJECTS:melissa_common>)
 
