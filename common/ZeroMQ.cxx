@@ -92,9 +92,9 @@ void zmq::recv(zmq::Message& msg, void* socket, int flags) {
 }
 
 
-void zmq::send(zmq::Message& msg, void* p, int n) {
-    assert(p);
-    ZMQ_CHECK(zmq_msg_send(&msg, p, n));
+void zmq::send(zmq::Message& msg, void* socket, int flags) {
+    assert(socket);
+    ZMQ_CHECK(zmq_msg_send(&msg, socket, flags));
 }
 
 
