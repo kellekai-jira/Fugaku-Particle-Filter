@@ -28,7 +28,7 @@ zmq::MessageRef msg_init(
 template <typename T>
 zmq::MessageRef msg_init_n(
     T* data, std::size_t count, FreeFn free = nullptr, void* hints = nullptr) {
-    static_assert(std::is_trivial<T>::value);
+    static_assert(std::is_trivial<T>::value, "");
 
     return msg_init(data, sizeof(T) * count, free, hints);
 }
@@ -41,7 +41,7 @@ std::size_t size(Message& msg);
 
 template <typename T>
 void send(void* socket, const T* first, const T* last, int flags = 0) {
-    static_assert(std::is_trivial<T>::value);
+    static_assert(std::is_trivial<T>::value, "");
 
     assert(last >= first);
 
@@ -52,7 +52,7 @@ void send(void* socket, const T* first, const T* last, int flags = 0) {
 
 template <typename T>
 void send_n(void* socket, const T* data, std::size_t count, int flags = 0) {
-    static_assert(std::is_trivial<T>::value);
+    static_assert(std::is_trivial<T>::value, "");
 
     impl::send(socket, data, count * sizeof(T), flags);
 }
