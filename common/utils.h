@@ -1,34 +1,33 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-#include <unistd.h>
+#include "melissa_da_stype.h"
+
 #include <cassert>
+#include <climits>
+#include <csignal>
 #include <csignal>
 #include <cstddef>
-#include <zmq.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 
-#include <mpi.h>
-
+#include <chrono>
 #include <iostream>
-
-#include <stdint.h>
-#include <limits.h>
+#include <numeric>
 #include <vector>
 
-#include <stdio.h>
-#include <execinfo.h>
-#include <signal.h>
-#include <stdlib.h>
-
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <chrono>
+#include <execinfo.h>
+#include <ifaddrs.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <unistd.h>
 
 
-
-#include "melissa_da_stype.h"
+#include <mpi.h>
+#include <zmq.h>
 
 inline void print_stack_trace() {
     void *array[10];
@@ -67,7 +66,8 @@ enum Phase
 
 #define E(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
                                       printf("\n"); \
-                                      fprintf(stderr, "[melissa_da_server,%d] ", comm_rank); \
+                                      fprintf(stderr, "[melissa_da_server,%d] ", \
+                                              comm_rank); \
                                       fprintf(stderr, x); fprintf(stderr, "\n"); \
                                       std::raise(SIGINT); \
                                       exit(EXIT_FAILURE);}
@@ -105,12 +105,8 @@ void create_MPI_INDEX_MAP_T();
 
 /// sums over a vector
 template <class T>
-T sum_vec(const std::vector<T> &vec) {
-    T res = 0;
-    for (auto &it : vec) {
-        res += it;
-    }
-    return res;
+T sum_vec(const std::vector<T>& vec) {
+    return std::accumulate(vec.cbegin(), vec.cend(), T{0});
 }
 
 
@@ -175,12 +171,15 @@ inline void init_utils()
 
 
 
-void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size_t *displs,
-                 MPI_Datatype sendtype, void *recvbuf, size_t recvcount,
-                 MPI_Datatype recvtype,
-                 int root, MPI_Comm comm);
-void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendtype,
-                void *recvbuf, const size_t *recvcounts, const size_t *displs,
-                MPI_Datatype recvtype, int root, MPI_Comm comm);
+void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const
+                       size_t *displs,
+                       MPI_Datatype sendtype, void *recvbuf, size_t recvcount,
+                       MPI_Datatype recvtype,
+                       int root, MPI_Comm comm);
+void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype
+                      sendtype,
+                      void *recvbuf, const size_t *recvcounts, const
+                      size_t *displs,
+                      MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 #endif
