@@ -40,17 +40,6 @@ void send(Message& msg, void* socket, int flags = 0);
 std::size_t size(Message& msg);
 
 template <typename T>
-void send(void* socket, const T* first, const T* last, int flags = 0) {
-    static_assert(std::is_trivial<T>::value, "");
-
-    assert(last >= first);
-
-    auto count = last - first;
-
-    impl::send(socket, first, count * sizeof(T), flags);
-}
-
-template <typename T>
 void send_n(void* socket, const T* data, std::size_t count, int flags = 0) {
     static_assert(std::is_trivial<T>::value, "");
 
