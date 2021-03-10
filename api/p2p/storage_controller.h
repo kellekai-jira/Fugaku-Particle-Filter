@@ -5,11 +5,6 @@
 #include <cstddef>
 #include <fti.h>
 
-struct peer_state_req_t {
-  int peer_id;
-  int state_id;
-};
-
 class StateServer {
   public:
     StateServer(void * context);
@@ -77,7 +72,6 @@ class StorageController {
 
     enum FTI_TAG {
       TAG_REQUEST_HOME = TAG_OFFSET,
-      TAG_REQUEST_PEER,
       TAG_INFO_HOME,
       TAG_DELETE,
       TAG_PREFETCH,

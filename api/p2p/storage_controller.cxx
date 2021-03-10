@@ -83,14 +83,13 @@ void StorageController::handle_state_request_home(){
 
 // (2) state request from peer runner
 void StorageController::handle_state_request_peer(){
-  peer_state_req_t req;
-  if( FTI_HeadProbe(TAG_REQUEST_PEER) ) {
-    FTI_HeadRecv(&req, sizeof(peer_state_req_t), TAG_REQUEST_HOME, FTI_HEAD_MODE_SELF);
-    FTIT_stat st; FTI_Stat( req.state_id, &st );
+  int state_id, peer_id;
+  if( m_peers.probe( &state_id, &peer_id ) ) {
+    FTIT_stat st; FTI_Stat( state_id, &st );
     if( FTI_ST_IS_LOCAL( st.level ) ) {
-      m_peers.response( req.state_id, req.peer_id, true );
+      m_peers.response( state_id, peer_id, true );
     } else {
-      m_peers.response( req.state_id, req.peer_id, false );
+      m_peers.response( state_id, peer_id, false );
     }
   }
 }
