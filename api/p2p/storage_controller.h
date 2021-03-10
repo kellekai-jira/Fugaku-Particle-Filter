@@ -1,9 +1,26 @@
-#ifndef _STATE_SERVER_H_
-#define _STATE_SERVER_H_
+#ifndef _STORAGE_CONTROLLER_H_
+#define _STORAGE_CONTROLLER_H_
 
 #include "peer_controller.h"
 #include <cstddef>
 #include <fti.h>
+
+enum StateStatus {
+  MELISSA_STATE_BUSY,
+  MELISSA_STATE_IDLE,
+  MELISSA_STATE_LOAD,
+};
+
+enum StateLocation {
+  MELISSA_STATE_L1, // RAMdisk
+  MELISSA_STATE_L2, // SSD or NVMe
+  MELISSA_STATE_L3  // PFS or BurstBuffer
+};
+
+struct StateInfo_t {
+  StateStatus status;
+  StateLocation location;
+};
 
 class StateServer {
   public:
@@ -57,6 +74,7 @@ class StorageController {
     //##> VARIABLES
 
     PeerController m_peers;
+    std::map<int,StateInfo_t> m_states;
 
     size_t m_request_counter;
 
@@ -79,4 +97,4 @@ class StorageController {
     };
 };
 
-#endif
+#endif // _STORAGE_CONTROLLER_H_
