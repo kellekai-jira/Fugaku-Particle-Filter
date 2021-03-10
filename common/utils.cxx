@@ -74,7 +74,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
 
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
-    char t[] = "/tmp/melissa_da_serverXXXXXX";  // FIXME: supposing this path is common for all ranks!
+    char t[] = SLOW_MPI_DIR "/melissa_da_serverXXXXXX";
     if (rank == root) {
         mkdtemp(t);
     }

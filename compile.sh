@@ -46,7 +46,8 @@ else
           -DCMAKE_CXX_COMPILER=mpicxx \
           -DCMAKE_Fortran_COMPILER=mpif90 \
           -DCMAKE_C_COMPILER=mpicc \
-          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
+          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
+          -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp"
     else
         echo here, juwels with profiling...
         cd ..
