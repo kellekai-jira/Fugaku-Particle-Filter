@@ -1,7 +1,14 @@
 #ifndef _STATE_SERVER_H_
 #define _STATE_SERVER_H_
 
+#include "peer_controller.h"
 #include <cstddef>
+#include <fti.h>
+
+struct StateInfo_t {
+  int state_rank;
+  int state_id;
+};
 
 class StateServer {
   public:
@@ -52,12 +59,27 @@ class StorageController {
     bool update_info() { return (m_request_interval % m_request_counter++) == 0; }
 
     //##> VARIABLES
-    
+
+    PeerController m_peers;
+
     size_t m_request_counter;
 
     // FTI sleeps 500 us each iteration. Thus, a request interval of 2
     // coresponds to a server info request each second.
     int m_request_interval;
+
+    //##> CONSTANTS
+    
+    static const int TAG_OFFSET = 1000000;
+
+    enum FTI_TAG {
+      TAG_REQUEST_HOME = TAG_OFFSET,
+      TAG_REQUEST_PEER,
+      TAG_INFO_HOME,
+      TAG_DELETE,
+      TAG_PREFETCH,
+      TAG_STAGE
+    };
 };
 
 #endif

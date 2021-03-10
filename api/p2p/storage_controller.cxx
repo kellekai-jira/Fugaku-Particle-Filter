@@ -53,35 +53,65 @@ void StorageController::callback() {
 
 // (1) state request from home runner
 void StorageController::handle_state_request_home(){
+  /*
+   * 1) check for messages
+   * 2) receive messages
+   * 3) request from bob
+   * 4) request from pfs
+   * 5) release alice
+  */
+  StateInfo_t state_info;
+  int peer_id;
 
+  // 1) check for messages
+  if( FTI_HeadProbe(TAG_REQUEST_HOME) ) {
+    int result = -1;
+    // 2) receive messages
+    FTI_HeadRecv(&state_info, sizeof(StateInfo_t), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
+    if( m_peers.query( state_info.state_id, &peer_id ) ) {
+      // 3) request from bob
+      result = m_peers.transfer( state_info.state_id, state_info.state_rank, peer_id );
+    } else {
+      // 4) request from pfs
+      result = FTI_Convert( peer_id, state_info.state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
+    }
+    // 5) release alice
+    FTI_HeadSend( &result, sizeof(int), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
+  }
 }
 
 // (2) state request from peer runner
 void StorageController::handle_state_request_peer(){
-
+  if( FTI_HeadProbe(TAG_REQUEST_PEER) ) {
+  }
 }
 
 // (3) update-message from home runner
 void StorageController::handle_update_message_home(){
-
+  if( FTI_HeadProbe(TAG_INFO_HOME) ) {
+  }
 }
 
 // (4) delete request
 void StorageController::handle_delete_request(){
-
+  if( FTI_HeadProbe(TAG_DELETE) ) {
+  }
 }
 
 // (5) prefetch request
 void StorageController::handle_prefetch_request(){
-
+  if( FTI_HeadProbe(TAG_PREFETCH) ) {
+  }
 }
 
 // (6) stage request
 void StorageController::handle_stage_request(){
-
+  if( FTI_HeadProbe(TAG_STAGE) ) {
+  }
 }
 
 // request state cache and peer info from server
 void StorageController::query_runtime_info_server(){
-
+  if( update_info() ) {
+  }
 }
