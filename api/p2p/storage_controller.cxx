@@ -60,20 +60,21 @@ void StorageController::handle_state_request_home(){
    * 4) request from pfs
    * 5) release alice
   */
-  StateInfo_t state_info;
-  int peer_id;
+  int peer_id, state_id, result = 0;
 
   // 1) check for messages
   if( FTI_HeadProbe(TAG_REQUEST_HOME) ) {
-    int result = -1;
     // 2) receive messages
-    FTI_HeadRecv(&state_info, sizeof(StateInfo_t), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
-    if( m_peers.query( state_info.state_id, &peer_id ) ) {
+    FTI_HeadRecv(&state_id, sizeof(int), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
+    if( m_peers.query( state_id, &peer_id ) ) {
       // 3) request from bob
-      result = m_peers.transfer( state_info.state_id, state_info.state_rank, peer_id );
+      const int* const body = FTI_HeadBody();
+      for(int i=0; i<m_nbody; i++) {
+        result += m_peers.transfer( state_id, body[i], peer_id );
+      } 
     } else {
-      // 4) request from pfs
-      result = FTI_Convert( peer_id, state_info.state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
+      // 4) request from pfs TODO FTI_Convert cannot be called from heads yet.
+      result += FTI_Convert( peer_id, state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
     }
     // 5) release alice
     FTI_HeadSend( &result, sizeof(int), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
@@ -82,7 +83,15 @@ void StorageController::handle_state_request_home(){
 
 // (2) state request from peer runner
 void StorageController::handle_state_request_peer(){
+  peer_state_req_t req;
   if( FTI_HeadProbe(TAG_REQUEST_PEER) ) {
+    FTI_HeadRecv(&req, sizeof(peer_state_req_t), TAG_REQUEST_HOME, FTI_HEAD_MODE_SELF);
+    FTIT_stat st; FTI_Stat( req.state_id, &st );
+    if( FTI_ST_IS_LOCAL( st.level ) ) {
+      m_peers.response( req.state_id, req.peer_id, true );
+    } else {
+      m_peers.response( req.state_id, req.peer_id, false );
+    }
   }
 }
 

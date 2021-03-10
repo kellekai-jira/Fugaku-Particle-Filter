@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <fti.h>
 
-struct StateInfo_t {
-  int state_rank;
+struct peer_state_req_t {
+  int peer_id;
   int state_id;
 };
 
@@ -22,9 +22,10 @@ class StateServer {
 class StorageController {
   
   public:
-    StorageController( int request_interval ) : 
+    StorageController( int request_interval, int nbody ) : 
       m_request_interval(request_interval),
-      m_request_counter(0)
+      m_request_counter(0),
+      m_nbody(nbody)
     {}
     // function to register for FTI
     void callback();
@@ -67,9 +68,11 @@ class StorageController {
     // FTI sleeps 500 us each iteration. Thus, a request interval of 2
     // coresponds to a server info request each second.
     int m_request_interval;
+    
+    int m_nbody; 
 
     //##> CONSTANTS
-    
+
     static const int TAG_OFFSET = 1000000;
 
     enum FTI_TAG {
