@@ -5,21 +5,21 @@
 #include <cstddef>
 #include <fti.h>
 
+enum StorageLevel {
+  MELISSA_CACHE_L1, // RAMdisk
+  MELISSA_CACHE_L2, // SSD or NVMe
+  MELISSA_CACHE_L3  // PFS or BurstBuffer
+};
+
 enum StateStatus {
   MELISSA_STATE_BUSY,
   MELISSA_STATE_IDLE,
   MELISSA_STATE_LOAD,
 };
 
-enum StateLocation {
-  MELISSA_STATE_L1, // RAMdisk
-  MELISSA_STATE_L2, // SSD or NVMe
-  MELISSA_STATE_L3  // PFS or BurstBuffer
-};
-
 struct StateInfo_t {
   StateStatus status;
-  StateLocation location;
+  StorageLevel device;
 };
 
 class StateServer {
