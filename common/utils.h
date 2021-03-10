@@ -18,11 +18,9 @@
 #include <vector>
 
 #include <arpa/inet.h>
-#include <chrono>
 #include <execinfo.h>
 #include <ifaddrs.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include <unistd.h>
 
 
@@ -30,7 +28,7 @@
 #include <zmq.h>
 
 inline void print_stack_trace() {
-    void *array[10];
+    void* array[10];
     size_t size;
 
     // get void*'s for all entries on the stack
@@ -52,48 +50,69 @@ enum Phase
 // debug logs:
 #ifdef NDEBUG
 // release mode
-#define D(...)
+#define D(...) \
+    do { \
+    } while(false)
 #else
-// debug mode
-// #define D(x ...) printf(x); printf(" (%s:%d)\n", __FILE__, __LINE__)
-#define D(x ...) if(comm_rank == 0) {printf(x); printf(" (%s:%d)\n", __FILE__, \
-                                                       __LINE__);}
+#define D(x ...) \
+    do { \
+        if(comm_rank == 0) { \
+            std::printf(x); \
+            std::printf(" (%s:%d)\n", __FILE__, __LINE__); \
+        } \
+    } while(false)
 #endif
 
 // normal logging:
-#define L(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
-                                      printf("\n");}
+#define L(x ...) \
+    do { \
+        if(comm_rank == 0) { \
+            std::printf("[%d] ", comm_rank); \
+            std::printf(x); \
+            std::printf("\n"); \
+        } \
+    } while(false)
 
-#define E(x ...) if (comm_rank == 0) {printf("[%d] ", comm_rank); printf(x); \
-                                      printf("\n"); \
-                                      fprintf(stderr, "[melissa_da_server,%d] ", \
-                                              comm_rank); \
-                                      fprintf(stderr, x); fprintf(stderr, "\n"); \
-                                      std::raise(SIGINT); \
-                                      exit(EXIT_FAILURE);}
+#define E(x ...) \
+    do { \
+        if(comm_rank == 0) { \
+            std::printf("[%d] ", comm_rank); \
+            std::printf(x); \
+            std::printf("\n"); \
+            std::fprintf(stderr, "[melissa_da_server,%d] ", comm_rank); \
+            std::fprintf(stderr, x); \
+            std::fprintf(stderr, "\n"); \
+            std::raise(SIGINT); \
+            std::exit(EXIT_FAILURE); \
+        } \
+    } while(false)
 
 
-#define ZMQ_CHECK(x) if (x == -1) { int err2 = errno; int err = zmq_errno(); E( \
-                                        "zmq error(%d, errno=%d): %s", err, \
-                                        err2, zmq_strerror(err)); \
-                                    std::raise(SIGINT); }
+#define ZMQ_CHECK(x) \
+    do { \
+        if((x) == -1) { \
+            int err2 = errno; \
+            int err = zmq_errno(); \
+            E("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); \
+            std::raise(SIGINT); \
+        } \
+    } while(false)
 
-// https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi  :
+// https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi
+// :
 #if SIZE_MAX == UCHAR_MAX
-   #define my_MPI_SIZE_T MPI_UNSIGNED_CHAR
+#define my_MPI_SIZE_T MPI_UNSIGNED_CHAR
 #elif SIZE_MAX == USHRT_MAX
-   #define my_MPI_SIZE_T MPI_UNSIGNED_SHORT
+#define my_MPI_SIZE_T MPI_UNSIGNED_SHORT
 #elif SIZE_MAX == UINT_MAX
-   #define my_MPI_SIZE_T MPI_UNSIGNED
+#define my_MPI_SIZE_T MPI_UNSIGNED
 #elif SIZE_MAX == ULONG_MAX
-   #define my_MPI_SIZE_T MPI_UNSIGNED_LONG
+#define my_MPI_SIZE_T MPI_UNSIGNED_LONG
 #elif SIZE_MAX == ULLONG_MAX
-   #define my_MPI_SIZE_T MPI_UNSIGNED_LONG_LONG
+#define my_MPI_SIZE_T MPI_UNSIGNED_LONG_LONG
 #else
-   #error "what is happening here?"
+#error "what is happening here?"
 #endif
-
-
 
 
 // Functions:
@@ -112,10 +131,9 @@ T sum_vec(const std::vector<T>& vec) {
 
 // inline Functions:
 template <typename T>
-inline void print_vector (const std::vector<T> &vec)
-{
+inline void print_vector(const std::vector<T>& vec) {
     printf("[");
-    for (auto it = vec.begin(); it != vec.end(); it++)
+    for(auto it = vec.begin(); it != vec.end(); it++)
     {
         // printf("%.3f,", *it);
         std::cout << *it << ", ";
@@ -125,34 +143,29 @@ inline void print_vector (const std::vector<T> &vec)
     printf("]\n");
 }
 
-inline void assert_more_zmq_messages(void * socket)
-{
+inline void assert_more_zmq_messages(void* socket) {
     int more;
-    size_t more_size = sizeof (more);
-    zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+    size_t more_size = sizeof(more);
+    zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &more_size);
     assert(more);
 }
 
-inline void assert_no_more_zmq_messages(void * socket)
-{
+inline void assert_no_more_zmq_messages(void* socket) {
     int more;
-    size_t more_size = sizeof (more);
-    zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+    size_t more_size = sizeof(more);
+    zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &more_size);
     assert(more == 0);
 }
 
-inline std::ostream& operator<<(std::ostream& os, const INDEX_MAP_T &rhs) {
+inline std::ostream& operator<<(std::ostream& os, const INDEX_MAP_T& rhs) {
     return os << rhs.varid << ": " << rhs.index;
 }
 
 
-
-
-
 // timing:
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
-inline double diff_to_millis(const TimePoint &lhs, const TimePoint &rhs) {
-    return std::chrono::duration<double, std::milli>(lhs-rhs).count();
+inline double diff_to_millis(const TimePoint& lhs, const TimePoint& rhs) {
+    return std::chrono::duration<double, std::milli>(lhs - rhs).count();
 }
 
 // Globals:
@@ -161,14 +174,11 @@ extern int comm_size;
 extern Phase phase;
 
 
-
 // init
-inline void init_utils()
-{
+inline void init_utils() {
     check_data_types();
     create_MPI_INDEX_MAP_T();
 }
-
 
 
 void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const

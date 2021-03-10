@@ -18,7 +18,7 @@ if [ ! -f "$verification_path/ens_06_step08_ana.txt" ]; then
   set -e
   cd $verification_path
   PDAF_ARCH=linux_gfortran_openmpi make model_pdaf
-  mpirun -np 18 ./model_pdaf -dim_ens 9
+  mpirun --oversubscribe -np 18 ./model_pdaf -dim_ens 9
   cd -
   set +e
 fi
