@@ -5,52 +5,7 @@
 
 // TODO error checking!
 
-#include "../../server-p2p/messages/cpp/control_messages.pb.h"
-
-// Callback called in the FTI head loop:
-void StorageController::callback() {
-    void* context;
-    static std::unique_ptr<StateServer> state_server(nullptr);
-    if (state_server.get() == nullptr) {
-        // open all sockets necessary
-        state_server = std::make_unique<StateServer>(context);
-    }
-
-    /*
-     * The heads have to handle 6 kinds of requests:
-     * 
-     * (1) state request from home runner
-     * (2) state request from peer runner
-     * (3) update-message from home runner
-     * (4) delete request (remove deprecated states)
-     * (5) prefetch request (update state cache)
-     * (6) stage request (push state to PFS)
-     * 
-     * Furthermore, the heads frequently update the the work queue 
-     * and the peer list requesting info from the server.
-    */
-
-    // (1) state request from home runner
-    handle_state_request_home();
-    
-    // (2) state request from peer runner
-    handle_state_request_peer();
-
-    // (3) update-message from home runner
-    handle_update_message_home();
-    
-    // (4) delete request
-    handle_delete_request();
-    
-    // (5) prefetch request
-    handle_prefetch_request();
-    
-    // (6) stage request
-    handle_stage_request();
-    
-    // request state cache and peer info from server
-    query_runtime_info_server();
-}
+#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
 // (1) handle state requests from Alice
 void StorageController::handle_state_request_home(){
@@ -70,7 +25,7 @@ void StorageController::handle_state_request_home(){
     if( m_peers.query( state_id, &peer_id ) ) {
       // 3) request from bob
       const int* const body = FTI_HeadBody();
-      for(int i=0; i<m_nbody; i++) {
+      for(int i=0; i<m_comm_model_size; i++) {
         result += m_peers.transfer( state_id, body[i], peer_id );
       } 
     } else {
@@ -151,11 +106,12 @@ void StorageController::handle_prefetch_request(){
   int state_id, peer_id, storage_level, result = 0;
   if( FTI_HeadProbe(TAG_PREFETCH) ) {
     FTI_HeadRecv(&state_id, sizeof(int), TAG_PREFETCH, FTI_HEAD_MODE_SING);
+    FTI_HeadRecv(&storage_level, sizeof(StorageLevel), TAG_PREFETCH, FTI_HEAD_MODE_SING);
     assert(m_states.count(state_id) == 0 && "state already registered"); 
     if( m_peers.query( state_id, &peer_id ) ) {
       // 3) request from bob
       const int* const body = FTI_HeadBody();
-      for(int i=0; i<m_nbody; i++) {
+      for(int i=0; i<m_comm_model_size; i++) {
         result += m_peers.transfer( state_id, body[i], peer_id );
       } 
     } else {
@@ -163,14 +119,13 @@ void StorageController::handle_prefetch_request(){
       result += FTI_Convert( peer_id, state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
     }
     assert( result == 0 && "FATAL could not find state" );
-    FTI_HeadRecv(&storage_level, sizeof(StorageLevel), TAG_PREFETCH, FTI_HEAD_MODE_SING);
     StateInfo_t info;
     if( storage_level == MELISSA_CACHE_L1 ) {
       FTI_Move( state_id, FTI_L1, MELISSA_CACHE_L1 );
 #warning TODO implement FTI_Stash (stash l1 checkpoint to second storage level)
       //FTI_Stash( state_id, FTI_L1, MELISSA_CACHE_L2, FTI_STASH_PUSH ); // reverse FTI_Stash( state_id, FTI_L1, FTI_STASH_APPLY )
       info.status = MELISSA_STATE_IDLE;
-      info.device = MELISSA_CACHE_L1;
+      info.level = MELISSA_CACHE_L1;
       m_states.insert( std::pair<int,StateInfo_t>(state_id,info) );
     }
   }
