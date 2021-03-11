@@ -120,7 +120,7 @@ option(REPORT_TIMING_ALL_RANKS "If activated all server ranks will collect timin
 
 # Trick MPI
 option(SLOW_MPI "Activate mpiscatter and gather through files for arrays with element_count > INTMAX" OFF)
-option(SLOW_MPI_DIR "A folder that every server rank can access. Default is /tmp which won't work on e.g. juwels" "/tmp")
+SET(SLOW_MPI_DIR "/tmp" CACHE PATH "A folder that every server rank can access. Default is /tmp which won't work on e.g. juwels")
 
 
 # Testing convenience:                                                      $0 in the -c environment, not a part of $@
