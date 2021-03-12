@@ -7,12 +7,14 @@
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
-StorageController::StorageController( bool init, int request_interval, int comm_model_size, std::unique_ptr<IoController> & io ) : 
+StorageController::StorageController( bool init, int request_interval, int comm_model_size, 
+    std::unique_ptr<IoController> & io, std::unique_ptr<PeerController> & peer) : 
   m_initialized(init),
   m_request_interval(request_interval),
   m_request_counter(0),
   m_comm_model_size(comm_model_size),
   m_io(io),
+  m_peer(peer),
   m_worker_thread(true) {
 
   assert( init && "StorageController not initialized" );

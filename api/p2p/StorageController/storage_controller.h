@@ -4,19 +4,24 @@
 #include "io_controller.h"
 #include "peer_controller.h"
 #include <cstddef>
+#include <cassert>
 #include <memory>
 
-static std::unique_ptr<IoController> unique_ptr_nullptr = std::unique_ptr<IoController>(nullptr);
+template<typename T>
+std::unique_ptr<T>& unique_nullptr() { 
+  static std::unique_ptr<T> ptr = std::unique_ptr<T>(nullptr);
+  return ptr;
+}
 
-enum StateStatus {
+enum state_status_t {
   MELISSA_STATE_BUSY,
   MELISSA_STATE_IDLE,
   MELISSA_STATE_LOAD,
 };
 
-struct StateInfo_t {
-  StateStatus status;
-  StorageLevel level;
+struct state_info_t {
+  state_status_t status;
+  io_level_t level;
 };
 
 class StateServer {
@@ -52,13 +57,16 @@ class StorageController {
 
   private:
     
-    static StorageController& _getInstance(bool init = false, int request_interval = -1, int comm_model_size = -1, std::unique_ptr<IoController> & io = unique_ptr_nullptr )
+    static StorageController& _getInstance(bool init = false, int request_interval = -1, 
+        int comm_model_size = -1, std::unique_ptr<IoController> & io = unique_nullptr<IoController>(),
+        std::unique_ptr<PeerController> & peer = unique_nullptr<PeerController>())
     {
-      static StorageController instance{ init, request_interval, comm_model_size, io };
+      static StorageController instance{ init, request_interval, comm_model_size, io, peer };
       return instance;
     }
     
-    StorageController( bool init, int request_interval, int comm_model_size, std::unique_ptr<IoController> & io );
+    StorageController( bool init, int request_interval, int comm_model_size, 
+        std::unique_ptr<IoController> & io, std::unique_ptr<PeerController> & peer);
 
     void m_load_core( int state_id );
     void m_load_user( int state_id );
@@ -93,9 +101,9 @@ class StorageController {
     bool m_initialized;
     
     std::unique_ptr<IoController>& m_io;
-    PeerController m_peers;
+    std::unique_ptr<PeerController>& m_peer;
 
-    std::map<int,StateInfo_t> m_states;
+    std::map<int,state_info_t> m_states;
     
     bool m_worker_thread;
     size_t m_request_counter;
@@ -106,17 +114,6 @@ class StorageController {
     
     int m_comm_model_size; 
 
-    //##> CONSTANTS
-
-    static const int TAG_OFFSET = 1000000;
-
-    enum FTI_TAG {
-      TAG_REQUEST_HOME = TAG_OFFSET,
-      TAG_INFO_HOME,
-      TAG_DELETE,
-      TAG_PREFETCH,
-      TAG_STAGE
-    };
 };
 
 #endif // _STORAGE_CONTROLLER_H_

@@ -4,14 +4,32 @@
 #include <fti.h>
 #include "io_controller.h"
 
-class FtiController : IoController {
-   public:
-      bool is_local( int id );
-      void move( int id, int device_from, int device_to );
-      void store( int id, int device );
-      void stage( int id, int device );
-      void load( int id, int device );
-      void register_callback( void (*f)(void) );
-};
 
+namespace FTI {
+
+  static const int MPI_TAG_OFFSET = 1000000;
+
+  enum mpi_tag_t {
+    REQUEST = MPI_TAG_OFFSET,
+    MESSAGE,
+    ERASE,
+    LOAD,
+    COPY
+  };
+
+  class FtiController : IoController {
+    public:
+      void load( int id, io_level_t level = IO_STORAGE_L1 );
+      void store( int id, io_level_t level = IO_STORAGE_L1 );
+      void move( int id, io_level_t from, io_level_t to );
+      void copy( int id, io_level_t from, io_level_t to );
+
+      bool is_local( int id );
+
+      void request( int id );
+
+      void register_callback( void (*f)(void) );
+  };
+
+}
 #endif // _FTI_CONTROLLER_H_
