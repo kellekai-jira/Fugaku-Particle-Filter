@@ -4,7 +4,8 @@
 #include <fti.h>
 #include "io_controller.hpp"
 #include <vector>
-
+#include <map>
+#include <cassert>
 //namespace FTI {
 
   static const int MPI_TAG_OFFSET = 1000000;
@@ -33,6 +34,8 @@
 
       void register_callback( void (*f)(void) );
     private:
+      std::map<io_level_t,FTIT_level> m_io_level_map;
+      std::map<io_type_t,fti_id_t> m_io_type_map;
       int m_id_counter;
   };
 

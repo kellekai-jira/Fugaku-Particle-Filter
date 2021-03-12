@@ -4,23 +4,18 @@
 
 //using namespace FTI;     
 int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
-  switch (type) {
-    case IO_DOUBLE:
-      FTI_Protect(m_id_counter, buffer, size, FTI_DBLE);
-      m_id_counter++;
-      break;
-    case IO_INT:
-      FTI_Protect(m_id_counter, buffer, size, FTI_INTG);
-      m_id_counter++;
-      break;
-    default:
-      std::cout << "Invalid Type" << std::endl;
-  }  
+  assert( m_io_type_map.count(type) != 0 && "invalid type" );
+  FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
+  m_id_counter++;
   return m_id_counter;
 }
 
 void FtiController::init( MpiController & mpi ) {
   FTI_Init("config.fti", mpi.comm() );
+  m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
+  m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
+  m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L1, FTI_L1 ) );
+  m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L2, FTI_L4 ) );
   m_id_counter = 0;
 }
 
@@ -29,29 +24,13 @@ void FtiController::fini() {
 }
 
 void FtiController::load( int id, io_level_t level ) {
-  switch( level ) {
-    case IO_STORAGE_L1:
-      FTI_Load( id, FTI_L1 ); 
-      break;
-    case IO_STORAGE_L2:
-      FTI_Load( id, FTI_L4 ); 
-      break;
-    default:
-      std::cout << "invalid checkpoint level '" << level << "'" << std::endl;
-  }
+  assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
+  FTI_Load( id, m_io_level_map[level] ); 
 }
 
 void FtiController::store( int id, io_level_t level ) {
-  switch( level ) {
-    case IO_STORAGE_L1:
-      FTI_Checkpoint( id, FTI_L1 );
-      break;
-    case IO_STORAGE_L2:
-      FTI_Checkpoint( id, FTI_L4 );
-      break;
-    default:
-      std::cout << "invalid checkpoint level '" << level << "'" << std::endl;
-  }
+  assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
+  FTI_Checkpoint( id, m_io_level_map[level] );
 }
 
 void FtiController::move( int id, io_level_t from, io_level_t to ) {
@@ -59,7 +38,9 @@ void FtiController::move( int id, io_level_t from, io_level_t to ) {
 }
 
 void FtiController::copy( int id, io_level_t from, io_level_t to ) {
-
+  assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
+  assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
+  FTI_Copy( id, m_io_level_map[from], m_io_level_map[to] ); 
 }
 
 bool FtiController::is_local( int id ) {
@@ -73,7 +54,7 @@ void FtiController::request( int id ) {
 }
 
 void FtiController::register_callback( void (*f)(void) ) {
-
+  FTI_RegisterUserFunction( f );
 }
 
 

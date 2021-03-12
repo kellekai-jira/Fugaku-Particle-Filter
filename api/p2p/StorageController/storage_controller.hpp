@@ -9,11 +9,14 @@
 #include <memory>
 #include <vector>
 
+/*
 template<typename T>
 std::unique_ptr<T>& unique_nullptr() { 
   static std::unique_ptr<T> ptr = std::unique_ptr<T>(nullptr);
   return ptr;
 }
+*/
+static std::unique_ptr<IoController> unique_nullptr = std::unique_ptr<IoController>(nullptr);
 
 static MpiController mpi_controller_null;
 
@@ -60,12 +63,13 @@ class StorageController {
     // API
     void load( int state_id );
     void store( int state_id );
+    void copy( int state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
 
   private:
     
     static StorageController& _getInstance(bool init = false, int request_interval = -1, 
-       MpiController & mpi = mpi_controller_null, std::unique_ptr<IoController> & io = unique_nullptr<IoController>() )
+       MpiController & mpi = mpi_controller_null, std::unique_ptr<IoController> & io = unique_nullptr )
     {
       static StorageController instance{ init, request_interval, mpi, io };
       return instance;

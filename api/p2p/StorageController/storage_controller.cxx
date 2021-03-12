@@ -32,8 +32,13 @@ void StorageController::fini() {
 // Callback called in the FTI head loop:
 void StorageController::callback() {
   
-  void* context;
+  //void* context;
+  static bool init = false;
   static StorageController& storage = StorageController::getInstance();
+  if( !init ) {
+    std::cout << "I am a head and I got called for the first time!" << std::endl;
+    init = true;
+  }
   //static std::unique_ptr<StateServer> state_server(nullptr);
   
   //if (state_server.get() == nullptr) {
