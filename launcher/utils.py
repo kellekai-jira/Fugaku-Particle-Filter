@@ -20,19 +20,12 @@ melissa_comm4py.send_message.argtypes = [c_char_p]
 melissa_comm4py.send_job.argtypes = [c_int, c_char_p, c_int, c_double_p]
 melissa_comm4py.send_drop.argtypes = [c_int, c_char_p]
 melissa_comm4py.send_options.argtypes = [c_char_p]
-melissa_comm4py = cdll.LoadLibrary(melissa_install_prefix + '/lib/libmelissa_comm4py.so')
-melissa_comm4py.send_message.argtypes = [c_char_p]
-melissa_comm4py.send_job.argtypes = [c_int, c_char_p, c_int, c_double_p]
-melissa_comm4py.send_drop.argtypes = [c_int, c_char_p]
-melissa_comm4py.send_options.argtypes = [c_char_p]
-
 melissa_comm4py.bind_message_rcv.argtypes = [c_char_p]
 melissa_comm4py.bind_message_resp.argtypes = [c_char_p]
 melissa_comm4py.bind_message_snd.argtypes = [c_char_p]
 melissa_comm4py.send_resp_message.argtypes = [c_char_p]
 #melissa_comm4py.wait_message.argtypes = [c_char_p]
 #melissa_comm4py.poll_message.argtypes = [c_char_p]
-melissa_comm4py.send_job.argtypes = [c_int, c_char_p, c_int, c_double_p]
 
 # Enums:
 
