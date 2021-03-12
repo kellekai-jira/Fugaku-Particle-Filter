@@ -1,4 +1,5 @@
 #include "storage_controller.hpp"
+#include "storage_impl.hpp"
 
 #include "utils.h"
 #include <memory>
@@ -7,18 +8,9 @@
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
-StorageController::StorageController( bool init, int request_interval, MpiController &mpi, 
-    std::unique_ptr<IoController> & io) : 
-  m_initialized(init),
-  m_request_interval(request_interval),
-  m_request_counter(0),
-  m_io(io),
-  m_mpi(mpi),
-  m_worker_thread(true) {
-
-  assert( init && "StorageController not initialized" );
-  
+void StorageController::init( MpiController* mpi, IoController* io ) { 
   m_peer = new PeerController();
+  m_io = io;
   m_io->register_callback( StorageController::callback );
   m_io->init(mpi);
   m_worker_thread = false;
@@ -34,7 +26,6 @@ void StorageController::callback() {
   
   //void* context;
   static bool init = false;
-  static StorageController& storage = StorageController::getInstance();
   if( !init ) {
     std::cout << "I am a head and I got called for the first time!" << std::endl;
     init = true;

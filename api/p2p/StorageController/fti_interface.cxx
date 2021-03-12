@@ -10,8 +10,8 @@ int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   return m_id_counter;
 }
 
-void FtiController::init( MpiController & mpi ) {
-  FTI_Init("config.fti", mpi.comm() );
+void FtiController::init( MpiController* mpi ) {
+  FTI_Init("config.fti", mpi->comm() );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L1, FTI_L1 ) );

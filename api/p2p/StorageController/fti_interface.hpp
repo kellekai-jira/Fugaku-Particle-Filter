@@ -20,7 +20,7 @@
 
   class FtiController : public IoController {
     public:
-      void init( MpiController & mpi );
+      void init( MpiController* mpi );
       void fini();
       int protect( void* buffer, size_t size, io_type_t type );
       void load( int id, io_level_t level = IO_STORAGE_L1 );

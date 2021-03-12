@@ -18,7 +18,7 @@ enum io_type_t {
 
 class IoController {
    public:
-      virtual void init( MpiController & mpi ) = 0;
+      virtual void init( MpiController* mpi ) = 0;
       virtual void fini() = 0;
       virtual int protect( void* buffer, size_t size, io_type_t type ) = 0;
       virtual bool is_local( int id ) = 0;

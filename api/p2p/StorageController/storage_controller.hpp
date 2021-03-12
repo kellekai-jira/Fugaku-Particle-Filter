@@ -9,14 +9,11 @@
 #include <memory>
 #include <vector>
 
-/*
 template<typename T>
 std::unique_ptr<T>& unique_nullptr() { 
   static std::unique_ptr<T> ptr = std::unique_ptr<T>(nullptr);
   return ptr;
 }
-*/
-static std::unique_ptr<IoController> unique_nullptr = std::unique_ptr<IoController>(nullptr);
 
 static MpiController mpi_controller_null;
 
@@ -43,18 +40,8 @@ class StateServer {
 class StorageController {
   
   public:
-    // SINGLETON
-    static StorageController& getInstance()
-    {
-      return _getInstance();
-    }
-    static void create( int request_interval, MpiController & mpi, std::unique_ptr<IoController> & io ) // enable moving in
-    {
-      _getInstance( true, request_interval, mpi, io );
-    }
-    StorageController(StorageController const&) = delete;
-    void operator=(StorageController const&) = delete;
     
+    void init( MpiController* mpi, IoController* io );
     void fini();
 
     // CALLBACK FOR FTI HEADS
@@ -68,15 +55,6 @@ class StorageController {
 
   private:
     
-    static StorageController& _getInstance(bool init = false, int request_interval = -1, 
-       MpiController & mpi = mpi_controller_null, std::unique_ptr<IoController> & io = unique_nullptr )
-    {
-      static StorageController instance{ init, request_interval, mpi, io };
-      return instance;
-    }
-    
-    StorageController( bool init, int request_interval, MpiController & mpi, std::unique_ptr<IoController> & io);
-
     void m_load_core( int state_id );
     void m_load_user( int state_id );
     
@@ -107,11 +85,9 @@ class StorageController {
 //  VARIABLES
 //----------------------------------------------------------------------------------------
     
-    bool m_initialized;
-    
-    std::unique_ptr<IoController>& m_io;
+    IoController* m_io;
     PeerController* m_peer;
-    MpiController& m_mpi;
+    MpiController* m_mpi;
 
     std::map<int,state_info_t> m_states;
     
