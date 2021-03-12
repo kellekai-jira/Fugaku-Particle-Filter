@@ -40,11 +40,13 @@ from utils import get_node_name
 
 context = zmq.Context()
 
-
 # Tuning melissa4py adding messages needed in Melissa-DA context
 class Alive:
     def encode(self):
         return bytes(ctypes.c_int32(7))  # Alive is 7, see melissa_messages.h
+
+# patch state id so we can use it as dict index:
+cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
 
 SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
@@ -59,13 +61,15 @@ State ids in general
 
 consist of 2 parts: the assimilation cycle and the state id it self.
 """
+
 """
 Weights of states.
 
 Example:
-    {(1, 41): 1023, (1,40): 512}
+    {StateId: 1023, StateId: 512}
 """
 state_weights = {}
+
 """
 Unscheduled jobs. They represent particles that will be needed to propagate for this
 iteration.
@@ -74,9 +78,10 @@ Data structure consits of pairs:
     new state id == job id: parent_state_id
 
 Example:
-    {(2,50): (1,42), (2,60): (1,43)}
+    {StateId: StateId, (2,60): (1,43)}
 """
 unscheduled_jobs = {}
+
 """
 Jobs currently running on some runner.
 
@@ -84,9 +89,10 @@ Data structure constis of triples:
     new state id == job id: due date, runner_id, parent_state_id
 
 Example:
-    (2,55): (100001347, runner, (1,43))
+    StateId: (100001347, runner_id, StateId)
 """
 running_jobs = {}
+
 """
 Contains all entries of state data and from when they are.
 
@@ -99,9 +105,9 @@ state_server_dns_data = {}
 Contains all runners and which states they have prefetched
 
 Format:
-    {runner_id: [(,),...]}
+    {runner_id: [state_id,...]}
 """
-prefetched_jobs = {}
+state_cache = {}
 
 
 def bind_socket(t, addr):
@@ -134,21 +140,28 @@ def can_do_update_step():
 
 # Populate unscheduled jobs
 for p in range(PARTICLES):
-    unscheduled_jobs[(assimilation_cycle, p)] = (0, p)
+    jid = cm.StateId()
+    jid.t = assimilation_cycle
+    jid.id = p
+
+    pid = cm.StateId()
+    pid.t = 0
+    pid.id = p
+
+    unscheduled_jobs[jid] = pid
 
 print('Server up now')
 
+def send_and_serialize(socket, data):
+    socket.send(data.SerializeToString())
 
 def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
 
     assert msg.WhichOneof('content') == 'weight'
 
-    if msg.weight.runner_id in faulty_runners:
-        print("Ignoring faulty runners weight message:", msg.weight)
-        return
 
-    state_id = (msg.weight.state_id.t, msg.weight.state_id.id)
+    state_id = msg.weight.state_id
 
     del running_jobs[state_id]
     weight = msg.weight.weight
@@ -167,13 +180,11 @@ Fromat:
     {runner_id: [('frog1', 8080), ('frog2', 8080) ...]}
 
 """
-runners = {}
+runners = {}  #FIXME: reuse code state_data_dns_Server!!!!
 def accept_runner_request(msg):
     # store request
-    runner_id = msg.runner_request.runner_id
-    runners[runner_id] = []
-    for it in msg.runner_request.runner.head_ranks:
-        runners[runner_id].append((it.node_name, it.port))
+    runner_id = msg.runner_id
+    runners[runner_id] = msg.runner_request.runner
 
     # remove all faulty runners
     for rid in faulty_runners:
@@ -181,30 +192,104 @@ def accept_runner_request(msg):
 
     # generate reply:
     reply = cm.Message()
-    reply.runner_response.runners.add.....
+    for rid in runners:
+        if rid == runner_id:
+            continue
+        r = reply.runner_response.runners.add()
+        r.CopyFrom(runners[rid])
 
-    gp_socket.send(reply.SerializeToString())
+
+    send_and_serialize(gp_socket, reply)
+
+def accept_delete(msg):
+    # allow to delete all states that are:
+    # - old
+    # - in the pfs and not needed anymore for running / unscheduled jobs
+    # we simply reply the first job to delete so far.
+
+    def running_or_unscheduled(state_id):
+        for k in running_jobs:
+            rj  = running_jobs[k]
+            if rj[2] == state_id:
+                return True
+
+        for k in unscheduled_jobs:
+            rj  = running_jobs[k]
+            if rj == state_id:
+                return True
+    reply = cm.Message()
+    reply.delete_response  # hope that this will init the content to delete_response
+    for state_id in msg.delete_request.cached_states:
+        if state_id.t <= assimilation_cycle-2 or \
+                (state_id in pfs and not running_or_unscheduled(state_id)):
+            reply.delete_response.to_delete = state_id
+            break
+
+    send_and_serialize(gp_socket, reply)
+
+    # update our statecache knowledge about this runner
+    runner_id = msg.runner_id
+    state_cache[runner_id] = []
+    for state_id in msg.delete_request.cached_states:
+        if state_id != reply.delete_response.to_delete:
+            state_cache[runner_id].append(state_id)
 
 
+def accept_prefetch(msg):
+    # just select a random job that ideally is not in the prefetch list of any other jobs:
 
-def handle_general_purpose():
+    # try to find a better job that is only in a few state caches
+
+    runner_id = msg.runner_id
+
+    amount_in_caches = []
+    for uj in unscheduled_jobs:
+        parent_state_id = unscheduled_jobs[uj]
+        amount =  len(filter(lambda rid : rid != runner_id and \
+                parent_state_id in state_cache[rid], state_cache))
+        amount_in_caches.append((amount, parent_state_id))
+
+    the_parent_state_id = sorted(amount_in_caches)[0]  # TODO: this does not take into account that some jobs need to be calculated multiple times!
+
+    reply = cm.Messages
+    reply.prefetch_resonse.state_id = the_parent_state_id
+
+    send_and_serialize(gp_socket, reply)
+
+    # update our statecache knowledge about this runner
+    state_cache[runner_id] = [the_parent_state_id]
+    for state_id in msg.delete_request.cached_states:
+        state_cache[runner_id].append(state_id)
+
+def recv_nonblocking(socket):
     msg = None
     try:
-        msg = gp_socket.recv(flags=zmq.NOBLOCK)  # only polling
+        msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
     except zmq.error.Again:
         # could not poll anything
         pass
 
+    return msg
+
+def handle_general_purpose():
+    msg = recv_nonblocking(gp_socket)
+
+
     if msg:
         msg = parse(msg)
+
+        if msg.runner_id in faulty_runners:
+            print("Ignoring faulty runner's message:", msg)
+            gp_socket.reply(0)
+            return
 
         ty = msg.WhichOneof('content')
         if ty == 'weight':
             accept_weight(msg)
         elif ty == 'delete_request':
-            gp_socket.send()  # TODO
+            accept_delete(msg)
         elif ty == 'prefetch_request':
-            gp_socket.send()  # TODO
+            accept_prefetch(msg)
         elif ty == 'runner_request':
             accept_runner_request(msg)
         else:
@@ -216,20 +301,18 @@ def hanlde_job_requests(launcher):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
-    msg = None
-    try:
-        msg = job_socket.recv(flags=zmq.NOBLOCK)  # only polling
-    except zmq.error.Again:
-        # could not poll anything
-        pass
+    msg = recv_nonblocking(job_socket)
 
     if msg:
         msg = parse(msg)
         assert msg.WhichOneof('content') == 'job_request'
 
-        if msg.job_request.runner_id in faulty_runners:
-            print("Ignoring faulty runners weight message:", msg.weight)
+        if msg.runner_id in faulty_runners:
+            print("Ignoring faulty runner's message:", msg)
+            job_socket.reply(0)
             return
+
+        runner_id = msg.runner_id
 
         if len(msg.job_request.client.ranks) > 0:
             print("got ranks:", msg.job_request.client.ranks)
@@ -241,23 +324,20 @@ def hanlde_job_requests(launcher):
 
         launcher.notify_runner_connect(msg.job_request.runner_id)
 
-        the_job = random.choice(list(unscheduled_jobs.keys()))
+        the_job = random.choice(list(unscheduled_jobs))
 
         # try to select a better job where the runner has the cache already
-        if len(msg.job_request.cached_states) > 0:
-            for cs in msg.job_request.cached_states:
-                cj = (cs.t, cs.id)
+        if runner_id in cached_states and len(cached_states[runner_id]) > 0:
+            for cs in cached_states:
                 if cj in unscheduled_jobs:
                     the_job = cj
                     break
 
         reply = cm.Message()
 
-        reply.job_response.job.t = the_job[0]
-        reply.job_response.job.id = the_job[1]
+        reply.job_response.job = the_job
 
-        reply.job_response.parent.t = unscheduled_jobs[the_job][0]
-        reply.job_response.parent.id = unscheduled_jobs[the_job][1]
+        reply.job_response.parent = unscheduled_jobs[the_job]
 
         for runner_id in state_server_dns_data:
             ti, ranks = state_server_dns_data[runner_id]
@@ -269,7 +349,7 @@ def hanlde_job_requests(launcher):
                     rank.node_name = it[0]
                     rank.port = it[1]
 
-        job_socket.send(reply.SerializeToString())
+        send_and_serialize(job_socket, reply)
 
         running_job = (time.time() + RUNNER_TIMEOUT, msg.job_request.runner_id,
                        unscheduled_jobs[the_job])
@@ -373,7 +453,7 @@ def do_update_step():
     global assimilation_cycle
 
     this_cycle = filter(lambda x: x[0] == assimilation_cycle,
-                        state_weights.keys())
+                        state_weights)
 
     best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
 
@@ -381,10 +461,12 @@ def do_update_step():
 
     # add each 4 times to unscheduled_jobs
     job_id = 0
-    for it in best_10:
+    for parent_state_id in best_10:
         for _ in range(4):
-            unscheduled_jobs[(assimilation_cycle,
-                              job_id)] = it  # TODO: maybe we need a copy?
+            jid = cm.StateId()
+            jid.t = assimilation_cycle
+            jid.id = job_id
+            unscheduled_jobs[jid] = parent_state_id  # TODO: maybe we need a copy?
             job_id += 1
 
     return assimilation_cycle < CYCLES
@@ -414,7 +496,7 @@ if __name__ == '__main__':
                 # end: tell launcher to kill everything
                 print('End!')
                 break
-            # TODO: FTI_push_to_deeper_level(unscheduled_jobs.keys())
+            # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
             # not necessary since we only answer job requests if job is there... answer_open_job_requests()
 
