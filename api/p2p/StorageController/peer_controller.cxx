@@ -1,4 +1,4 @@
-#include "peer_controller.h"
+#include "peer_controller.hpp"
     
 bool PeerController::query( int state_id, int* peer_id ) {
   bool success = false; 
@@ -9,6 +9,9 @@ bool PeerController::query( int state_id, int* peer_id ) {
 }
 
 int PeerController::transfer( int state_id, int state_rank, int peer_id ) {
+}
+
+void PeerController::request( int state_id ) {
 }
 
 void PeerController::response( int state_id, int peer_id, bool available ) {

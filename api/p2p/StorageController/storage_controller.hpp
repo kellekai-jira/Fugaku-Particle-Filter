@@ -1,17 +1,21 @@
 #ifndef _STORAGE_CONTROLLER_H_
 #define _STORAGE_CONTROLLER_H_
 
-#include "io_controller.h"
-#include "peer_controller.h"
+#include "mpi_controller.hpp"
+#include "io_controller.hpp"
+#include "peer_controller.hpp"
 #include <cstddef>
 #include <cassert>
 #include <memory>
+#include <vector>
 
 template<typename T>
 std::unique_ptr<T>& unique_nullptr() { 
   static std::unique_ptr<T> ptr = std::unique_ptr<T>(nullptr);
   return ptr;
 }
+
+static MpiController mpi_controller_null;
 
 enum state_status_t {
   MELISSA_STATE_BUSY,
@@ -41,12 +45,14 @@ class StorageController {
     {
       return _getInstance();
     }
-    static void create( int request_interval, int comm_model_size ) // enable moving in
+    static void create( int request_interval, MpiController & mpi, std::unique_ptr<IoController> & io ) // enable moving in
     {
-      _getInstance( true, request_interval, comm_model_size );
+      _getInstance( true, request_interval, mpi, io );
     }
     StorageController(StorageController const&) = delete;
     void operator=(StorageController const&) = delete;
+    
+    void fini();
 
     // CALLBACK FOR FTI HEADS
     static void callback();
@@ -54,19 +60,18 @@ class StorageController {
     // API
     void load( int state_id );
     void store( int state_id );
+    int protect( void* buffer, size_t size, io_type_t );
 
   private:
     
     static StorageController& _getInstance(bool init = false, int request_interval = -1, 
-        int comm_model_size = -1, std::unique_ptr<IoController> & io = unique_nullptr<IoController>(),
-        std::unique_ptr<PeerController> & peer = unique_nullptr<PeerController>())
+       MpiController & mpi = mpi_controller_null, std::unique_ptr<IoController> & io = unique_nullptr<IoController>() )
     {
-      static StorageController instance{ init, request_interval, comm_model_size, io, peer };
+      static StorageController instance{ init, request_interval, mpi, io };
       return instance;
     }
     
-    StorageController( bool init, int request_interval, int comm_model_size, 
-        std::unique_ptr<IoController> & io, std::unique_ptr<PeerController> & peer);
+    StorageController( bool init, int request_interval, MpiController & mpi, std::unique_ptr<IoController> & io);
 
     void m_load_core( int state_id );
     void m_load_user( int state_id );
@@ -101,7 +106,8 @@ class StorageController {
     bool m_initialized;
     
     std::unique_ptr<IoController>& m_io;
-    std::unique_ptr<PeerController>& m_peer;
+    PeerController* m_peer;
+    MpiController& m_mpi;
 
     std::map<int,state_info_t> m_states;
     

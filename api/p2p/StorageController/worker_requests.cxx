@@ -1,4 +1,4 @@
-#include "storage_controller.h"
+#include "storage_controller.hpp"
 
 #include "utils.h"
 #include <memory>
@@ -7,138 +7,35 @@
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
-// (1) handle state requests from Alice
-void StorageController::handle_state_request_home(){
-  /*
-   * 1) check for messages
-   * 2) receive messages
-   * 3) request from bob
-   * 4) request from pfs
-   * 5) release alice
-  */
-  int peer_id, state_id, result = 0;
+// (1) state request from user to worker
+void StorageController::m_state_request_user() {
 
-  // 1) check for messages
-  if( FTI_HeadProbe(TAG_REQUEST_HOME) ) {
-    // 2) receive messages
-    FTI_HeadRecv(&state_id, sizeof(int), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
-    if( m_peers.query( state_id, &peer_id ) ) {
-      // 3) request from bob
-      const int* const body = FTI_HeadBody();
-      for(int i=0; i<m_comm_model_size; i++) {
-        result += m_peers.transfer( state_id, body[i], peer_id );
-      } 
-    } else {
-      // 4) request from pfs TODO FTI_Convert cannot be called from heads yet.
-      result += FTI_Convert( peer_id, state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
-    }
-    // 5) release alice
-    FTI_HeadSend( &result, sizeof(int), TAG_REQUEST_HOME, FTI_HEAD_MODE_SING);
-  }
 }
 
-// (2) handle state requests from Bob
-void StorageController::handle_state_request_peer(){
-  // TODO maybe we should flag the state until we get a message
-  // that the peer has completed the transfer. Otherwise, it could 
-  // happen that the state get deleted during the peer trys to 
-  // load it.
-  /*
-   * 1) check for messages (zeroMQ)
-   * 2) receive messages (in 1)
-   * 3) check if state local
-   * 4) response to peer (release)
-  */
-  int state_id, peer_id;
-  // 1) check for messages
-  // 2) receive messages
-  if( m_peers.probe( &state_id, &peer_id ) ) {
-    FTIT_stat st; FTI_Stat( state_id, &st );
-    // 3) check if state local
-    // 4) response to peer
-    if( FTI_ST_IS_LOCAL( st.level ) ) {
-      m_peers.response( state_id, peer_id, true );
-    } else {
-      m_peers.response( state_id, peer_id, false );
-    }
-  }
+// (2) state request from peer to worker
+void StorageController::m_state_request_peer() {
+
 }
 
-// (3) update-message from home runner
-void StorageController::handle_update_message_home(){
-  /*
-   * 1) check for messages
-   * 2) receive messages
-   * 3) flag states
-  */
-  int active_state_id, finished_state_id;
-  // 1) check for messages
-  if( FTI_HeadProbe(TAG_INFO_HOME) ) {
-    // 2) receive messages
-    FTI_HeadRecv(&active_state_id, sizeof(int), TAG_INFO_HOME, FTI_HEAD_MODE_SING);
-    FTI_HeadRecv(&finished_state_id, sizeof(int), TAG_INFO_HOME, FTI_HEAD_MODE_SING);
-    assert(m_states.count(active_state_id) > 0 && "state not registered"); 
-    assert(m_states.count(finished_state_id) > 0 && "state not registered"); 
-    // 3) flag states
-    m_states[active_state_id].status = MELISSA_STATE_BUSY;
-    m_states[finished_state_id].status = MELISSA_STATE_IDLE;
-  }
+// (3) state info from user
+void StorageController::m_state_info_user() {
+
 }
 
-// (4) delete request
-void StorageController::handle_delete_request(){
-  /*
-   * 1) check for messages
-   * 2) receive messages
-   * 3) delete states
-  */
-  int state_id;
-  if( FTI_HeadProbe(TAG_DELETE) ) {
-    FTI_HeadRecv(&state_id, sizeof(int), TAG_DELETE, FTI_HEAD_MODE_SING);
-    // blocking call !!!
-    FTI_Remove( state_id, FTI_L1 );
-    m_states.erase( state_id );
-  }
+// organize storage
+void StorageController::m_prefetch() {
+
+}
+void StorageController::m_erase() {
+
+}
+void StorageController::m_move() {
+
+}
+void StorageController::m_push() {
+
 }
 
-// (5) prefetch request
-void StorageController::handle_prefetch_request(){
-  int state_id, peer_id, storage_level, result = 0;
-  if( FTI_HeadProbe(TAG_PREFETCH) ) {
-    FTI_HeadRecv(&state_id, sizeof(int), TAG_PREFETCH, FTI_HEAD_MODE_SING);
-    FTI_HeadRecv(&storage_level, sizeof(StorageLevel), TAG_PREFETCH, FTI_HEAD_MODE_SING);
-    assert(m_states.count(state_id) == 0 && "state already registered"); 
-    if( m_peers.query( state_id, &peer_id ) ) {
-      // 3) request from bob
-      const int* const body = FTI_HeadBody();
-      for(int i=0; i<m_comm_model_size; i++) {
-        result += m_peers.transfer( state_id, body[i], peer_id );
-      } 
-    } else {
-      // 4) request from pfs TODO FTI_Convert cannot be called from heads yet.
-      result += FTI_Convert( peer_id, state_id, FTI_L4, FTI_L1, FTI_CONVERT_HEAD );
-    }
-    assert( result == 0 && "FATAL could not find state" );
-    StateInfo_t info;
-    if( storage_level == MELISSA_CACHE_L1 ) {
-      FTI_Move( state_id, FTI_L1, MELISSA_CACHE_L1 );
-#warning TODO implement FTI_Stash (stash l1 checkpoint to second storage level)
-      //FTI_Stash( state_id, FTI_L1, MELISSA_CACHE_L2, FTI_STASH_PUSH ); // reverse FTI_Stash( state_id, FTI_L1, FTI_STASH_APPLY )
-      info.status = MELISSA_STATE_IDLE;
-      info.level = MELISSA_CACHE_L1;
-      m_states.insert( std::pair<int,StateInfo_t>(state_id,info) );
-    }
-  }
-}
+void StorageController::m_query_server() {
 
-// (6) stage request
-void StorageController::handle_stage_request(){
-  if( FTI_HeadProbe(TAG_STAGE) ) {
-  }
-}
-
-// request state cache and peer info from server
-void StorageController::query_runtime_info_server(){
-  if( update_info() ) {
-  }
 }

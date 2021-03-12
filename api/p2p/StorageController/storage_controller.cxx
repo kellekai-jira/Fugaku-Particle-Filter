@@ -1,4 +1,4 @@
-#include "storage_controller.h"
+#include "storage_controller.hpp"
 
 #include "utils.h"
 #include <memory>
@@ -7,19 +7,26 @@
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
-StorageController::StorageController( bool init, int request_interval, int comm_model_size, 
-    std::unique_ptr<IoController> & io, std::unique_ptr<PeerController> & peer) : 
+StorageController::StorageController( bool init, int request_interval, MpiController &mpi, 
+    std::unique_ptr<IoController> & io) : 
   m_initialized(init),
   m_request_interval(request_interval),
   m_request_counter(0),
-  m_comm_model_size(comm_model_size),
   m_io(io),
-  m_peer(peer),
+  m_mpi(mpi),
   m_worker_thread(true) {
 
   assert( init && "StorageController not initialized" );
-
+  
+  m_peer = new PeerController();
   m_io->register_callback( StorageController::callback );
+  m_io->init(mpi);
+  m_worker_thread = false;
+}
+
+void StorageController::fini() {
+  delete m_peer;
+  m_io->fini();
 }
 
 // Callback called in the FTI head loop:
@@ -27,13 +34,13 @@ void StorageController::callback() {
   
   void* context;
   static StorageController& storage = StorageController::getInstance();
-  static std::unique_ptr<StateServer> state_server(nullptr);
+  //static std::unique_ptr<StateServer> state_server(nullptr);
   
-  if (state_server.get() == nullptr) {
-    // open all sockets necessary
-    state_server = std::make_unique<StateServer>(context);
-    storage.m_worker_thread = true;
-  }
+  //if (state_server.get() == nullptr) {
+  //  // open all sockets necessary
+  //  state_server = std::make_unique<StateServer>(context);
+  //  storage.m_worker_thread = true;
+  //}
 
   // check and handle state request from Alice
   storage.m_state_request_user();
