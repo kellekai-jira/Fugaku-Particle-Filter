@@ -32,13 +32,11 @@ message Pong { }
 
 message Weight {
     StateId state_id = 1;
-    uint32 runner_id = 2;
-    double weight = 3;
+    double weight = 2;
 }
 
 // application ranks to job socket on weight server
 message JobRequest {
-    uint32 runner_id = 1;
 }
 
 message JobResponse {
@@ -64,8 +62,7 @@ message StateResponse {
 
 // fti headranks to general purpose request socket
 message RunnerRequest {
-    uint32 runner_id = 1;
-    StateServer runner = 2;
+    StateServer runner = 1;
 }
 
 message RunnerResponse {
@@ -77,7 +74,6 @@ message RunnerResponse {
 // Runner to server what might be useful to prefetch:
 message PrefetchRequest { // the same as job request
     repeated StateId cached_states = 1;
-    uint32 runner_id = 2;
 }
 
 message PrefetchResponse {
@@ -87,12 +83,10 @@ message PrefetchResponse {
 
 message DeleteRequest { // the same as job request
     repeated StateId cached_states = 1;
-    uint32 runner_id = 2;
 }
 
 message DeleteResponse { // the same as job request
-    repeated StateId cached_states = 1;
-    uint32 runner_id = 2;
+    StateId to_delete = 1;
 }
 
 
@@ -119,31 +113,33 @@ message StopStudy {
 // Wrapper message
 
 message Message {
+    uint32 runner_id = 1;
     oneof content {  // one could optimize out pingpong and have smaller message numbers...
-        Ping ping = 1;
-        Pong pong = 2;
+
+        Ping ping = 2;
+        Pong pong = 3;
 
         // Messages Runner - Server-Job socket
-        JobRequest job_request = 3;
-        JobResponse job_response = 4;
+        JobRequest job_request = 4;
+        JobResponse job_response = 5;
 
         // Messages Runner - Server-General-Purpose socket
-        Weight weight = 5;
-        PrefetchRequest prefetch_request = 6;
-        PrefetchResponse prefetch_response = 7;
-        DeleteRequest delete_request = 8;
-        DeleteResponse delete_response = 9;
-        RunnerRequest runner_request = 10;
-        RunnerResponse runner_response = 11;
+        Weight weight = 6;
+        PrefetchRequest prefetch_request = 7;
+        PrefetchResponse prefetch_response = 8;
+        DeleteRequest delete_request = 9;
+        DeleteResponse delete_response = 10;
+        RunnerRequest runner_request = 11;
+        RunnerResponse runner_response = 12;
 
         // Messages Runner - Runner
-        StateRequest state_request = 12;
-        StateResponse state_response = 13;
+        StateRequest state_request = 13;
+        StateResponse state_response = 14;
 
         // Messages Server - Launcher
-        RunnerCrashed runner_crashed = 14;
-        RunnerUp runner_up = 15;
-        StopStudy stop_study = 16;
+        RunnerCrashed runner_crashed = 15;
+        RunnerUp runner_up = 16;
+        StopStudy stop_study = 17;
     }
 }
 
