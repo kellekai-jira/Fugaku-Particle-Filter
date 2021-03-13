@@ -148,26 +148,12 @@ class LocalCluster(cluster.Cluster):
                 msg = 'pid={:d}: LocalCluster terminating process {:d}'
                 print(msg.format(pid, job.pid))
                 job.terminate()
-                job.kill()
                 job.wait()
 
         self.jobs = {}
-
-        # Since zombie processes might keep running since sigterm is not propagated by
-        # mpiexec correctly, we need to rely on this nasty trick:
-        if executable is not None:
-            os.system("pkill -9 {:s}".format(executable))
-
-        os.system("pkill -9 melissa_da_server")
-
-
-        # even after this we still see zombie processes. Now we react with an extern
-        # kill script:
-        LocalCluster.clean_up_test()
 
     @staticmethod
     def clean_up_test():
         """ an extremely rigorous method of cleanup to fix some process kill issues in the
         debian CI"""
-        os.system('melissa-da-cleanup-local.sh')
-
+        pass

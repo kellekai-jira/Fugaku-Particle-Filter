@@ -97,9 +97,6 @@ def run_melissa_da_study(
     EXECUTABLE = runner_cmd.split(' ')[0].split('/')[-1]
 
 
-    cluster.CleanUp(EXECUTABLE)
-
-
 
 
 
@@ -136,11 +133,6 @@ def run_melissa_da_study(
 
         def check_state(self):
             return self.cstate
-
-        def __del__(self):
-            if hasattr(self, 'job_id'):
-                debug("Killing Job job_id=%s" % str(self.job_id))
-                cluster.KillJob(self.job_id)
 
     Job.jobs = []
 

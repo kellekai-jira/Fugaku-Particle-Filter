@@ -134,11 +134,4 @@ with open('STATS/never_connecting_runner') as f:
             found += 1
 assert found == 1
 
-print('Running pkill after some sleep time')
-time.sleep(10)  # give instruction pointer to the os to be able to finish ongoing app startups
-os.system('ps')
-os.system('pkill -9 mpiexec')
-os.system('pkill -9 never_connecting_runner')
-os.system('pkill -9 sleep')
-
 print('passed')
