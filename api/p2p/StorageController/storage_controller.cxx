@@ -3,6 +3,7 @@
 
 #include "utils.h"
 #include <memory>
+#include <numeric>
 
 // TODO error checking!
 
@@ -11,8 +12,14 @@
 void StorageController::init( MpiController* mpi, IoController* io ) { 
   m_peer = new PeerController();
   m_io = io;
+  m_mpi = mpi;
   m_io->register_callback( StorageController::callback );
-  m_io->init(mpi);
+  m_comm_global_size = m_mpi->size();
+  // heads dont return here!
+  m_io->init_io(m_mpi);
+  m_io->init_core(m_mpi);
+  m_comm_worker_size = m_io->m_dict_int["nodes"]; 
+  m_comm_runner_size = m_io->m_dict_int["nodes"] * (m_io->m_dict_int["procs_node"]-1);
   m_worker_thread = false;
 }
 
@@ -27,7 +34,9 @@ void StorageController::callback() {
   //void* context;
   static bool init = false;
   if( !init ) {
-    std::cout << "I am a head and I got called for the first time!" << std::endl;
+    storage.m_io->init_core(storage.m_mpi);
+    storage.m_comm_worker_size = storage.m_io->m_dict_int["nodes"]; 
+    storage.m_comm_runner_size = storage.m_io->m_dict_int["nodes"] * (storage.m_io->m_dict_int["procs_node"]-1);
     init = true;
   }
   //static std::unique_ptr<StateServer> state_server(nullptr);

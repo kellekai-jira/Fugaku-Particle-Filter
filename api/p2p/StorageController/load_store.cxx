@@ -1,7 +1,9 @@
 #include "storage_controller.hpp"
+#include <iostream>
 
 // TODO implement exceptions for error handling
 // and remove asserts!
+#include <unistd.h>
 
 int StorageController::protect( void* buffer, size_t size, io_type_t type) {
   m_io->protect(buffer, size, type);  
@@ -22,7 +24,11 @@ void StorageController::m_load_core( int state_id ) {
 
 void StorageController::m_load_user( int state_id ) {
   if( !m_io->is_local( state_id ) ) {
-    m_io->request( state_id );
+    //m_io->request( state_id );
+    int status;
+    m_io->sendrecv( &state_id, &status, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
+    //m_io->send( &state_id, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
+    //m_io->recv( &status, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
   }
   assert( m_io->is_local( state_id ) && "unable to load state to local storage" );
   m_io->load( state_id );

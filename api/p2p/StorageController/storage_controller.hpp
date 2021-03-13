@@ -40,7 +40,10 @@ class StateServer {
 class StorageController {
   
   public:
-    
+    StorageController() :
+      m_worker_thread(true),
+      m_request_counter(0) {}
+
     void init( MpiController* mpi, IoController* io );
     void fini();
 
@@ -98,7 +101,9 @@ class StorageController {
     // coresponds to a server info request each second.
     int m_request_interval;
     
-    int m_comm_model_size; 
+    int m_comm_global_size; 
+    int m_comm_runner_size; 
+    int m_comm_worker_size; 
 
 };
 
