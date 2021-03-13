@@ -8,7 +8,6 @@ import pandas as pd
 from io import StringIO
 
 import time
-from threading import Thread
 
 import subprocess
 import signal
