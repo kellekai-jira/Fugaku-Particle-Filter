@@ -101,7 +101,6 @@ def run_melissa_da_study(
 
 
     running = True
-# dirty but convenient to kill stuff...
 
     def signal_handler(sig, frame):
         debug("Received Signal %d, Cleaning up now!" % sig)
@@ -109,13 +108,6 @@ def run_melissa_da_study(
         running = False
 
         finalize_sockets()
-
-        if sig == signal.SIGTERM:
-            debug("SIGTERM: trying to join state_refresher...")
-            state_refresher.join()
-            debug("State refresher joined")
-
-
         cluster.CleanUp(EXECUTABLE)
 
         sys.exit(1)

@@ -77,7 +77,7 @@ class FifoThread(Thread):
         return self.on_timing_event(what, parameter)
 
     def __init__(self):
-        super().__init__()
+        super().__init__(daemon=True)
         self.tmpdir = tempfile.mkdtemp()
         self.fifo_name_server = os.path.join(self.tmpdir, 'server_fifo')
         self.running = True
