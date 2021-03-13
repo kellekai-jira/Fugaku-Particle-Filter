@@ -108,6 +108,8 @@ def run_melissa_da_study(
         nonlocal running
         running = False
 
+        finalize_sockets()
+
         if sig == signal.SIGTERM:
             debug("SIGTERM: trying to join state_refresher...")
             state_refresher.join()
