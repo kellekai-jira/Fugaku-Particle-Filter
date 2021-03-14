@@ -5,6 +5,17 @@
 #include <string>
 #include <map>
 
+struct mpi_request_t {
+    MPI_Request mpi_request{0};
+    char errstr[MPI_MAX_ERROR_STRING];
+    int errval;
+    bool test();
+    void wait();
+  private:
+    MPI_Status mpi_status{0};
+};
+
+
 class MpiController
 {
 
@@ -17,6 +28,7 @@ class MpiController
         const MPI_Comm & comm();
         const int & size();
         const int & rank();
+        void barrier(std::string comm);
         void finalize();
 
         MPI_Fint fortranComm();

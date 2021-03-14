@@ -25,7 +25,6 @@ enum state_status_t {
 
 struct state_info_t {
   state_status_t status;
-  io_level_t level;
 };
 
 class StateServer {

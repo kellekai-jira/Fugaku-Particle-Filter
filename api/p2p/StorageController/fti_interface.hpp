@@ -26,6 +26,7 @@ class FtiController : public IoController {
     bool probe( io_tag_t tag );
     void sendrecv( void* send_buffer, void* recv_buffer, int n, io_tag_t tag, io_msg_t message_type  );
     void send( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  );
+    void isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  );
     void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  );
 
     void register_callback( void (*f)(void) );

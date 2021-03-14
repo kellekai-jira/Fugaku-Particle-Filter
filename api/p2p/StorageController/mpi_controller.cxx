@@ -2,6 +2,31 @@
 #include <cassert>
 #include "utils.h"
 
+bool mpi_request_t::test() {
+  int flag;
+  MPI_Test( &mpi_request, &flag, &mpi_status );
+  if( flag == 1 ) {
+    errval = mpi_status.MPI_ERROR;
+    if( errval != MPI_SUCCESS ) {
+      int len;
+      MPI_Error_string(mpi_status.MPI_ERROR, errstr, &len);
+      std::cerr << "[IO ERROR]: " << errstr << "STAT: " << mpi_status.MPI_ERROR << std::endl;
+    }
+  }
+  return (flag == 1);
+}
+
+void mpi_request_t::wait() {
+  int flag;
+  MPI_Wait( &mpi_request, &mpi_status );
+  errval = mpi_status.MPI_ERROR;
+  if( errval != MPI_SUCCESS ) {
+    int len;
+    MPI_Error_string(mpi_status.MPI_ERROR, errstr, &len);
+    std::cerr << "[IO ERROR]: " << errstr << "STAT: " << mpi_status.MPI_ERROR << std::endl;
+  }
+}
+
 MpiController::MpiController() :
     m_comm_key("mpi_comm_world")
 {
@@ -53,6 +78,10 @@ const int & MpiController::size()
 const int & MpiController::rank()
 {
     return m_rank;
+}
+
+void MpiController::barrier( std::string comm ) {
+  MPI_Barrier(m_comms[m_comm_key]);
 }
 
 void MpiController::finalize()

@@ -33,6 +33,8 @@ void FtiController::init_core( MpiController* mpi ) {
   m_dict_int.insert( std::pair<std::string,int>( "nodes", FTI_Topo->nbNodes ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_node", FTI_Topo->nodeSize ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_total", FTI_Topo->nbProc ) );
+  m_dict_bool.insert( std::pair<std::string,bool>( "master_node", FTI_Topo->masterLocal ) );
+  m_dict_bool.insert( std::pair<std::string,bool>( "master_global", FTI_Topo->masterGlobal ) );
 }
       
 void FtiController::sendrecv( void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
@@ -52,7 +54,15 @@ void FtiController::send( void* send_buffer, int size, io_tag_t tag, io_msg_t me
     FTI_AppSend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
   }
 }
-
+      
+void FtiController::isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) {
+  if( FTI_AmIaHead() ) {
+    assert( 0 && "not implemented!" );
+  } else {
+    FTI_AppIsend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type], &req.mpi_request );
+  }
+}
+      
 void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
   if( FTI_AmIaHead() ) {
     FTI_HeadRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );

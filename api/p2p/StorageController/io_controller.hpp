@@ -1,5 +1,6 @@
 #ifndef _IO_CONTROLLER_H_
 #define _IO_CONTROLLER_H_
+#include <iostream>
 
 #include "mpi_controller.hpp"
 
@@ -52,9 +53,11 @@ class IoController {
       virtual void register_callback( void (*f)(void) ) = 0;
       virtual void sendrecv( void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
       virtual void send( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
+      virtual void isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) = 0;
       virtual void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
       
       std::map<std::string,int> m_dict_int;
+      std::map<std::string,bool> m_dict_bool;
       std::map<std::string,double> m_dict_double;
       std::map<std::string,std::string> m_dict_string;
 };
