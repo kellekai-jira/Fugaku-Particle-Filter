@@ -107,11 +107,6 @@ def run_melissa_da_study(
         nonlocal running
         running = False
 
-        finalize_sockets()
-        cluster.CleanUp(EXECUTABLE)
-
-        sys.exit(1)
-
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
