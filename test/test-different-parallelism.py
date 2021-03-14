@@ -92,7 +92,7 @@ for i, case in enumerate(cases):
 
 
     assert rw.iterations_after_runners >= 8 * PROCS_SERVER  # did not kill server too early
-    assert rw.runners == N_RUNNERS
+    assert rw.runners >= N_RUNNERS
 
 
     # runner 0 does the output.
