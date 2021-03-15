@@ -31,6 +31,7 @@ enum io_msg_t {
 enum io_tag_t {
   IO_TAG_REQUEST,
   IO_TAG_MESSAGE,
+  IO_TAG_FINAL,
   IO_TAG_ERASE,
   IO_TAG_PULL,
   IO_TAG_PUSH

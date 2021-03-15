@@ -25,6 +25,9 @@ void StorageController::init( MpiController* mpi, IoController* io ) {
 
 void StorageController::fini() {
   delete m_peer;
+  int dummy[2];
+  m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
+  m_mpi->barrier("fti_comm_world");
   m_io->fini();
 }
 
@@ -47,6 +50,8 @@ void StorageController::callback() {
   //  storage.m_worker_thread = true;
   //}
 
+  storage.m_finalize_worker();
+  
   // query info from server
   // submit:
   // - remove requests

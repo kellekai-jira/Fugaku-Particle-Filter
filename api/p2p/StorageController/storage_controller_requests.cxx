@@ -56,6 +56,25 @@ void StorageController::m_state_request_push() {
   }
 }
 
+void StorageController::m_finalize_worker() {
+  if( m_io->probe( IO_TAG_FINAL ) ) {
+    int dummy;
+    m_io->recv( &dummy, sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
+    m_state_info_user();
+    while( m_io->probe( IO_TAG_PUSH ) ) {
+      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
+      m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
+      m_io->m_state_push_requests.pop();
+    }
+    while( m_io->probe( IO_TAG_PULL ) ) {
+      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
+      load( m_io->m_state_pull_requests.front() );
+      m_io->m_state_pull_requests.pop();
+    }
+    m_io->send( &dummy, sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
+  }
+}
+
 void StorageController::m_state_request_remove() {
 
 }

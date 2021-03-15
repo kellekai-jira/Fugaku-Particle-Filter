@@ -62,7 +62,9 @@ class StorageController {
     
     void m_store_core( int state_id );
     void m_store_user( int state_id );
-    
+   
+    void m_finalize_worker();
+
     // (1) state request from user to worker
     void m_state_request_user();
     
