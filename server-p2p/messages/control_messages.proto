@@ -14,14 +14,11 @@ message StateId {
     uint32 id = 2;
 }
 
-message Socket {
+message StateServerSocket {
     string node_name = 1;
     uint32 port = 2;
 }
 
-message StateServer {
-    repeated Socket head_ranks = 1;
-}
 
 
 // Messages
@@ -62,11 +59,12 @@ message StateResponse {
 
 // fti headranks to general purpose request socket
 message RunnerRequest {
-    StateServer runner = 1;
+    uint32 head_rank = 1;
+    StateServerSocket socket = 2;
 }
 
 message RunnerResponse {
-    repeated StateServer runners = 1;
+    repeated StateServerSocket sockets = 1;
 } // replies empty list if there are no others. if no others: look on pfs...
 
 // when runner fti heads have nothing to do they can do a prefetch

@@ -67,11 +67,9 @@ void melissa_p2p_init(const char *field_name,
     // exchanged at the beginning
     phase = PHASE_SIMULATION;
 
-    fti_init(runner_id, comm_);
-
-
-    fti_protect( &step, &state_id, state_buffer, buffer_count);  // FIXME: also checkpoint hidden or remove hidden
-    // assuming the pointer to the data to checkpoint doesn't change...
+    // TODO move storage.init in constructor and use smartpointer instead
+    storage.init(mpi, io);
+    fti_init(runner_id, comm_);  // kai
 
     // open sockets to server on rank 0:
     if (getCommRank() == 0)
@@ -119,21 +117,19 @@ double calculate_weight()
     return 0.7;
 }
 
+
+
 void push_weight_to_server(double weight)
 {
     ::melissa_p2p::Message m;
+    m.set_runner_id(runner_id);
     m.mutable_weight()->mutable_state_id()->set_t(current_step);
     m.mutable_weight()->mutable_state_id()->set_id(current_id);
-    m.mutable_weight()->set_runner_id(runner_id);
     m.mutable_weight()->set_weight(weight);
 
+    send_message(gp_socket, m);
+    zmq::recv(gp_socket);  // receive ack
 
-    m.google::protobuf::Message::ByteSize()
-    // TODO: zmq send
-    zmq_msg_t msg;
-    zmq_msg_init_size(&msg, m.ByteSize());
-    m.SerializeToArray(zmq_msg_data(&msg), m.ByteSize());
-    ZMQ_CHECK(zmq_msg_send(&msg, gp_socket, 0));  // TODO: use new api!
 }
 
 ::melissa_p2p::StateServer my_state_server_ranks;
@@ -170,75 +166,46 @@ int melissa_p2p_expose(VEC_T *values,
 
     int nsteps = 0;
 
+    int parent_t, parent_id, job_t, job_id;
+
     // Rank 0:
     if (getCommRank() == 0) {
 
         // 3. push weight to server
         push_weight_to_server(weight);
 
+        // 3.5 do checkpoint
+       storage.protect(values,  field.local_vectsize, IO_BYTE);
+       // FIXME: call protect direkt in chunk based api
+       storage.protect(hidden_values,  field.local_hidden_vectsize, IO_BYTE);
+       storage.checkpoint();
+
         // 4. ask server for more work
-
-        // [KAI] FIXME I think we should also ask this from the heads
-        // [SEBASTIAN] I don't think so. if the heads are blocking the runner would block!
-        // + its easier to implemennt this way
         auto job_response = request_work_from_server();
-
-        FTI_ID_T checkpoint_id;
-
-        if (nsteps > 0) {
-
-            // [KAI] FIXME I think it is better to let the heads check if the state is in local.
-            // I think we should commubnicate with the heads in any case, so that the heads know
-            // that the runner has finished working on the state.
-
-            // 5. check if job's parent state in memory. if not tell fti head to organize it
-            checkpoint_id = hash_fti_id(parent_t, parent_id);
-            FTIT_stat st;
-            FTI_Stat( id, &st );
-            if (FTI_ST_IS_LOCAL( st.level )) {
-                D("Parent state was found locally");
-            } else {
-                // TODO: pack message with protobuf
-                ::melissa_p2p::DownloadState dls;
-                dls.mutable_parent()->set_t(parent_t);
-                dls.mutable_parent()->set_id(parent_id);
-                for (auto & runner :
-                dls.add_runners()
-                int len = dls.ByteSize();
-                FTI_AppSend( &len, sizeof(size_t), MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
-                // send packed protobuf message
-                FTI_AppSend( &msg_serialized, len, MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
-
-                // 6. wait until parent state is ready
-                int response = 0;  // FIXME: wait for a protobuf message here too??!!
-                /*
-                MPI_Recv(&response, 1, MPI_INT, fti_head_rank_0, MELISSA_USER_MESSAGE,
-                        MPI_COMM_WORLD, MPI_STATUS_IGNORE);*/
-                FTI_AppRecv( &response, sizeof(int), MELISSA_USER_MESSAGE, FTI_HEAD_MODE_SING );
-
-                if (response == 1) {
-                    D("Parent state was retrieved p2p");
-                } else if (FTI_ST_IS_LEVEL_1( st.level )) {
-                    D("Parent state was restored from level 1"); // ist es ein level 1 checkpoint?
-                } else {
-                    E("Parent state was not found!");
-                    // FIXME abort everything now
-                    assert(false);
-                }
-            }
-        }
+        job_id = job_id.job_id();
+        job_t = job_id.job_t();
+        parent_id = job_id.parent_id();
+        parent_t = job_id.parent_t();
     }
     // All ranks:
-    // 7. broadcast which state to propagate next to all ranks and how much nsteps
-    MPI_Bcast() ....
 
-    if (nsteps == 0)
-    {
-        fti_finalize();
+    // Propagate work to all ranks:
+    MPI_Bcast(&len, job_response.ByteSize()
+
+    storage.load(job_response.state_id)
+
+    // For the moment we assume always that nsteps = 1
+    nsteps = 1
+
+    if (nsteps > 0) {
+        // 5. check if job's parent state in memory. if not it will tell the fti head
+        //    to organize it
+        checkpoint_id = hash_fti_id(parent_t, parent_id);
+        storage.load(checkpoint_id);
     }
     else
     {
-        FTI_Recover(checkpoint id)
+        storage.fini();
     }
 
 

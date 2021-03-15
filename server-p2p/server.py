@@ -96,13 +96,6 @@ Example:
 """
 running_jobs = {}
 
-"""
-Contains all entries of state data and from when they are.
-
-Format:
-    {runner_id: (time, [(node_name_rank0, port_rank0), (node_name_rank1, port_rank1))}
-"""
-state_server_dns_data = {}
 
 """
 Contains all runners and which states they have prefetched
@@ -180,14 +173,17 @@ def accept_weight(msg):
 DNS list of runners
 
 Fromat:
-    {runner_id: [('frog1', 8080), ('frog2', 8080) ...]}
+    {runner_id: {head_rank_0: ('frog1', 8080)}, ...}, ...}
 
 """
-runners = {}  #FIXME: reuse code state_data_dns_Server!!!!
+runners = {}
 def accept_runner_request(msg):
     # store request
     runner_id = msg.runner_id
-    runners[runner_id] = msg.runner_request.runner
+    head_rank = msg.runner_request.head_rank
+    if not runner_id in runners:
+        runners[runner_id] = {}
+    runners[runner_id][head_rank] = msg.runner_request.socket
 
     # remove all faulty runners
     for rid in faulty_runners:
@@ -195,11 +191,13 @@ def accept_runner_request(msg):
 
     # generate reply:
     reply = cm.Message()
-    for rid in runners:
+    shuffeled_runners = random.shuffle(list(runners))
+    for rid in shuffeled_runners:
         if rid == runner_id:
             continue
-        r = reply.runner_response.runners.add()
-        r.CopyFrom(runners[rid])
+        if head_rank in runners[rid]:
+            s = reply.runner_response.sockets.add()
+            s.CopyFrom(runners[rid][head_rank])
 
 
     send_and_serialize(gp_socket, reply)
@@ -317,14 +315,6 @@ def hanlde_job_requests(launcher):
 
         runner_id = msg.runner_id
 
-        if len(msg.job_request.client.ranks) > 0:
-            print("got ranks:", msg.job_request.client.ranks)
-            # refresh dns entry:
-            state_server_dns_data[msg.job_request.runner_id] = (time.time(), [
-                (rank.node_name, rank.port)
-                for rank in msg.job_request.client.ranks
-            ])
-
         launcher.notify_runner_connect(msg.job_request.runner_id)
 
         the_job = random.choice(list(unscheduled_jobs))
@@ -341,16 +331,6 @@ def hanlde_job_requests(launcher):
         reply.job_response.job = the_job
 
         reply.job_response.parent = unscheduled_jobs[the_job]
-
-        for runner_id in state_server_dns_data:
-            ti, ranks = state_server_dns_data[runner_id]
-            if ti > time.time() - RUNNER_TIMEOUT:
-                # add this entry as it is up to date.
-                client = reply.job_response.clients.add()
-                for it in ranks:
-                    rank = client.ranks.add()
-                    rank.node_name = it[0]
-                    rank.port = it[1]
 
         send_and_serialize(job_socket, reply)
 
