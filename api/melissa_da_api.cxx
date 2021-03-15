@@ -227,9 +227,8 @@ struct ServerRankConnection
         {
             // TODO: is this really an error?
             printf("Error: Server decided to end this runner now.\n");
-            melissa_finalize();
             // calculate 0 steps now.
-            nsteps = 0;
+            nsteps = 0;  // caller will call melissa_finalize()
         }
         else if(type == KILL_RUNNER)
         {
