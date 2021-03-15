@@ -7,7 +7,7 @@
 
 // TODO error checking!
 
-#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
+//#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
 void StorageController::init( MpiController* mpi, IoController* io ) { 
   m_peer = new PeerController();
@@ -77,17 +77,17 @@ void StorageController::callback() {
   storage.m_state_request_load();
 }
 
-void StorageController::load( int state_id ) {
+void StorageController::load( io_id_t state_id ) {
   if( m_worker_thread ) {
-    return m_load_core( state_id );
+    return m_load_head( state_id );
   } else {
     return m_load_user( state_id );
   }
 }
 
-void StorageController::store( int state_id ) {
+void StorageController::store( io_id_t state_id ) {
   if( m_worker_thread ) {
-    return m_store_core( state_id );
+    return m_store_head( state_id );
   } else {
     return m_store_user( state_id );
   }
@@ -97,11 +97,11 @@ int StorageController::protect( void* buffer, size_t size, io_type_t type) {
   m_io->protect(buffer, size, type);  
 }
 
-void StorageController::copy( int id, io_level_t from, io_level_t to) {
-  m_io->copy(id, from, to);  
+void StorageController::copy( io_id_t state_id, io_level_t from, io_level_t to) {
+  m_io->copy(state_id, from, to);  
 }
 
-void StorageController::m_load_core( int state_id ) {
+void StorageController::m_load_head( io_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
     m_peer->request( state_id );
   }
@@ -111,22 +111,22 @@ void StorageController::m_load_core( int state_id ) {
   }
 }
 
-void StorageController::m_load_user( int state_id ) {
+void StorageController::m_load_user( io_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
     sleep(1);
     int status;
-    m_io->sendrecv( &state_id, &status, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
+    m_io->sendrecv( &state_id, &status, sizeof(io_id_t), IO_TAG_REQUEST, IO_MSG_ALL );
     // TODO check status
   }
   assert( m_io->is_local( state_id ) && "unable to load state to local storage" );
   m_io->load( state_id );
 }
     
-void StorageController::m_store_core( int state_id ) {
+void StorageController::m_store_head( io_id_t state_id ) {
   assert( 0 && "not implemented" );
 }
 
-void StorageController::m_store_user( int state_id ) {
+void StorageController::m_store_user( io_id_t state_id ) {
   m_io->store( state_id );
   assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }

@@ -112,17 +112,6 @@ void melissa_p2p_init(const char *field_name,
     }
 }
 
-
-// FIXME assuming fti checkpoint id's are ints
-typedef int FTI_ID_T;
-
-FTI_ID_T hash_fti_id(int cycle, int state_id)
-{
-    // this should work for up to 10000 members!
-    assert(state_id < 10000);
-    return cycle*10000 + state_id
-}
-
 double calculate_weight()
 {
     // Warning returns correct weight only on rank 0! other ranks return -1.0

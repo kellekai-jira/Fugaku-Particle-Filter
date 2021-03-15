@@ -50,18 +50,18 @@ class StorageController {
     static void callback();
     
     // API
-    void load( int state_id );
-    void store( int state_id );
-    void copy( int state_id, io_level_t from, io_level_t to );
+    void load( io_id_t state_id );
+    void store( io_id_t state_id );
+    void copy( io_id_t state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
 
   private:
     
-    void m_load_core( int state_id );
-    void m_load_user( int state_id );
+    void m_load_head( io_id_t state_id );
+    void m_load_user( io_id_t state_id );
     
-    void m_store_core( int state_id );
-    void m_store_user( int state_id );
+    void m_store_head( io_id_t state_id );
+    void m_store_user( io_id_t state_id );
    
     void m_finalize_worker();
 

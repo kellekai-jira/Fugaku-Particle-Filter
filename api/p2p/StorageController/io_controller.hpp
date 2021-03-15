@@ -5,6 +5,8 @@
 
 #include "mpi_controller.hpp"
 
+typedef int io_id_t;
+
 enum io_level_t {
   IO_STORAGE_L1,
   IO_STORAGE_L2,
@@ -19,6 +21,7 @@ enum io_result_t {
 
 enum io_type_t {
   IO_DOUBLE,
+  IO_BYTE,
   IO_INT,
 };
 
@@ -44,13 +47,13 @@ class IoController {
       virtual void init_core( MpiController* mpi ) = 0;
       virtual void fini() = 0;
       virtual int protect( void* buffer, size_t size, io_type_t type ) = 0;
-      virtual bool is_local( int id ) = 0;
-      virtual void move( int id, io_level_t from, io_level_t to ) = 0;
-      virtual void remove( int id, io_level_t level ) = 0;
-      virtual void store( int id, io_level_t level = IO_STORAGE_L1 ) = 0;
-      virtual void copy( int id, io_level_t from, io_level_t to ) = 0;
-      virtual void load( int id, io_level_t level = IO_STORAGE_L1 ) = 0;
-      virtual void request( int id ) = 0;
+      virtual bool is_local( io_id_t state_id ) = 0;
+      virtual void move( io_id_t state_id, io_level_t from, io_level_t to ) = 0;
+      virtual void remove( io_id_t state_id, io_level_t level ) = 0;
+      virtual void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
+      virtual void copy( io_id_t state_id, io_level_t from, io_level_t to ) = 0;
+      virtual void load( io_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
+      virtual void request( io_id_t state_id ) = 0;
       virtual bool probe( io_tag_t tag ) = 0;
       virtual void register_callback( void (*f)(void) ) = 0;
       virtual void sendrecv( void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
@@ -63,8 +66,8 @@ class IoController {
       std::map<std::string,double> m_dict_double;
       std::map<std::string,std::string> m_dict_string;
     
-      std::queue<int> m_state_pull_requests; 
-      std::queue<int> m_state_push_requests; 
+      std::queue<io_id_t> m_state_pull_requests; 
+      std::queue<io_id_t> m_state_push_requests; 
 };
 
 #endif // _IO_CONTROLLER_H_

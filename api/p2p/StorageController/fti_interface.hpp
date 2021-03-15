@@ -7,21 +7,23 @@
 #include <map>
 #include <cassert>
 
+io_id_t fti_ckpt_id(int cycle, int state_id);
+
 class FtiController : public IoController {
   public:
     void init_io( MpiController* mpi );
     void init_core( MpiController* mpi );
     void fini();
     int protect( void* buffer, size_t size, io_type_t type );
-    void load( int id, io_level_t level = IO_STORAGE_L1 );
-    void store( int id, io_level_t level = IO_STORAGE_L1 );
-    void move( int id, io_level_t from, io_level_t to );
-    void remove( int id, io_level_t level );
-    void copy( int id, io_level_t from, io_level_t to );
+    void load( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
+    void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
+    void move( io_id_t state_id, io_level_t from, io_level_t to );
+    void remove( io_id_t state_id, io_level_t level );
+    void copy( io_id_t state_id, io_level_t from, io_level_t to );
 
-    bool is_local( int id );
+    bool is_local( io_id_t state_id );
 
-    void request( int id );
+    void request( io_id_t state_id );
 
     bool probe( io_tag_t tag );
     void sendrecv( void* send_buffer, void* recv_buffer, int n, io_tag_t tag, io_msg_t message_type  );
