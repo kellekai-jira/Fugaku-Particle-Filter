@@ -46,7 +46,10 @@ class Alive:
         return bytes(ctypes.c_int32(7))  # Alive is 7, see melissa_messages.h
 
 # patch state id so we can use it as dict index:
-cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
+# TODO Better would be: Generate another class around it that has the state_id as member !
+# (might break if Protobuf will define their own hash function)
+if not cm.StateId.__hash__:
+    cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
 
 SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
@@ -274,7 +277,6 @@ def recv_nonblocking(socket):
 def handle_general_purpose():
     msg = recv_nonblocking(gp_socket)
 
-
     if msg:
         msg = parse(msg)
 
@@ -305,6 +307,7 @@ def hanlde_job_requests(launcher):
 
     if msg:
         msg = parse(msg)
+
         assert msg.WhichOneof('content') == 'job_request'
 
         if msg.runner_id in faulty_runners:
