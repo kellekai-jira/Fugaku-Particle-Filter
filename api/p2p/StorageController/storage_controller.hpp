@@ -73,10 +73,9 @@ class StorageController {
     void m_state_info_user();
     
     // organize storage
-    void m_prefetch();
-    void m_erase();
-    void m_move();
-    void m_push();
+    void m_state_request_push();
+    void m_state_request_remove();
+    void m_state_request_load();
     
     // request state cache and peer info from server
     void m_query_server();

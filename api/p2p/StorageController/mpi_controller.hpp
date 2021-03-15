@@ -6,11 +6,13 @@
 #include <map>
 
 struct mpi_request_t {
-    MPI_Request mpi_request{0};
+    MPI_Request mpi_request;
     char errstr[MPI_MAX_ERROR_STRING];
     int errval;
     bool test();
     void wait();
+    void free();
+    mpi_request_t() : mpi_request(MPI_REQUEST_NULL) {}
   private:
     MPI_Status mpi_status{0};
 };

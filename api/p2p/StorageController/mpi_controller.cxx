@@ -3,8 +3,8 @@
 #include "utils.h"
 
 bool mpi_request_t::test() {
-  int flag;
-  MPI_Test( &mpi_request, &flag, &mpi_status );
+  int flag = 0;
+  if( mpi_request != MPI_REQUEST_NULL ) MPI_Test( &mpi_request, &flag, &mpi_status );
   if( flag == 1 ) {
     errval = mpi_status.MPI_ERROR;
     if( errval != MPI_SUCCESS ) {
@@ -25,6 +25,10 @@ void mpi_request_t::wait() {
     MPI_Error_string(mpi_status.MPI_ERROR, errstr, &len);
     std::cerr << "[IO ERROR]: " << errstr << "STAT: " << mpi_status.MPI_ERROR << std::endl;
   }
+}
+
+void mpi_request_t::free() {
+  MPI_Request_free( &mpi_request );
 }
 
 MpiController::MpiController() :

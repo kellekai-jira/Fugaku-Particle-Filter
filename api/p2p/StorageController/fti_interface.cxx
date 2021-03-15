@@ -16,6 +16,7 @@ void FtiController::init_io( MpiController* mpi ) {
 void FtiController::init_core( MpiController* mpi ) {
   mpi->register_comm( "fti_comm_world", FTI_COMM_WORLD );
   mpi->set_comm( "fti_comm_world" );
+  const FTIT_topology* const FTI_Topo = FTI_GetTopo();
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L1, FTI_L1 ) );
@@ -26,15 +27,14 @@ void FtiController::init_core( MpiController* mpi ) {
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_REQUEST, IO_TAG_REQUEST + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_MESSAGE, IO_TAG_MESSAGE + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_ERASE, IO_TAG_ERASE + 1000000 ) );
-  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_LOAD, IO_TAG_LOAD + 1000000 ) );
-  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_COPY, IO_TAG_COPY + 1000000 ) );
-  m_id_counter = 0;
-  const FTIT_topology* const FTI_Topo = FTI_GetTopo();
+  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PULL, IO_TAG_PULL + 1000000 ) );
+  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PUSH, IO_TAG_PUSH + 1000000 ) );
   m_dict_int.insert( std::pair<std::string,int>( "nodes", FTI_Topo->nbNodes ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_node", FTI_Topo->nodeSize ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_total", FTI_Topo->nbProc ) );
   m_dict_bool.insert( std::pair<std::string,bool>( "master_node", FTI_Topo->masterLocal ) );
   m_dict_bool.insert( std::pair<std::string,bool>( "master_global", FTI_Topo->masterGlobal ) );
+  m_id_counter = 0;
 }
       
 void FtiController::sendrecv( void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
@@ -57,7 +57,7 @@ void FtiController::send( void* send_buffer, int size, io_tag_t tag, io_msg_t me
       
 void FtiController::isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) {
   if( FTI_AmIaHead() ) {
-    assert( 0 && "not implemented!" );
+    FTI_HeadIsend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type], &req.mpi_request );
   } else {
     FTI_AppIsend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type], &req.mpi_request );
   }
@@ -72,7 +72,13 @@ void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t me
 }
     
 bool FtiController::probe( io_tag_t tag ) {
-  return FTI_HeadProbe( m_io_tag_map[tag] );  
+  if( tag == IO_TAG_PULL ) {
+    return !m_state_pull_requests.empty();
+  } else if( tag == IO_TAG_PUSH ) {
+    return !m_state_push_requests.empty();
+  } else {
+    return FTI_HeadProbe( m_io_tag_map[tag] );  
+  }
 }
 
 void FtiController::fini() {

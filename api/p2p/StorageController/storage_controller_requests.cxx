@@ -27,6 +27,7 @@ void StorageController::m_state_request_peer() {
 // (3) state info from user
 void StorageController::m_state_info_user() {
   if( m_io->probe( IO_TAG_MESSAGE ) ) {
+    if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
     state_info_t new_state_info;
     int info[2]; // [0]->active [1]->finished state id
     m_io->recv( &info, sizeof(int)*2, IO_TAG_MESSAGE, IO_MSG_MASTER );
@@ -36,31 +37,46 @@ void StorageController::m_state_info_user() {
     } else {
       m_states[info[0]].status = MELISSA_STATE_BUSY;
     }
-    if( info[1] != -1 ) { // on initialization finished state is -1
-      if( m_states.count( info[1] ) == 0 ) {
-        new_state_info.status = MELISSA_STATE_IDLE;
-        m_states.insert( std::pair<int, state_info_t>( info[1], new_state_info ) );
-      } else {
-        m_states[info[1]].status = MELISSA_STATE_IDLE;
-      }
+    if( m_states.count( info[1] ) == 0 ) {
+      new_state_info.status = MELISSA_STATE_IDLE;
+      m_states.insert( std::pair<int, state_info_t>( info[1], new_state_info ) );
+    } else {
+      m_states[info[1]].status = MELISSA_STATE_IDLE;
     }
+    m_io->m_state_push_requests.push(info[1] );
   }
 }
 
 // organize storage
-void StorageController::m_prefetch() {
+void StorageController::m_state_request_push() {
+  if( m_io->probe( IO_TAG_PUSH ) ) {
+    if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
+    m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
+    m_io->m_state_push_requests.pop();
+  }
+}
+
+void StorageController::m_state_request_remove() {
 
 }
-void StorageController::m_erase() {
 
-}
-void StorageController::m_move() {
-
-}
-void StorageController::m_push() {
-
+void StorageController::m_state_request_load() {
+  if( m_io->probe( IO_TAG_PULL ) ) {
+    if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
+    load( m_io->m_state_pull_requests.front() );
+    m_io->m_state_pull_requests.pop();
+  }
 }
 
 void StorageController::m_query_server() {
-
+  // update peers 
+  static int count = 0; 
+  // update states
+  // [dummy impl zum testen]
+  if(count == 30) {
+    for(int i=2; i<11; i++) {
+      m_io->m_state_pull_requests.push( i );
+    }
+  }
+  count++;
 }

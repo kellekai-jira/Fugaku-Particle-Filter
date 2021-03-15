@@ -1,6 +1,7 @@
 #ifndef _IO_CONTROLLER_H_
 #define _IO_CONTROLLER_H_
 #include <iostream>
+#include <queue>
 
 #include "mpi_controller.hpp"
 
@@ -31,8 +32,8 @@ enum io_tag_t {
   IO_TAG_REQUEST,
   IO_TAG_MESSAGE,
   IO_TAG_ERASE,
-  IO_TAG_LOAD,
-  IO_TAG_COPY
+  IO_TAG_PULL,
+  IO_TAG_PUSH
 };
 
 
@@ -60,6 +61,9 @@ class IoController {
       std::map<std::string,bool> m_dict_bool;
       std::map<std::string,double> m_dict_double;
       std::map<std::string,std::string> m_dict_string;
+    
+      std::queue<int> m_state_pull_requests; 
+      std::queue<int> m_state_push_requests; 
 };
 
 #endif // _IO_CONTROLLER_H_

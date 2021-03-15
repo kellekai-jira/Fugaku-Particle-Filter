@@ -1,5 +1,5 @@
 #include "storage_controller.hpp"
-#include "storage_impl.hpp"
+#include "storage_controller_impl.hpp"
 
 #include "utils.h"
 #include <memory>
@@ -47,29 +47,29 @@ void StorageController::callback() {
   //  storage.m_worker_thread = true;
   //}
 
+  // query info from server
+  // submit:
+  // - remove requests
+  // - load requests for prefetching
+  storage.m_query_server();
+
+  // has to have the highest priority!!!
+  storage.m_state_info_user();
+
   // check and handle state request from Alice
   storage.m_state_request_user();
+
+  // check and handle push request
+  storage.m_state_request_push();
 
   // check and handle state request from Bob
   storage.m_state_request_peer();
 
-  // check and handle acknowledge info from Alice
-  storage.m_state_info_user();
+  // check and handle delete request
+  storage.m_state_request_remove();
 
   // check and handle delete request
-  storage.m_erase();
-
-  // check and handle move request
-  storage.m_move();
-
-  // check and handle push request
-  storage.m_push();
-
-  // check and handle prefetch request
-  storage.m_prefetch();
-
-  // query info from server
-  storage.m_query_server();
+  storage.m_state_request_load();
 }
 
 void StorageController::load( int state_id ) {
@@ -86,5 +86,43 @@ void StorageController::store( int state_id ) {
   } else {
     return m_store_user( state_id );
   }
+}
+
+int StorageController::protect( void* buffer, size_t size, io_type_t type) {
+  m_io->protect(buffer, size, type);  
+}
+
+void StorageController::copy( int id, io_level_t from, io_level_t to) {
+  m_io->copy(id, from, to);  
+}
+
+void StorageController::m_load_core( int state_id ) {
+  if( !m_io->is_local( state_id ) ) {
+    m_peer->request( state_id );
+  }
+  if( !m_io->is_local( state_id ) ) {
+    sleep(2);
+    m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
+  }
+}
+
+void StorageController::m_load_user( int state_id ) {
+  if( !m_io->is_local( state_id ) ) {
+    sleep(1);
+    int status;
+    m_io->sendrecv( &state_id, &status, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
+    // TODO check status
+  }
+  assert( m_io->is_local( state_id ) && "unable to load state to local storage" );
+  m_io->load( state_id );
+}
+    
+void StorageController::m_store_core( int state_id ) {
+  assert( 0 && "not implemented" );
+}
+
+void StorageController::m_store_user( int state_id ) {
+  m_io->store( state_id );
+  assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }
 
