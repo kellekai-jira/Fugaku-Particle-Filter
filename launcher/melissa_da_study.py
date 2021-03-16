@@ -53,7 +53,7 @@ def run_melissa_da_study(
         cluster=cluster_selector(),  # TODO: replace this by a class that contains all the necessary methods taken from annas batch spawner
         procs_server=1,
         procs_runner=1,
-        n_runners=1,
+        n_runners=1,  # may be a function if the allowed runner amount may change over time
         show_server_log = True,
         show_simulation_log = True,
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
@@ -87,6 +87,10 @@ def run_melissa_da_study(
 
 
 
+    if callable(n_runners):
+        max_runners = n_runners
+    else:
+        max_runners = lambda : n_runners
 
 
 
@@ -237,6 +241,7 @@ def run_melissa_da_study(
     init_sockets()
 
 
+
     runners = {}  # running runners
     server = None
     next_runner_id = 0
@@ -245,16 +250,26 @@ def run_melissa_da_study(
 
         if not server:  # No server. Start one!
             server = Server()
+            debug('Starting Server')
         if server.state == STATE_WAITING:
             if server.check_state() == STATE_RUNNING:
                 server.state = STATE_RUNNING
                 debug('Server running now!')
                 server.last_msg_from = time.time()
         if server.state == STATE_RUNNING:
-            if server.node_name != '' and len(runners) < n_runners:  # TODO depend on check load here!
-                runner_id = next_runner_id
-                next_runner_id += 1
-                runners[runner_id] = Runner(runner_id, server.node_name)
+            if server.node_name != '':
+                mr = max_runners()
+                if len(runners) < mr:  # TODO depend on check load here!
+                    runner_id = next_runner_id
+                    next_runner_id += 1
+                    debug('Starting runner %d', runner_id)
+                    runners[runner_id] = Runner(runner_id, server.node_name)
+                else:
+                    while len(runners) > mr:
+                        log("killing a runner as too many runners are up")
+                        del runners[random.choice(list(runners))]
+                        # TODO: notify server!
+
 
             # Check if the server did not timeout!
             if time.time() - server.last_msg_from > server_timeout or \
@@ -278,7 +293,7 @@ def run_melissa_da_study(
 
             # Check if some runners are running now, timed out while registration or if
             # they were killed for some strange reasons...
-            for runner_id in list(runners.keys()):
+            for runner_id in list(runners):
                 runner = runners[runner_id]
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
@@ -294,6 +309,7 @@ def run_melissa_da_study(
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner %d is killed as its job is not up anymore' %
                                 runner_id)
+                        # TODO: notify server!
                         del runners[runner_id]
 
 
