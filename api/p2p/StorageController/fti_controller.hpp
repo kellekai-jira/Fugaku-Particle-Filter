@@ -2,19 +2,19 @@
 #define _FTI_CONTROLLER_H_
 
 #include <fti.h>
+#include "fti_kernel.hpp"
 #include "io_controller.hpp"
 #include <vector>
 #include <map>
 #include <cassert>
-
-io_id_t fti_ckpt_id(int cycle, int state_id);
 
 class FtiController : public IoController {
   public:
     void init_io( MpiController* mpi );
     void init_core( MpiController* mpi );
     void fini();
-    int protect( void* buffer, size_t size, io_type_t type );
+    int protect( void* buffer, io_size_t size, io_type_t type );
+    void update( io_id_t id, void* buffer, io_size_t size );
     void load( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void move( io_id_t state_id, io_level_t from, io_level_t to );
@@ -22,6 +22,7 @@ class FtiController : public IoController {
     void copy( io_id_t state_id, io_level_t from, io_level_t to );
 
     bool is_local( io_id_t state_id );
+    bool is_global( io_id_t state_id );
 
     void request( io_id_t state_id );
 
@@ -37,7 +38,9 @@ class FtiController : public IoController {
     std::map<io_type_t,fti_id_t> m_io_type_map;
     std::map<io_msg_t,int> m_io_msg_map;
     std::map<io_tag_t,int> m_io_tag_map;
-    int m_id_counter;
+    std::map<io_id_t,io_var_t> m_var_id_map;
+    io_id_t m_id_counter;
+    FTI::Kernel m_kernel;
 };
 
 #endif // _FTI_CONTROLLER_H_

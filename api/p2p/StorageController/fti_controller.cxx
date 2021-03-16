@@ -1,18 +1,19 @@
-#include "fti_interface.hpp"
+#include "fti_controller.hpp"
 #include <fti.h>
 #include <iostream>
-
-io_id_t fti_ckpt_id(int cycle, int state_id) {
-    // this should work for up to 10000 members!
-    assert(state_id < 10000 && "too many state_ids!");
-    return cycle*10000 + state_id;
-}
 
 int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
   FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
+  io_var_t variable = { buffer, size, type };
+  m_var_id_map.insert( std::pair<io_id_t,io_var_t>( m_id_counter, variable ) );  
   m_id_counter++;
   return m_id_counter;
+}
+
+void FtiController::update( io_id_t id, void* buffer, io_size_t size ) {
+  assert( m_var_id_map.count(id) != 0 && "invalid type" );
+  FTI_Protect(id, buffer, size, m_var_id_map[id].type);
 }
 
 void FtiController::init_io( MpiController* mpi ) {
@@ -22,7 +23,6 @@ void FtiController::init_io( MpiController* mpi ) {
 void FtiController::init_core( MpiController* mpi ) {
   mpi->register_comm( "fti_comm_world", FTI_COMM_WORLD );
   mpi->set_comm( "fti_comm_world" );
-  const FTIT_topology* const FTI_Topo = FTI_GetTopo();
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_BYTE, FTI_CHAR ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
@@ -36,11 +36,22 @@ void FtiController::init_core( MpiController* mpi ) {
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_ERASE, IO_TAG_ERASE + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PULL, IO_TAG_PULL + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PUSH, IO_TAG_PUSH + 1000000 ) );
-  m_dict_int.insert( std::pair<std::string,int>( "nodes", FTI_Topo->nbNodes ) );
-  m_dict_int.insert( std::pair<std::string,int>( "procs_node", FTI_Topo->nodeSize ) );
-  m_dict_int.insert( std::pair<std::string,int>( "procs_total", FTI_Topo->nbProc ) );
-  m_dict_bool.insert( std::pair<std::string,bool>( "master_node", FTI_Topo->masterLocal ) );
-  m_dict_bool.insert( std::pair<std::string,bool>( "master_global", FTI_Topo->masterGlobal ) );
+  m_dict_int.insert( std::pair<std::string,int>( "nodes", m_kernel.topo->nbNodes ) );
+  m_dict_int.insert( std::pair<std::string,int>( "procs_node", m_kernel.topo->nodeSize ) );
+  int app_procs_node = m_kernel.topo->nodeSize - m_kernel.topo->nbHeads;
+  m_dict_int.insert( std::pair<std::string,int>( "app_procs_node", app_procs_node ) );
+  m_dict_int.insert( std::pair<std::string,int>( "procs_total", m_kernel.topo->nbProc ) );
+  m_dict_bool.insert( std::pair<std::string,bool>( "master_local", m_kernel.topo->masterLocal ) );
+  m_dict_bool.insert( std::pair<std::string,bool>( "master_global", m_kernel.topo->masterGlobal ) );
+  auto strip_id = [](std::string path, std::string id) { 
+    auto start_position_to_erase = path.find(std::string("/"+id));
+    path.erase(start_position_to_erase, path.size());
+    return path;
+  };
+  m_dict_string.insert( std::pair<std::string,std::string>( "global_dir", strip_id(m_kernel.conf->glbalDir,m_kernel.exec->id) ) );
+  m_dict_string.insert( std::pair<std::string,std::string>( "local_dir", strip_id(m_kernel.conf->localDir,m_kernel.exec->id) ) );
+  m_dict_string.insert( std::pair<std::string,std::string>( "meta_dir", strip_id(m_kernel.conf->metadDir,m_kernel.exec->id) ) );
+  m_dict_string.insert( std::pair<std::string,std::string>( "exec_id", m_kernel.exec->id ) );
   m_id_counter = 0;
 }
       
@@ -120,6 +131,12 @@ bool FtiController::is_local( io_id_t state_id ) {
   FTIT_stat st;
   FTI_Stat( state_id, &st );
   return FTI_ST_IS_LOCAL(st.level);
+}
+
+bool FtiController::is_global( io_id_t state_id ) {
+  FTIT_stat st;
+  FTI_Stat( state_id, &st );
+  return FTI_ST_IS_GLOBAL(st.level);
 }
 
 void FtiController::request( io_id_t state_id ) {

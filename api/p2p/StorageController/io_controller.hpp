@@ -2,10 +2,14 @@
 #define _IO_CONTROLLER_H_
 #include <iostream>
 #include <queue>
+#include <exception>
 
 #include "mpi_controller.hpp"
 
+const size_t IO_TRANSFER_SIZE = 16*1024*1024; // 16 Mb
+
 typedef int io_id_t;
+typedef size_t io_size_t;
 
 enum io_level_t {
   IO_STORAGE_L1,
@@ -23,6 +27,9 @@ enum io_type_t {
   IO_DOUBLE,
   IO_BYTE,
   IO_INT,
+  IO_USER1,
+  IO_USER2,
+  IO_USER3,
 };
 
 enum io_msg_t {
@@ -40,14 +47,21 @@ enum io_tag_t {
   IO_TAG_PUSH
 };
 
+struct io_var_t {
+  void* data;
+  io_size_t size;
+  io_type_t type;
+};
 
 class IoController {
    public:
       virtual void init_io( MpiController* mpi ) = 0;
       virtual void init_core( MpiController* mpi ) = 0;
       virtual void fini() = 0;
-      virtual int protect( void* buffer, size_t size, io_type_t type ) = 0;
+      virtual int protect( void* buffer, io_size_t size, io_type_t type ) = 0;
+      virtual void update( io_id_t, void* buffer, io_size_t size ) = 0;
       virtual bool is_local( io_id_t state_id ) = 0;
+      virtual bool is_global( io_id_t state_id ) = 0;
       virtual void move( io_id_t state_id, io_level_t from, io_level_t to ) = 0;
       virtual void remove( io_id_t state_id, io_level_t level ) = 0;
       virtual void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
@@ -68,6 +82,27 @@ class IoController {
     
       std::queue<io_id_t> m_state_pull_requests; 
       std::queue<io_id_t> m_state_push_requests; 
+};
+
+class IoException : public std::runtime_error {
+  const char* file;
+  int line;
+  const char* func;
+  const char* info;
+
+  public:
+  IoException(const char* msg, const char* file_, int line_, const char* func_, const char* info_ = "") : std::runtime_error(msg),
+    file (file_),
+    line (line_),
+    func (func_),
+    info (info_)
+    {
+    }
+
+  const char* get_file() const { return file; }
+  int get_line() const { return line; }
+  const char* get_func() const { return func; }
+  const char* get_info() const { return info; }
 };
 
 #endif // _IO_CONTROLLER_H_

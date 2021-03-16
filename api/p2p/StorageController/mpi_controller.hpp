@@ -26,21 +26,23 @@ class MpiController
         MpiController();
         void init();
         void register_comm( std::string, MPI_Comm & );
-        void set_comm( std::string );
-        const MPI_Comm & comm();
-        const int & size();
-        const int & rank();
-        void barrier(std::string comm);
+        void set_comm( std::string key );
+        const MPI_Comm & comm( std::string key = m_comm_set );
+        const int & size( std::string key = m_comm_set );
+        const int & rank( std::string key = m_comm_set );
+        void barrier( std::string key = m_comm_set );
         void finalize();
 
         MPI_Fint fortranComm();
 
     private:
-
-        std::string m_comm_key;
-        std::map<std::string,MPI_Comm> m_comms;
-        int m_size;
-        int m_rank;
+        static std::string m_comm_set;
+        struct mpi_comm_t {
+          MPI_Comm comm;
+          int size;
+          int rank;
+        };
+        std::map<std::string,mpi_comm_t> m_comms;
 
 };
 
