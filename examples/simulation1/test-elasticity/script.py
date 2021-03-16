@@ -3,7 +3,7 @@ from melissa_da_study import *
 
 import time
 import random
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 import numpy as np
 
 random.seed(43)
@@ -23,11 +23,13 @@ def free_resources():
     data = sorted(zip(ts,ys))
     ts = np.array(data).T[0]
     ys = np.array(data).T[1]
-    # plt.step(ts, ys)
-    # plt.show()
+    #plt.step(ts, ys)
+    #plt.show()
     return ts, ys
 
 ts, ys = free_resources()
+
+print(ts, ys)
 
 start_time = time.time()
 
@@ -53,12 +55,12 @@ run_melissa_da_study(
         assimilator_type=ASSIMILATOR_DUMMY,
         # not necessary to add cluster. By default an automatic selection for the cluster
         # is done. See the cluster_selector() method.
-        #cluster=LocalCluster(),
+        cluster=SlurmCluster('igf@cpu'),
         procs_server=2,
-        #nodes_server=NODES_SERVER,
-        nodes_server=1,
+        nodes_server=NODES_SERVER,
         procs_runner=3,
         nodes_runner=NODES_RUNNER,
         n_runners=runners_now,
         show_server_log=False,
-        show_simulation_log=False)
+        show_simulation_log=False,
+        walltime='00:45:00')
