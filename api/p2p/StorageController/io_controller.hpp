@@ -7,8 +7,8 @@
 #include "mpi_controller.hpp"
 
 #define IO_TRY( expr, result, msg ) do { \
-  if( expr != result ) \
-    throw IoException( msg, __FILE__, __LINE__, __func__); \
+  if( (expr) != (result) ) \
+    throw IoException( (msg), __FILE__, __LINE__, __func__); \
   } while(0)
 
 const size_t IO_TRANSFER_SIZE = 16*1024*1024; // 16 Mb

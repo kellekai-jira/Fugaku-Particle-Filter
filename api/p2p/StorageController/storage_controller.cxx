@@ -15,7 +15,19 @@
 //  STORAGE CONTROLLER INITIALIZATION
 //======================================================================
 
-void StorageController::init( MpiController* mpi, IoController* io ) { 
+void StorageController::init( MpiController* mpi, IoController* io,
+    size_t capacity, size_t checkpoint_size ) {
+
+  m_capacity = capacity;
+  m_checkpoint_size = checkpoint_size;
+  
+  // 2 model checkpoints + 1 runner prefetch request
+  size_t minimum_storage_requirement = 3 * checkpoint_size;
+  
+  IO_TRY( minimum_storage_requirement > capacity, true, "Insufficiant storage capacity!" );
+
+  m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / checkpoint_size; 
+
   m_peer = new PeerController();
   m_io = io;
   m_mpi = mpi;
@@ -69,7 +81,10 @@ void StorageController::callback() {
   storage.m_query_server();
 
   // has to have the highest priority!!!
-  storage.m_state_info_user();
+  if( storage.m_io->probe( IO_TAG_LOAD ) ) {
+    storage.m_state_info_user();
+    return;
+  }
 
   // check and handle state request from Alice
   storage.m_state_request_user();

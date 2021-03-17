@@ -28,7 +28,8 @@ class StorageController {
       m_request_counter(0),
       m_request_interval(1) {}
 
-    void init( MpiController* mpi, IoController* io );
+    void init( MpiController* mpi, IoController* io,
+      size_t capacity, size_t checkpoint_size );
     void fini();
 
     // CALLBACK FOR FTI HEADS
@@ -93,6 +94,13 @@ class StorageController {
     int m_comm_global_size; 
     int m_comm_runner_size; 
     int m_comm_worker_size; 
+
+    // size in bytes
+    size_t m_capacity;
+    size_t m_checkpoint_size;
+    
+    // number of states
+    int m_prefetch_capacity;
 
 //----------------------------------------------------------------------------------------
 //  SERVER CONNECTION
