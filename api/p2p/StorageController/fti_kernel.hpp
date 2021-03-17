@@ -17,6 +17,7 @@ namespace FTI {
       // API
       void update_ckpt_metadata( int ckptId, int level );
       void file_copy( std::string from,  std::string to );
+      void print( std::string msg, int priority );
       
       // FTI Core
       FTIT_topology* topo = FTI_GetTopo();
@@ -28,6 +29,8 @@ namespace FTI {
 }
 
 extern "C" {
+
+void FTI_Print(const char* msg, int priority);
 
 int FTI_UpdateCkptMetaData(FTIT_configuration* FTI_Conf,
     FTIT_execution* FTI_Exec, FTIT_topology* FTI_Topo,

@@ -8,18 +8,27 @@
 #include <map>
 #include <cassert>
 
+struct io_state_t {
+  io_id_t id;
+  io_status_t status;
+  std::string exec_id; 
+  int runner_id;
+  int parent_id;
+  int cycle;
+};
+
 class FtiController : public IoController {
   public:
     void init_io( MpiController* mpi );
-    void init_core( MpiController* mpi );
+    void init_core();
     void fini();
     int protect( void* buffer, io_size_t size, io_type_t type );
     void update( io_id_t id, void* buffer, io_size_t size );
     void load( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 );
-    void move( io_id_t state_id, io_level_t from, io_level_t to );
     void remove( io_id_t state_id, io_level_t level );
-    void copy( io_id_t state_id, io_level_t from, io_level_t to );
+    void copy( io_state_t state, io_level_t from, io_level_t to );
+    void copy_extern( io_state_t state, io_level_t from, io_level_t to );
 
     bool is_local( io_id_t state_id );
     bool is_global( io_id_t state_id );
@@ -41,6 +50,7 @@ class FtiController : public IoController {
     std::map<io_id_t,io_var_t> m_var_id_map;
     io_id_t m_id_counter;
     FTI::Kernel m_kernel;
+    MpiController* m_mpi;
 };
 
 #endif // _FTI_CONTROLLER_H_

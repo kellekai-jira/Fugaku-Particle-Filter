@@ -6,10 +6,21 @@
 
 #include "mpi_controller.hpp"
 
+#define IO_TRY( expr, result, msg ) do { \
+  if( expr != result ) \
+    throw IoException( msg, __FILE__, __LINE__, __func__); \
+  } while(0)
+
 const size_t IO_TRANSFER_SIZE = 16*1024*1024; // 16 Mb
 
 typedef int io_id_t;
 typedef size_t io_size_t;
+
+enum io_status_t {
+  IO_STATE_BUSY,
+  IO_STATE_IDLE,
+  IO_STATE_LOAD,
+};
 
 enum io_level_t {
   IO_STORAGE_L1,
@@ -34,17 +45,17 @@ enum io_type_t {
 
 enum io_msg_t {
   IO_MSG_ALL,
-  IO_MSG_MASTER,
-  IO_MSG_SELF
+  IO_MSG_ONE,
 };
   
 enum io_tag_t {
-  IO_TAG_REQUEST,
-  IO_TAG_MESSAGE,
-  IO_TAG_FINAL,
-  IO_TAG_ERASE,
+  IO_TAG_LOAD,
+  IO_TAG_PEER,
   IO_TAG_PULL,
-  IO_TAG_PUSH
+  IO_TAG_PUSH,
+  IO_TAG_POST,
+  IO_TAG_DUMP,
+  IO_TAG_FINI
 };
 
 struct io_var_t {
@@ -53,19 +64,26 @@ struct io_var_t {
   io_type_t type;
 };
 
+struct io_dump_request_t {
+  io_id_t state_id;
+  io_level_t level;
+};
+
+struct io_state_t;
+
 class IoController {
    public:
       virtual void init_io( MpiController* mpi ) = 0;
-      virtual void init_core( MpiController* mpi ) = 0;
+      virtual void init_core() = 0;
       virtual void fini() = 0;
       virtual int protect( void* buffer, io_size_t size, io_type_t type ) = 0;
       virtual void update( io_id_t, void* buffer, io_size_t size ) = 0;
       virtual bool is_local( io_id_t state_id ) = 0;
       virtual bool is_global( io_id_t state_id ) = 0;
-      virtual void move( io_id_t state_id, io_level_t from, io_level_t to ) = 0;
       virtual void remove( io_id_t state_id, io_level_t level ) = 0;
       virtual void store( io_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
-      virtual void copy( io_id_t state_id, io_level_t from, io_level_t to ) = 0;
+      virtual void copy( io_state_t state, io_level_t from, io_level_t to ) = 0;
+      virtual void copy_extern( io_state_t state, io_level_t from, io_level_t to ) = 0;
       virtual void load( io_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
       virtual void request( io_id_t state_id ) = 0;
       virtual bool probe( io_tag_t tag ) = 0;
@@ -82,6 +100,8 @@ class IoController {
     
       std::queue<io_id_t> m_state_pull_requests; 
       std::queue<io_id_t> m_state_push_requests; 
+      std::queue<io_dump_request_t> m_state_dump_requests; 
+      MpiController* m_mpi;
 };
 
 class IoException : public std::runtime_error {

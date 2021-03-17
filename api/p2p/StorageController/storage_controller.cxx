@@ -13,6 +13,10 @@
 
 //#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
+//======================================================================
+//  STORAGE CONTROLLER INITIALIZATION
+//======================================================================
+
 void StorageController::init( MpiController* mpi, IoController* io ) { 
   m_peer = new PeerController();
   m_io = io;
@@ -21,7 +25,7 @@ void StorageController::init( MpiController* mpi, IoController* io ) {
   m_comm_global_size = m_mpi->size();
   // heads dont return here!
   m_io->init_io(m_mpi);
-  m_io->init_core(m_mpi);
+  m_io->init_core();
   m_comm_worker_size = m_io->m_dict_int["nodes"]; 
   m_comm_runner_size = m_io->m_dict_int["nodes"] * (m_io->m_dict_int["procs_node"]-1);
   m_worker_thread = false;
@@ -30,10 +34,14 @@ void StorageController::init( MpiController* mpi, IoController* io ) {
 void StorageController::fini() {
   delete m_peer;
   int dummy[2];
-  m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
+  m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   m_mpi->barrier("fti_comm_world");
   m_io->fini();
 }
+
+//======================================================================
+//  STATIC CALLBACK FUNCTION
+//======================================================================
 
 // Callback called in the FTI head loop:
 void StorageController::callback() {
@@ -41,7 +49,7 @@ void StorageController::callback() {
   //void* context;
   static bool init = false;
   if( !init ) {
-    storage.m_io->init_core(storage.m_mpi);
+    storage.m_io->init_core();
     storage.m_comm_worker_size = storage.m_io->m_dict_int["nodes"]; 
     storage.m_comm_runner_size = storage.m_io->m_dict_int["nodes"] * (storage.m_io->m_dict_int["procs_node"]-1);
     init = true;
@@ -75,11 +83,15 @@ void StorageController::callback() {
   storage.m_state_request_peer();
 
   // check and handle delete request
-  storage.m_state_request_remove();
+  storage.m_state_request_dump();
 
   // check and handle delete request
   storage.m_state_request_load();
 }
+
+//======================================================================
+//  STORAGE CONTROLLER API
+//======================================================================
 
 int StorageController::protect( void* buffer, size_t size, io_type_t type) {
   m_io->protect(buffer, size, type);  
@@ -106,119 +118,16 @@ void StorageController::store( io_id_t state_id ) {
 }
 
 void StorageController::copy( io_id_t state_id, io_level_t from, io_level_t to) {
-  m_io->copy(state_id, from, to);  
-}
-
-void StorageController::copy_extern( io_id_t state_id ) {
-  
-  std::stringstream global;
-  global << m_io->m_dict_string["global_dir"];
-  global << "/";
-  global << m_states[state_id].io_exec_id;
-  global << "/l4/";
-  global << std::to_string(state_id);
-  
-  std::stringstream extern_meta;
-  extern_meta << m_io->m_dict_string["meta_dir"];
-  extern_meta << "/";
-  extern_meta << m_states[state_id].io_exec_id;
-  extern_meta << "/l4/";
-  extern_meta << std::to_string(state_id);
-  
-  std::stringstream meta;
-  meta << m_io->m_dict_string["meta_dir"];
-  meta << "/";
-  meta << m_io->m_dict_string["exec_id"];
-  meta << "/l1/";
-  meta << std::to_string(state_id);
-  
-  std::stringstream meta_tmp_dir;
-  meta_tmp_dir << m_io->m_dict_string["meta_dir"];
-  meta_tmp_dir << "/tmp";
-    
-  std::stringstream local_tmp_dir;
-  local_tmp_dir << m_io->m_dict_string["local_dir"];
-  local_tmp_dir << "/tmp";
-    
-  std::stringstream local_tmp;
-  local_tmp << local_tmp_dir.str();
-
-  if( m_io->m_dict_bool["master_local"] ) {
-    assert( mkdir( local_tmp_dir.str().c_str(), 0777 ) == 0 );  
-  }
-
-  if( m_io->m_dict_bool["master_global"] ) {
-    assert( mkdir( meta_tmp_dir.str().c_str(), 0777 ) == 0 );
-  }
-
-  m_mpi->barrier();
- 
-  for(int i=0; i<m_io->m_dict_int["app_procs_node"]; i++) {
-    int proc = m_fti_kernel.topo->body[i];
-
-    std::stringstream filename;
-    filename << "Ckpt" << state_id << "-Rank" << proc << ".fti";
-    
-    std::stringstream global_fn;
-    global_fn << global.str(); 
-    global_fn << "/";
-    global_fn << filename.str(); 
-    
-    std::stringstream local_tmp_fn;
-    local_tmp_fn << local_tmp_dir.str();
-    local_tmp_fn << "/";
-    local_tmp_fn << filename.str();
-
-    m_fti_kernel.file_copy( global_fn.str(), local_tmp_fn.str() );
-
-    if (m_fti_kernel.topo->groupRank == 0) {
-      int groupId = i+1;
-      std::stringstream metafilename_extern;
-      metafilename_extern << extern_meta.str();
-      metafilename_extern << "/";
-      metafilename_extern << "sector" << m_fti_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::stringstream metafilename_tmp;
-      metafilename_tmp << meta_tmp_dir.str();
-      metafilename_tmp << "/";
-      metafilename_tmp << "sector" << m_fti_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      m_fti_kernel.file_copy( metafilename_extern.str(), metafilename_tmp.str() );
-    }
-
-  }
-  
-  m_mpi->barrier();
-  
-  std::stringstream local;
-  local << m_io->m_dict_string["local_dir"];
-  local << "/";
-  local << m_states[state_id].io_exec_id;
-  local << "/l1/";
-  local << std::to_string(state_id);
-
-  if( m_io->m_dict_bool["master_local"] ) {
-    assert( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ) == 0 ); 
-  }
-  if( m_io->m_dict_bool["master_global"] ) {
-    assert( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ) == 0 ); 
-    m_fti_kernel.update_ckpt_metadata( state_id, FTI_L1 );
-  }
-
-  m_mpi->barrier();
-
+  m_io->copy(m_states[state_id], from, to);  
 }
 
 void StorageController::m_load_head( io_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
-    m_peer->request( state_id );
+    //m_peer->request( state_id );
   }
   if( !m_io->is_local( state_id ) ) {
     sleep(2);
-    if( m_io->is_global( state_id ) ) {
-      //m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
-      copy_extern( state_id );
-    } else {
-      copy_extern( state_id );
-    }
+    m_io->copy( m_states[state_id], IO_STORAGE_L2, IO_STORAGE_L1 );
   }
 }
 
@@ -226,7 +135,7 @@ void StorageController::m_load_user( io_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
     sleep(1);
     int status;
-    m_io->sendrecv( &state_id, &status, sizeof(io_id_t), IO_TAG_REQUEST, IO_MSG_ALL );
+    m_io->sendrecv( &state_id, &status, sizeof(io_id_t), IO_TAG_LOAD, IO_MSG_ALL );
     // TODO check status
   }
   assert( m_io->is_local( state_id ) && "unable to load state to local storage" );
@@ -242,50 +151,82 @@ void StorageController::m_store_user( io_id_t state_id ) {
   assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }
 
-// (1) state request from user to worker
-void StorageController::m_state_request_user() {
-  if( m_io->probe( IO_TAG_REQUEST ) ) {
-    io_id_t *state_id = new io_id_t[m_io->m_dict_int["procs_app"]];
-    int result=(int)IO_SUCCESS; 
-    m_io->recv( state_id, sizeof(io_id_t), IO_TAG_REQUEST, IO_MSG_ALL );
-    load( state_id[0] );
-    m_io->send( &result, sizeof(int), IO_TAG_REQUEST, IO_MSG_ALL );
-    delete[] state_id;
+//======================================================================
+//  SERVER QUERY
+//======================================================================
+
+void StorageController::m_query_server() {
+  // update peers 
+  static int count = 0; 
+  // update states
+  // [dummy impl zum testen]
+
+  if(count == 30) {
+    for(int i=2; i<11; i++) {
+      io_state_t fake_state_info;
+      fake_state_info.status = IO_STATE_IDLE;
+      fake_state_info.id = i;
+      fake_state_info.exec_id = m_io->m_dict_string["exec_id"]; 
+      fake_state_info.runner_id = m_runner_id;
+      fake_state_info.cycle = 0;
+      fake_state_info.parent_id = i;
+      io_id_t fake_state_id = generate_state_id( 0, i );
+      m_states.insert( std::pair<io_id_t, io_state_t>( fake_state_id, fake_state_info ) );
+      m_io->m_state_pull_requests.push( i );
+    }
   }
+  count++;
 }
 
-// (2) state request from peer to worker
-void StorageController::m_state_request_peer() {
-}
+//======================================================================
+//  ASYNC USER MESSAGE
+//======================================================================
 
-// (3) state info from user
 void StorageController::m_state_info_user() {
-  if( m_io->probe( IO_TAG_MESSAGE ) ) {
+  if( m_io->probe( IO_TAG_POST ) ) {
     if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
     io_id_t info[4];
     // [0]->cycle_active, [1]->parent_id_active, [2]->cycle_finished, [3]->parent_id_finished
-    m_io->recv( &info, sizeof(io_id_t)*4, IO_TAG_MESSAGE, IO_MSG_MASTER );
-    state_info_t active_state_info;
-    state_info_t finished_state_info;
+    m_io->recv( &info, sizeof(io_id_t)*4, IO_TAG_POST, IO_MSG_ONE );
+    io_state_t active_state_info;
+    io_state_t finished_state_info;
     io_id_t active_state_id = generate_state_id( info[0], info[1] ); 
     io_id_t finished_state_id = generate_state_id( info[2], info[3] ); 
     if( m_states.count( active_state_id ) == 0 ) {
-      active_state_info.status = MELISSA_STATE_BUSY;
-      active_state_info.io_exec_id = m_io->m_dict_string["exec_id"]; 
+      active_state_info.status = IO_STATE_BUSY;
+      active_state_info.id = active_state_id;
+      active_state_info.exec_id = m_io->m_dict_string["exec_id"]; 
       active_state_info.runner_id = m_runner_id;
       active_state_info.cycle = info[0];
       active_state_info.parent_id = info[1];
-      m_states.insert( std::pair<io_id_t, state_info_t>( active_state_id, active_state_info ) );
+      m_states.insert( std::pair<io_id_t, io_state_t>( active_state_id, active_state_info ) );
     } else {
-      m_states[active_state_id].status = MELISSA_STATE_BUSY;
+      m_states[active_state_id].status = IO_STATE_BUSY;
     }
-    finished_state_info.status = MELISSA_STATE_IDLE;
-    finished_state_info.io_exec_id = m_io->m_dict_string["exec_id"]; 
+    finished_state_info.id = finished_state_id;
+    finished_state_info.status = IO_STATE_IDLE;
+    finished_state_info.exec_id = m_io->m_dict_string["exec_id"]; 
     finished_state_info.runner_id = m_runner_id;
     finished_state_info.cycle = info[2];
     finished_state_info.parent_id = info[3];
-    m_states.insert( std::pair<io_id_t, state_info_t>( finished_state_id, finished_state_info ) );
+    m_states.insert( std::pair<io_id_t, io_state_t>( finished_state_id, finished_state_info ) );
     m_io->m_state_push_requests.push(finished_state_id);
+  }
+}
+
+//======================================================================
+//  REQUESTS
+//======================================================================
+
+// (1) state request from user to worker
+void StorageController::m_state_request_user() {
+  if( m_io->probe( IO_TAG_LOAD ) ) {
+    io_id_t *state_id = new io_id_t[m_io->m_dict_int["procs_app"]];
+    int result=(int)IO_SUCCESS; 
+    m_io->recv( state_id, sizeof(io_id_t), IO_TAG_LOAD, IO_MSG_ALL );
+    load( state_id[0] );
+    m_io->send( &result, sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
+    delete[] state_id;
   }
 }
 
@@ -293,32 +234,26 @@ void StorageController::m_state_info_user() {
 void StorageController::m_state_request_push() {
   if( m_io->probe( IO_TAG_PUSH ) ) {
     if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
-    m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
+    m_io->copy( m_states[m_io->m_state_push_requests.front()], IO_STORAGE_L1, IO_STORAGE_L2 );
+    io_dump_request_t dump = { m_io->m_state_push_requests.front(), IO_STORAGE_L1 };
+    m_io->m_state_dump_requests.push( dump ); 
     m_io->m_state_push_requests.pop();
   }
 }
 
-void StorageController::m_finalize_worker() {
-  if( m_io->probe( IO_TAG_FINAL ) ) {
-    int dummy;
-    m_io->recv( &dummy, sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
-    m_state_info_user();
-    while( m_io->probe( IO_TAG_PUSH ) ) {
-      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
-      m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
-      m_io->m_state_push_requests.pop();
-    }
-    while( m_io->probe( IO_TAG_PULL ) ) {
-      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
-      load( m_io->m_state_pull_requests.front() );
-      m_io->m_state_pull_requests.pop();
-    }
-    m_io->send( &dummy, sizeof(int), IO_TAG_FINAL, IO_MSG_MASTER );
+// (2) state request from peer to worker
+void StorageController::m_state_request_peer() {
+  if( m_io->probe( IO_TAG_PEER ) ) {
   }
 }
 
-void StorageController::m_state_request_remove() {
-
+void StorageController::m_state_request_dump() {
+  if( m_io->probe( IO_TAG_DUMP ) ) {
+    if(m_io->m_dict_bool["master_global"]) std::cout << "head received REMOVE request" << std::endl;
+    io_dump_request_t dump = m_io->m_state_dump_requests.front();
+    m_io->remove( dump.state_id, dump.level );
+    m_io->m_state_dump_requests.pop();
+  }
 }
 
 void StorageController::m_state_request_load() {
@@ -329,25 +264,26 @@ void StorageController::m_state_request_load() {
   }
 }
 
-void StorageController::m_query_server() {
-  // update peers 
-  static int count = 0; 
-  // update states
-  // [dummy impl zum testen]
+//======================================================================
+//  FINALIZE REQUEST
+//======================================================================
 
-  if(count == 30) {
-    for(int i=2; i<11; i++) {
-      state_info_t fake_state_info;
-      fake_state_info.status = MELISSA_STATE_IDLE;
-      fake_state_info.io_exec_id = m_io->m_dict_string["exec_id"]; 
-      fake_state_info.runner_id = m_runner_id;
-      fake_state_info.cycle = 0;
-      fake_state_info.parent_id = i;
-      io_id_t fake_state_id = generate_state_id( 0, i );
-      m_states.insert( std::pair<io_id_t, state_info_t>( fake_state_id, fake_state_info ) );
-      m_io->m_state_pull_requests.push( i );
+void StorageController::m_finalize_worker() {
+  if( m_io->probe( IO_TAG_FINI ) ) {
+    int dummy;
+    m_io->recv( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
+    m_state_info_user();
+    while( m_io->probe( IO_TAG_PUSH ) ) {
+      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
+      m_io->copy( m_states[m_io->m_state_push_requests.front()], IO_STORAGE_L1, IO_STORAGE_L2 );
+      m_io->m_state_push_requests.pop();
     }
+    while( m_io->probe( IO_TAG_PULL ) ) {
+      if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
+      load( m_io->m_state_pull_requests.front() );
+      m_io->m_state_pull_requests.pop();
+    }
+    m_io->send( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   }
-  count++;
 }
 

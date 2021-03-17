@@ -4,17 +4,11 @@
 #include "mpi_controller.hpp"
 #include "io_controller.hpp"
 #include "peer_controller.hpp"
-#include "fti_kernel.hpp"
+#include "fti_controller.hpp"
 #include <cstddef>
 #include <cassert>
 #include <memory>
 #include <vector>
-
-template<typename T>
-std::unique_ptr<T>& unique_nullptr() { 
-  static std::unique_ptr<T> ptr = std::unique_ptr<T>(nullptr);
-  return ptr;
-}
 
 inline io_id_t generate_state_id(int cycle, int parent_id) {
     // this should work for up to 10000 members!
@@ -23,20 +17,6 @@ inline io_id_t generate_state_id(int cycle, int parent_id) {
 }
 
 static MpiController mpi_controller_null;
-
-enum state_status_t {
-  MELISSA_STATE_BUSY,
-  MELISSA_STATE_IDLE,
-  MELISSA_STATE_LOAD,
-};
-
-struct state_info_t {
-  state_status_t status;
-  std::string io_exec_id; 
-  int runner_id;
-  int parent_id;
-  int cycle;
-};
 
 class StateServer {
   public:
@@ -63,7 +43,6 @@ class StorageController {
     void load( io_id_t state_id );
     void store( io_id_t state_id );
     void copy( io_id_t state_id, io_level_t from, io_level_t to );
-    void copy_extern( io_id_t state_id );
     int protect( void* buffer, size_t size, io_type_t );
     int update( io_id_t id, void* buffer, io_size_t size );
 
@@ -88,7 +67,7 @@ class StorageController {
     
     // organize storage
     void m_state_request_push();
-    void m_state_request_remove();
+    void m_state_request_dump();
     void m_state_request_load();
     
     // request state cache and peer info from server
@@ -107,7 +86,7 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    std::map<int,state_info_t> m_states;
+    std::map<int,io_state_t> m_states;
     
     bool m_worker_thread;
     size_t m_request_counter;
@@ -119,9 +98,6 @@ class StorageController {
     int m_comm_global_size; 
     int m_comm_runner_size; 
     int m_comm_worker_size; 
-    
-    // hack :(
-    FTI::Kernel m_fti_kernel;
 
 };
 
