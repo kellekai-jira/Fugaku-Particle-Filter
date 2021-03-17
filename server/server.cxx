@@ -1423,6 +1423,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 #ifdef WITH_FTI
         FT.initCP(current_step);
 #endif
+        D("Finished update step at %ld s unix time", time(NULL));
     }
 
     return false;

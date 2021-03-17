@@ -28,6 +28,10 @@ module load python/3.7.5  # don't have this while compiling!
 # to have the conda command
 conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 
+
+# let the server find lib  python:  (don't know why I need to do this manually...)
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfsscratch/rech/moy/rkop006/conda_envs/lib
+
 # packages in environment at /gpfsscratch/rech/moy/rkop006/conda_envs:
 #
 # Name                    Version                   Build  Channel
