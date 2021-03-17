@@ -19,19 +19,19 @@ typedef size_t io_size_t;
 enum io_status_t {
   IO_STATE_BUSY,
   IO_STATE_IDLE,
-  IO_STATE_LOAD,
+  IO_STATE_DONE
 };
 
 enum io_level_t {
   IO_STORAGE_L1,
   IO_STORAGE_L2,
   IO_STORAGE_L3,
-  IO_STORAGE_L4,
+  IO_STORAGE_L4
 };
 
 enum io_result_t {
   IO_SUCCESS,
-  IO_FAILURE,
+  IO_FAILURE
 };
 
 enum io_type_t {
@@ -40,12 +40,12 @@ enum io_type_t {
   IO_INT,
   IO_USER1,
   IO_USER2,
-  IO_USER3,
+  IO_USER3
 };
 
 enum io_msg_t {
   IO_MSG_ALL,
-  IO_MSG_ONE,
+  IO_MSG_ONE
 };
   
 enum io_tag_t {

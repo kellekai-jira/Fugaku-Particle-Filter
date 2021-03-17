@@ -11,8 +11,6 @@
 
 // TODO error checking!
 
-//#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
-
 //======================================================================
 //  STORAGE CONTROLLER INITIALIZATION
 //======================================================================
@@ -252,7 +250,9 @@ void StorageController::m_state_request_dump() {
     if(m_io->m_dict_bool["master_global"]) std::cout << "head received REMOVE request" << std::endl;
     io_dump_request_t dump = m_io->m_state_dump_requests.front();
     m_io->remove( dump.state_id, dump.level );
+    m_states.erase( dump.state_id );
     m_io->m_state_dump_requests.pop();
+    
   }
 }
 
@@ -287,3 +287,31 @@ void StorageController::m_finalize_worker() {
   }
 }
 
+//======================================================================
+//  SERVER REQUESTS
+//======================================================================
+
+void StorageController::Server::request( StorageController* storage ) {
+  // generate buffer
+  melissa_p2p::WorkerRequest request;
+  // set runner id
+  request.set_id(storage->m_runner_id);
+  // set states
+  for( auto& pair : storage->m_states ) {
+    auto state = request.add_states();
+    // set state id
+    state->mutable_id()->set_id(pair.second.id);
+    // set state status
+    switch( pair.second.status ) {
+      case IO_STATE_BUSY: 
+        state->set_status(melissa_p2p::WorkerRequest_StateStatus_BUSY);
+        break;
+      case IO_STATE_IDLE: 
+        state->set_status(melissa_p2p::WorkerRequest_StateStatus_IDLE);
+        break;
+      case IO_STATE_DONE: 
+        state->set_status(melissa_p2p::WorkerRequest_StateStatus_DONE);
+        break;
+    }
+  }
+}

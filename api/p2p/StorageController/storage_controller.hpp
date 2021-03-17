@@ -10,6 +10,8 @@
 #include <memory>
 #include <vector>
 
+#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
+
 inline io_id_t generate_state_id(int cycle, int parent_id) {
     // this should work for up to 10000 members!
     assert(parent_id < 10000 && "too many state_ids!");
@@ -18,20 +20,13 @@ inline io_id_t generate_state_id(int cycle, int parent_id) {
 
 static MpiController mpi_controller_null;
 
-class StateServer {
-  public:
-    StateServer();
-    void request( );
-    void respond();
-  private:
-};
-
 class StorageController {
   
   public:
     StorageController() :
       m_worker_thread(true),
-      m_request_counter(0) {}
+      m_request_counter(0),
+      m_request_interval(1) {}
 
     void init( MpiController* mpi, IoController* io );
     void fini();
@@ -86,7 +81,7 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    std::map<int,io_state_t> m_states;
+    std::map<io_id_t,io_state_t> m_states;
     
     bool m_worker_thread;
     size_t m_request_counter;
@@ -98,6 +93,25 @@ class StorageController {
     int m_comm_global_size; 
     int m_comm_runner_size; 
     int m_comm_worker_size; 
+
+//----------------------------------------------------------------------------------------
+//  SERVER CONNECTION
+//----------------------------------------------------------------------------------------
+
+    class Server {
+      public:
+        Server();
+        void init_zmq_context( void* context );
+        void request( StorageController* storage ); 
+        void response( StorageController* storage ); 
+      private:
+        void update_peers( );
+        void update_states( );
+    };
+
+    friend class Server;
+
+    Server server;
 
 };
 

@@ -15,6 +15,7 @@ struct io_state_t {
   int runner_id;
   int parent_id;
   int cycle;
+  bool local;
 };
 
 class FtiController : public IoController {
