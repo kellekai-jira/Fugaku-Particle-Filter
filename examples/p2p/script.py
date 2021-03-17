@@ -1,10 +1,17 @@
 import os
 
+os.system('killall gdb')
+
 from melissa_da_study import *
-pp = os.getenv('MELISSA_DA_SOURCE_PATH') + '/server-p2p'
+clean_old_stats()
+
+
+pp = os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p'
+pp = os.getcwd()
 run_melissa_da_study(
-    server_cmd='xterm_gdb python3 -u %s/server.py' % pp,
-    runner_cmd='xterm_gdb python3 -u %s/runner.py' % pp,
+    # server_cmd='xterm_gdb python3 -u %s/server.py' % pp,
+    # runner_cmd='xterm_gdb python3 -u %s/examples/p2p/r2.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),
+    runner_cmd='xterm_gdb python3 -u %s/r2.py' % os.getcwd(),
     total_steps=10,
     ensemble_size=30,
     procs_server=1,
