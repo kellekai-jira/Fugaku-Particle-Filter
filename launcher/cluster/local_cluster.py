@@ -118,17 +118,8 @@ class LocalCluster(cluster.Cluster):
             print('no job found with id {:d}'.format(job_id), file=sys.stderr)
             return
 
-        print("terminating {:d}".format(job_id))
-
         job = self.jobs[job_id]
         job.terminate()
-        print("waiting for job {:d}".format(job_id))
-
-        # Since sigterm produces deadlocks as sig term sent to the runner ranks won't
-        # stop them for strange reasons (probably they get stuck in the zmq thread)
-        # we kill the mpiexec thread. Unfortunately the runner processes will zombie
-        # around that way. They are cleaned up when CleanUp is called.
-        job.kill()
         job.wait()
         del self.jobs[job_id]
 
