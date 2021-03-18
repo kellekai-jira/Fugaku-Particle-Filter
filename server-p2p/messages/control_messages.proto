@@ -6,12 +6,13 @@ syntax = "proto3";
  */
 
 package melissa_p2p;
-
+  
 // Types
 
 message StateId {
     uint32 t = 1;
     uint32 id = 2;
+    uint32 peer_id = 3;
 }
 
 message StateServerSocket {
@@ -19,7 +20,10 @@ message StateServerSocket {
     uint32 port = 2;
 }
 
-
+message Peer {
+  uint32 id = 1;
+  StateServerSocket address = 2;
+}
 
 // Messages
 
@@ -31,7 +35,7 @@ message Weight {
     StateId state_id = 1;
     double weight = 2;
 }
-
+  
 // application ranks to job socket on weight server
 message JobRequest {
 }
@@ -57,32 +61,15 @@ message StateResponse {
 
 // FTI head -> state server
 message WorkerRequest {
-  message State {
-    StateId id = 1;
-    StateStatus status = 2;
-  }
-  // own runner id
-  uint32 id = 1;
-  // send only local states
-  repeated State cached_states = 2;
-  repeated Weight weights = 4;
+  uint32 peer_id = 1;
+  repeated StateId cached_states = 2;
+  repeated Weight weights = 3;
 }
 
 // state server -> FTI head
 message WorkerResponse {
-  enum StateAction {
-    LOAD = 0;
-    DUMP = 1;
-  }
-  message State {
-    StateId id = 1;
-    StateAction action = 2;
-  }
-  message Peer {
-    uint32 id = 1;
-    string ip = 2;
-  }
-  repeated State states = 2;
+  repeated StateId load_states = 2;
+  repeated StateId dump_states = 2;
   repeated Peer peers = 3;
 }
 
