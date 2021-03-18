@@ -119,16 +119,20 @@ double calculate_weight()
 
 
 
-void push_weight_to_server(double weight)
+void push_weight_to_head(double weight)
 {
+    static mpi_request_t req;
+    req.wait();  // be sure that there is nothing else in the mpi send queue
+
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
     m.mutable_weight()->mutable_state_id()->set_t(current_step);
     m.mutable_weight()->mutable_state_id()->set_id(current_id);
     m.mutable_weight()->set_weight(weight);
 
-    send_message(gp_socket, m);
-    zmq::recv(gp_socket);  // receive ack
+    char buf[m.ByteSize()];
+    m.SerializeToArray(buf);
+    io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
 
 }
 
@@ -172,13 +176,13 @@ int melissa_p2p_expose(VEC_T *values,
     if (getCommRank() == 0) {
 
         // 3. push weight to server
-        push_weight_to_server(weight);
+        push_weight_to_head(weight);
 
         // 3.5 do checkpoint
-       storage.protect(values,  field.local_vectsize, IO_BYTE);
-       // FIXME: call protect direkt in chunk based api
-       storage.protect(hidden_values,  field.local_hidden_vectsize, IO_BYTE);
-       storage.checkpoint();
+        storage.protect(values,  field.local_vectsize, IO_BYTE);
+        // FIXME: call protect direkt in chunk based api
+        storage.protect(hidden_values,  field.local_hidden_vectsize, IO_BYTE);
+        storage.checkpoint();
 
         // 4. ask server for more work
         auto job_response = request_work_from_server();
@@ -190,22 +194,21 @@ int melissa_p2p_expose(VEC_T *values,
     // All ranks:
 
     // Propagate work to all ranks:
-    MPI_Bcast(&len, job_response.ByteSize()
+    MPI_Bcast(&len, job_response.ByteSize()  // FIXME
 
-    storage.load(job_response.state_id)
 
     // For the moment we assume always that nsteps = 1
-    nsteps = 1
+    nsteps = job_response.nsteps;
 
     if (nsteps > 0) {
-        // 5. check if job's parent state in memory. if not it will tell the fti head
-        //    to organize it
-        checkpoint_id = hash_fti_id(parent_t, parent_id);
-        storage.load(checkpoint_id);
+        // called by every app core
+        storage.load(job_response.state_id);
     }
     else
     {
         storage.fini();
+        // FIXME: close new connections to gp socket and job server socket
+        // rest of deinit is done by caller
     }
 
 
