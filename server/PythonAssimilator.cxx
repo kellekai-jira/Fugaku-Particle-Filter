@@ -44,7 +44,7 @@ void PythonAssimilator::on_init_state(const int runner_id, const
                                       Part & hidden_part,
                                       const VEC_T * values_hidden)
 {
-    assert(runner_id == 0);  // be sure to collect data only from one runner!
+    //assert(runner_id == 0);  // be sure to collect data only from one runner!
 
     // let's use this to set the init.
     // you may not have more runners than ensemble members here! Otherwise some
@@ -76,7 +76,7 @@ int PythonAssimilator::do_update_step(const int current_step) {
     L("Doing python update step...\n");
     MPI_Barrier(mpi.comm());
 
-    py::callback(current_step);
+    int nsteps = py::callback(current_step);
 
     if (current_step >= total_steps)
     {
@@ -84,7 +84,7 @@ int PythonAssimilator::do_update_step(const int current_step) {
     }
     else
     {
-        return getNSteps();
+        return nsteps;
     }
 }
 
@@ -213,7 +213,7 @@ void py::init(Field & field) {
     assert(sizeof(index_map_t) == 2*sizeof(int));
 }
 
-void py::callback(const int current_step) {
+int py::callback(const int current_step) {
     PyObject *pTime = Py_BuildValue("i", current_step);
 
     err(pTime != NULL, "Cannot create argument");
@@ -232,7 +232,12 @@ void py::callback(const int current_step) {
 
     D("Back from callback:");
 
+    int nsteps = static_cast<int>(PyLong_AsLong(pReturn));
+
+
     Py_DECREF(pReturn);
+
+    return nsteps;
 }
 
 void py::finalize() {

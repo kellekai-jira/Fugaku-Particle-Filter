@@ -26,7 +26,7 @@ extern PyObject *pArray_assimilated_index;
 extern PyObject *pArray_assimilated_varid;
 
 void init(Field &field);
-void callback(const int current_step);
+int callback(const int current_step);
 void finalize();
 void err(bool no_fail, const char * error_str);
 }

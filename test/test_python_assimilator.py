@@ -139,7 +139,7 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
             with open(fn, 'w+') as f:
                 f.write('Success\n')
 
-    # return ensemble return nothing, performs inplace changement
+    return 1
 
 
 if __name__ == '__main__':

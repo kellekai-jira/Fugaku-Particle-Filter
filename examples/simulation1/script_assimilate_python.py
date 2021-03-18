@@ -31,7 +31,7 @@ def callback(t, ensemble_list_background, ensemble_list_analysis,
 
     print('hidden:', ensemble_list_hidden_inout)
 
-    # return ensemble return nothing, performs inplace changement
+    return 1
 
 
 if __name__ == '__main__':
