@@ -12,7 +12,6 @@ package melissa_p2p;
 message StateId {
     uint32 t = 1;
     uint32 id = 2;
-    uint32 peer_id = 3;
 }
 
 message StateServerSocket {
@@ -68,9 +67,8 @@ message WorkerRequest {
 
 // state server -> FTI head
 message WorkerResponse {
-  repeated StateId load_states = 2;
+  repeated StateId load_states = 1;
   repeated StateId dump_states = 2;
-  repeated Peer peers = 3;
 }
 
 

@@ -19,7 +19,7 @@ bool mpi_request_t::test() {
 }
 
 void mpi_request_t::wait() {
-  int flag;
+  if( mpi_request == MPI_REQUEST_NULL ) return;
   MPI_Wait( &mpi_request, &mpi_status );
   errval = mpi_status.MPI_ERROR;
   if( errval != MPI_SUCCESS ) {

@@ -88,9 +88,9 @@ class IoController {
       virtual void request( io_id_t state_id ) = 0;
       virtual bool probe( io_tag_t tag ) = 0;
       virtual void register_callback( void (*f)(void) ) = 0;
-      virtual void sendrecv( void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
-      virtual void send( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
-      virtual void isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) = 0;
+      virtual void sendrecv( const void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
+      virtual void send( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
+      virtual void isend( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) = 0;
       virtual void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
       
       std::map<std::string,int> m_dict_int;

@@ -9,14 +9,21 @@
 #include <cassert>
 
 struct io_state_t {
-  io_id_t id;
-  io_status_t status;
-  std::string exec_id; 
-  int runner_id;
-  int parent_id;
-  int cycle;
-  bool local;
+  int t;
+  int id;
 };
+
+inline io_id_t to_ckpt_id(int t, int id) {
+  // this should work for up to 10000 members!
+  assert(id < 10000 && "too many state_ids!");
+  return t*10000 + id;
+}
+
+inline void from_ckpt_id(const io_id_t ckpt_id, int * t, int * id) {
+  // this should work for up to 10000 members!
+  *t = ckpt_id / 10000;
+  *id = ckpt_id % 10000;
+}
 
 class FtiController : public IoController {
   public:
@@ -37,9 +44,9 @@ class FtiController : public IoController {
     void request( io_id_t state_id );
 
     bool probe( io_tag_t tag );
-    void sendrecv( void* send_buffer, void* recv_buffer, int n, io_tag_t tag, io_msg_t message_type  );
-    void send( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  );
-    void isend( void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  );
+    void sendrecv( const void* send_buffer, void* recv_buffer, int n, io_tag_t tag, io_msg_t message_type  );
+    void send( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  );
+    void isend( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  );
     void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  );
 
     void register_callback( void (*f)(void) );

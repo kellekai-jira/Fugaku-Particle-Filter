@@ -12,11 +12,9 @@
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
-inline io_id_t generate_state_id(int cycle, int parent_id) {
-    // this should work for up to 10000 members!
-    assert(parent_id < 10000 && "too many state_ids!");
-    return cycle*10000 + parent_id;
-}
+#define IO_PROBE( tag, func ) do { if( storage.m_io->probe( tag ) ) {func; return;} } while(0)
+
+using namespace melissa_p2p;
 
 static MpiController mpi_controller_null;
 
@@ -42,7 +40,12 @@ class StorageController {
     int protect( void* buffer, size_t size, io_type_t );
     int update( io_id_t id, void* buffer, io_size_t size );
 
+    // TODO put in private
+    void m_create_symlink( io_id_t ckpt_id );
+
   private:
+    
+    void m_push_weight_to_server( io_state_t state_info, double weight );
     
     void m_load_head( io_id_t state_id );
     void m_load_user( io_id_t state_id );
@@ -50,21 +53,21 @@ class StorageController {
     void m_store_head( io_id_t state_id );
     void m_store_user( io_id_t state_id );
    
-    void m_finalize_worker();
+    void m_request_fini();
 
     // (1) state request from user to worker
-    void m_state_request_user();
+    void m_request_load();
     
     // (2) state request from peer to worker
-    void m_state_request_peer();
+    void m_request_peer();
     
     // (3) state info from user
-    void m_state_info_user();
+    void m_request_post();
     
     // organize storage
-    void m_state_request_push();
-    void m_state_request_dump();
-    void m_state_request_load();
+    void m_request_push();
+    void m_request_dump();
+    void m_request_pull();
     
     // request state cache and peer info from server
     void m_query_server();
@@ -82,7 +85,8 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    std::map<io_id_t,io_state_t> m_states;
+    std::map<io_id_t,io_state_t> m_known_states;
+    std::map<io_id_t,io_state_t> m_local_states;
     
     bool m_worker_thread;
     size_t m_request_counter;
@@ -108,7 +112,6 @@ class StorageController {
 
     class Server {
       public:
-        Server();
         void init_zmq_context( void* context );
         void request( StorageController* storage ); 
         void response( StorageController* storage ); 
