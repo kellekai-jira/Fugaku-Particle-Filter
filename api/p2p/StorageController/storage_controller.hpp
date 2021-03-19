@@ -30,7 +30,7 @@ class StorageController {
       m_request_interval(1) {}
 
     void init( MpiController* mpi, IoController* io,
-      size_t capacity, size_t checkpoint_size, void* zmq_socket );
+      size_t capacity, size_t state_size, void* zmq_socket );
     void fini();
 
     // CALLBACK FOR FTI HEADS
@@ -113,7 +113,7 @@ class StorageController {
 
     // size in bytes
     size_t m_capacity;
-    size_t m_checkpoint_size;
+    size_t m_state_size_node;
     
     // number of states
     int m_prefetch_capacity;

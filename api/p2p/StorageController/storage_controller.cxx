@@ -16,17 +16,20 @@
 //======================================================================
 
 void StorageController::init( MpiController* mpi, IoController* io,
-    size_t capacity, size_t checkpoint_size, void* zmq_socket ) {
+    size_t capacity, size_t state_size, void* zmq_socket ) {
 
   m_capacity = capacity;
-  m_checkpoint_size = checkpoint_size;
+  m_state_size_node = 0xffffffffffffffff; // TODO compute state_size_local (state size on this node);
   
-  // 2 model checkpoints + 1 runner prefetch request
-  size_t minimum_storage_requirement = 3 * checkpoint_size;
+  // 2 model checkpoints
+  // 2 for prefetching
+  // 1 for alice load request
+  // 1 for sending to peer (needs memory copy of ckpt file)
+  size_t minimum_storage_requirement = 6 * m_state_size_node;
   
   IO_TRY( minimum_storage_requirement > capacity, false, "Insufficiant storage capacity!" );
 
-  m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / checkpoint_size; 
+  m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / m_state_size_node; 
     
   server.init( zmq_socket );
 
