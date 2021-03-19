@@ -10,8 +10,8 @@ package melissa_p2p;
 // Types
 
 message StateId {
-    uint32 t = 1;
-    uint32 id = 2;
+    int32 t = 1;
+    int32 id = 2;
 }
 
 message StateServerSocket {
@@ -87,10 +87,12 @@ message RunnerResponse {
 // Runner to server what might be useful to prefetch:
 message PrefetchRequest { // the same as job request
     repeated StateId cached_states = 1;
+    uint32 free = 2;
 }
 
 message PrefetchResponse {
-    StateId state_id = 1;
+    repeated StateId pull_states = 1;
+    repeated StateId dump_states = 2;
 }
 
 

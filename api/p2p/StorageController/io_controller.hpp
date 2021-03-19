@@ -98,8 +98,8 @@ class IoController {
       std::map<std::string,double> m_dict_double;
       std::map<std::string,std::string> m_dict_string;
     
-      std::queue<io_id_t> m_state_pull_requests; 
-      std::queue<io_id_t> m_state_push_requests; 
+      std::queue<io_state_t> m_state_pull_requests; 
+      std::queue<io_state_t> m_state_push_requests; 
       std::queue<io_dump_request_t> m_state_dump_requests; 
       MpiController* m_mpi;
 };

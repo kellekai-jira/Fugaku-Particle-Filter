@@ -1,6 +1,7 @@
 #ifndef _STORAGE_CONTROLLER_H_
 #define _STORAGE_CONTROLLER_H_
 
+#include "utils.h"
 #include "mpi_controller.hpp"
 #include "io_controller.hpp"
 #include "peer_controller.hpp"
@@ -14,6 +15,8 @@
 
 #define IO_PROBE( tag, func ) do { if( storage.m_io->probe( tag ) ) {func; return;} } while(0)
 
+#define PROTOBUF_MAX_SIZE 512
+
 using namespace melissa_p2p;
 
 static MpiController mpi_controller_null;
@@ -23,11 +26,11 @@ class StorageController {
   public:
     StorageController() :
       m_worker_thread(true),
-      m_request_counter(0),
+      m_request_counter(1),
       m_request_interval(1) {}
 
     void init( MpiController* mpi, IoController* io,
-      size_t capacity, size_t checkpoint_size );
+      size_t capacity, size_t checkpoint_size, void* zmq_socket );
     void fini();
 
     // CALLBACK FOR FTI HEADS
@@ -35,6 +38,8 @@ class StorageController {
     
     // API
     void load( io_id_t state_id );
+    void pull( io_id_t state_id );
+    int free() { return m_free_slots; }
     void store( io_id_t state_id );
     void copy( io_id_t state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
@@ -47,8 +52,14 @@ class StorageController {
     
     void m_push_weight_to_server( io_state_t state_info, double weight );
     
+    template<typename T> void m_serialize( T& message, char* buffer );
+    template<typename T> void m_deserialize( T& message, char* buffer, int size );
+    
     void m_load_head( io_id_t state_id );
     void m_load_user( io_id_t state_id );
+    
+    void m_pull_head( io_id_t state_id );
+    void m_pull_user( io_id_t state_id );
     
     void m_store_head( io_id_t state_id );
     void m_store_user( io_id_t state_id );
@@ -85,8 +96,9 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
+    int m_free_slots;
     std::map<io_id_t,io_state_t> m_known_states;
-    std::map<io_id_t,io_state_t> m_local_states;
+    std::map<io_id_t,io_state_t> m_cached_states;
     
     bool m_worker_thread;
     size_t m_request_counter;
@@ -112,12 +124,10 @@ class StorageController {
 
     class Server {
       public:
-        void init_zmq_context( void* context );
-        void request( StorageController* storage ); 
-        void response( StorageController* storage ); 
+        void init( void* socket );
+        void prefetch_request( StorageController* storage ); 
       private:
-        void update_peers( );
-        void update_states( );
+        void* m_socket;
     };
 
     friend class Server;
