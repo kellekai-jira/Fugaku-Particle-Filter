@@ -27,17 +27,17 @@ class StorageController {
     StorageController() :
       m_worker_thread(true),
       m_request_counter(1),
-      m_request_interval(1) {}
+      m_request_interval(10000) {}
 
     void init( MpiController* mpi, IoController* io,
-      size_t capacity, size_t state_size, void* zmq_socket );
+      size_t capacity, size_t state_size );
     void fini();
 
     // CALLBACK FOR FTI HEADS
     static void callback();
 
     // API
-    void load( io_id_t state_id );
+    void load( io_state_t state );
     void pull( io_id_t state_id );
     int free() { return m_free; }
     void store( io_id_t state_id );
@@ -55,8 +55,8 @@ class StorageController {
     template<typename T> void m_serialize( T& message, char* buffer );
     template<typename T> void m_deserialize( T& message, char* buffer, int size );
 
-    void m_load_head( io_id_t state_id );
-    void m_load_user( io_id_t state_id );
+    void m_load_head( io_state_t state );
+    void m_load_user( io_state_t state );
 
     void m_pull_head( io_id_t state_id );
     void m_pull_user( io_id_t state_id );

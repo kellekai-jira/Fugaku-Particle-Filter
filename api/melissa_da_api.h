@@ -83,6 +83,8 @@ int melissa_get_current_step();
 /// a melissa runner
 int melissa_is_runner();
 
+void melissa_refresh_comm_f(MPI_Fint * comm_fortran);
+
 /// Chunk stuff
 /// TODO: write doxygen!
 int melissa_commit_chunks_f(MPI_Fint * comm_fortran);

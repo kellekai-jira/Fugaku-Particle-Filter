@@ -9,6 +9,7 @@
 #include <cassert>
 
 struct io_state_t {
+  io_state_t( int _i, int _id ) : t(_t), id(_id) {} 
   int t;
   int id;
 };

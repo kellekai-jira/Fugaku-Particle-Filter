@@ -3,40 +3,7 @@
 
 #include "api_common.h"
 
-int fti_init( int runner_id, MPI_Comm & comm_ )
-{
-    assert( !fti_is_init && "FTI must not have been initialized before!");
-    fti_cfg_path = GetEnv( "FTI_CFG_PATH" );
-    assert( fti_cfg_path != "" && "FTI config path is not set!");
-    std::string cfg = fti_cfg_path + "/config-" + std::to_string(runner_id) + ".fti";
-    FTI_Init(cfg.c_str(), comm_);
-    fti_is_init = true;
-}
-
-int fti_protect( int* step, int* state_id, double* state_buffer, size_t buffer_count )
-{
-    assert( fti_is_init && "FTI must be initialized before!");
-    FTI_Protect( 0, step, 1, FTI_INTG );
-    FTI_Protect( 1, state_id, 1, FTI_INTG );
-    FTI_Protect( 2, state_buffer, buffer_count, FTI_DBLE );
-}
-
-int fti_finalize()
-{
-    assert( fti_is_init && "FTI must be initialized before!");
-    FTI_Finalize();
-    fti_is_init = false;
-}
-
-int fti_checkpoint( int id )  // FIXME: why int?
-{
-  assert( fti_is_init && "FTI must be initialized before!");
-  FTI_Checkpoint( id , FTI_L1 );
-}
-
-
 void* job_socket;
-void* gp_socket;
 
 std::vector<INDEX_MAP_T> local_index_map;
 std::vector<INDEX_MAP_T> local_index_map_hidden;
@@ -68,32 +35,29 @@ void melissa_p2p_init(const char *field_name,
     phase = PHASE_SIMULATION;
 
     // TODO move storage.init in constructor and use smartpointer instead
-    storage.init(mpi, io);
-    fti_init(runner_id, comm_);  // kai
+    FtiController io;
+    mpi.init( comm );
+
+    assert(local_vect_size_hidden == 0 && "Melissa-P2P does not yet work if there is a hidden state");
+    storage.init( &mpi, &io, capacity, local_vect_size);
+    fti_protect_id = storage.protect( NULL, local_vect_size, IO_BYTE );
 
     // open sockets to server on rank 0:
-    if (getCommRank() == 0)
+    if (mpi.rank() == 0)
     {
         char * melissa_server_master_node = getenv(
             "MELISSA_SERVER_MASTER_NODE");
-        if (melissa_server_master_node == nullptr)
-        {
             L(
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
             assert(false);
         }
 
+        // Refactor: put all sockets in a class
         job_socket = zmq_socket(context, zmq_REQ);
         std::string addr = "tcp://" + melissa_server_master_node;
         D("connect to job request server at %s", addr);
         int req = zmq_connect(job_socket, addr.c_str());
         assert(req == 0);
-
-
-
-        // init state server ranks by sending a message to head rank 0:
-        FTI_AppSend(request state server ranks);
-        FTI_Recv (...my_state_server_ranks );
     }
 }
 
@@ -127,19 +91,12 @@ void push_weight_to_head(double weight)
 
 ::melissa_p2p::JobResponse request_work_from_server() {
     ::melissa_p2p::Message m;
-    // TODO:  one might set cached states here.
-    m.mutable_job_request()->set_runner_id(runner_id);
-    m.mutable_job_request()->mutable_runner()->google::protobuf::Message::CopyFrom(my_state_server_ranks);
+    m.set_runner_id(runner_id);
+    m.mutable_job_request();  // create job request
 
-    zmq_msg_t req, res;
-    zmq_msg_init_size(&req, m.ByteSize());
-    m.SerializeToArray(zmq_msg_data(&req), m.ByteSize());
-    ZMQ_CHECK(zmq_msg_send(m, job_socket, 0));  // TODO: use new api
+    message_send(job_socket, m);
 
-    zmq_msg_init(&res);
-    ZMQ_CHECK(zmq_recv(&res, job_socket, 0));
-    ::melissa_p2p::Message r;
-    r.ParseFromArray(zmq_msg_data(&res), zmq_msg_size(&r));
+    auto r = message_receive(job_socket);
 
     return r.job_response();
 }
@@ -147,55 +104,59 @@ void push_weight_to_head(double weight)
 int melissa_p2p_expose(VEC_T *values,
                    VEC_T *hidden_values)
 {
-    // Do the following:
-    // 1. Checkpoint state and in parallel:
-    FTI_ID_T current_checkpoint_id = hash_fti_id(current_step, current_state_id);
-    fti_checkpoint();  // This will block until data is written to local disk by each rank.
+    // Update pointer
+    storage.update( fti_protect_id, values, local_vect_size );
+    
+    // store to ram disk
+    // TODO: call protect direkt in chunk based api
+    io_state_t state = { current_step, current_state_id };
+    storage.store( state );
 
     // 2. calculate weight and synchronize weight on rank 0
     double weight = calculate_weight();
 
     int nsteps = 0;
 
-    int parent_t, parent_id, job_t, job_id;
+    int parent_t, parent_id, job_t, job_id, nsteps;
 
     // Rank 0:
-    if (getCommRank() == 0) {
-
+    if (mpi.comm() == 0) {
         // 3. push weight to server
         push_weight_to_head(weight);
 
-        // 3.5 do checkpoint
-        storage.protect(values,  field.local_vectsize, IO_BYTE);
-        // FIXME: call protect direkt in chunk based api
-        storage.protect(hidden_values,  field.local_hidden_vectsize, IO_BYTE);
-        storage.checkpoint();
-
         // 4. ask server for more work
         auto job_response = request_work_from_server();
-        job_id = job_id.job_id();
-        job_t = job_id.job_t();
-        parent_id = job_id.parent_id();
-        parent_t = job_id.parent_t();
+        parent_t = job_response.parent().t();
+        parent_id = job_response.parent().id();
+        job_t = job_response.job().t();
+        job_id = job_response.job().id();
+        nsteps = job_response.nsteps();
     }
-    // All ranks:
 
-    // Propagate work to all ranks:
-    MPI_Bcast(&len, job_response.ByteSize()  // FIXME
+    // Broadcast to all ranks:
+    MPI_Bcast(&parent_t, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&parent_id, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&job_t, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&job_id, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
 
-
-    // For the moment we assume always that nsteps = 1
-    nsteps = job_response.nsteps;
 
     if (nsteps > 0) {
         // called by every app core
-        storage.load(job_response.state_id);
+        storage.load(io_state_t(job_t, job_id));
+
+        current_step = job_t;
+        current_id = job_id;
     }
     else
     {
         zmq_disconnect(job_socket);
 
         storage.fini();
+
+
+        current_step = -1;
+        current_id = -1;
     }
 
 

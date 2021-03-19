@@ -25,6 +25,9 @@ void FtiController::init_io( MpiController* mpi ) {
 }
       
 void FtiController::init_core() {
+  // FTI_COMM_WORLD is the MPI_COMM_WORLD replacement
+  // so FTI_COMM_WORLD contains all app cores if you are on an app core
+  // and containes all FTI headranks if you are on an head rank
   m_mpi->register_comm( "fti_comm_world", FTI_COMM_WORLD );
   m_mpi->set_comm( "fti_comm_world" );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );

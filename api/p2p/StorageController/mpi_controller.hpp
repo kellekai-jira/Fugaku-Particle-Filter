@@ -24,7 +24,7 @@ class MpiController
     public:
 
         MpiController();
-        void init();
+        void init( MPI_Comm & comm );
         void register_comm( std::string, MPI_Comm & );
         void set_comm( std::string key );
         const MPI_Comm & comm( std::string key = m_comm_set );

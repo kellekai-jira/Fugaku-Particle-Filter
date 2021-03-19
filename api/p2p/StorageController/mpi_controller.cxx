@@ -39,19 +39,10 @@ MpiController::MpiController()
     m_comms.insert( std::pair<std::string, mpi_comm_t>( m_comm_set, std::move(mpi_comm) ) );
 }
 
-void MpiController::init()
+void MpiController::init( MPI_Comm & comm )
 {
-#if defined WITH_FTI && FTI_THREADS
-    int provided;
-    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
-    if( provided < MPI_THREAD_MULTIPLE ) {
-        D( "thread level is not provided!" );
-        MPI_Abort( MPI_COMM_WORLD, -1 );
-    }
-#else
-    MPI_Init(NULL, NULL);
-#endif
-    m_comms[m_comm_set].comm = MPI_COMM_WORLD;
+  // TODO init mit global comm
+    m_comms[m_comm_set].comm = comm;
     MPI_Comm_size( m_comms[m_comm_set].comm, &m_comms[m_comm_set].size );
     MPI_Comm_rank( m_comms[m_comm_set].comm, &m_comms[m_comm_set].rank );
 }

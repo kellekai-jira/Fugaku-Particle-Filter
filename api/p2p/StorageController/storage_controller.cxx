@@ -15,8 +15,11 @@
 //  STORAGE CONTROLLER INITIALIZATION
 //======================================================================
 
+// init MPI
+// init IO
+
 void StorageController::init( MpiController* mpi, IoController* io,
-    size_t capacity, size_t state_size, void* zmq_socket ) {
+    size_t capacity, size_t state_size ) {
 
   m_capacity = capacity;
   m_state_size_node = 0xffffffffffffffff; // TODO compute state_size_local (state size on this node);
@@ -32,7 +35,7 @@ void StorageController::init( MpiController* mpi, IoController* io,
   m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / m_state_size_node; 
   m_free = m_prefetch_capacity;
 
-  server.init();
+  //server.init();
 
   m_io = io;
   m_peer = new PeerController( io );
@@ -55,9 +58,6 @@ void StorageController::fini() {
   m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   m_mpi->barrier("fti_comm_world");
   m_io->fini();
-
-  server->fini();
-
 }
 
 
@@ -71,6 +71,7 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
+    storage.server.init();
     storage.m_io->init_core();
     storage.m_comm_worker_size = storage.m_io->m_dict_int["nodes"];
     storage.m_comm_runner_size = storage.m_io->m_dict_int["nodes"] * (storage.m_io->m_dict_int["procs_node"]-1);
@@ -80,6 +81,7 @@ void StorageController::callback() {
   }
 
 
+  // app core may tell the head to finish application. This will end ina call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 
   // QUERY (every x seconds)
@@ -89,7 +91,7 @@ void StorageController::callback() {
 
   // EVENT
   // message from alice, sent after completion of the forecast
-  // containing (1) forecast state id and (2) weight.
+  // containing (1) forecast state id and (2) WEIGHT.
   IO_PROBE( IO_TAG_POST, storage.m_request_post() );
 
   // EVENT
@@ -103,8 +105,8 @@ void StorageController::callback() {
   IO_PROBE( IO_TAG_PULL, storage.m_request_pull() );
 
   // EVENT
-  // Bob requests a state
-  IO_PROBE( IO_TAG_PEER, storage.m_request_peer() );
+  // Bob check and serve peer requests
+  storage.m_request_peer();
 
 }
 
@@ -120,13 +122,13 @@ int StorageController::update( io_id_t id, void* buffer, io_size_t size ) {
   m_io->update(id, buffer, size);
 }
 
-
+#warning rename io_state_t to io_state_id_t and state to io_state_id
 // TODO change head case load to pull
-void StorageController::load( io_id_t state_id ) {
+void StorageController::load( io_state_t state ) {
   if( m_worker_thread ) {
-    return m_load_head( state_id );
+    return m_load_head( state );
   } else {
-    return m_load_user( state_id );
+    return m_load_user( state );
   }
 }
 
@@ -152,7 +154,7 @@ void StorageController::copy( io_id_t state_id, io_level_t from, io_level_t to) 
 
 void StorageController::m_pull_head( io_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
-    //m_peer->request( state_id );
+    m_peer->mirror( state_id );
   }
   if( !m_io->is_local( state_id ) ) {
     sleep(2);
@@ -168,19 +170,19 @@ void StorageController::m_pull_user( io_id_t state_id ) {
   assert( 0 && "not implemented" );
 }
 
-void StorageController::m_load_head( io_id_t state_id ) {
+void StorageController::m_load_head( io_state_t state ) {
   assert( 0 && "not implemented" );
 }
 
-void StorageController::m_load_user( io_id_t state_id ) {
-  if( !m_io->is_local( state_id ) ) {
+void StorageController::m_load_user( io_state_t state ) {
+  if( !m_io->is_local( state ) ) {
     sleep(1);
     int status;
-    m_io->sendrecv( &state_id, &status, sizeof(io_id_t), IO_TAG_LOAD, IO_MSG_ALL );
+    m_io->sendrecv( &state, &status, sizeof(io_state_t), IO_TAG_LOAD, IO_MSG_ALL );
     // TODO check status
   }
-  assert( m_io->is_local( state_id ) && "unable to load state to local storage" );
-  m_io->load( state_id );
+  assert( m_io->is_local( state ) && "unable to load state to local storage" );
+  m_io->load( state );
 }
 
 void StorageController::m_store_head( io_id_t state_id ) {
@@ -244,6 +246,7 @@ void StorageController::m_request_load() {
 
 // (2) state request from peer to worker
 void StorageController::m_request_peer() {
+  m_peer->handle_request();
 }
 
 void StorageController::m_request_pull() {
@@ -262,6 +265,7 @@ void StorageController::m_request_pull() {
 //======================================================================
 
 void StorageController::m_request_fini() {
+  /// Request handled to end the Runner
   int dummy;
   m_io->recv( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   m_request_post();
@@ -279,6 +283,7 @@ void StorageController::m_request_fini() {
     pull( to_ckpt_id( t, id ) );
     m_io->m_state_pull_requests.pop();
   }
+  server.fini();
   m_io->send( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
 }
 
@@ -309,28 +314,22 @@ void StorageController::Server::fini() {
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {
 
-  PrefetchRequest request;
-  PrefetchResponse response;
+
+  Message request;
 
   for( const auto& pair : storage->m_cached_states ) {
-    auto state = request.add_cached_states();
+    auto state = request.mutable_prefetch_request()->add_cached_states();
     state->set_t(pair.second.t);
     state->set_id(pair.second.id);
   }
-  request.set_free(storage->free());
+  request.mutable_prefetch_request()->set_free_slots(storage->free());
+  request.set_runner_id(storage->m_runner_id);
 
-  char sbuf[request.ByteSizeLong()];
-  storage->m_serialize(request, sbuf);
-  // zmq::send( sbuf, ... );
+  send_message(m_socket, request);
 
-  // TODO no idea how the char buffer size handling works here...
-  char rbuf[PROTOBUF_MAX_SIZE];
-  int msg_size;
-  // zmq::recv( rbuf, ... );
+  auto reponse = recv_message(m_socket);
 
-  storage->m_deserialize( response, rbuf, msg_size );
-
-  auto pull_states = response.pull_states();
+  auto pull_states = response.prefetch_response().pull_states();
   for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
     io_state_t state = { it->t(), it->id() };
     storage->m_io->m_state_pull_requests.push( state );

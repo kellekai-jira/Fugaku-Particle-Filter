@@ -5,6 +5,7 @@ import ctypes
 import os
 
 from mpi4py import MPI
+
 class MelissaAPI:
 
 # void melissa_init_f(const char *field_name,
@@ -38,6 +39,11 @@ class MelissaAPI:
             hidden_values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                 )
 
+    def refresh_comm(self, inout_comm):
+        fcomm = inout_comm.py2f()  # since we only can easily acces the fortran communicator,
+        self.c_lib.melissa_refresh_comm_f(fcomm)
+        inout_comm.MPI.comm.f2py(fcomm)
+
 
 
 # Main:
@@ -45,13 +51,16 @@ import numpy as np
 import time
 state = np.zeros(2000, dtype='float64')
 hidden = np.zeros(4000, dtype='float64')
-api = MelissaAPI(len(state), len(hidden), MPI.COMM_WORLD)
+melissa = MelissaAPI(len(state), len(hidden), MPI.COMM_WORLD)
+
+FTI_COMM_WORLD = melissa.get_comm()
 
 nsteps = 1
 while nsteps > 0:
-    MPI.COMM_WORLD.Barrier()
+    FTI_COMM_WORLD.Barrier()
+    # do some thing with the states
     time.sleep(0.1)
-    nsteps = api.expose(state, hidden)
+    nsteps = melissa.expose(state, hidden)
 
     print('Now propagating %d steps' % nsteps)
 
