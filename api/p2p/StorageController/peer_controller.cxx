@@ -19,17 +19,17 @@ void PeerController::handle_requests()
 
         ::melissa_p2p::Message reply;
         reply.mutable_state_response();
-        if (!has_state_cached(req.state_request().state_id())) {  // TODO: kai we need a function that checks if the state is in the ram disk cache!
+        if (!m_io->is_local(req.state_request().state_id())) {
             send_message(state_server_socket);
 
             return;
         }
-        // TODO Ask fti for file list! kai
-        std::vector<std::string> filenames;
-
+        
+				std::vector<std::string> filenames;
+        m_io->filelist_local( req.state_request().state_id(), filenames );
         // Generate File list message.
         for (auto &it : filenames) {
-            reply.mutable_state_response()->add_filenames() = *it;
+            reply.mutable_state_response()->add_filenames() = get_file_name_from_path(it);
         }
 
         send_message(state_server_socket, reply, ZMQ_SNDMORE);
@@ -150,3 +150,16 @@ bool PeerController::mirror(io_id_t id)
 
     return found;
 }
+      
+std::string PeerController::get_file_name_from_path( const std::string& path ) {
+
+   char sep = '/';
+
+   size_t i = s.rfind(sep, path.length());
+   if (i != string::npos) {
+      return(path.substr(i+1, path.length() - i));
+   }
+
+   return("");
+}
+

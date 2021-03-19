@@ -92,6 +92,7 @@ class IoController {
       virtual void send( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
       virtual void isend( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) = 0;
       virtual void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
+      virtual void filelist_local( io_id_t ckpt_id, std::vector<std::string> & ckptfiles ) = 0;
       
       std::map<std::string,int> m_dict_int;
       std::map<std::string,bool> m_dict_bool;

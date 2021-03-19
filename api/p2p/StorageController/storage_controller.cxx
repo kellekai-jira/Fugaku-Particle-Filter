@@ -30,8 +30,8 @@ void StorageController::init( MpiController* mpi, IoController* io,
     
   server.init( zmq_socket );
 
-  m_peer = new PeerController();
   m_io = io;
+  m_peer = new PeerController( io );
   m_mpi = mpi;
   m_io->register_callback( StorageController::callback );
   m_comm_global_size = m_mpi->size();
@@ -64,6 +64,8 @@ void StorageController::callback() {
     storage.m_comm_worker_size = storage.m_io->m_dict_int["nodes"]; 
     storage.m_comm_runner_size = storage.m_io->m_dict_int["nodes"] * (storage.m_io->m_dict_int["procs_node"]-1);
     init = true;
+    std::vector<std::string> files;
+    storage.m_io->filelist_local( 1, files );
   }
   
 
@@ -178,7 +180,7 @@ void StorageController::m_store_user( io_id_t state_id ) {
   m_io->store( state_id );
   assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }
-
+    
 //======================================================================
 //  SERVER QUERY
 //======================================================================

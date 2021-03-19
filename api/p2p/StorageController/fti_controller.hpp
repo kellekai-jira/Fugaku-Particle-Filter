@@ -37,6 +37,7 @@ class FtiController : public IoController {
     void remove( io_id_t state_id, io_level_t level );
     void copy( io_state_t state, io_level_t from, io_level_t to );
     void copy_extern( io_state_t state, io_level_t from, io_level_t to );
+    void filelist_local( io_id_t ckpt_id, std::vector<std::string> & ckptfiles );
 
     bool is_local( io_id_t state_id );
     bool is_global( io_id_t state_id );

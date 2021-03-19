@@ -10,6 +10,8 @@ class Peer {
 
 class PeerController {
   public:
+
+      PeerController( IoController* io ) : m_io(io) {}
       /// checks if somebody wants to load states from the disk
       void handle_requests();
 
@@ -18,11 +20,14 @@ class PeerController {
       bool mirror(io_id_t id);
 
 private:
+
+			std::string get_file_name_from_path( const std::string& path );
       std::string hostname;
       int port;
       void * state_server_socket;
       void * state_request_socket;
-
+      
+      IoController* m_io;
 
 };
 

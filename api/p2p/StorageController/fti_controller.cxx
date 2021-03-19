@@ -255,4 +255,15 @@ void FtiController::register_callback( void (*f)(void) ) {
   FTI_RegisterUserFunction( f );
 }
 
+void FtiController::filelist_local( io_id_t ckpt_id, std::vector<std::string> & ckptfiles ) {
+  ckptfiles.clear();
+  std::string directory = m_dict_string["local_dir"] + "/" + 
+    m_dict_string["exec_id"] + "/l1/" + std::to_string(ckpt_id);
+  for(int i; i<m_dict_int["app_procs_node"]; i++) {
+    std::string filepath = directory + "/" + "Ckpt" + std::to_string(ckpt_id) + 
+      "-Rank" + std::to_string(m_kernel.topo->body[i]) + "." + m_kernel.conf->suffix;
+    ckptfiles.push_back(filepath);
+    std::cout << filepath << std::endl;
+  }
+}
 
