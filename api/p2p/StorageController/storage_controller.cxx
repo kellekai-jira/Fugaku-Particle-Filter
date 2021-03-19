@@ -29,7 +29,8 @@ void StorageController::init( MpiController* mpi, IoController* io,
 
   IO_TRY( minimum_storage_requirement > capacity, false, "Insufficiant storage capacity!" );
 
-  m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / m_state_size_node;
+  m_prefetch_capacity = ( m_capacity - minimum_storage_requirement ) / m_state_size_node; 
+  m_free = m_prefetch_capacity;
 
   server.init();
 
@@ -379,3 +380,7 @@ void StorageController::m_deserialize( T& message, char* buffer, int size ) {
   message.ParseFromArray(buffer, size);
 }
 
+void insert_slot() {
+  int free_slots = 1;//free();
+  
+}

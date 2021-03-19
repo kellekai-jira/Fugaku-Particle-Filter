@@ -39,7 +39,7 @@ class StorageController {
     // API
     void load( io_id_t state_id );
     void pull( io_id_t state_id );
-    int free() { return m_free_slots; }
+    int free() { return m_free; }
     void store( io_id_t state_id );
     void copy( io_id_t state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
@@ -96,7 +96,6 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    int m_free_slots;
     std::map<io_id_t,io_state_t> m_known_states;
     std::map<io_id_t,io_state_t> m_cached_states;
 
@@ -117,6 +116,7 @@ class StorageController {
 
     // number of states
     int m_prefetch_capacity;
+    int m_free;
 
 //----------------------------------------------------------------------------------------
 //  SERVER CONNECTION
