@@ -24,7 +24,7 @@ void PeerController::handle_requests()
 
             return;
         }
-        
+
 				std::vector<std::string> filenames;
         m_io->filelist_local( req.state_request().state_id(), filenames );
         // Generate File list message.
@@ -133,10 +133,13 @@ bool PeerController::mirror(io_id_t id)
                 // write to outfile
                 auto data_msg = zmq::recv(state_request_socket);
 
+
+
+
+
                 outfile.write (zmq::data(data_msg), zmq::size(data_msg));
                 outfile.close();  // close explicitly to create softlink
-                // TODO: create soft link to global dir...
-                // TODO: send file per file ....
+void StorageController::m_create_symlink( io_id_t ckpt_id ) {  // TODO kai how to call this here?
             }
             break;
         }
@@ -150,7 +153,7 @@ bool PeerController::mirror(io_id_t id)
 
     return found;
 }
-      
+
 std::string PeerController::get_file_name_from_path( const std::string& path ) {
 
    char sep = '/';

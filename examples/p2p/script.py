@@ -6,11 +6,8 @@ from melissa_da_study import *
 clean_old_stats()
 
 
-pp = os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p'
-pp = os.getcwd()
 run_melissa_da_study(
-    # server_cmd='xterm_gdb python3 -u %s/server.py' % pp,
-    # runner_cmd='xterm_gdb python3 -u %s/examples/p2p/r2.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),
+    # server_cmd='xterm_gdb python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
     runner_cmd='xterm_gdb python3 -u %s/r2.py' % os.getcwd(),
     total_steps=10,
     ensemble_size=30,

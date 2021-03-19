@@ -6,7 +6,7 @@ syntax = "proto3";
  */
 
 package melissa_p2p;
-  
+
 // Types
 
 message StateId {
@@ -34,7 +34,7 @@ message Weight {
     StateId state_id = 1;
     double weight = 2;
 }
-  
+
 // application ranks to job socket on weight server
 message JobRequest {
 }
@@ -58,20 +58,6 @@ message StateResponse {
     // if state not there will just  send back emnpty file names list
 }
 
-// FTI head -> state server
-message WorkerRequest {
-  uint32 peer_id = 1;
-  repeated StateId cached_states = 2;
-  repeated Weight weights = 3;
-}
-
-// state server -> FTI head
-message WorkerResponse {
-  repeated StateId load_states = 1;
-  repeated StateId dump_states = 2;
-}
-
-
 // fti headranks to general purpose request socket
 message RunnerRequest {
     uint32 head_rank = 1;
@@ -85,9 +71,9 @@ message RunnerResponse {
 // when runner fti heads have nothing to do they can do a prefetch
 // the server will send back things that are worth prefetching
 // Runner to server what might be useful to prefetch:
-message PrefetchRequest { // the same as job request
+message PrefetchRequest {
     repeated StateId cached_states = 1;
-    uint32 free = 2;
+    uint32 free_slots = 2;
 }
 
 message PrefetchResponse {
@@ -95,12 +81,11 @@ message PrefetchResponse {
     repeated StateId dump_states = 2;
 }
 
-
-message DeleteRequest { // the same as job request
+message DeleteRequest {
     repeated StateId cached_states = 1;
 }
 
-message DeleteResponse { // the same as job request
+message DeleteResponse {
     StateId to_delete = 1;
 }
 

@@ -8,19 +8,19 @@ from mpi4py import MPI
 
 import numpy as np
 
-def callback(t, ensemble_list_background, ensemble_list_analysis,
+def callback(cycle, ensemble_list_background, ensemble_list_analysis,
         ensemble_list_hidden_inout):
 
     rank = MPI.COMM_WORLD.rank
     print('my rank:', rank)
 
     print("in the callback function")
-    print("now doing DA update for t=%d..." % t)
+    print("now doing DA update for cycle=%d..." % cycle)
     print("lens:", len(ensemble_list_background), len(ensemble_list_analysis))
 
     ii = ensemble_list_background[0]
     oo = ensemble_list_analysis[0]
-    # load observation orresponding to time
+    # load observation corresponding to time of cycle
     # somehow compare them with ensemble_list_background to generate ensemble_list_analysis
     print(np.array(ii).shape)
     print('input:', ii)
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     clean_old_stats()
     run_melissa_da_study(
         runner_cmd='simulation1',
-        total_steps=3,
+        total_cycles=3,  # Total amount of cycles
         ensemble_size=3,
         assimilator_type=ASSIMILATOR_PYTHON,
         # cluster is now auto selected

@@ -82,14 +82,6 @@ void melissa_p2p_init(const char *field_name,
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
             assert(false);
         }
-        char * melissa_server_master_weight_node = getenv(
-            "MELISSA_SERVER_MASTER_GP_NODE");
-        if (melissa_server_master_node == nullptr)
-        {
-            L(
-                "you must set the MELISSA_SERVER_MASTER_GP_NODE environment variable before running!");
-            assert(false);
-        }
 
         job_socket = zmq_socket(context, zmq_REQ);
         std::string addr = "tcp://" + melissa_server_master_node;
@@ -97,11 +89,6 @@ void melissa_p2p_init(const char *field_name,
         int req = zmq_connect(job_socket, addr.c_str());
         assert(req == 0);
 
-        job_socket = zmq_socket(context, zmq_PUSH);
-        addr = "tcp://" + melissa_server_master_node;
-        D("connect to weight push server at %s", addr);
-        req = zmq_connect(job_socket, addr.c_str());
-        assert(req == 0);
 
 
         // init state server ranks by sending a message to head rank 0:
@@ -206,9 +193,9 @@ int melissa_p2p_expose(VEC_T *values,
     }
     else
     {
+        zmq_disconnect(job_socket);
+
         storage.fini();
-        // FIXME: close new connections to gp socket and job server socket
-        // rest of deinit is done by caller
     }
 
 

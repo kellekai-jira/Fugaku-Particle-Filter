@@ -221,10 +221,14 @@ def accept_delete(msg):
     reply = cm.Message()
     reply.delete_response  # hope that this will init the content to delete_response
     for state_id in msg.delete_request.cached_states:
-        if state_id.t <= assimilation_cycle-2 or \
-                (state_id in pfs and not running_or_unscheduled(state_id)):
-            reply.delete_response.to_delete = state_id
-            break
+        # loesch
+
+        # PFS delete requests are implicit.... all cached states are in pfs already!
+        # so even if we delete from the local cache the thing is still in the pfs
+
+    # never have empty reply here!
+    assert(
+            # TODO: return minimumn one state to delete!!!!
 
     send_and_serialize(gp_socket, reply)
 
@@ -237,6 +241,7 @@ def accept_delete(msg):
 
 
 def accept_prefetch(msg):
+    # TODO: handle replace requests (queried when cache of runner full)
     # just select a random job that ideally is not in the prefetch list of any other jobs:
 
     # try to find a better job that is only in a few state caches
