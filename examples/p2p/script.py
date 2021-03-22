@@ -18,4 +18,5 @@ run_melissa_da_study(
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
     server_timeout=60 * 60,
+    additional_env={'MELISSA_DA_IS_P2P': '1'}
 )

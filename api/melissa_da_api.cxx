@@ -46,8 +46,11 @@ MPI_Comm comm;
 
 bool is_p2p()
 {
-    // FIXME: check an env variable here!
-    return true;
+    if (getenv("MELISSA_DA_IS_P2P")) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
