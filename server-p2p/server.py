@@ -5,6 +5,7 @@ import random
 import time
 import zmq
 import control_messages_pb2 as cm
+import numpy as np
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -104,6 +105,7 @@ Format:
     {runner_id: [state_id,...]}
 """
 state_cache = {}
+state_cache_with_prefetch = {}
 
 
 def bind_socket(t, addr):
@@ -148,14 +150,13 @@ for p in range(PARTICLES):
 
 print('Server up now')
 
-def send_and_serialize(socket, data):
+def send_message(socket, data):
     socket.send(data.SerializeToString())
 
 def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
 
     assert msg.WhichOneof('content') == 'weight'
-
 
     state_id = msg.weight.state_id
 
@@ -168,6 +169,12 @@ def accept_weight(msg):
           len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
 
     gp_socket.send(0)  # send an empty ack. Check this works like this.
+
+
+    # Update knowledge on cached states:
+    runner_id = msg.runner_id
+    state_cache[runner_id].append(state_id)
+    state_cache_with_prefetch[runner_id].append(state_id)
 
 """
 DNS list of runners
@@ -200,77 +207,110 @@ def accept_runner_request(msg):
             s.CopyFrom(runners[rid][head_rank])
 
 
-    send_and_serialize(gp_socket, reply)
+    send_message(gp_socket, reply)
+
+def count_runners_with_state(state_id):
+    # Number of runners that have the state in their memory (or are about to get it)
+    return len(filter(lambda x: state_id in state_cache[x], state_cache))
 
 def accept_delete(msg):
-    # allow to delete all states that are:
-    # - old
-    # - in the pfs and not needed anymore for running / unscheduled jobs
-    # we simply reply the first job to delete so far.
-
-    def running_or_unscheduled(state_id):
-        for k in running_jobs:
-            rj  = running_jobs[k]
-            if rj[2] == state_id:
-                return True
-
-        for k in unscheduled_jobs:
-            rj  = running_jobs[k]
-            if rj == state_id:
-                return True
-    reply = cm.Message()
-    reply.delete_response  # hope that this will init the content to delete_response
-    for state_id in msg.delete_request.cached_states:
-        # loesch
-
-        # PFS delete requests are implicit.... all cached states are in pfs already!
-        # so even if we delete from the local cache the thing is still in the pfs
-
-    # never have empty reply here!
-    assert(
-            # TODO: return minimumn one state to delete!!!!
-
-    send_and_serialize(gp_socket, reply)
-
-    # update our statecache knowledge about this runner
     runner_id = msg.runner_id
-    state_cache[runner_id] = []
-    for state_id in msg.delete_request.cached_states:
-        if state_id != reply.delete_response.to_delete:
-            state_cache[runner_id].append(state_id)
 
+    update_state_knowledge(msg.delete_request, runner_id)
+
+    # Attach importance to states on runner and sort:
+    sorted_importance = sorted(
+            zip(map(calculate_parent_state_importance, state_cache[runner_id]),
+                state_cache[runner_id]) )
+
+    reply = cm.Message()
+    reply.delete_response
+    # Try to delete something with importance < 1 --> must be stored on other resource too.
+    if sorted_importance[0][0] < 1:
+        reply.delete_response.to_delete = sorted_importance[0][1]
+    else:
+        # if minimum >= 1: select something that possibly is stored on a different
+        # runner too.
+        for _, state_id in sorted_importance:
+            runners_with_it = count_runners_with_state
+            if runners_with_it > 1:
+                reply.delete_response.to_delete = sorted_importance[0][1]
+                break
+
+    if reply.delete_response.to_delete:
+        state_cache[runner_id].remove(reply.delete_response.to_delete)
+    else:
+        print("nothing good was found to be deleted on", runner_id)
+        reply.delete_response.to_delete = sorted_importance[0][1]
+        print("reply:", reply)
+
+    send_message(gp_socket, reply)
+
+
+def calculate_parent_state_importance(parent_state_id):
+    # Calculate the importance of a parent state id
+
+    # Number of unscheduled tasks dependent on it
+    d = len(filter(lambda x: unscheduled_jobs[x] == parent_state_id, unscheduled_jobs))
+
+    return d / count_runners_with_state(parent_state_id)
+
+
+def calculate_runner_importance(runner_id):
+    # Cumulate the importance of all states stored on the runner
+    return np.sum(map(calculate_parent_state_importance, state_cache_with_prefetch[runner_id]))
+
+def calculate_mean_importance():
+    # Get the mean importance over all runners
+    return np.mean(map(calculate_runner_importance, state_cache_with_prefetch))
+
+def update_state_knowledge(msg, runner_id):
+    # Update knowledge about state caches of runners:
+    state_cache[runner_id] = msg.cached_states
+    state_cache_with_prefetch[runner_id] = msg.cached_states  # fixme: probably we need a copy here!
 
 def accept_prefetch(msg):
-    # TODO: handle replace requests (queried when cache of runner full)
-    # just select a random job that ideally is not in the prefetch list of any other jobs:
-
-    # try to find a better job that is only in a few state caches
-
     runner_id = msg.runner_id
+    update_state_knowledge(msg.prefetch_request, runner_id)
 
-    amount_in_caches = []
-    for uj in unscheduled_jobs:
-        parent_state_id = unscheduled_jobs[uj]
-        amount =  len(filter(lambda rid : rid != runner_id and \
-                parent_state_id in state_cache[rid], state_cache))
-        amount_in_caches.append((amount, parent_state_id))
+    mean_importance = calculate_mean_importance()
 
-    the_parent_state_id = sorted(amount_in_caches)[0]  # TODO: this does not take into account that some jobs need to be calculated multiple times!
+
+    # Figure out if this compute resource is a receiver or a sender:
+    runner_importance = calculate_runner_importance(runner_id)
 
     reply = cm.Messages
-    reply.prefetch_resonse.state_id = the_parent_state_id
+    if runner_importance >= mean_importance:
+        # This is a sender. it shall not prefetch anything:
+        reply.prefetch_resonse
+    else:
+        # This runner shall receive (prefetch) the most important state:
 
-    send_and_serialize(gp_socket, reply)
+        # Get parent state ids of unscheduled jobs
+        parent_state_ids = map(lambda x: x[1], unscheduled_jobs)
+        # Attach importance to it, sort ascending and get last element
+        most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
+            parent_state_ids))[-1]
 
-    # update our statecache knowledge about this runner
-    state_cache[runner_id] = [the_parent_state_id]
-    for state_id in msg.delete_request.cached_states:
-        state_cache[runner_id].append(state_id)
+        # Reply state id of most important parent state (and not its importance)
+        reply.prefetch_resonse.pull_states.append(most_important[1])
 
-def recv_nonblocking(socket):
+        state_cache[runner_id].append(most_important[1])
+
+    send_message(gp_socket, reply)
+
+
+
+def receive_message_nonblocking(socket):
     msg = None
     try:
         msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
+        msg = parse(msg)
+
+        if msg.runner_id in faulty_runners:
+            print("Ignoring faulty runner's message:", msg)
+            gp_socket.reply(0)
+            return
     except zmq.error.Again:
         # could not poll anything
         pass
@@ -278,16 +318,9 @@ def recv_nonblocking(socket):
     return msg
 
 def handle_general_purpose():
-    msg = recv_nonblocking(gp_socket)
+    msg = receive_message_nonblocking(gp_socket)
 
     if msg:
-        msg = parse(msg)
-
-        if msg.runner_id in faulty_runners:
-            print("Ignoring faulty runner's message:", msg)
-            gp_socket.reply(0)
-            return
-
         ty = msg.WhichOneof('content')
         if ty == 'weight':
             accept_weight(msg)
@@ -306,17 +339,10 @@ def hanlde_job_requests(launcher):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
-    msg = recv_nonblocking(job_socket)
+    msg = receive_message_nonblocking(job_socket)
 
     if msg:
-        msg = parse(msg)
-
         assert msg.WhichOneof('content') == 'job_request'
-
-        if msg.runner_id in faulty_runners:
-            print("Ignoring faulty runner's message:", msg)
-            job_socket.reply(0)
-            return
 
         runner_id = msg.runner_id
 
@@ -324,12 +350,25 @@ def hanlde_job_requests(launcher):
 
         the_job = random.choice(list(unscheduled_jobs))
 
-        # try to select a better job where the runner has the cache already
-        if runner_id in cached_states and len(cached_states[runner_id]) > 0:
-            for cs in cached_states:
-                if cj in unscheduled_jobs:
-                    the_job = cj
-                    break
+        # try to select a better job where the runner has the cache already and which is
+        # only on few other runners
+
+        if runner_id in state_cache:
+            parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
+
+            # Get cached parent state ids
+            useful_states = filter(lambda x: x in parent_state_ids, state_cache[runner_id])
+
+            if len(useful_states) > 0:
+                # Select tha state_id that is on fewest other runners
+                # TODO: replace sorted zip by arg sort or something
+                parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
+                    useful_states))[0][1]
+
+                # find again job for parent_state_id
+                the_job = filter(lambda x: unscheduled_jobs[x] == parent_state_id,
+                        unscheduled_jobs)[0]
+
 
         reply = cm.Message()
 
@@ -337,7 +376,7 @@ def hanlde_job_requests(launcher):
 
         reply.job_response.parent = unscheduled_jobs[the_job]
 
-        send_and_serialize(job_socket, reply)
+        send_message(job_socket, reply)
 
         running_job = (time.time() + RUNNER_TIMEOUT, msg.job_request.runner_id,
                        unscheduled_jobs[the_job])

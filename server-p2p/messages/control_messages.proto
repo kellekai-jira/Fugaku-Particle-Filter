@@ -73,12 +73,12 @@ message RunnerResponse {
 // Runner to server what might be useful to prefetch:
 message PrefetchRequest {
     repeated StateId cached_states = 1;
-    uint32 free_slots = 2;
+    uint32 free_slots = 2;  // unused on server side so far.
 }
 
 message PrefetchResponse {
     repeated StateId pull_states = 1;
-    repeated StateId dump_states = 2;
+    repeated StateId dump_states = 2;  // unused on server side so far.
 }
 
 message DeleteRequest {
