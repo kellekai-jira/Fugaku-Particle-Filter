@@ -10,6 +10,9 @@
 #include <cassert>
 #include <memory>
 #include <vector>
+#include "helpers.h"
+#include "ZeroMQ.h"
+#include "../p2p_globals.h"
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
@@ -20,7 +23,7 @@
 using namespace melissa_p2p;
 
 static MpiController mpi_controller_null;
-
+    
 class StorageController {
 
   public:
@@ -30,39 +33,35 @@ class StorageController {
       m_request_interval(10000) {}
 
     void init( MpiController* mpi, IoController* io,
-      size_t capacity, size_t state_size );
+      double capacity, double state_size );
     void fini();
 
     // CALLBACK FOR FTI HEADS
     static void callback();
 
     // API
-    void load( io_state_t state );
-    void pull( io_id_t state_id );
-    int free() { return m_free; }
-    void store( io_id_t state_id );
-    void copy( io_id_t state_id, io_level_t from, io_level_t to );
+    void load( io_state_id_t state );
+    void pull( io_state_id_t state_id );
+    void store( io_state_id_t state_id );
+    void copy( io_state_id_t state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
-    int update( io_id_t id, void* buffer, io_size_t size );
+    int update( io_id_t id, void* buffer, size_t size );
 
     // TODO put in private
-    void m_create_symlink( io_id_t ckpt_id );
+    void m_create_symlink( io_state_id_t state_id );
 
   private:
 
-    void m_push_weight_to_server( io_state_t state_info, double weight );
+    void m_push_weight_to_server( const Message & m );
 
-    template<typename T> void m_serialize( T& message, char* buffer );
-    template<typename T> void m_deserialize( T& message, char* buffer, int size );
+    void m_load_head( io_state_id_t state );
+    void m_load_user( io_state_id_t state );
 
-    void m_load_head( io_state_t state );
-    void m_load_user( io_state_t state );
+    void m_pull_head( io_state_id_t state_id );
+    void m_pull_user( io_state_id_t state_id );
 
-    void m_pull_head( io_id_t state_id );
-    void m_pull_user( io_id_t state_id );
-
-    void m_store_head( io_id_t state_id );
-    void m_store_user( io_id_t state_id );
+    void m_store_head( io_state_id_t state_id );
+    void m_store_user( io_state_id_t state_id );
 
     void m_request_fini();
 
@@ -96,8 +95,8 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    std::map<io_id_t,io_state_t> m_known_states;
-    std::map<io_id_t,io_state_t> m_cached_states;
+    std::map<io_id_t,io_state_id_t> m_known_states;
+    std::map<io_id_t,io_state_id_t> m_cached_states;
 
     bool m_worker_thread;
     size_t m_request_counter;
@@ -106,18 +105,27 @@ class StorageController {
     // coresponds to a server info request each second.
     int m_request_interval;
 
-    int m_comm_global_size;
-    int m_comm_runner_size;
-    int m_comm_worker_size;
+    class StatePool {
+      public:
+        StatePool() : m_used_slots(0) {} 
+        void init( size_t capacity, size_t slot_size );
+        int free() { return m_capacity - m_used_slots; }
+        int size() { return m_used_slots; }
+        int capacity() { return m_capacity; }
+        StatePool& operator++();
+        StatePool operator++(int);
+        StatePool& operator--();
+        StatePool operator--(int);
+      private:
+        size_t m_capacity;
+        size_t m_slot_size;
+        size_t m_used_slots;
+        friend class StorageController;
+    };
+    
+    friend class StatePool;
 
-    // size in bytes
-    size_t m_capacity;
-    size_t m_state_size_node;
-
-    // number of states
-    int m_prefetch_capacity;
-    int m_free;
-
+    StatePool state_pool;
 //----------------------------------------------------------------------------------------
 //  SERVER CONNECTION
 //----------------------------------------------------------------------------------------
@@ -126,9 +134,12 @@ class StorageController {
       public:
         void init();
         void prefetch_request( StorageController* storage );
+        void delete_request( StorageController* storage );
         void fini();
       private:
+        friend class StorageController;
         void* m_socket;
+        std::string m_addr;
     };
 
     friend class Server;

@@ -14,7 +14,7 @@ int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   return m_id_counter;
 }
 
-void FtiController::update( io_id_t id, void* buffer, io_size_t size ) {
+void FtiController::update( io_id_t id, void* buffer, size_t size ) {
   assert( m_var_id_map.count(id) != 0 && "invalid type" );
   FTI_Protect(id, buffer, size, m_var_id_map[id].type);
 }
@@ -62,13 +62,13 @@ void FtiController::init_core() {
   m_id_counter = 0;
 }
   
-void FtiController::sendrecv( const void* send_buffer, void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
+void FtiController::sendrecv( const void* send_buffer, void* recv_buffer, int send_size, int recv_size, io_tag_t tag, io_msg_t message_type  ) {
   if( FTI_AmIaHead() ) {
-    FTI_HeadRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
-    FTI_HeadSend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    FTI_HeadRecv( recv_buffer, recv_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    FTI_HeadSend( send_buffer, send_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
   } else {
-    FTI_AppSend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
-    FTI_AppRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    FTI_AppSend( send_buffer, send_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    FTI_AppRecv( recv_buffer, recv_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
   }
 }
 
@@ -108,36 +108,44 @@ bool FtiController::probe( io_tag_t tag ) {
   }
 }
 
+void FtiController::get_message_size( int* size, io_tag_t tag, io_msg_t message_type  ) {
+  if( FTI_AmIaHead() ) {
+    FTI_HeadGetMessageSize( size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+  } else {
+    FTI_AppGetMessageSize( size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+  }
+}
+
 void FtiController::fini() {
   FTI_Finalize();
 }
 
-void FtiController::load( io_id_t state_id, io_level_t level ) {
+void FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
-  FTI_Load( state_id, m_io_level_map[level] ); 
+  FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] ); 
 }
 
-void FtiController::store( io_id_t state_id, io_level_t level ) {
+void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
-  FTI_Checkpoint( state_id, m_io_level_map[level] );
+  FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
 }
       
-void FtiController::remove( io_id_t state_id, io_level_t level ) {
-  IO_TRY( FTI_Remove( state_id, m_io_level_map[level] ), 
+void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
+  IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ), 
       FTI_SCES, "failed to remove file" );
 }
 
-void FtiController::copy( io_state_t state, io_level_t from, io_level_t to ) {
+void FtiController::copy( io_state_id_t state_id, io_level_t from, io_level_t to ) {
   assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
   assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
   if( from == IO_STORAGE_L1 ) {
-    FTI_Copy( to_ckpt_id(state.t, state.id), m_io_level_map[from], m_io_level_map[to] ); 
+    FTI_Copy( to_ckpt_id(state_id), m_io_level_map[from], m_io_level_map[to] ); 
   } else {
-    copy_extern( state, from, to );
+    copy_extern( state_id, from, to );
   }
 }
 
-void FtiController::copy_extern( io_state_t state, io_level_t from, io_level_t to ) {
+void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_level_t to ) {
   
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
   assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 1 to level 2 not implemented for extern" );
@@ -145,19 +153,19 @@ void FtiController::copy_extern( io_state_t state, io_level_t from, io_level_t t
   std::stringstream global;
   global << m_dict_string["global_dir"];
   global << "/";
-  global << std::to_string(to_ckpt_id(state.t, state.id));
+  global << std::to_string(to_ckpt_id(state_id));
   
   std::stringstream extern_meta;
   extern_meta << m_dict_string["meta_dir"];
   extern_meta << "/";
-  extern_meta << std::to_string(to_ckpt_id(state.t, state.id));
+  extern_meta << std::to_string(to_ckpt_id(state_id));
   
   std::stringstream meta;
   meta << m_dict_string["meta_dir"];
   meta << "/";
   meta << m_dict_string["exec_id"];
   meta << "/l1/";
-  meta << std::to_string(state.id);
+  meta << std::to_string(to_ckpt_id(state_id));
   
   std::stringstream meta_tmp_dir;
   meta_tmp_dir << m_dict_string["meta_dir"];
@@ -184,7 +192,7 @@ void FtiController::copy_extern( io_state_t state, io_level_t from, io_level_t t
     int proc = m_kernel.topo->body[i];
 
     std::stringstream filename;
-    filename << "Ckpt" << state.id << "-Rank" << proc << ".fti";
+    filename << "Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
     
     std::stringstream global_fn;
     global_fn << global.str(); 
@@ -220,37 +228,37 @@ void FtiController::copy_extern( io_state_t state, io_level_t from, io_level_t t
   local << "/";
   local << m_dict_string["exec_id"];
   local << "/l1/";
-  local << std::to_string(state.id);
+  local << std::to_string(to_ckpt_id(state_id));
 
   if( m_dict_bool["master_local"] ) {
     assert( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ) == 0 ); 
   }
   if( m_dict_bool["master_global"] ) {
     assert( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ) == 0 ); 
-    m_kernel.update_ckpt_metadata( state.id, FTI_L1 );
+    m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), FTI_L1 );
   }
 
   std::stringstream msg;
-  msg << "Conversion of Ckpt." << state.id << "from level '" << 4 << "' to '" << 1 << "' was successful";
+  msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
 
   m_mpi->barrier();
 
 }
 
-bool FtiController::is_local( io_id_t state_id ) {
+bool FtiController::is_local( io_state_id_t state_id ) {
   FTIT_stat st;
-  FTI_Stat( state_id, &st );
+  FTI_Stat( to_ckpt_id(state_id), &st );
   return FTI_ST_IS_LOCAL(st.level);
 }
 
-bool FtiController::is_global( io_id_t state_id ) {
+bool FtiController::is_global( io_state_id_t state_id ) {
   FTIT_stat st;
-  FTI_Stat( state_id, &st );
+  FTI_Stat( to_ckpt_id(state_id), &st );
   return FTI_ST_IS_GLOBAL(st.level);
 }
 
-void FtiController::request( io_id_t state_id ) {
+void FtiController::request( io_state_id_t state_id ) {
 
 }
 
@@ -258,12 +266,12 @@ void FtiController::register_callback( void (*f)(void) ) {
   FTI_RegisterUserFunction( f );
 }
 
-void FtiController::filelist_local( io_id_t ckpt_id, std::vector<std::string> & ckptfiles ) {
+void FtiController::filelist_local( io_state_id_t state_id, std::vector<std::string> & ckptfiles ) {
   ckptfiles.clear();
   std::string directory = m_dict_string["local_dir"] + "/" + 
-    m_dict_string["exec_id"] + "/l1/" + std::to_string(ckpt_id);
+    m_dict_string["exec_id"] + "/l1/" + std::to_string(to_ckpt_id(state_id));
   for(int i; i<m_dict_int["app_procs_node"]; i++) {
-    std::string filepath = directory + "/" + "Ckpt" + std::to_string(ckpt_id) + 
+    std::string filepath = directory + "/" + "Ckpt" + std::to_string(to_ckpt_id(state_id)) + 
       "-Rank" + std::to_string(m_kernel.topo->body[i]) + "." + m_kernel.conf->suffix;
     ckptfiles.push_back(filepath);
     std::cout << filepath << std::endl;

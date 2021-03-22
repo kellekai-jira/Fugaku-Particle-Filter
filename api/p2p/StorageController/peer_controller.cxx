@@ -1,7 +1,5 @@
 #include "peer_controller.hpp"
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
-#include "ZeroMQ.h"
-#include "helpers.h"
 
 void PeerController::handle_requests()
 {
@@ -56,7 +54,7 @@ void PeerController::handle_requests()
 }
 
 
-PeerController::PeerController()
+PeerController::PeerController( IoController* io ) : m_io(io) 
 {
 
     port = 3131;
@@ -82,7 +80,7 @@ PeerController::~PeerController()
 }
 
 
-bool PeerController::mirror( io_state_id_t io_state_id)
+bool PeerController::mirror( io_state_id_t io_state_id )
 {
     ::melissa_p2p::Message dns_req;
     // get friendly head rank of the same rank...

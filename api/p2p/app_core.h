@@ -4,7 +4,6 @@
 #include "utils.h"
 #include "melissa_da_api.h"
 
-
 void melissa_p2p_init(const char *field_name,
                   const size_t local_vect_size,
                   const size_t local_hidden_vect_size,

@@ -2,6 +2,10 @@
 #define _PEER_CONTROLLER_H_
 
 #include <string>
+#include "io_controller.hpp"
+#include "fti_controller.hpp"
+#include "ZeroMQ.h"
+#include "helpers.h"
 
 class Peer {
   public:
@@ -11,13 +15,13 @@ class Peer {
 class PeerController {
   public:
 
-      PeerController( IoController* io ) : m_io(io) {}
+      PeerController( IoController* io );
       /// checks if somebody wants to load states from the disk
       void handle_requests();
 
       /// mirrors a state from another runner
       /// returns false if the state could not be found.
-      bool mirror(io_id_t id);
+      bool mirror(io_state_id_t id);
 
 private:
 
