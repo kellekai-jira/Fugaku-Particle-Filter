@@ -8,15 +8,32 @@ file(GLOB
 file(GLOB
      ALL_P2P
      RELATIVE
-     ${CMAKE_CURRENT_SOURCE_DIR}/p2p
-     *.cxx
+     ${CMAKE_CURRENT_SOURCE_DIR}
+     p2p/*.cxx
      )
 
- add_library(melissa_da_api SHARED ${ALL_API} ${ALL_P2P}
+file(GLOB
+     ALL_STORAGE_CONTROLLER
+     RELATIVE
+     ${CMAKE_CURRENT_SOURCE_DIR}
+     p2p/StorageController/*.cxx
+     )
+
+ MESSAGE("API contains:
+     ${ALL_API}
+     ${ALL_P2P}
+     ${ALL_STORAGE_CONTROLLER}"
+     )
+
+ add_library(melissa_da_api SHARED
+     ${ALL_API}
+     ${ALL_P2P}
+     ${ALL_STORAGE_CONTROLLER}
     "../../server-p2p/messages/cpp/control_messages.pb.cc"
     $<TARGET_OBJECTS:melissa_common>)
 
 # TODO add lib dependencie -lprotobuf
+target_link_libraries(melissa_da_api protobuf)
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)
@@ -35,6 +52,20 @@ add_custom_command(TARGET melissa_da_api
     VERBATIM
 )
 
+
+if(WITH_FTI OR WITH_FTI_THREADS)
+    target_include_directories(melissa_da_api PUBLIC "${FTI_INCLUDE_DIR}")
+    target_link_libraries(melissa_da_api ${FTI_LIBRARY})
+    target_compile_definitions(melissa_da_api PUBLIC WITH_FTI)
+  if(WITH_FTI_THREADS)
+    target_compile_definitions(melissa_da_api PUBLIC WITH_FTI_THREADS)
+  endif(WITH_FTI_THREADS)
+endif(WITH_FTI OR WITH_FTI_THREADS)
+
+
+if(INSTALL_FTI)
+    add_dependencies(melissa_da_api FTI)
+endif(INSTALL_FTI)
 
 target_compile_options(melissa_da_api BEFORE PUBLIC -fPIC)
 install(TARGETS melissa_da_api LIBRARY DESTINATION lib)

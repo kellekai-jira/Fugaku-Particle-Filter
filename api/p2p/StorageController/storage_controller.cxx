@@ -9,7 +9,9 @@
 #include <sys/stat.h>
 #include <cstdio>
 #include <cmath>
+#include <string>
 
+#include "api_common.h"
 // TODO error checking!
 
 //======================================================================
@@ -19,26 +21,29 @@
 // init MPI
 // init IO
 
-void StorageController::init( MpiController* mpi, IoController* io,
-    double capacity_dp, double state_size_dp ) {
+void StorageController::io_init( MpiController* mpi, IoController* io ) {
 
-  size_t capacity = std::floor(capacity_dp);
-  size_t state_size_proc = std::ceil(state_size_dp);
-
-  m_io = io;
-  m_peer = new PeerController( io );
   m_mpi = mpi;
+  m_io = io;
   m_io->register_callback( StorageController::callback );
-  
+
+  m_peer = new PeerController( io );
+
   // heads dont return from init_io !!!
   m_io->init_io(m_mpi);
 
   m_io->init_core();
+}
+
+void StorageController::init( double capacity_dp, double state_size_dp ) {
+  // this is only called by app cores
+  size_t capacity = std::floor(capacity_dp);
+  size_t state_size_proc = std::ceil(state_size_dp);
 
   // propagate state size to head
   m_io->send( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
   m_io->send( &state_size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
-  
+
   m_worker_thread = false;
 
 }
@@ -68,20 +73,20 @@ void StorageController::callback() {
     init = true;
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
-   
+
     size_t capacity;
     storage.m_io->recv( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
     size_t size_proc[storage.m_io->m_dict_int["app_procs_node"]], size_node;
     storage.m_io->recv( size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
-    
+
     size_t state_size_node = 0;
     for(int i=0; i<storage.m_io->m_dict_int["app_procs_node"]; i++) {
       state_size_node += size_proc[i];
     }
-   
+
     // in slots
     capacity = capacity / state_size_node;
-    
+
     // 1 model checkpoints
     // 2 for prefetching
     // 1 for sending to peer (needs memory copy of ckpt file)
@@ -92,11 +97,11 @@ void StorageController::callback() {
     // 1 model checkpoints
     // 1 for sending to peer (needs memory copy of ckpt file)
     size_t minimum_storage_reservation = 2;
-    
-    size_t prefetch_capacity = capacity - minimum_storage_reservation; 
-   
+
+    size_t prefetch_capacity = capacity - minimum_storage_reservation;
+
     storage.state_pool.init( capacity, state_size_node );
-    
+
     if(storage.m_io->m_dict_bool["master_global"]) {
       std::cout << "storage capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
@@ -179,7 +184,7 @@ void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_
 void StorageController::m_pull_head( io_state_id_t state_id ) {
   assert( !m_io->is_local( state_id ) && "state is already local!" );
   if( state_pool.free() == 0 ) {
-    server.delete_request(this); 
+    server.delete_request(this);
   }
   if( !m_io->is_local( state_id ) ) {
     m_peer->mirror( state_id );
@@ -314,7 +319,7 @@ void StorageController::m_request_fini() {
 //======================================================================
 //  State Pool
 //======================================================================
-        
+
 void StorageController::StatePool::init( size_t capacity, size_t slot_size ) {
   std::cout << "storage capacity [slots]: " << capacity << std::endl;
   m_capacity = capacity;
@@ -366,7 +371,7 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
     assert(false);
   }
 
-  m_socket = zmq_socket(MELISSA_P2P::context, ZMQ_REQ);
+  m_socket = zmq_socket(context, ZMQ_REQ);
   m_addr = std::string("tcp://") + melissa_server_master_gp_node;
   D("connect to general purpose server at %s", m_addr.c_str());
   assert( zmq_connect(m_socket, m_addr.c_str()) );
@@ -386,7 +391,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     state->set_t(pair.second.t);
     state->set_id(pair.second.id);
   }
-  request.mutable_prefetch_request()->set_free_slots(storage->m_peer.free());
+  request.mutable_prefetch_request()->set_free_slots(storage->state_pool.free());
   request.set_runner_id(storage->m_runner_id);
 
   send_message(m_socket, request);

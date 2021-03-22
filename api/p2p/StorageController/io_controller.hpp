@@ -52,7 +52,7 @@ enum io_msg_t {
   IO_MSG_ALL,
   IO_MSG_ONE
 };
-  
+
 enum io_tag_t {
   IO_TAG_LOAD,
   IO_TAG_PEER,
@@ -86,15 +86,16 @@ class IoController {
       virtual void recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) = 0;
       virtual void get_message_size( int* size, io_tag_t tag, io_msg_t message_type  ) = 0;
       virtual void filelist_local( io_state_id_t ckpt_id, std::vector<std::string> & ckptfiles ) = 0;
-      
+      virtual void update_metadata( io_state_id_t ckpt_id, io_level_t level ) = 0;
+
       std::map<std::string,int> m_dict_int;
       std::map<std::string,bool> m_dict_bool;
       std::map<std::string,double> m_dict_double;
       std::map<std::string,std::string> m_dict_string;
-    
-      std::queue<io_state_id_t> m_state_pull_requests; 
-      std::queue<io_state_id_t> m_state_push_requests; 
-      std::queue<io_ckpt_t> m_state_dump_requests; 
+
+      std::queue<io_state_id_t> m_state_pull_requests;
+      std::queue<io_state_id_t> m_state_push_requests;
+      std::queue<io_ckpt_t> m_state_dump_requests;
       MpiController* m_mpi;
 };
 

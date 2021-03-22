@@ -12,7 +12,6 @@
 #include <vector>
 #include "helpers.h"
 #include "ZeroMQ.h"
-#include "../p2p_globals.h"
 
 #include "../../../server-p2p/messages/cpp/control_messages.pb.h"
 
@@ -23,7 +22,7 @@
 using namespace melissa_p2p;
 
 static MpiController mpi_controller_null;
-    
+
 class StorageController {
 
   public:
@@ -32,8 +31,8 @@ class StorageController {
       m_request_counter(1),
       m_request_interval(10000) {}
 
-    void init( MpiController* mpi, IoController* io,
-      double capacity, double state_size );
+    void io_init( MpiController* mpi, IoController* io );
+    void init( double capacity, double state_size );
     void fini();
 
     // CALLBACK FOR FTI HEADS
@@ -107,7 +106,7 @@ class StorageController {
 
     class StatePool {
       public:
-        StatePool() : m_used_slots(0) {} 
+        StatePool() : m_used_slots(0) {}
         void init( size_t capacity, size_t slot_size );
         int free() { return m_capacity - m_used_slots; }
         int size() { return m_used_slots; }
@@ -122,7 +121,7 @@ class StorageController {
         size_t m_used_slots;
         friend class StorageController;
     };
-    
+
     friend class StatePool;
 
     StatePool state_pool;

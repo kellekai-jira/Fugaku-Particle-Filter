@@ -25,12 +25,12 @@ if (WITH_FTI)
     if(INSTALL_FTI)
         include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
         ExternalProject_Add(FTI
-            GIT_REPOSITORY https://github.com/leobago/fti.git
-            GIT_TAG melissa
+            GIT_REPOSITORY https://gitlab.bsc.es/kkeller/fti.git
+            GIT_TAG melissa-p2p
             GIT_SHALLOW TRUE
             GIT_PROGRESS TRUE
             PREFIX ${CMAKE_CURRENT_BINARY_DIR}/FTI
-            CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=1
+            CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=0
             -DHDF5_ROOT=${HDF5_ROOT}
             -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
         message(STATUS "FTI will be installed")

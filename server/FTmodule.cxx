@@ -20,9 +20,9 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     mpi.set_comm( "fti_comm" );
 #endif
     // protect global variables and set id_offset for subset ids
-    hsize_t dim = 1;
-    hsize_t offset = 0;
-    hsize_t count = 1;
+    FTIT_hsize_t dim = 1;
+    FTIT_hsize_t offset = 0;
+    FTIT_hsize_t count = 1;
     FTI_DefineGlobalDataset( m_id_offset, 1, &dim, "epoch_counter", NULL, FTI_INTG );
     FTI_Protect( m_id_offset, &epoch_counter, 1, FTI_INTG );
     FTI_AddSubset( m_id_offset, 1, &offset, &count, m_id_offset );
@@ -55,22 +55,22 @@ void FTmodule::protect_background( MpiManager & mpi, std::unique_ptr<Field> & fi
     }
     int myRank = mpi.rank();
     int dataset_rank = 1;
-    hsize_t state_dim = field->globalVectSize();
+    FTIT_hsize_t state_dim = field->globalVectSize();
     int dataset_id = 0 + m_id_offset; // equals state_id
     int subset_id = 0 + m_id_offset;
     int N_e = field->ensemble_members.size();
-    hsize_t offset_base = 0;
+    FTIT_hsize_t offset_base = 0;
     for(int i=0; i<myRank; i++) { offset_base+=local_vect_sizes_server[i]; }
     for(auto it_ens=field->ensemble_members.begin(); it_ens!=field->ensemble_members.end(); it_ens++) {
         size_t count_tot = 0;
-        hsize_t offset = offset_base;
+        FTIT_hsize_t offset = offset_base;
         std::string dataset_name(field->name);
         dataset_name += "_" + std::to_string( dataset_id-m_id_offset );
         FTI_DefineGlobalDataset( dataset_id, dataset_rank, &state_dim, dataset_name.c_str(), NULL, FTI_CHAR );
         std::vector<Part>::iterator it_part = field->parts.begin();
         while( (it_part = std::find_if( it_part, field->parts.end(), [myRank]( Part & part ) {return myRank == part.rank_server;} )) != field->parts.end() ){
-            offset += static_cast<hsize_t>(it_part->local_offset_server);
-            hsize_t count = static_cast<hsize_t>(it_part->send_count);
+            offset += static_cast<FTIT_hsize_t>(it_part->local_offset_server);
+            FTIT_hsize_t count = static_cast<FTIT_hsize_t>(it_part->send_count);
             void* ptr = it_ens->state_background.data() + it_part->local_offset_server;
             FTI_Protect( subset_id, ptr, it_part->send_count, FTI_CHAR );
             count_tot += count;

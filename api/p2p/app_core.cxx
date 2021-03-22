@@ -1,19 +1,36 @@
 #include "app_core.h"
+#include "StorageController/helpers.h"
 #include "../../server-p2p/messages/cpp/control_messages.pb.h"
 
 #include "api_common.h"
+#include "StorageController/fti_controller.hpp"
+#include "StorageController/mpi_controller.hpp"
+#include "StorageController/storage_controller_impl.hpp"
+
+#include "StorageController/helpers.h"
 
 void* job_socket;
 
 std::vector<INDEX_MAP_T> local_index_map;
 std::vector<INDEX_MAP_T> local_index_map_hidden;
 
+FtiController io;
+MpiController mpi;
+int fti_protect_id;
+
+void melissa_io_init_f(MPI_Fint *comm_fortran)
+{
+    MPI_Comm comm_c = MPI_Comm_f2c(*comm_fortran);
+    mpi.init( comm_c );
+    storage.io_init( &mpi, &io );
+    comm = mpi.comm();  // TODO: use mpi controller everywhere in api
+}
+
 void melissa_p2p_init(const char *field_name,
                   const size_t local_vect_size,
                   const size_t local_hidden_vect_size,
                   const int bytes_per_element,
                   const int bytes_per_element_hidden,
-                  MPI_Comm comm_,
                   const INDEX_MAP_T local_index_map_[],
                   const INDEX_MAP_T local_index_map_hidden_[]
                   )
@@ -26,20 +43,19 @@ void melissa_p2p_init(const char *field_name,
     // store local_index_map to reuse in weight calculation
     local_index_map.resize(local_vect_size);
     local_index_map_hidden.resize(local_hidden_vect_size);
-    std::copy(local_index_map_, local_index_map_ + local_vect_size,  local_index_map);
-    std::copy(local_index_map_hidden_, local_index_map_hidden_ + local_vect_size_hidden,
-            local_index_map_hidden);
+    std::copy(local_index_map_, local_index_map_ + local_vect_size,  local_index_map.data());
+    //std::memcpy(local_index_map.data(), local_index_map_, sizeof(INDEX_MAP_T) * local_vect_size);
+    //std::memcpy(local_index_map.data(), local_index_map_, sizeof(INDEX_MAP_T) * local_vect_size);
+    std::copy(local_index_map_hidden_, local_index_map_hidden_ + local_hidden_vect_size,
+            local_index_map_hidden.data());
 
     // there is no real PHASE_INIT in p2p since no configuration messages need to be
     // exchanged at the beginning
     phase = PHASE_SIMULATION;
 
     // TODO move storage.init in constructor and use smartpointer instead
-    FtiController io;
-    mpi.init( comm );
-
-    assert(local_vect_size_hidden == 0 && "Melissa-P2P does not yet work if there is a hidden state");
-    storage.init( &mpi, &io, capacity, local_vect_size);
+    assert(local_hidden_vect_size == 0 && "Melissa-P2P does not yet work if there is a hidden state");
+    storage.init( 2*1024L*1024L*1024L, local_vect_size);  // 2GB storage for now
     fti_protect_id = storage.protect( NULL, local_vect_size, IO_BYTE );
 
     // open sockets to server on rank 0:
@@ -47,14 +63,15 @@ void melissa_p2p_init(const char *field_name,
     {
         char * melissa_server_master_node = getenv(
             "MELISSA_SERVER_MASTER_NODE");
+        if (! melissa_server_master_node) {
             L(
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
             assert(false);
         }
 
         // Refactor: put all sockets in a class
-        job_socket = zmq_socket(context, zmq_REQ);
-        std::string addr = "tcp://" + melissa_server_master_node;
+        job_socket = zmq_socket(context, ZMQ_REQ);
+        std::string addr = std::string("tcp://") + melissa_server_master_node;
         D("connect to job request server at %s", addr);
         int req = zmq_connect(job_socket, addr.c_str());
         assert(req == 0);
@@ -77,26 +94,24 @@ void push_weight_to_head(double weight)
 
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
-    m.mutable_weight()->mutable_state_id()->set_t(current_step);
-    m.mutable_weight()->mutable_state_id()->set_id(current_id);
+    m.mutable_weight()->mutable_state_id()->set_t(field.current_step);
+    m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
 
-    char buf[m.ByteSize()];
-    m.SerializeToArray(buf);
+    char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
+    m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
 
 }
-
-::melissa_p2p::StateServer my_state_server_ranks;
 
 ::melissa_p2p::JobResponse request_work_from_server() {
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
     m.mutable_job_request();  // create job request
 
-    message_send(job_socket, m);
+    send_message(job_socket, m);
 
-    auto r = message_receive(job_socket);
+    auto r = receive_message(job_socket);
 
     return r.job_response();
 }
@@ -105,11 +120,11 @@ int melissa_p2p_expose(VEC_T *values,
                    VEC_T *hidden_values)
 {
     // Update pointer
-    storage.update( fti_protect_id, values, local_vect_size );
-    
+    storage.update( fti_protect_id, values, field.local_vect_size );
+
     // store to ram disk
     // TODO: call protect direkt in chunk based api
-    io_state_t state = { current_step, current_state_id };
+    io_state_id_t state = { field.current_step, field.current_state_id };
     storage.store( state );
 
     // 2. calculate weight and synchronize weight on rank 0
@@ -117,7 +132,7 @@ int melissa_p2p_expose(VEC_T *values,
 
     int nsteps = 0;
 
-    int parent_t, parent_id, job_t, job_id, nsteps;
+    int parent_t, parent_id, job_t, job_id;
 
     // Rank 0:
     if (mpi.comm() == 0) {
@@ -143,20 +158,20 @@ int melissa_p2p_expose(VEC_T *values,
 
     if (nsteps > 0) {
         // called by every app core
-        storage.load(io_state_t(job_t, job_id));
+        storage.load(io_state_id_t(job_t, job_id));
 
-        current_step = job_t;
-        current_id = job_id;
+        field.current_step = job_t;
+        field.current_state_id = job_id;
     }
     else
     {
-        zmq_disconnect(job_socket);
+        zmq_close(job_socket);
 
         storage.fini();
 
 
-        current_step = -1;
-        current_id = -1;
+        field.current_step = -1;
+        field.current_state_id = -1;
     }
 
 

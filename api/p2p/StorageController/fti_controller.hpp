@@ -9,8 +9,8 @@
 #include <cassert>
 
 struct io_state_id_t {
-  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {} 
-  io_state_id_t() : t(0), id(0) {} 
+  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
+  io_state_id_t() : t(0), id(0) {}
   io_id_t t;
   io_id_t id;
 };
@@ -50,6 +50,7 @@ class FtiController : public IoController {
     void copy( io_state_id_t state, io_level_t from, io_level_t to );
     void copy_extern( io_state_id_t state, io_level_t from, io_level_t to );
     void filelist_local( io_state_id_t ckpt_id, std::vector<std::string> & ckptfiles );
+    void update_metadata( io_state_id_t ckpt_id, io_level_t level );
 
     bool is_local( io_state_id_t state_id );
     bool is_global( io_state_id_t state_id );

@@ -1,3 +1,6 @@
+#ifndef MESSAGES_H_
+#define MESSAGES_H_
+
 enum ConfigurationMessageType
 {
     REGISTER_RUNNER_ID = 0,
@@ -13,4 +16,4 @@ enum DataMessageType
     KILL_RUNNER = 4
 };
 
-
+#endif

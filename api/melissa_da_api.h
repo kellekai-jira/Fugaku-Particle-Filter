@@ -29,6 +29,10 @@ void melissa_init(const char *field_name,
                   MPI_Comm comm_
                   );
 
+// must be called at the very beginning to replace the one mpi rank with the helper rank
+void melissa_io_init_f(MPI_Fint *comm_fortran);
+
+
 
 /// index map: a list of all the indicies in the order as transimitted as values in melissa_expos/
 /// this is needed by some assimilators that use the function domainIdx() and domainIdx_hidden()

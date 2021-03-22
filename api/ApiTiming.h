@@ -1,3 +1,8 @@
+#ifndef _API_TIMING_H_
+#define _API_TIMING_H_
+
+
+
 #include <list>
 #include <chrono>  // TODO:  use clock instead??!
 #include <iostream>
@@ -164,3 +169,6 @@ public:
     }
 
 };
+
+
+#endif
