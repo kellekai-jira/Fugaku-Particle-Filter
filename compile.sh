@@ -41,8 +41,9 @@ then
     #cmake .. -DZeroMQ_DIR=$HOME/workspace/melissa/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install
 if [ "$MELISSA_PROFILING" == "" ];
 then
-    cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/$USER/opt/HDF5/GCC/1.10.5 \
+    cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/$USER/opt/HDF5/GCC/1.10.5 \
      -DWITH_FTI_THREADS=ON \
+     -DFTI_PATH=/home/kellekai/STUDY/PhD/Research/Melissa-P2P-Lab/FTI/fti-gitlab/install \
      -DREPORT_TIMING_ALL_RANKS=ON
     #cmake .. -DWITH_FTI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
      #-DREPORT_TIMING_ALL_RANKS=ON
