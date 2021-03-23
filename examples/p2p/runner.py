@@ -1,139 +1,81 @@
-"""A runner module"""
+# runner written in python that calls the melissa da api
+
+
+import ctypes
 import os
+
+from mpi4py import MPI
+
+class MelissaAPI:
+    MPI_Fint = ctypes.c_int
+
+# void melissa_init_f(const char *field_name,
+                    # const int *local_doubles_count,
+                    # const int *local_hidden_doubles_count,
+                    # MPI_Fint   *comm_fortran);
+    def __init__(self, local_doubles_count, local_hidden_doubles_count, comm):
+
+        self.c_lib = ctypes.CDLL(os.getenv("MELISSA_DA_PATH")+"/lib/libmelissa_da_api.so")
+
+        self.field_name = "state1".encode('utf-8')
+
+
+        fcomm = comm.py2f()  # since we only can easily acces the fortran communicator,
+        # we use the fortran api for init.
+
+
+        self.c_lib.melissa_init_f(
+                ctypes.c_char_p(self.field_name),
+                ctypes.byref(ctypes.c_int(local_doubles_count)),
+                ctypes.byref(ctypes.c_int(local_hidden_doubles_count)),
+                ctypes.byref(MelissaAPI.MPI_Fint(fcomm))
+                )
+
+
+    def expose(self, values, hidden_values):
+        return self.c_lib.melissa_expose_d(
+            ctypes.c_char_p(self.field_name),
+            values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            hidden_values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                )
+
+    def refresh_comm(self, inout_comm):
+        fcomm = inout_comm.py2f()  # since we only can easily acces the fortran communicator,
+        self.c_lib.melissa_refresh_comm_f(MelissaAPI.MPI_Fint(fcomm))
+        inout_comm.MPI.comm.f2py(fcomm)
+
+    def io_init(self, comm):
+        fcomm = comm.py2f()
+        self.c_lib.melissa_io_init_f(MelissaAPI.MPI_Fint(fcomm))
+
+
+
+
+
+# Main:
+import numpy as np
 import time
-import random
-import sys
-import zmq
-from common import parse
-import messages.py.control_messages_pb2 as cm
 
-sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
-from utils import get_node_name
+melissa.fti_init()
+# Melissa init
+melissa.refresh_comm(MPI.COMM_WORLD)
 
-RUNNER_ID = int(os.getenv("MELISSA_DA_RUNNER_ID"))
+#model init
+state = np.zeros(2000, dtype='float64')
+hidden = np.zeros(4000, dtype='float64')
 
-print("Starting runner with id %d" % RUNNER_ID)
+melissa = MelissaAPI(len(state), len(hidden), MPI.COMM_WORLD)
 
 
-# 2 user functions:
-def integrate(x):
-    #time.sleep(random.randint(1,50)/100)  # simulate some calculation
-    time.sleep(0.001)
-    new_x = map(lambda x: x + 42, x)
-    return new_x
+nsteps = 1
+while nsteps > 0:
+    MPI.COMM_WORLD.Barrier()
+    # do some thing with the states
+    time.sleep(0.1)
+    nsteps = melissa.expose(state, hidden)
+
+    print('Now propagating %d steps' % nsteps)
+
+print("Finished")
 
 
-def get_weight(x):
-    return random.random()
-
-
-context = zmq.Context()
-
-print(os.getenv("MELISSA_SERVER_MASTER_NODE"))
-MELISSA_SERVER_MASTER_NODE = os.getenv("MELISSA_SERVER_MASTER_NODE")[6:].split(
-    ':')[0]
-if MELISSA_SERVER_MASTER_NODE == get_node_name():
-    MELISSA_SERVER_MASTER_NODE = "127.0.0.1"
-
-job_req_socket = context.socket(zmq.REQ)
-addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 4000)
-print('connect to melissa server at', addr)
-job_req_socket.connect(addr)
-
-weight_push_socket = context.socket(zmq.PUSH)
-addr = "tcp://%s:%d" % (MELISSA_SERVER_MASTER_NODE, 4001)
-print('connect weight puhser to', addr)
-weight_push_socket.connect(addr)
-
-# Get all open state server sockets belonging to this runner on rank 0:
-state_server_sockets = [("dummy%d" % RUNNER_ID, 1234),
-                        ("dummy%d" % RUNNER_ID, 1235)]
-
-# a state id is always a tuple:
-# (assimilation_cycle, id),
-# job id's too obviously as they are the state id of the resulting state
-# state_cache = {
-# (1, 42): [1,2,3,4],
-# (1, 43): [4,4,4,4]
-# }
-
-state_cache = {}  # the state cache must become part of FTI later
-
-# init all with a useful state cache (for now...):
-for i in range(100):
-    state_cache[(0, i)] = [1 + i, 2, 3, 4]
-
-
-def get_job(state_cache):
-    """Request a job from the server that is possibly already in the state cache"""
-    #assert mpirank == 0
-    msg = cm.Message()
-    for t, iid in state_cache.keys():
-        it = msg.job_request.cached_states.add()
-        it.t = t
-        it.id = iid
-    msg.job_request.runner_id = RUNNER_ID
-    for s in state_server_sockets:
-        rank = msg.job_request.client.ranks.add()
-        rank.node_name = s[0]
-        rank.port = s[1]
-
-    job_req_socket.send(msg.SerializeToString())
-    print("Sent request to server")
-
-    reply = job_req_socket.recv()
-    reply = parse(reply)
-
-    assert reply.WhichOneof('content') == 'job_response'
-
-    print("Got response")
-    print("dns update:", reply.job_response.clients)
-
-    # let it raise an exceotion if it cannot fetch any job for now..
-    return (reply.job_response.job.t, reply.job_response.job.id), \
-        (reply.job_response.parent.t, reply.job_response.parent.id)
-    # TODO: handle node list!
-
-
-def fetch_state(state_id):
-    # FIXME At the moment we assume no horizontal state transport
-    #assert state_id in state_cache
-    it = state_id
-    if not it in state_cache:
-        it = random.choice(list(state_cache.keys()))
-
-    return state_cache[it]
-    # if state_id in state_cache:
-    # return state_cache[state_id]
-    # else:
-    # return FTI_fetch_state_extern()  # using FTI magic...
-    # FTI heuristically loads states on this runners cache in the background. the list of this cache is transmitted to the server each time jobs are requested.
-
-
-def send_weight_to_server(state_id, weight):
-    """pushes weight to server. can probably use the same channel as get_job"""
-    msg = cm.Message()
-    msg.weight.state_id.t = state_id[0]
-    msg.weight.state_id.id = state_id[1]
-    msg.weight.weight = weight
-    data = msg.SerializeToString()
-    print('want to push weight')
-    weight_push_socket.send(data)
-
-    print("pushing weight", weight, "for", state_id, "to server")
-
-
-if __name__ == '__main__':
-    # runner algo:
-    job_id, parent_state_id = get_job(state_cache)
-    while True:
-        print("propagating", parent_state_id, "->", job_id)
-        x = fetch_state(parent_state_id)
-        new_x = integrate(x)
-        state_cache[job_id] = new_x
-        #FTI_magic(job_id, new_x)
-        w = get_weight(new_x)
-        send_weight_to_server(job_id, w)
-        job_id, parent_state_id = get_job(
-            state_cache
-        )  # job_id is the new job id the server will give me. we assume x contains also information on what time step we are on
