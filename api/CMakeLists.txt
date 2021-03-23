@@ -24,9 +24,9 @@ file(GLOB
      ${ALL_P2P}
      ${ALL_STORAGE_CONTROLLER}
     $<TARGET_OBJECTS:melissa_common>
-    $<TARGET_OBJECTS:melissa_protocol>)
+)
 
-#target_link_libraries(melissa_da_api melissa_protocol)
+target_link_libraries(melissa_da_api melissa_protocol)
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)
@@ -60,8 +60,6 @@ if(INSTALL_FTI)
     add_dependencies(melissa_da_api FTI)
 endif(INSTALL_FTI)
 
-target_compile_options(melissa_da_api BEFORE PUBLIC -fPIC)
-install(TARGETS melissa_da_api LIBRARY DESTINATION lib)
 install(TARGETS melissa_da_api LIBRARY DESTINATION lib)
 
 install(FILES melissa_da_api.h DESTINATION include)

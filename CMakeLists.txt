@@ -35,7 +35,7 @@ if (WITH_FTI)
             -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
         message(STATUS "FTI will be installed")
         set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
-        set(FTI_LIBRARY "${FTI_PATH}/lib64/libfti.so")
+        set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")  # TIODO: use gnu package to decide automatically between lib64 and lib
         set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
         set(WITH_FTI TRUE)
     else()
