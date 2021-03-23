@@ -10,8 +10,7 @@ int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
   io_var_t variable = { buffer, size, type };
   m_var_id_map.insert( std::pair<io_id_t,io_var_t>( m_id_counter, variable ) );
-  m_id_counter++;
-  return m_id_counter;
+  return m_id_counter++;
 }
 
 void FtiController::update( io_id_t id, void* buffer, size_t size ) {
