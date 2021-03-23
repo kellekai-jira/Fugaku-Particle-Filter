@@ -13,10 +13,11 @@ class MelissaAPI:
                     # const int *local_doubles_count,
                     # const int *local_hidden_doubles_count,
                     # MPI_Fint   *comm_fortran);
-    def __init__(self, local_doubles_count, local_hidden_doubles_count, comm):
-
+    def __init__(self):
         self.c_lib = ctypes.CDLL(os.getenv("MELISSA_DA_PATH")+"/lib/libmelissa_da_api.so")
 
+
+    def init(self, local_doubles_count, local_hidden_doubles_count, comm):
         self.field_name = "state1".encode('utf-8')
 
 
@@ -32,21 +33,23 @@ class MelissaAPI:
                 )
 
 
-    def expose(self, values, hidden_values):
+    def expose(self, values):
         return self.c_lib.melissa_expose_d(
             ctypes.c_char_p(self.field_name),
             values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-            hidden_values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+            None,
                 )
 
-    def refresh_comm(self, inout_comm):
-        fcomm = inout_comm.py2f()  # since we only can easily acces the fortran communicator,
-        self.c_lib.melissa_refresh_comm_f(MelissaAPI.MPI_Fint(fcomm))
-        inout_comm.MPI.comm.f2py(fcomm)
+    def get_comm(self):
+        self.c_lib.melissa_get_comm_f.restype = ctypes.c_int
+        res = self.c_lib.melissa_get_comm_f()
+        print ('in python get comm:', res)
+        return res
 
     def io_init(self, comm):
         fcomm = comm.py2f()
-        self.c_lib.melissa_io_init_f(MelissaAPI.MPI_Fint(fcomm))
+        print('in python io init', fcomm)
+        self.c_lib.melissa_io_init_f(ctypes.byref(MelissaAPI.MPI_Fint(fcomm)))
 
 
 
@@ -56,23 +59,28 @@ class MelissaAPI:
 import numpy as np
 import time
 
-melissa.fti_init()
+melissa = MelissaAPI()
+
+melissa.io_init(MPI.COMM_WORLD)
 # Melissa init
-melissa.refresh_comm(MPI.COMM_WORLD)
+print('Old  comm size:', MPI.COMM_WORLD.size)
+comm = MPI.COMM_WORLD.f2py(melissa.get_comm())
+print('New  comm size:', comm.size)
 
 #model init
 state = np.zeros(2000, dtype='float64')
-hidden = np.zeros(4000, dtype='float64')
+state[0] = 41
 
-melissa = MelissaAPI(len(state), len(hidden), MPI.COMM_WORLD)
+melissa.init(len(state), 0, comm)
+
 
 
 nsteps = 1
 while nsteps > 0:
-    MPI.COMM_WORLD.Barrier()
+    comm.Barrier()
     # do some thing with the states
     time.sleep(0.1)
-    nsteps = melissa.expose(state, hidden)
+    nsteps = melissa.expose(state)
 
     print('Now propagating %d steps' % nsteps)
 

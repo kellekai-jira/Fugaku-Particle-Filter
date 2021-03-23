@@ -1,5 +1,5 @@
 import zmq
-import messages.py.control_messages_pb2 as cm
+import p2p_pb2 as cm
 
 def parse(buf):
     """Parse a buffer into a message object"""

@@ -45,10 +45,10 @@ class StorageController {
     void m_create_symlink( io_state_id_t state_id );
 
   private:
-    
+
     // CALLBACK FOR FTI HEADS
     static void callback();
-    
+
     void pull( io_state_id_t state_id );
     void copy( io_state_id_t state_id, io_level_t from, io_level_t to );
 
@@ -139,7 +139,6 @@ class StorageController {
       private:
         friend class StorageController;
         void* m_socket;
-        std::string m_addr;
     };
 
     friend class Server;

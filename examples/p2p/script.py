@@ -12,11 +12,12 @@ run_melissa_da_study(
     total_steps=10,
     ensemble_size=30,
     procs_server=1,
-    procs_runner=1,
-    n_runners=3,
+    procs_runner=2,
+    n_runners=1,
     show_server_log=False,
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
     server_timeout=60 * 60,
-    additional_env={'MELISSA_DA_IS_P2P': '1'}
+    additional_env={'MELISSA_DA_IS_P2P': '1'},
+    config_fti_path=os.getcwd()+'/config.fti'
 )

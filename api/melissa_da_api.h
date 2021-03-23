@@ -93,6 +93,9 @@ void melissa_refresh_comm_f(MPI_Fint * comm_fortran);
 /// TODO: write doxygen!
 int melissa_commit_chunks_f(MPI_Fint * comm_fortran);
 
+
+int melissa_get_comm_f();
+
 #define add_chunk_wrapper_decl(TYPELETTER, CTYPE) \
     void melissa_add_chunk_##TYPELETTER(const int * varid, const int * index_map, \
             CTYPE * values, const size_t * count, \

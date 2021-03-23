@@ -179,11 +179,11 @@ void StorageController::store( io_state_id_t state_id ) {
 }
 
 void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_t to) {
-  if( to == IO_STORAGE_L1 && state_pool.free() == 0 ) { 
+  if( to == IO_STORAGE_L1 && state_pool.free() == 0 ) {
     server.delete_request(this);
   }
   m_io->copy(state_id, from, to);
-  if( to == IO_STORAGE_L1 ) { 
+  if( to == IO_STORAGE_L1 ) {
     state_pool++;
   }
 }
@@ -260,12 +260,12 @@ void StorageController::m_request_post() {
 
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
   io_id_t ckpt_id = to_ckpt_id( state_id );
-  
+
   m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-  
+
   // create symbolic link
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
@@ -381,13 +381,12 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
   }
 
   m_socket = zmq_socket(context, ZMQ_REQ);
-  m_addr = std::string("tcp://") + melissa_server_master_gp_node;
-  D("connect to general purpose server at %s", m_addr.c_str());
-  assert( zmq_connect(m_socket, m_addr.c_str()) );
+  D("connect to general purpose server at %s", melissa_server_master_gp_node);
+  assert( zmq_connect(m_socket, melissa_server_master_gp_node) );
 }
 
 void StorageController::Server::fini() {
-  zmq_disconnect(m_socket, m_addr.c_str());
+  zmq_close(m_socket);
 }
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {

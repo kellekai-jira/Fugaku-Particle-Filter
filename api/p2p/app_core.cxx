@@ -24,6 +24,7 @@ void melissa_io_init_f(MPI_Fint *comm_fortran)
     mpi.init( comm_c );
     storage.io_init( &mpi, &io );
     comm = mpi.comm();  // TODO: use mpi controller everywhere in api
+    *comm_fortran = MPI_Comm_c2f(comm);
 }
 
 void melissa_p2p_init(const char *field_name,
@@ -40,14 +41,16 @@ void melissa_p2p_init(const char *field_name,
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+    if (local_index_map_ != nullptr) {
     // store local_index_map to reuse in weight calculation
-    local_index_map.resize(local_vect_size);
-    local_index_map_hidden.resize(local_hidden_vect_size);
-    std::copy(local_index_map_, local_index_map_ + local_vect_size,  local_index_map.data());
-    //std::memcpy(local_index_map.data(), local_index_map_, sizeof(INDEX_MAP_T) * local_vect_size);
-    //std::memcpy(local_index_map.data(), local_index_map_, sizeof(INDEX_MAP_T) * local_vect_size);
-    std::copy(local_index_map_hidden_, local_index_map_hidden_ + local_hidden_vect_size,
-            local_index_map_hidden.data());
+        local_index_map.resize(local_vect_size);
+        local_index_map_hidden.resize(local_hidden_vect_size);
+        std::copy(local_index_map_, local_index_map_ + local_vect_size,  local_index_map.data());
+    }
+    if (local_index_map_hidden_ != nullptr) {
+        std::copy(local_index_map_hidden_, local_index_map_hidden_ + local_hidden_vect_size,
+                local_index_map_hidden.data());
+    }
 
     // there is no real PHASE_INIT in p2p since no configuration messages need to be
     // exchanged at the beginning
@@ -63,6 +66,7 @@ void melissa_p2p_init(const char *field_name,
     {
         char * melissa_server_master_node = getenv(
             "MELISSA_SERVER_MASTER_NODE");
+
         if (! melissa_server_master_node) {
             L(
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
@@ -71,9 +75,8 @@ void melissa_p2p_init(const char *field_name,
 
         // Refactor: put all sockets in a class
         job_socket = zmq_socket(context, ZMQ_REQ);
-        std::string addr = std::string("tcp://") + melissa_server_master_node;
-        D("connect to job request server at %s", addr);
-        int req = zmq_connect(job_socket, addr.c_str());
+        D("connect to job request server at %s", melissa_server_master_node);
+        int req = zmq_connect(job_socket, melissa_server_master_node);
         assert(req == 0);
     }
 }
