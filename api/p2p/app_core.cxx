@@ -93,7 +93,7 @@ double calculate_weight()
 void push_weight_to_head(double weight)
 {
     static mpi_request_t req;
-    req.wait();  // be sure that there is nothing else in the mpi send queue
+    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
 
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
