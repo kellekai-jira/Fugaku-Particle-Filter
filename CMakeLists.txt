@@ -131,6 +131,8 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR}/common)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/api)
 include_directories ("${PROJECT_BINARY_DIR}/include")
 
+include_directories(${CMAKE_BINARY_DIR}/common/protocol)
+
 # pdaf-core is not in the f2008 standard
 #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=f95")
 add_subdirectory(pdaf-core)

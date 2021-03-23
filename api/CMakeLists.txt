@@ -19,21 +19,14 @@ file(GLOB
      p2p/StorageController/*.cxx
      )
 
- MESSAGE("API contains:
-     ${ALL_API}
-     ${ALL_P2P}
-     ${ALL_STORAGE_CONTROLLER}"
-     )
-
  add_library(melissa_da_api SHARED
      ${ALL_API}
      ${ALL_P2P}
      ${ALL_STORAGE_CONTROLLER}
-    "../../server-p2p/messages/cpp/control_messages.pb.cc"
-    $<TARGET_OBJECTS:melissa_common>)
+    $<TARGET_OBJECTS:melissa_common>
+    $<TARGET_OBJECTS:melissa_protocol>)
 
-# TODO add lib dependencie -lprotobuf
-target_link_libraries(melissa_da_api protobuf)
+#target_link_libraries(melissa_da_api melissa_protocol)
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)

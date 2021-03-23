@@ -1,5 +1,5 @@
-#ifndef MESSAGES_H_
-#define MESSAGES_H_
+#ifndef _MESSAGES_H_
+#define _MESSAGES_H_
 
 enum ConfigurationMessageType
 {

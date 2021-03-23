@@ -13,7 +13,7 @@
 #include "helpers.h"
 #include "ZeroMQ.h"
 
-#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
+#include "p2p.pb.h"
 
 #define IO_PROBE( tag, func ) do { if( storage.m_io->probe( tag ) ) {func; return;} } while(0)
 

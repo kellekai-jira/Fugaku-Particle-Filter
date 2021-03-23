@@ -1,6 +1,6 @@
 #include "app_core.h"
 #include "StorageController/helpers.h"
-#include "../../server-p2p/messages/cpp/control_messages.pb.h"
+#include "p2p.pb.h"
 
 #include "api_common.h"
 #include "StorageController/fti_controller.hpp"

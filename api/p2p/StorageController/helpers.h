@@ -1,7 +1,7 @@
 #ifndef _HELPERS_H_
 #define _HELPERS_H_
 
-#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
+#include "p2p.pb.h"
 #include "ZeroMQ.h"
 
 inline void send_message(void * socket, const ::melissa_p2p::Message &m, int flags = 0) {

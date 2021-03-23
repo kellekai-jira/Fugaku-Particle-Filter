@@ -13,6 +13,6 @@ on ubuntu
 Just in case you want to compile this using protobuf:
 
   mkdir -p cpp py
-  protoc control_messages.proto --python_out=py --cpp_out=cpp
+  protoc p2p.proto --python_out=py --cpp_out=cpp
 
 

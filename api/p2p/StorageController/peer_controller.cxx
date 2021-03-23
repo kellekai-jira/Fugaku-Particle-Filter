@@ -1,5 +1,5 @@
 #include "peer_controller.hpp"
-#include "../../../server-p2p/messages/cpp/control_messages.pb.h"
+#include "p2p.pb.h"
 
 #include "helpers.h"
 
