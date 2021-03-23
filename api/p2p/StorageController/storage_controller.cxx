@@ -33,6 +33,7 @@ void StorageController::io_init( MpiController* mpi, IoController* io ) {
   m_io->init_io(m_mpi);
 
   m_io->init_core();
+
 }
 
 void StorageController::init( double capacity_dp, double state_size_dp ) {
@@ -153,11 +154,11 @@ int StorageController::update( io_id_t id, void* buffer, size_t size ) {
   m_io->update(id, buffer, size);
 }
 
-void StorageController::load( io_state_id_t state ) {
+void StorageController::load( io_state_id_t state_id ) {
   if( m_worker_thread ) {
-    return m_load_head( state );
+    return m_load_head( state_id );
   } else {
-    return m_load_user( state );
+    return m_load_user( state_id );
   }
 }
 
@@ -178,7 +179,13 @@ void StorageController::store( io_state_id_t state_id ) {
 }
 
 void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_t to) {
+  if( to == IO_STORAGE_L1 && state_pool.free() == 0 ) { 
+    server.delete_request(this);
+  }
   m_io->copy(state_id, from, to);
+  if( to == IO_STORAGE_L1 ) { 
+    state_pool++;
+  }
 }
 
 void StorageController::m_pull_head( io_state_id_t state_id ) {
@@ -193,8 +200,9 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
     sleep(2);
     int id, t;
     m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
-    m_known_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   }
+  m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
+  assert( m_io->is_local( state_id ) && "state should be local now!" );
   state_pool++;
 }
 
@@ -252,16 +260,18 @@ void StorageController::m_request_post() {
 
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
   io_id_t ckpt_id = to_ckpt_id( state_id );
-  m_known_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-
+  
   m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
-  // increase state pool occupation
-  state_pool++;
-
+  m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
+  m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
+  
   // create symbolic link
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
+
+  // increase local state pool
+  state_pool++;
 
   // ask if something to prefetch
   server.prefetch_request( this );
@@ -321,7 +331,6 @@ void StorageController::m_request_fini() {
 //======================================================================
 
 void StorageController::StatePool::init( size_t capacity, size_t slot_size ) {
-  std::cout << "storage capacity [slots]: " << capacity << std::endl;
   m_capacity = capacity;
   m_slot_size = slot_size;
 }
@@ -383,7 +392,8 @@ void StorageController::Server::fini() {
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {
 
-
+  // TODO server needs to assure that the minimum storage requirements
+  // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
   Message request;
 
   for( const auto& pair : storage->m_cached_states ) {
@@ -407,6 +417,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   auto dump_states = response.prefetch_response().dump_states();
   for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
     storage->m_io->remove( { it->t(), it->id() }, IO_STORAGE_L1 );
+    storage->state_pool--;
   }
 
 }
@@ -430,6 +441,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   io_state_id_t state_id( pull_state.t(), pull_state.id() );
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
+  storage->state_pool--;
 
 }
 

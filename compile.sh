@@ -35,6 +35,31 @@ then
         cmake .. \
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_INSTALL_PREFIX=install
+elif [ "$(hostname)" == "linux-rol5" ];
+then
+    #cmake .. -DZeroMQ_DIR=$HOME/workspace/melissa/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install
+if [ "$MELISSA_PROFILING" == "" ];
+then
+    cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/$USER/opt/HDF5/GCC/1.10.5 \
+     -DWITH_FTI_THREADS=ON \
+     -DREPORT_TIMING_ALL_RANKS=ON
+    #cmake .. -DWITH_FTI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
+     #-DREPORT_TIMING_ALL_RANKS=ON
+else
+    F90="wrapper-f90.sh"
+    CC="wrapper-cc.sh"
+    CXX="wrapper-cxx.sh"
+
+    #F90=scorep-gfortran
+    #CC=scorep-gcc
+    #CXX=scorep-g++
+    #make SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--user" SCOREP_WRAPPER_COMPILER_FLAGS="-g –O2"
+    cd ..
+    export PATH="$PWD/profiling:$PATH"
+    cd build
+    cmake .. -DINSTALL_FTI=ON -DWITH_FTI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/kellekai/opt/HDF5/GCC/1.10.5 \
+     -DWITH_FTI_THREADS=ON -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_C_COMPILER="$CC" -DCMAKE_Fortran_COMPILER="$F90"
+fi
 else
     # juwels...
     if [ "$MELISSA_PROFILING" == "" ];

@@ -35,14 +35,9 @@ class StorageController {
     void init( double capacity, double state_size );
     void fini();
 
-    // CALLBACK FOR FTI HEADS
-    static void callback();
-
     // API
     void load( io_state_id_t state );
-    void pull( io_state_id_t state_id );
     void store( io_state_id_t state_id );
-    void copy( io_state_id_t state_id, io_level_t from, io_level_t to );
     int protect( void* buffer, size_t size, io_type_t );
     int update( io_id_t id, void* buffer, size_t size );
 
@@ -50,6 +45,12 @@ class StorageController {
     void m_create_symlink( io_state_id_t state_id );
 
   private:
+    
+    // CALLBACK FOR FTI HEADS
+    static void callback();
+    
+    void pull( io_state_id_t state_id );
+    void copy( io_state_id_t state_id, io_level_t from, io_level_t to );
 
     void m_push_weight_to_server( const Message & m );
 
@@ -94,7 +95,7 @@ class StorageController {
     int m_runner_id;
     int m_cycle;
 
-    std::map<io_id_t,io_state_id_t> m_known_states;
+    std::map<io_id_t,io_state_id_t> m_ckpted_states;
     std::map<io_id_t,io_state_id_t> m_cached_states;
 
     bool m_worker_thread;
