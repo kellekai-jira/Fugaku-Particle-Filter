@@ -4,7 +4,7 @@ import sys
 import random
 import time
 import zmq
-import control_messages_pb2 as cm
+import p2p_pb2 as cm
 import numpy as np
 
 # Configuration:

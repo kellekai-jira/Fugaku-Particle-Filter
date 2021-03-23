@@ -17,6 +17,10 @@ set_target_properties(melissa_protocol PROPERTIES LINKER_LANGUAGE CXX)
 
 # Install python library
 protobuf_generate_python(PROTO_PY p2p.proto)
+message("python protobuf: ${PROTO_PY}")
+
+add_custom_target(melissa_protocol_python ALL
+    DEPENDS ${PROTO_PY})
 
 install(FILES ${PROTO_PY}
  DESTINATION share/melissa-da/python)
