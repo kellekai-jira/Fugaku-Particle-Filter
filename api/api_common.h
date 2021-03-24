@@ -22,7 +22,6 @@
 // zmq context:
 // TODO: push into Singleton or something comparable
 extern void* context;
-extern int runner_id;
 
 extern void* job_req_socket;
 extern void* weight_push_socket;

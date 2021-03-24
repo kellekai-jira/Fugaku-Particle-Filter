@@ -104,7 +104,7 @@ PeerController::~PeerController()
 
 bool PeerController::mirror( io_state_id_t state_id )
 {
-    printf("Performing dns request\n");
+    printf("Runner %d Performing dns request\n", runner_id);
 
     ::melissa_p2p::Message dns_req;
     // get friendly head rank of the same rank...

@@ -20,11 +20,16 @@ int fti_protect_id;
 
 MPI_Fint melissa_io_init_f(const MPI_Fint *comm_fortran)
 {
+    runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+    printf("Hello! I'm runner %d\n", runner_id);
+
     // TODO: only do this if is_p2p() !
     MPI_Comm comm_c = MPI_Comm_f2c(*comm_fortran);
     mpi.init( comm_c );
     storage.io_init( &mpi, &io );
     comm = mpi.comm();  // TODO: use mpi controller everywhere in api
+
+
     return MPI_Comm_c2f(comm);
 }
 
