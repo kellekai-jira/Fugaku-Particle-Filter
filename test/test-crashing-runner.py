@@ -91,7 +91,8 @@ print("RunnerTester Thread ended, now terminating study...")
 study.terminate()
 
 assert rt.remove_runners_called == True
-assert rt.runners == N_RUNNERS  # check if runners were restarted!
+# check if runners were restarted!
+assert rt.runners == N_RUNNERS or (rt.runners < rt.runner_max and rt.runners > N_RUNNERS)
 assert rt.iterations_after_runners >= 3*PROCS_SERVER
 assert rt.iterations_after_kills >= 3*PROCS_SERVER
 

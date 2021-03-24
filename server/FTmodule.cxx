@@ -9,7 +9,7 @@ void FTmodule::init( MpiManager & mpi, int & epoch_counter )
     m_checkpointing = false;
     id_check.clear();
     FTI_Init( FTI_CONFIG, mpi.comm() );
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
     MPI_Comm_dup( FTI_COMM_WORLD, &m_fti_comm_dup );
     mpi.register_comm( "fti_comm_dup", m_fti_comm_dup );
     mpi.set_comm( "fti_comm_dup" );
@@ -92,7 +92,7 @@ void FTmodule::store_subset( std::unique_ptr<Field> & field, int state_id, int r
         std::string key(field->name);
         key += "_" + std::to_string( state_id ) + "_" + std::to_string( runner_rank );
         if( id_check.find(key) == id_check.end() ) {
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
             FTsched.submit( FTI_AddVarICP, id_map[key] );
 #else
             FTI_AddVarICP( id_map[key] );
@@ -117,7 +117,7 @@ void FTmodule::initCP( int epoch )
 
 void FTmodule::flushCP( void )
 {
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
     if( m_checkpointing ) {
         FTsched.synchronize();
         FTsched.submit( FTI_FinalizeICP );
@@ -128,7 +128,7 @@ void FTmodule::flushCP( void )
 void FTmodule::finalizeCP( void )
 {
     if( m_checkpointing ) {
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
         FTsched.synchronize();
 #else
         FTI_FinalizeICP();

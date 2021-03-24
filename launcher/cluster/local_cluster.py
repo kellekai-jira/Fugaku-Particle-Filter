@@ -118,17 +118,8 @@ class LocalCluster(cluster.Cluster):
             print('no job found with id {:d}'.format(job_id), file=sys.stderr)
             return
 
-        print("terminating {:d}".format(job_id))
-
         job = self.jobs[job_id]
         job.terminate()
-        print("waiting for job {:d}".format(job_id))
-
-        # Since sigterm produces deadlocks as sig term sent to the runner ranks won't
-        # stop them for strange reasons (probably they get stuck in the zmq thread)
-        # we kill the mpiexec thread. Unfortunately the runner processes will zombie
-        # around that way. They are cleaned up when CleanUp is called.
-        job.kill()
         job.wait()
         del self.jobs[job_id]
 
@@ -148,26 +139,12 @@ class LocalCluster(cluster.Cluster):
                 msg = 'pid={:d}: LocalCluster terminating process {:d}'
                 print(msg.format(pid, job.pid))
                 job.terminate()
-                job.kill()
                 job.wait()
 
         self.jobs = {}
-
-        # Since zombie processes might keep running since sigterm is not propagated by
-        # mpiexec correctly, we need to rely on this nasty trick:
-        if executable is not None:
-            os.system("pkill -9 {:s}".format(executable))
-
-        os.system("pkill -9 melissa_da_server")
-
-
-        # even after this we still see zombie processes. Now we react with an extern
-        # kill script:
-        LocalCluster.clean_up_test()
 
     @staticmethod
     def clean_up_test():
         """ an extremely rigorous method of cleanup to fix some process kill issues in the
         debian CI"""
-        os.system('melissa-da-cleanup-local.sh')
-
+        pass

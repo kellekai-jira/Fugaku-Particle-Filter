@@ -1,4 +1,4 @@
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
 
 #include "FTthreadManager.h"
 #include <iostream>

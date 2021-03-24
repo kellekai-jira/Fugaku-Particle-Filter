@@ -13,5 +13,5 @@ then
         sleep 1
     done
 else
-    simulation1
+    exec simulation1
 fi

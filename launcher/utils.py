@@ -60,7 +60,7 @@ def logger_function(loglevel):
 
 
 def defer(f):
-    t = threading.Thread(target=f)
+    t = threading.Thread(daemon=True, target=f)
     t.start()
     return t
 

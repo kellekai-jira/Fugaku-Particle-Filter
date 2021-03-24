@@ -7,7 +7,7 @@
 #include "Field.h"
 #include <map>
 #include <memory>
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
 #include "FTthreadManager.h"
 #endif
 #include "MpiManager.h"
@@ -29,7 +29,7 @@ class FTmodule {
         
         MPI_Comm m_fti_comm;
         MPI_Comm m_fti_comm_dup;
-#ifdef WITH_FTI_THREADS
+#if WITH_FTI_THREADS
         FTthreadManager FTsched;
 #endif
         bool m_checkpointing;

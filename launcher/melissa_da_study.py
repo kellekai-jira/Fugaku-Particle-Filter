@@ -97,29 +97,15 @@ def run_melissa_da_study(
     EXECUTABLE = runner_cmd.split(' ')[0].split('/')[-1]
 
 
-    cluster.CleanUp(EXECUTABLE)
-
-
 
 
 
     running = True
-# dirty but convenient to kill stuff...
 
     def signal_handler(sig, frame):
         debug("Received Signal %d, Cleaning up now!" % sig)
         nonlocal running
         running = False
-
-        if sig == signal.SIGTERM:
-            debug("SIGTERM: trying to join state_refresher...")
-            state_refresher.join()
-            debug("State refresher joined")
-
-
-        cluster.CleanUp(EXECUTABLE)
-
-        sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -136,11 +122,6 @@ def run_melissa_da_study(
 
         def check_state(self):
             return self.cstate
-
-        def __del__(self):
-            if hasattr(self, 'job_id'):
-                debug("Killing Job job_id=%s" % str(self.job_id))
-                cluster.KillJob(self.job_id)
 
     Job.jobs = []
 
