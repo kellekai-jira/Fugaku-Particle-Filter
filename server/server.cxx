@@ -337,13 +337,13 @@ SubTaskList finished_sub_tasks; // TODO: why do we need to store this? actually
 void register_runner_id(
     zmq::Message& msg, void* configuration_socket,
     char* data_response_port_names) {
-    assert(zmq_msg_size(&msg) == 2 * sizeof(int));
+    assert(zmq::size(msg) == 2 * sizeof(int));
 
     static bool register_field = true;
 
     int int_buffer[] = {-1, -1};
 
-    std::memcpy(int_buffer, zmq_msg_data(&msg), zmq_msg_size(&msg));
+    std::memcpy(int_buffer, zmq::data(msg), zmq::size(msg));
 
     auto runner_id = int_buffer[1];
     auto found = std::find_if(
@@ -393,7 +393,7 @@ void register_field(zmq::Message& field_msg, void* configuration_socket) {
     // we accept new fields only if in initialization phase.
     assert(phase == PHASE_INIT);
     assert(
-        zmq_msg_size(&field_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
+        zmq::size(field_msg) == 4 * sizeof(int) + MPI_MAX_PROCESSOR_NAME);
     assert(field == nullptr); // we accept only one field for now.
 
     int buf[4] = {0};
