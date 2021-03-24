@@ -72,9 +72,9 @@ void PeerController::handle_requests()
 }
 
 
-PeerController::PeerController( IoController* io ) : m_io(io)
+PeerController::PeerController( IoController* io, void* zmq_context ) : m_io(io)
 {
-
+    m_zmq_context = zmq_context; 
     port = 3131;
     char tmp[MPI_MAX_PROCESSOR_NAME];
     melissa_get_node_name(tmp, MPI_MAX_PROCESSOR_NAME);
@@ -82,10 +82,10 @@ PeerController::PeerController( IoController* io ) : m_io(io)
 
     std::string addr = std::string(hostname) + ":" + std::to_string(port);
 
-    state_server_socket = zmq_socket(context, ZMQ_REP);
+    state_server_socket = zmq_socket(m_zmq_context, ZMQ_REP);
     zmq_bind(state_server_socket, addr.c_str());
 
-    state_request_socket = zmq_socket(context, ZMQ_REQ);
+    state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 }
 
 PeerController::~PeerController()
@@ -119,7 +119,8 @@ bool PeerController::mirror( io_state_id_t state_id )
         std::string addr = dns_reply.runner_response().sockets(i).node_name() + ':' +
             std::to_string(dns_reply.runner_response().sockets(i).port());
 
-        zmq_connect(state_request_socket, addr.c_str());
+        std::string port_name = fix_port_name(addr.c_str());
+        assert( zmq_connect(state_request_socket, port_name.c_str()) == 0 );
 
         send_message(state_request_socket, state_request);
         auto m = receive_message(state_request_socket);

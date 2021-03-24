@@ -27,8 +27,6 @@ void StorageController::io_init( MpiController* mpi, IoController* io ) {
   m_io = io;
   m_io->register_callback( StorageController::callback );
 
-  m_peer = new PeerController( io );
-
   // heads dont return from init_io !!!
   m_io->init_io(m_mpi);
 
@@ -69,6 +67,9 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
+    
+    storage.m_zmq_context = zmq_ctx_new();
+    storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context );
     storage.server.init();
     storage.m_io->init_core();
     init = true;
@@ -380,9 +381,9 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
     assert(false);
   }
 
-  m_socket = zmq_socket(context, ZMQ_REQ);
-  D("connect to general purpose server at %s", melissa_server_master_gp_node);
-  assert( zmq_connect(m_socket, melissa_server_master_gp_node) );
+  m_socket = zmq_socket(storage.m_zmq_context, ZMQ_REQ);
+  std::string port_name = fix_port_name(melissa_server_master_gp_node);
+  assert( zmq_connect(m_socket, port_name.c_str()) == 0 );
 }
 
 void StorageController::Server::fini() {

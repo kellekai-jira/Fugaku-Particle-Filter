@@ -25,8 +25,7 @@ MPI_Fint melissa_io_init_f(const MPI_Fint *comm_fortran)
     mpi.init( comm_c );
     storage.io_init( &mpi, &io );
     comm = mpi.comm();  // TODO: use mpi controller everywhere in api
-    //*comm_fortran = MPI_Comm_c2f(comm);
-    return *comm_fortran;
+    return MPI_Comm_c2f(comm);
 }
 
 void melissa_p2p_init(const char *field_name,
@@ -77,8 +76,9 @@ void melissa_p2p_init(const char *field_name,
 
         // Refactor: put all sockets in a class
         job_socket = zmq_socket(context, ZMQ_REQ);
-        D("connect to job request server at %s", melissa_server_master_node);
-        int req = zmq_connect(job_socket, melissa_server_master_node);
+        std::string port_name = fix_port_name(melissa_server_master_node);
+        D("connect to job request server at %s", port_name.c_str());
+        int req = zmq_connect(job_socket, port_name.c_str());
         assert(req == 0);
     }
 }
@@ -95,7 +95,7 @@ double calculate_weight()
 void push_weight_to_head(double weight)
 {
     static mpi_request_t req;
-//    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
+    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
 
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
@@ -106,10 +106,6 @@ void push_weight_to_head(double weight)
     char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
     m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
-    if( io.m_dict_bool["master_local"] ) {
-      req.wait();  // be sure that there is nothing else in the mpi send queue
-      std::cout << "CALLED SEND" << std::endl;
-    }
 
 }
 

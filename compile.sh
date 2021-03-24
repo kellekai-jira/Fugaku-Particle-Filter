@@ -38,7 +38,7 @@ then
           -DCMAKE_INSTALL_PREFIX=install
 elif [ "$(hostname)" == "linux-rol5" ];
 then
-    #cmake .. -DZeroMQ_DIR=$HOME/workspace/melissa/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install
+    #cmake .. -DZeroMQ_DIR=$HOME/workspace/melissa/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DMPIEX....
 if [ "$MELISSA_PROFILING" == "" ];
 then
     cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/$USER/opt/HDF5/GCC/1.10.5 \

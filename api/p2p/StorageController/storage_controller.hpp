@@ -92,6 +92,7 @@ class StorageController {
     PeerController* m_peer;
     MpiController* m_mpi;
 
+    void* m_zmq_context;
     int m_runner_id;
     int m_cycle;
 
