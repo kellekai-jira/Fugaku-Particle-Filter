@@ -570,12 +570,8 @@ int melissa_is_runner() {
 }
 
 
-
-void melissa_refresh_comm_f(MPI_Fint * comm_fortran) {
-    *comm_fortran = MPI_Comm_c2f(comm);
-}
-
 int melissa_get_comm_f() {
+    assert(0 && "Deprecated!");
     int res =  MPI_Comm_c2f(comm);
     D("melissa_get_comm in c: %d", res);
     return res;

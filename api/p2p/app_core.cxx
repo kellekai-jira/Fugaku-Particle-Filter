@@ -18,13 +18,15 @@ FtiController io;
 MpiController mpi;
 int fti_protect_id;
 
-void melissa_io_init_f(MPI_Fint *comm_fortran)
+MPI_Fint melissa_io_init_f(const MPI_Fint *comm_fortran)
 {
+    // TODO: only do this if is_p2p() !
     MPI_Comm comm_c = MPI_Comm_f2c(*comm_fortran);
     mpi.init( comm_c );
     storage.io_init( &mpi, &io );
     comm = mpi.comm();  // TODO: use mpi controller everywhere in api
-    *comm_fortran = MPI_Comm_c2f(comm);
+    //*comm_fortran = MPI_Comm_c2f(comm);
+    return *comm_fortran;
 }
 
 void melissa_p2p_init(const char *field_name,
