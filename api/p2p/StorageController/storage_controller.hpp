@@ -127,6 +127,8 @@ class StorageController {
     friend class StatePool;
 
     StatePool state_pool;
+
+  public:  // public so peer_controller can access it. feel free to friend!
 //----------------------------------------------------------------------------------------
 //  SERVER CONNECTION
 //----------------------------------------------------------------------------------------
@@ -137,13 +139,12 @@ class StorageController {
         void prefetch_request( StorageController* storage );
         void delete_request( StorageController* storage );
         void fini();
-      private:
-        friend class StorageController;
         void* m_socket;
+      //private:
+        //friend class StorageController;
     };
 
-    friend class Server;
-
+    //friend class Server;
     Server server;
 
 };

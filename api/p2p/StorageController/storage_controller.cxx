@@ -54,6 +54,8 @@ void StorageController::fini() {
   m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   m_mpi->barrier("fti_comm_world");
   m_io->fini();
+
+  zmq_ctx_destroy(m_zmq_context);
 }
 
 
@@ -67,8 +69,8 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
-    
-    storage.m_zmq_context = zmq_ctx_new();
+
+    storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
     storage.server.init();
     storage.m_io->init_core();
     std::vector<std::string> files;
@@ -101,7 +103,7 @@ void StorageController::callback() {
     size_t prefetch_capacity = capacity - minimum_storage_reservation;
 
     storage.state_pool.init( capacity, state_size_node );
-    
+
     storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
 
@@ -137,7 +139,7 @@ void StorageController::callback() {
   // EVENT
   // Bob check and serve peer requests
   storage.m_request_peer();
-  
+
   // app core may tell the head to finish application. This will end ina call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 

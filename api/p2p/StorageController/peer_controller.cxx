@@ -16,6 +16,8 @@
 
 #include "mpi_controller.hpp"
 
+#include "storage_controller_impl.hpp"
+
 
 void PeerController::handle_requests()
 {
@@ -76,17 +78,17 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
 {
     m_io = io;
     m_mpi = mpi;
-    m_zmq_context = zmq_context; 
+    m_zmq_context = zmq_context;
     port = 3131;
     char tmp[MPI_MAX_PROCESSOR_NAME];
     melissa_get_node_name(tmp, MPI_MAX_PROCESSOR_NAME);
-    
+
     hostname = tmp;
 
-    std::string addr = std::string("tcp://") + tmp + ":" + std::to_string(port);
+    std::string addr = std::string("tcp://") + hostname + ":" + std::to_string(port);
 
     std::string port_name = fix_port_name(addr.c_str());
-  
+
     state_server_socket = zmq_socket(m_zmq_context, ZMQ_REP);
     zmq_bind(state_server_socket, port_name.c_str());
 
@@ -102,20 +104,24 @@ PeerController::~PeerController()
 
 bool PeerController::mirror( io_state_id_t state_id )
 {
+    printf("Performing dns request\n");
+
     ::melissa_p2p::Message dns_req;
     // get friendly head rank of the same rank...
     dns_req.mutable_runner_request()->set_head_rank(m_mpi->rank());
     dns_req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
     dns_req.mutable_runner_request()->mutable_socket()->set_port(port);
     dns_req.set_runner_id(runner_id);
-    send_message(state_request_socket, dns_req);
+    send_message(storage.server.m_socket, dns_req);
 
-    auto dns_reply = receive_message(state_request_socket);
+    auto dns_reply = receive_message(storage.server.m_socket);
 
     ::melissa_p2p::Message state_request;
     state_request.set_runner_id(runner_id);
     state_request.mutable_state_request()->mutable_state_id()->set_t(state_id.t);
     state_request.mutable_state_request()->mutable_state_id()->set_id(state_id.id);
+
+    printf("retrieved %d peers to try from...\n", dns_reply.runner_response().sockets_size());
 
     bool found = false;
     // go through list of runners (that is shuffled/ put in a good order by the server)
@@ -125,12 +131,15 @@ bool PeerController::mirror( io_state_id_t state_id )
             std::to_string(dns_reply.runner_response().sockets(i).port());
 
         std::string port_name = fix_port_name(addr.c_str());
+        printf("Try to retrieve State %d,%d at %s\n", state_id.t, state_id.id, port_name.c_str());
+
         assert( zmq_connect(state_request_socket, port_name.c_str()) == 0 );
 
         send_message(state_request_socket, state_request);
         auto m = receive_message(state_request_socket);
         if (m.state_response().has_state_id())
         {
+            printf("Found it!\n");
             found = true;
             // FIXME: assert that stateid is the one requested!
 
@@ -166,7 +175,7 @@ bool PeerController::mirror( io_state_id_t state_id )
         }
 
 
-        zmq_disconnect(state_request_socket, addr.c_str());
+        zmq_disconnect(state_request_socket, port_name.c_str());
         if (found) {
             break;
         }
