@@ -7,7 +7,7 @@ clean_old_stats()
 
 
 run_melissa_da_study(
-    server_cmd='python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
+    server_cmd='xterm_gdb python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
     runner_cmd='xterm_gdb python3 -u %s/runner.py' % os.getcwd(),
     total_steps=10,
     ensemble_size=30,

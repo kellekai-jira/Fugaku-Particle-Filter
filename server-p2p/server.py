@@ -346,7 +346,7 @@ def hanlde_job_requests(launcher):
 
         runner_id = msg.runner_id
 
-        launcher.notify_runner_connect(msg.job_request.runner_id)
+        launcher.notify_runner_connect(runner_id)
 
         the_job = random.choice(list(unscheduled_jobs))
 
