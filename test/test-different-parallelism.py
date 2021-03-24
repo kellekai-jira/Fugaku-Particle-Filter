@@ -18,8 +18,8 @@ class RunnerWaiter(FifoThread):
     def on_timing_event(self, what, parameter):
         global N_RUNNERS, PROCS_SERVER
 
-        # if at least all runners are up wait 8 iterations and crash server
-        if self.runners >= N_RUNNERS:
+        # if all runners are up wait 8 iterations and crash server
+        if self.runners == N_RUNNERS:
             if what == Event.STOP_ITERATION:
                 self.iterations_after_runners += 1
                 if self.iterations_after_runners == 8*PROCS_SERVER:  # every server proc is sending the stop iteration event...
@@ -45,7 +45,11 @@ random.shuffle(cases)
 cases = cases[:3]
 
 for i, case in enumerate(cases):
-    PROCS_SERVER, procs_runner, n_runners = case
+    procs_server, procs_runner, n_runners = case
+
+    # export variables from the local scope
+    PROCS_SERVER = procs_server
+    N_RUNNERS = n_runners
 
     print(os.getcwd())
 
@@ -58,14 +62,12 @@ for i, case in enumerate(cases):
     if os.path.isfile('STATS/server.run-information.csv'):
         os.remove('STATS/server.run-information.csv')
     rw = RunnerWaiter()
-#os.environ["MELISSA_DA_TEST_FIFO"] = fifo_name_runner
     rw.start()
 
 
-# override some study parameters:
+    # override some study parameters:
     ase = {}
     ase["MELISSA_DA_TEST_FIFO"] = rw.fifo_name_server
-    N_RUNNERS = mr
 
     def run():
         run_melissa_da_study(
@@ -91,8 +93,11 @@ for i, case in enumerate(cases):
     study.terminate()
 
 
-    assert rw.iterations_after_runners >= 8 * PROCS_SERVER  # did not kill server too early
-    assert rw.runners >= N_RUNNERS
+    # did not kill server too early
+    assert rw.iterations_after_runners >= 8 * PROCS_SERVER
+
+    # check that there was no other runner connecting for some strange reasons later on
+    assert rw.runners == N_RUNNERS
 
 
     # runner 0 does the output.
