@@ -80,12 +80,15 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
     port = 3131;
     char tmp[MPI_MAX_PROCESSOR_NAME];
     melissa_get_node_name(tmp, MPI_MAX_PROCESSOR_NAME);
+    
     hostname = tmp;
 
-    std::string addr = std::string(hostname) + ":" + std::to_string(port);
+    std::string addr = std::string("tcp://") + tmp + ":" + std::to_string(port);
 
+    std::string port_name = fix_port_name(addr.c_str());
+  
     state_server_socket = zmq_socket(m_zmq_context, ZMQ_REP);
-    zmq_bind(state_server_socket, addr.c_str());
+    zmq_bind(state_server_socket, port_name.c_str());
 
     state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 }
