@@ -390,6 +390,10 @@ class LauncherConnection:
         self.update_launcher_due_date()
         self.linger = 10000
         self.launcher_node_name = launcher_node_name
+
+        if node_name == self.launcher_node_name:
+            self.launcher_node_name = '127.0.0.1'
+
         self.text_pull_port = 5556
         self.text_push_port = 5555
         self.text_request_port = 5554
