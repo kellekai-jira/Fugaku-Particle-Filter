@@ -158,7 +158,6 @@ def run_melissa_da_study(
             self.last_msg_from = time.time()
             Server.starts += 1
             assert Server.starts < 2 or melissa_with_fti  # can't restart server without fti!
-            print("SERVER STARTS", flush=True)
 
             if Server.starts > MAX_SERVER_STARTS:
                 print('Tail of server logs for diagnostics:')
@@ -170,8 +169,8 @@ def run_melissa_da_study(
             options = [total_steps, ensemble_size, assimilator_type,
                                runner_timeout, server_slowdown_factor]
 
-            self.node_name = get_node_name()
-            options.append(self.node_name)
+            launcher_node_name = get_node_name()
+            options.append(launcher_node_name)
 
             debug('filling: %s' % str(options))
             cmd_opt = '%d %d %d %d %d %s' % tuple(options)
@@ -203,7 +202,7 @@ def run_melissa_da_study(
     class Runner(Job):
         def __init__(self, runner_id, server_node_name):
             #self.runner_id = runner_id
-            print("RUNNER STARTS", flush=True)
+
             precommand = 'xterm_gdb'
             precommand = ''
 
@@ -263,9 +262,7 @@ def run_melissa_da_study(
 
         if not server:  # No server. Start one!
             server = Server()
-            debug('Starting Server')
         if server.state == STATE_WAITING:
-            print("SERVER WAITING", flush=True)
             if server.check_state() == STATE_RUNNING:
                 server.state = STATE_RUNNING
                 debug('Server running now!')
