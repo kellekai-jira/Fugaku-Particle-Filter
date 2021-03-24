@@ -138,15 +138,15 @@ def can_do_update_step():
 
 # Populate unscheduled jobs
 for p in range(PARTICLES):
-    jid = cm.StateId()
-    jid.t = assimilation_cycle
-    jid.id = p
+    job_id = cm.StateId()
+    job_id.t = assimilation_cycle
+    job_id.id = p
 
-    pid = cm.StateId()
-    pid.t = 0
-    pid.id = p
+    parent_id = cm.StateId()
+    parent_id.t = 0
+    parent_id.id = p
 
-    unscheduled_jobs[jid] = pid
+    unscheduled_jobs[job_id] = parent_id
 
 print('Server up now')
 
@@ -211,7 +211,7 @@ def accept_runner_request(msg):
 
 def count_runners_with_state(state_id):
     # Number of runners that have the state in their memory (or are about to get it)
-    return len(filter(lambda x: state_id in state_cache[x], state_cache))
+    return len(list(filter(lambda x: state_id in state_cache[x], state_cache)))
 
 def accept_delete(msg):
     runner_id = msg.runner_id
@@ -224,7 +224,7 @@ def accept_delete(msg):
                 state_cache[runner_id]) )
 
     reply = cm.Message()
-    reply.delete_response
+    reply.delete_response.SetInParent()
     # Try to delete something with importance < 1 --> must be stored on other resource too.
     if sorted_importance[0][0] < 1:
         reply.delete_response.to_delete = sorted_importance[0][1]
@@ -251,18 +251,18 @@ def calculate_parent_state_importance(parent_state_id):
     # Calculate the importance of a parent state id
 
     # Number of unscheduled tasks dependent on it
-    d = len(filter(lambda x: unscheduled_jobs[x] == parent_state_id, unscheduled_jobs))
+    d = len(list(filter(lambda x: unscheduled_jobs[x] == parent_state_id, unscheduled_jobs)))
 
     return d / count_runners_with_state(parent_state_id)
 
 
 def calculate_runner_importance(runner_id):
     # Cumulate the importance of all states stored on the runner
-    return np.sum(map(calculate_parent_state_importance, state_cache_with_prefetch[runner_id]))
+    return np.sum(list(map(calculate_parent_state_importance, state_cache_with_prefetch[runner_id])))
 
 def calculate_mean_importance():
     # Get the mean importance over all runners
-    return np.mean(map(calculate_runner_importance, state_cache_with_prefetch))
+    return np.mean(list(map(calculate_runner_importance, state_cache_with_prefetch)))
 
 def update_state_knowledge(msg, runner_id):
     # Update knowledge about state caches of runners:
@@ -279,10 +279,10 @@ def accept_prefetch(msg):
     # Figure out if this compute resource is a receiver or a sender:
     runner_importance = calculate_runner_importance(runner_id)
 
-    reply = cm.Messages
+    reply = cm.Message()
     if runner_importance >= mean_importance:
         # This is a sender. it shall not prefetch anything:
-        reply.prefetch_resonse
+        reply.prefetch_response.SetInParent()
     else:
         # This runner shall receive (prefetch) the most important state:
 
@@ -335,7 +335,7 @@ def handle_general_purpose():
             assert False
 
 
-def hanlde_job_requests(launcher):
+def hanlde_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
@@ -372,13 +372,15 @@ def hanlde_job_requests(launcher):
 
         reply = cm.Message()
 
-        reply.job_response.job = the_job
+        reply.job_response.job.CopyFrom(the_job)
 
-        reply.job_response.parent = unscheduled_jobs[the_job]
+        reply.job_response.parent.CopyFrom(unscheduled_jobs[the_job])
+
+        reply.job_response.nsteps = nsteps
 
         send_message(job_socket, reply)
 
-        running_job = (time.time() + RUNNER_TIMEOUT, msg.job_request.runner_id,
+        running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
                        unscheduled_jobs[the_job])
         print("Scheduling", running_job)
         running_jobs[the_job] = running_job
@@ -500,7 +502,7 @@ def do_update_step():
             unscheduled_jobs[jid] = parent_state_id  # TODO: maybe we need a copy?
             job_id += 1
 
-    return assimilation_cycle < CYCLES
+    return 1 if assimilation_cycle < CYCLES else 0
 
 
 def check_due_date_violations():
@@ -519,11 +521,14 @@ if __name__ == '__main__':
     node_name = get_node_name()
     launcher = LauncherConnection(context, node_name, LAUNCHER_NODE_NAME)
 
+    nsteps = 1
     while True:
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
         if can_do_update_step():
-            if not do_update_step():  # will populate unscheduled jobs
+            # will populate unscheduled jobs
+            nsteps = do_update_step()
+            if nsteps <= 0:
                 # end: tell launcher to kill everything
                 print('End!')
                 break
@@ -532,7 +537,7 @@ if __name__ == '__main__':
             # not necessary since we only answer job requests if job is there... answer_open_job_requests()
 
         if len(unscheduled_jobs) > 0:
-            hanlde_job_requests(launcher)
+            hanlde_job_requests(launcher, nsteps)
 
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():
