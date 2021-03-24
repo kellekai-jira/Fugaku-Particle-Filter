@@ -19,8 +19,8 @@ void FtiController::update( io_id_t id, void* buffer, size_t size ) {
 }
 
 void FtiController::init_io( MpiController* mpi ) {
-  m_mpi = mpi;
-  FTI_Init("config.fti", mpi->comm() );
+  this->m_mpi = mpi;
+  FTI_Init("config.fti", m_mpi->comm() );
 }
 
 void FtiController::init_core() {

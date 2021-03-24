@@ -15,7 +15,7 @@ class Peer {
 class PeerController {
   public:
 
-      PeerController( IoController* io, void* zmq_context );
+      PeerController( IoController* io, void* zmq_context, MpiController* mpi );
       ~PeerController();
 
       /// checks if somebody wants to load states from the disk
@@ -35,6 +35,7 @@ private:
       void * state_request_socket;
       
       IoController* m_io;
+      MpiController* m_mpi;
 
 };
 

@@ -72,8 +72,10 @@ void PeerController::handle_requests()
 }
 
 
-PeerController::PeerController( IoController* io, void* zmq_context ) : m_io(io)
+PeerController::PeerController( IoController* io, void* zmq_context, MpiController* mpi )
 {
+    m_io = io;
+    m_mpi = mpi;
     m_zmq_context = zmq_context; 
     port = 3131;
     char tmp[MPI_MAX_PROCESSOR_NAME];
@@ -99,7 +101,7 @@ bool PeerController::mirror( io_state_id_t state_id )
 {
     ::melissa_p2p::Message dns_req;
     // get friendly head rank of the same rank...
-    dns_req.mutable_runner_request()->set_head_rank(m_io->m_mpi->rank());
+    dns_req.mutable_runner_request()->set_head_rank(m_mpi->rank());
     dns_req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
     dns_req.mutable_runner_request()->mutable_socket()->set_port(port);
     dns_req.set_runner_id(runner_id);

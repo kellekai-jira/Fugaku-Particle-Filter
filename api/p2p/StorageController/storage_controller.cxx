@@ -69,10 +69,8 @@ void StorageController::callback() {
   if( !init ) {
     
     storage.m_zmq_context = zmq_ctx_new();
-    storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context );
     storage.server.init();
     storage.m_io->init_core();
-    init = true;
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
 
@@ -103,6 +101,9 @@ void StorageController::callback() {
     size_t prefetch_capacity = capacity - minimum_storage_reservation;
 
     storage.state_pool.init( capacity, state_size_node );
+    
+    storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
+    init = true;
 
     if(storage.m_io->m_dict_bool["master_global"]) {
       std::cout << "storage capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
