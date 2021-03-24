@@ -88,8 +88,11 @@ void FtiController::isend( const void* send_buffer, int size, io_tag_t tag, io_m
 }
 
 void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
+  static int count = 0;
   if( FTI_AmIaHead() ) {
+    std::cout << "called : " << count << " times ["<<tag<<"]" << std::endl;
     FTI_HeadRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    count++;
   } else {
     FTI_AppRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
   }

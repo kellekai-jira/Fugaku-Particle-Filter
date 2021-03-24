@@ -112,10 +112,6 @@ void StorageController::callback() {
 
   }
 
-
-  // app core may tell the head to finish application. This will end ina call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
-  IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
-
   // EVENT
   // message from alice, sent after completion of the forecast
   // containing (1) forecast state id and (2) WEIGHT.
@@ -139,6 +135,9 @@ void StorageController::callback() {
   // EVENT
   // Bob check and serve peer requests
   storage.m_request_peer();
+  
+  // app core may tell the head to finish application. This will end ina call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
+  IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 
 }
 
@@ -308,20 +307,21 @@ void StorageController::m_request_pull() {
 //======================================================================
 
 void StorageController::m_request_fini() {
+  if(m_io->m_dict_bool["master_global"]) std::cout << "head received FINALIZATION request" << std::endl;
   /// Request handled to end the Runner
   int dummy;
   m_io->recv( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
-  m_request_post();
-  while( m_io->probe( IO_TAG_PUSH ) ) {
-    if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
-    m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
-    m_io->m_state_push_requests.pop();
-  }
-  while( m_io->probe( IO_TAG_PULL ) ) {
-    if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
-    pull( m_io->m_state_pull_requests.front() );
-    m_io->m_state_pull_requests.pop();
-  }
+  //m_request_post();
+  //while( m_io->probe( IO_TAG_PUSH ) ) {
+  //  if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
+  //  m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
+  //  m_io->m_state_push_requests.pop();
+  //}
+  //while( m_io->probe( IO_TAG_PULL ) ) {
+  //  if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
+  //  pull( m_io->m_state_pull_requests.front() );
+  //  m_io->m_state_pull_requests.pop();
+  //}
   server.fini();
   m_io->send( &dummy, sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
 }

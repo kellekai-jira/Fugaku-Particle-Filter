@@ -93,7 +93,7 @@ double calculate_weight()
 void push_weight_to_head(double weight)
 {
     static mpi_request_t req;
-    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
+//    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
 
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
@@ -104,6 +104,10 @@ void push_weight_to_head(double weight)
     char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
     m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
+    if( io.m_dict_bool["master_local"] ) {
+      req.wait();  // be sure that there is nothing else in the mpi send queue
+      std::cout << "CALLED SEND" << std::endl;
+    }
 
 }
 
@@ -138,7 +142,7 @@ int melissa_p2p_expose(VEC_T *values,
     int parent_t, parent_id, job_t, job_id;
 
     // Rank 0:
-    if (mpi.comm() == 0) {
+    if (mpi.rank() == 0) {
         // 3. push weight to server
         push_weight_to_head(weight);
 
@@ -171,7 +175,6 @@ int melissa_p2p_expose(VEC_T *values,
         zmq_close(job_socket);
 
         storage.fini();
-
 
         field.current_step = -1;
         field.current_state_id = -1;

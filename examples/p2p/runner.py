@@ -61,9 +61,10 @@ import time
 
 melissa = MelissaAPI()
 
+print('Old  comm size:', MPI.COMM_WORLD.size)
+
 melissa.io_init(MPI.COMM_WORLD)
 # Melissa init
-print('Old  comm size:', MPI.COMM_WORLD.size)
 comm = MPI.COMM_WORLD.f2py(melissa.get_comm())
 print('New  comm size:', comm.size)
 
