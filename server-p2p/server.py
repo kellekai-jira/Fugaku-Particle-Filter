@@ -198,7 +198,12 @@ def accept_runner_request(msg):
 
     # generate reply:
     reply = cm.Message()
-    shuffeled_runners = random.shuffle(list(runners))
+    reply.runner_response.SetInParent()
+    print('runners:', runners)
+    print('shuffling runner list:', list(runners))
+    shuffeled_runners = list(runners)
+    # shuffle inplace
+    random.shuffle(shuffeled_runners)
     for rid in shuffeled_runners:
         if rid == runner_id:
             continue
