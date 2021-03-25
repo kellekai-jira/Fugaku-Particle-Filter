@@ -275,6 +275,21 @@ def update_state_knowledge(msg, runner_id):
     state_cache_with_prefetch[runner_id] = msg.cached_states  # fixme: probably we need a copy here!
 
 def accept_prefetch(msg):
+    #
+    # TODO [sebastian]
+    # receive prefetch capacity (currently maximum 5 states)
+    # and number of free slots. determine if it is necessary
+    # to exchange cached states by new states that are more
+    # important.
+    #
+    # proto message is:
+    #
+    #   message PrefetchRequest {
+    #       repeated StateId cached_states = 1;
+    #       uint32 capacity = 2;  // unused on server side so far.
+    #       uint32 free = 3;  // unused on server side so far.
+    #   }
+    #
     runner_id = msg.runner_id
     update_state_knowledge(msg.prefetch_request, runner_id)
 

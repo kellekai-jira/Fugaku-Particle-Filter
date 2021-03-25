@@ -89,10 +89,9 @@ void StorageController::callback() {
     // in slots
     capacity = capacity / state_size_node;
 
-    // 1 model checkpoints
-    // 2 for prefetching
+    // 2 model checkpoints
     // 1 for sending to peer (needs memory copy of ckpt file)
-    size_t minimum_storage_requirement = 4;
+    size_t minimum_storage_requirement = 3;
 
     IO_TRY( minimum_storage_requirement > capacity, false, "Insufficiant storage capacity!" );
 
@@ -100,18 +99,22 @@ void StorageController::callback() {
     // 1 for sending to peer (needs memory copy of ckpt file)
     size_t minimum_storage_reservation = 2;
 
+    capacity -= minimum_storage_reservation;
+
     size_t prefetch_capacity = capacity - minimum_storage_reservation;
 
-    storage.state_pool.init( capacity, state_size_node );
+    prefetch_capacity = (prefetch_capacity<STORAGE_MAX_PREFETCH) ? prefetch_capacity : STORAGE_MAX_PREFETCH;
+
+    storage.state_pool.init( prefetch_capacity );
 
     storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
 
     if(storage.m_io->m_dict_bool["master_global"]) {
-      std::cout << "storage capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
+      std::cout << "storage capacity [# slots]: " << capacity << std::endl;
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
-      std::cout << "prefetch capacity [# slots]: " << prefetch_capacity << std::endl;
-      std::cout << "total free slots: " << storage.state_pool.free() << std::endl;
+      std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
+      std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
     }
 
   }
@@ -273,8 +276,12 @@ void StorageController::m_request_post() {
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
 
-  // increase local state pool
-  state_pool++;
+  // if slot free, keep checkpoint. If not ask to delete a state
+  if( state_pool.free() == 0 ) {
+    server.delete_request(this);
+  } else {
+    state_pool++;
+  }
 
   // ask if something to prefetch
   server.prefetch_request( this );
@@ -334,9 +341,8 @@ void StorageController::m_request_fini() {
 //  State Pool
 //======================================================================
 
-void StorageController::StatePool::init( size_t capacity, size_t slot_size ) {
+void StorageController::StatePool::init( size_t capacity ) {
   m_capacity = capacity;
-  m_slot_size = slot_size;
 }
 
 // prefix increment
@@ -404,7 +410,8 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     state->set_t(pair.second.t);
     state->set_id(pair.second.id);
   }
-  request.mutable_prefetch_request()->set_free_slots(storage->state_pool.free());
+  request.mutable_prefetch_request()->set_capacity(storage->state_pool.capacity());
+  request.mutable_prefetch_request()->set_free(storage->state_pool.free());
   request.set_runner_id(storage->m_runner_id);
 
   send_message(m_socket, request);

@@ -17,7 +17,7 @@
 
 #define IO_PROBE( tag, func ) do { if( storage.m_io->probe( tag ) ) {func; return;} } while(0)
 
-#define PROTOBUF_MAX_SIZE 512
+#define STORAGE_MAX_PREFETCH 5 // 5 states
 
 using namespace melissa_p2p;
 
@@ -109,18 +109,17 @@ class StorageController {
     class StatePool {
       public:
         StatePool() : m_used_slots(0) {}
-        void init( size_t capacity, size_t slot_size );
-        int free() { return m_capacity - m_used_slots; }
-        int size() { return m_used_slots; }
-        int capacity() { return m_capacity; }
+        void init( size_t capacity );
+        size_t free() { return m_capacity - m_used_slots; }
+        size_t size() { return m_used_slots; }
+        size_t capacity() { return m_capacity; }
         StatePool& operator++();
         StatePool operator++(int);
         StatePool& operator--();
         StatePool operator--(int);
       private:
         size_t m_capacity;
-        size_t m_slot_size;
-        size_t m_used_slots;
+        ssize_t m_used_slots;
         friend class StorageController;
     };
 

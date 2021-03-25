@@ -73,7 +73,8 @@ message RunnerResponse {
 // Runner to server what might be useful to prefetch:
 message PrefetchRequest {
     repeated StateId cached_states = 1;
-    uint32 free_slots = 2;  // unused on server side so far.
+    uint32 capacity = 2;  // unused on server side so far.
+    uint32 free = 3;  // unused on server side so far.
 }
 
 message PrefetchResponse {
