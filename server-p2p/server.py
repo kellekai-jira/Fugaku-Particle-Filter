@@ -387,14 +387,14 @@ def hanlde_job_requests(launcher, nsteps):
                 useful_states = filter(lambda x: x in parent_state_ids, state_cache[runner_id])
 
                 if len(useful_states) > 0:
-                    # Select tha state_id that is on fewest other runners
+                    # Select the state_id that is on fewest other runners
                     # TODO: replace sorted zip by arg sort or something
                     parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
                         useful_states))[0][1]
 
                     # find again job for parent_state_id
-                    the_job = filter(lambda x: unscheduled_jobs[x] == parent_state_id,
-                            unscheduled_jobs)[0]
+                    the_job = list(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
+                            unscheduled_jobs))[0]
 
 
             reply = cm.Message()
@@ -413,6 +413,7 @@ def hanlde_job_requests(launcher, nsteps):
             del unscheduled_jobs[the_job]
 
         else:
+            # Called during first cycle where particles shall be loaded from runner init
             reply = cm.Message()
             reply.job_response.job.t = 0
             reply.job_response.job.id = to_initialize
