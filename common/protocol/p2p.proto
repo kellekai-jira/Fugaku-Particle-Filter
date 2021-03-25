@@ -37,6 +37,7 @@ message Weight {
 
 // application ranks to job socket on weight server
 message JobRequest {
+    StateId job = 1;
 }
 
 message JobResponse {

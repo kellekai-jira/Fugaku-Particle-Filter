@@ -118,6 +118,11 @@ void push_weight_to_head(double weight)
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
     m.mutable_job_request();  // create job request
+    
+    if( field.current_step <= 0 ) {
+      m.mutable_job_request()->mutable_job()->set_t(field.current_step); 
+      m.mutable_job_request()->mutable_job()->set_id(field.current_state_id); 
+    }
 
     send_message(job_socket, m);
 
@@ -168,7 +173,7 @@ int melissa_p2p_expose(VEC_T *values,
 
     if (nsteps > 0) {
         // called by every app core
-        storage.load(io_state_id_t(job_t, job_id));
+        storage.load(io_state_id_t(parent_t, parent_id));
 
         field.current_step = job_t;
         field.current_state_id = job_id;
