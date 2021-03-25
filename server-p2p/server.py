@@ -133,10 +133,8 @@ print('general purpose port:', port_gp_socket)
 
 def can_do_update_step():
     """simplest case where we wait that all particles were propagated always"""
-    return len(unscheduled_jobs) == 0
-
-# for initialization
-to_initialize = PARTICLES
+    return len(unscheduled_jobs) == 0 and \
+        len(list(filter(lambda x: x.t == assimilation_cycle, state_weights))) == PARTICLES
 
 # Populate unscheduled jobs
 for p in range(PARTICLES):
@@ -361,7 +359,6 @@ def hanlde_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
-    global to_initialize
 
     msg = receive_message_nonblocking(job_socket)
 
@@ -377,63 +374,37 @@ def hanlde_job_requests(launcher, nsteps):
         # try to select a better job where the runner has the cache already and which is
         # only on few other runners
 
-        print("TO INITIALIZE: " + str(to_initialize))
+        if runner_id in state_cache:
+            parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
 
-        if to_initialize == 0:
-            if runner_id in state_cache:
-                parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
+            # Get cached parent state ids
+            useful_states = list(filter(lambda x: x in parent_state_ids, state_cache[runner_id]))
 
-                # Get cached parent state ids
-                useful_states = filter(lambda x: x in parent_state_ids, state_cache[runner_id])
+            if len(useful_states) > 0:
+                # Select the state_id that is on fewest other runners
+                # TODO: replace sorted zip by arg sort or something or use sorted with key argument ;)
+                parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
+                    useful_states))[0][1]
 
-                if len(useful_states) > 0:
-                    # Select the state_id that is on fewest other runners
-                    # TODO: replace sorted zip by arg sort or something
-                    parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
-                        useful_states))[0][1]
-
-                    # find again job for parent_state_id
-                    the_job = list(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
-                            unscheduled_jobs))[0]
+                # find again job for parent_state_id
+                the_job = list(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
+                        unscheduled_jobs))[0]
 
 
-            reply = cm.Message()
+        reply = cm.Message()
 
-            reply.job_response.job.CopyFrom(the_job)
+        reply.job_response.job.CopyFrom(the_job)
 
-            reply.job_response.parent.CopyFrom(unscheduled_jobs[the_job])
+        reply.job_response.parent.CopyFrom(unscheduled_jobs[the_job])
 
-            reply.job_response.nsteps = nsteps
-            send_message(job_socket, reply)
+        reply.job_response.nsteps = nsteps
+        send_message(job_socket, reply)
 
-            running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
-                           unscheduled_jobs[the_job])
-            print("Scheduling", running_job)
-            running_jobs[the_job] = running_job
-            del unscheduled_jobs[the_job]
-
-        else:
-            # Called during first cycle where particles shall be loaded from runner init
-            reply = cm.Message()
-            reply.job_response.job.t = 0
-            reply.job_response.job.id = to_initialize
-            reply.job_response.parent.CopyFrom(msg.job_request.job)
-            reply.job_response.nsteps = nsteps
-            to_initialize = to_initialize - 1
-            unscheduled_jobs.popitem()
-
-            the_job = reply.job_response.job
-
-            if reply.job_response.parent.t == -1:
-                to_initialize = to_initialize - 1
-                unscheduled_jobs.popitem()
-
-            send_message(job_socket, reply)
-
-            running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
-                           the_job)
-            print("Scheduling", running_job)
-            running_jobs[the_job] = running_job
+        running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
+                       unscheduled_jobs[the_job])
+        print("Scheduling", running_job)
+        running_jobs[the_job] = running_job
+        del unscheduled_jobs[the_job]
 
 
 
@@ -535,10 +506,12 @@ def do_update_step():
     # Sort by weights. Then take 10 best particles for next generation
     global assimilation_cycle
 
-    this_cycle = filter(lambda x: x[0] == assimilation_cycle,
+    this_cycle = filter(lambda x: x.t == assimilation_cycle,
                         state_weights)
 
-    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
+    best_10 = list(sorted(this_cycle, key=lambda x: state_weights[x])[-10:])
+
+    assert len(best_10) == 10
 
     assimilation_cycle += 1
 

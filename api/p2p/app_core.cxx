@@ -106,7 +106,8 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
         is_first_time = false;
     }
 
-    pi->calculate_weight(field.current_step, values, hidden_values);
+    pi->calculate_weight(field.current_step, field.current_state_id, values,
+            hidden_values);
 }
 
 
@@ -132,11 +133,6 @@ void push_weight_to_head(double weight)
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
     m.mutable_job_request();  // create job request
-    
-    if( field.current_step <= 0 ) {
-      m.mutable_job_request()->mutable_job()->set_t(field.current_step); 
-      m.mutable_job_request()->mutable_job()->set_id(field.current_state_id); 
-    }
 
     send_message(job_socket, m);
 
@@ -153,7 +149,14 @@ int melissa_p2p_expose(VEC_T *values,
 
     // store to ram disk
     // TODO: call protect direkt in chunk based api
+
     io_state_id_t state = { field.current_step, field.current_state_id };
+
+    if (field.current_step == 0) {
+        // if checkpointing initial state, use runner_id as state id
+        state.id = runner_id;
+    }
+
     storage.store( state );
 
     // 2. calculate weight and synchronize weight on rank 0
@@ -187,7 +190,20 @@ int melissa_p2p_expose(VEC_T *values,
 
     if (nsteps > 0) {
         // called by every app core
-        storage.load(io_state_id_t(parent_t, parent_id));
+        if (parent_t < 1) {
+            if (field.current_step == 0) {
+                printf("Not performing a state load as good init state already in memory");
+            } else {
+                // load my very own checkpoint from t=0:
+                // in this case the runner id is the state id
+                storage.load(io_state_id_t(0, runner_id));
+            }
+        } else if (field.current_step == parent_t && field.current_state_id == job_id) {
+            // TODO: KAI: or is this handled elsewhere already?
+                printf("Not performing a state load as good state already in memory");
+        } else {
+            storage.load(io_state_id_t(parent_t, parent_id));
+        }
 
         field.current_step = job_t;
         field.current_state_id = job_id;

@@ -130,7 +130,7 @@ public:
         }
     }
 
-    double calculate_weight(const int current_step, VEC_T *values,
+    double calculate_weight(const int current_step, const int current_state_id, VEC_T *values,
             VEC_T *hidden_values) {
 
         // REM: in theory the python callback may manipulate the state! but it SHOULDN'T !
@@ -156,13 +156,15 @@ public:
 
 
         PyObject *pTime = Py_BuildValue("i", current_step);
+        PyObject *pId = Py_BuildValue("i", current_state_id);
 
         err(pTime != NULL, "Cannot create argument");
+        err(pId != NULL, "Cannot create argument");
 
         D("calculate_weight input parameter:");
 
         // Py_INCREF(pValue);
-        PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
+        PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime, pId,
                 pBackground,
                 pHidden,
                 pArray_assimilated_index,

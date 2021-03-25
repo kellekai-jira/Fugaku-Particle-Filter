@@ -4,9 +4,9 @@ import mpi4py
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
 
-def calculate_weight(cycle, background, hidden, assimilated_index, assimilated_varid):
+def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid):
     try:
-        print("Calculating weight for:", cycle)
+        print("t=%d, Calculating weight for particle with id=%d" % (cycle, pid))
         state = np.zeros(40, dtype='float64')
         state[3] = 42.
 

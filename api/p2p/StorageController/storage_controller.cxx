@@ -144,7 +144,7 @@ void StorageController::callback() {
   // Bob check and serve peer requests
   storage.m_request_peer();
 
-  // app core may tell the head to finish application. This will end ina call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
+  // app core may tell the head to finish application. This will end in a call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 
 }
