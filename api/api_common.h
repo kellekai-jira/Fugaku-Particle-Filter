@@ -30,6 +30,8 @@ extern MPI_Comm comm;
 
 extern int runner_id;
 
+extern std::vector<INDEX_MAP_T> local_index_map;
+extern std::vector<INDEX_MAP_T> local_index_map_hidden;
 
 
 

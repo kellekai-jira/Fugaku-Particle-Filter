@@ -56,6 +56,15 @@ if(WITH_FTI OR WITH_FTI_THREADS)
 endif(WITH_FTI OR WITH_FTI_THREADS)
 
 
+# Python
+target_include_directories(melissa_da_api PRIVATE ${PYTHON_INCLUDE_DIR})
+
+# get numpy include dir:
+target_include_directories(melissa_da_api PRIVATE ${NUMPY_INCLUDE_DIRS})
+
+target_link_libraries(melissa_da_api ${PYTHON_LIBRARY})
+
+
 if(INSTALL_FTI)
     add_dependencies(melissa_da_api FTI)
 endif(INSTALL_FTI)

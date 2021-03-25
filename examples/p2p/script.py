@@ -7,7 +7,7 @@ clean_old_stats()
 
 
 run_melissa_da_study(
-    server_cmd='xterm_gdb python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
+    server_cmd='xterm_gdb python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
     #runner_cmd='xterm_gdb python3 -u %s/simulation.py' % os.getcwd(),
     runner_cmd='xterm_gdb simulation4-p2p',
     total_steps=10,
@@ -19,6 +19,10 @@ run_melissa_da_study(
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
     server_timeout=60 * 60,
-    additional_env={'MELISSA_DA_IS_P2P': '1'},
+    additional_env={
+        'MELISSA_DA_IS_P2P': '1',
+        'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
+        'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
+        },
     config_fti_path=os.getcwd()+'/config.fti'
 )

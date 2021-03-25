@@ -9,6 +9,12 @@
 
 #include "StorageController/helpers.h"
 
+
+#include <cstdlib>
+#include <memory>
+
+#include "PythonInterface.h"
+
 void* job_socket;
 
 std::vector<INDEX_MAP_T> local_index_map;
@@ -88,11 +94,19 @@ void melissa_p2p_init(const char *field_name,
     }
 }
 
-double calculate_weight()
+
+double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 {
     // Warning returns correct weight only on rank 0! other ranks return -1.0
     // use python interface, export index map
-    return 0.7;
+    static std::unique_ptr<PythonInterface> pi;  // gets destroyed when static scope is left!
+    static bool is_first_time = true;
+    if (is_first_time) {
+        pi = std::unique_ptr<PythonInterface>(new PythonInterface());
+        is_first_time = false;
+    }
+
+    pi->calculate_weight(field.current_step, values, hidden_values);
 }
 
 
@@ -143,7 +157,7 @@ int melissa_p2p_expose(VEC_T *values,
     storage.store( state );
 
     // 2. calculate weight and synchronize weight on rank 0
-    double weight = calculate_weight();
+    double weight = calculate_weight(values, hidden_values);
 
     int nsteps = 0;
 
