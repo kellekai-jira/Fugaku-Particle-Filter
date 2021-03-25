@@ -18,6 +18,8 @@
 
 #include "storage_controller_impl.hpp"
 
+#include <cassert>
+
 
 void PeerController::handle_requests()
 {
@@ -79,18 +81,27 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
     m_io = io;
     m_mpi = mpi;
     m_zmq_context = zmq_context;
-    port = 3131;
     char tmp[MPI_MAX_PROCESSOR_NAME];
     melissa_get_node_name(tmp, MPI_MAX_PROCESSOR_NAME);
 
     hostname = tmp;
 
-    std::string addr = std::string("tcp://") + hostname + ":" + std::to_string(port);
-
-    std::string port_name = fix_port_name(addr.c_str());
 
     state_server_socket = zmq_socket(m_zmq_context, ZMQ_REP);
-    zmq_bind(state_server_socket, port_name.c_str());
+    char port_name[1024]; //make this sufficiently large.
+                          //otherwise an error will be thrown because of invalid argument.
+
+    ZMQ_CHECK(zmq_bind(state_server_socket, "tcp://*:*"));
+    size_t size = sizeof(port_name);
+    zmq_getsockopt( state_server_socket, ZMQ_LAST_ENDPOINT, &port_name, &size );
+
+    int colon_pos = strlen(port_name)-1;
+    for (; port_name[colon_pos] != ':' && colon_pos > 0; colon_pos--);
+    assert(colon_pos > 0);
+    port = atoi(port_name + colon_pos + 1);
+
+    printf("Bound my state server to %s, publishing %s:%d\n", port_name,
+            hostname.c_str(), port);
 
     state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 }

@@ -438,12 +438,12 @@ def hanlde_job_requests(launcher, nsteps):
 
 
 class LauncherConnection:
-    def __init__(self, context, node_name, launcher_node_name):
+    def __init__(self, context, server_node_name, launcher_node_name):
         self.update_launcher_due_date()
         self.linger = 10000
         self.launcher_node_name = launcher_node_name
 
-        if node_name == self.launcher_node_name:
+        if server_node_name == self.launcher_node_name:
             self.launcher_node_name = '127.0.0.1'
 
         self.text_pull_port = 5556
@@ -471,11 +471,11 @@ class LauncherConnection:
             self.launcher_node_name, self.text_request_port))
 
         # Send node name to the launcher, get options and recover if necesary
-        msg = ServerNodeName(0, node_name)
+        msg = ServerNodeName(0, server_node_name)
         self.text_pusher.send(msg.encode())
         self.update_next_message_due_date()
         self.connection_request = None
-        print('Setup launcher connection, server node name:', node_name)
+        print('Setup launcher connection, server node name:', server_node_name)
 
         self.known_runners = set()
 
@@ -568,8 +568,8 @@ def check_due_date_violations():
 
 
 if __name__ == '__main__':
-    node_name = get_node_name()
-    launcher = LauncherConnection(context, node_name, LAUNCHER_NODE_NAME)
+    server_node_name = get_node_name()
+    launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
 
     nsteps = 1
     while True:

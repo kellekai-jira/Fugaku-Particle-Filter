@@ -35,8 +35,6 @@ extern int runner_id;
 
 struct ConnectedServerRank;
 
-extern void * context;
-
 int getCommRank();
 int getRunnerId();
 int getCommSize();

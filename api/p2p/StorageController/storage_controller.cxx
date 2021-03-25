@@ -49,6 +49,7 @@ void StorageController::init( double capacity_dp, double state_size_dp ) {
 
 
 void StorageController::fini() {
+  printf("Finalizing storage controller\n");
   delete m_peer;
   int dummy[2];
   m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
