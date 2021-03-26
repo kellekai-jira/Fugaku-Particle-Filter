@@ -160,7 +160,18 @@ def accept_weight(msg):
 
     state_id = msg.weight.state_id
 
-    del running_jobs[state_id]
+    if state_id in running_jobs:
+        del running_jobs[state_id]
+    else:
+        # we mess around with the state id for the first iteration (for init)
+        print('Got Weight message', msg, 'but its job was never set to running so far')
+        assert state_id.t == 1
+        messed_id = cm.StateId()
+        messed_id.t = 1
+        messed_id.id = msg.runner_id
+
+
+
     weight = msg.weight.weight
 
     # store result
