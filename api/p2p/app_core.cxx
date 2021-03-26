@@ -150,12 +150,12 @@ int melissa_p2p_expose(VEC_T *values,
     // store to ram disk
     // TODO: call protect direkt in chunk based api
 
-    io_state_id_t state = { field.current_step, field.current_state_id };
-
     if (field.current_step == 0) {
         // if checkpointing initial state, use runner_id as state id
-        state.id = runner_id;
+        field.current_state_id = runner_id; // We are beginning like this...
     }
+    
+    io_state_id_t state = { field.current_step, field.current_state_id };
 
     storage.store( state );
 
