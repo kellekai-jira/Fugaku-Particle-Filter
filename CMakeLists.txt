@@ -32,7 +32,8 @@ if (WITH_FTI)
             PREFIX ${CMAKE_CURRENT_BINARY_DIR}/FTI
             CMAKE_ARGS -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 -DENABLE_HDF5=0
             -DHDF5_ROOT=${HDF5_ROOT}
-            -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI)
+            -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}/FTI
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
         message(STATUS "FTI will be installed")
         set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
         set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")  # TIODO: use gnu package to decide automatically between lib64 and lib
