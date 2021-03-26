@@ -37,7 +37,7 @@ std::string fix_port_name(const char* port_name_) {
     melissa_get_node_name(my_host_name, MPI_MAX_PROCESSOR_NAME);
     size_t found = port_name.find(my_host_name);
     // check if found and if hostname is between tcp://<nodename>:port
-    if(found != std::string::npos && port_name[found - 1] == '/'
+    if(found != std::string::npos && (found == 0 || port_name[found - 1] == '/')
             && port_name[found + strlen(my_host_name)] == ':')
     {
         port_name = port_name.substr(0, found) + "127.0.0.1"
