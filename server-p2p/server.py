@@ -232,6 +232,10 @@ def accept_runner_request(msg):
 
     send_message(gp_socket, reply)
 
+def first(x):
+    """Helper to return the first element of something"""
+    return x[0]
+
 def count_runners_with_state(state_id):
     # Number of runners that have the state in their memory (or are about to get it)
     return len(list(filter(lambda x: state_id in state_cache[x], state_cache)))
@@ -242,30 +246,32 @@ def accept_delete(msg):
     update_state_knowledge(msg.delete_request, runner_id)
 
     # Attach importance to states on runner and sort:
+
     sorted_importance = sorted(
-            zip(list(map(calculate_parent_state_importance, state_cache[runner_id])),
-                state_cache[runner_id]))
+            zip(map(calculate_parent_state_importance, state_cache[runner_id]),
+                state_cache[runner_id]),
+            key=first)  # only sort by first element (weight) (and not by the second which would be the state id)
 
     reply = cm.Message()
     reply.delete_response.SetInParent()
     # Try to delete something with importance < 1 --> must be stored on other resource too.
     if sorted_importance[0][0] < 1:
-        reply.delete_response.to_delete = sorted_importance[0][1]
+        reply.delete_response.to_delete.CopyFrom(sorted_importance[0][1])
     else:
         # if minimum >= 1: select something that possibly is stored on a different
         # runner too.
         for _, state_id in sorted_importance:
             runners_with_it = count_runners_with_state
             if runners_with_it > 1:
-                reply.delete_response.to_delete = sorted_importance[0][1]
+                reply.delete_response.to_delete.CopyFrom(state_id)
                 break
 
-    if reply.delete_response.to_delete:
-        state_cache[runner_id].remove(reply.delete_response.to_delete)
-    else:
+    if not reply.delete_response.to_delete:
         print("nothing good was found to be deleted on", runner_id)
         reply.delete_response.to_delete = sorted_importance[0][1]
-        print("reply:", reply)
+        print("still deleting something:", reply)
+
+    state_cache[runner_id].remove(reply.delete_response.to_delete)
 
     send_message(gp_socket, reply)
 
@@ -328,7 +334,8 @@ def accept_prefetch(msg):
         parent_state_ids = map(lambda x: x[1], unscheduled_jobs)
         # Attach importance to it, sort ascending and get last element
         most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
-            parent_state_ids))[-1]
+            parent_state_ids),
+            key=first)[-1]
 
         # Reply state id of most important parent state (and not its importance)
         reply.prefetch_resonse.pull_states.append(most_important[1])
@@ -401,8 +408,9 @@ def hanlde_job_requests(launcher, nsteps):
             if len(useful_states) > 0:
                 # Select the state_id that is on fewest other runners
                 # TODO: replace sorted zip by arg sort or something or use sorted with key argument ;)
-                parent_state_id = sorted(zip(list(map(count_runners_with_state, useful_states)),
-                    useful_states))[0][1]
+                parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
+                    useful_states),
+                    key=first)[0][1]
 
                 # find again job for parent_state_id
                 the_job = list(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
