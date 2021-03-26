@@ -543,13 +543,13 @@ def do_update_step():
 
     # add each 4 times to unscheduled_jobs
     job_id = 0
-    for parent_state_id in best_10:
-        for _ in range(4):
-            jid = cm.StateId()
-            jid.t = assimilation_cycle
-            jid.id = job_id
-            unscheduled_jobs[jid] = parent_state_id  # TODO: maybe we need a copy?
-            job_id += 1
+    for i in range(PARTICLES):
+        parent_state_id = best_10[i % len(best_10)]
+        jid = cm.StateId()
+        jid.t = assimilation_cycle
+        jid.id = job_id
+        unscheduled_jobs[jid] = parent_state_id
+        job_id += 1
 
     return 1 if assimilation_cycle < CYCLES else 0
 
