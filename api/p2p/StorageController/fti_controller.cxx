@@ -29,6 +29,13 @@ void FtiController::init_core() {
   // and containes all FTI headranks if you are on an head rank
   m_mpi->register_comm( "fti_comm_world", FTI_COMM_WORLD );
   m_mpi->set_comm( "fti_comm_world" );
+  char tmp[FTI_BUFS];
+  if( FTI_AmIaHead() ) {
+    snprintf(tmp, FTI_BUFS, "%s.head", m_kernel.conf->mTmpDir);
+  } else {
+    snprintf(tmp, FTI_BUFS, "%s.app", m_kernel.conf->mTmpDir);
+  }
+  strncpy(m_kernel.conf->mTmpDir, tmp, FTI_BUFS);
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_BYTE, FTI_CHAR ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
