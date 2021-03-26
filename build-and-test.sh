@@ -42,7 +42,6 @@ build_type='Debug'
 
 raw_melissa_da_source_dir="${1:?path to Melissa DA source directory missing}"
 raw_pdaf_path="${2:?path to PDAF 1.15 needed}"
-raw_fti_path="${3:?path to FTI needed}"
 
 canonicalize_path() {
 	readlink --verbose --canonicalize-existing "${1:?}"
@@ -87,10 +86,9 @@ cmake \
 	-DCMAKE_BUILD_TYPE="$build_type" \
 	-DCMAKE_INSTALL_PREFIX="$melissa_da_prefix_dir" \
 	-DPDAF_PATH="$pdaf_path" \
-	-DWITH_FTI=ON -DWITH_FTI_THREADS=ON -DINSTALL_FTI=OFF \
-	-DFTI_PATH="$fti_prefix_dir" \
+	-DWITH_FTI=ON -DWITH_FTI_THREADS=ON -DINSTALL_FTI=ON \
 	-DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
 	"$melissa_da_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
-ctest --stop-on-failure --output-on-failure --timeout 300
+#ctest --stop-on-failure --output-on-failure --timeout 300
