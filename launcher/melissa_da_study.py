@@ -20,7 +20,7 @@ from shutil import copyfile
 import signal
 import sys
 import socket
-
+import inspect
 
 from cluster import *
 
@@ -223,7 +223,11 @@ def run_melissa_da_study(
                     os.chdir(runner_dir)
 
                 if prepare_runner_dir is not None:
-                    prepare_runner_dir()
+                    if (len(inspect.getargspec(prepare_runner_dir).args) == 1):
+                        prepare_runner_dir(runner_id)
+                    else:
+                        # support old api:
+                        prepare_runner_dir()
 
             additional_runner_env = {
                     "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
