@@ -15,7 +15,7 @@ int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
 
 void FtiController::update( io_id_t id, void* buffer, size_t size ) {
   assert( m_var_id_map.count(id) != 0 && "invalid type" );
-  FTI_Protect(id, buffer, size, m_var_id_map[id].type);
+  FTI_Protect(id, buffer, size, m_io_type_map[m_var_id_map[id].type]);
 }
 
 void FtiController::init_io( MpiController* mpi ) {
