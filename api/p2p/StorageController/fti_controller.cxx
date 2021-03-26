@@ -130,6 +130,7 @@ void FtiController::load( io_state_id_t state_id, io_level_t level ) {
 void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
+  m_mpi->barrier();
 }
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {

@@ -115,8 +115,11 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 void push_weight_to_head(double weight)
 {
     static mpi_request_t req;
-    if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
-
+    static bool wait = false;
+    if( wait ) {
+      if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
+      int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL );
+    }
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
     m.mutable_weight()->mutable_state_id()->set_t(field.current_step);
@@ -126,7 +129,7 @@ void push_weight_to_head(double weight)
     char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
     m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
-
+    wait = true;
 }
 
 ::melissa_p2p::JobResponse request_work_from_server() {

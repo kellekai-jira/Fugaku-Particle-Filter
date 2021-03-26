@@ -256,6 +256,9 @@ void StorageController::m_query_server() {
 void StorageController::m_request_post() {
   if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
 
+  static mpi_request_t req;
+  req.wait();  // be sure that there is nothing else in the mpi send queue
+  
   Message weight_message;
   int msg_size;
   m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_ONE );
@@ -283,6 +286,9 @@ void StorageController::m_request_post() {
   } else {
     state_pool++;
   }
+  
+  int dummy;
+  m_io->isend( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL, req );
 
   // ask if something to prefetch
   server.prefetch_request( this );
