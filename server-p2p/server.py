@@ -535,7 +535,7 @@ def do_update_step():
     this_cycle = filter(lambda x: x.t == assimilation_cycle,
                         state_weights)
 
-    best_10 = list(sorted(this_cycle, key=lambda x: state_weights[x])[-10:])
+    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
 
     assert len(best_10) == 10
 

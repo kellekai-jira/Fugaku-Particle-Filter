@@ -1,10 +1,15 @@
 import os
+import shutil
 
 os.system('killall gdb')
 
 from melissa_da_study import *
 clean_old_stats()
 
+def prepare_runner_dir():
+    print('Preparing runner directory (%s)' % os.getcwd())
+    shutil.copy('../../config-runner.fti', './config.fti')
+    pass
 
 run_melissa_da_study(
     server_cmd='xterm_gdb python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
@@ -15,6 +20,8 @@ run_melissa_da_study(
     procs_server=1,
     procs_runner=2,
     n_runners=1,
+    create_runner_dir=True,
+    prepare_runner_dir=prepare_runner_dir,
     show_server_log=False,
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
@@ -24,5 +31,4 @@ run_melissa_da_study(
         'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         },
-    config_fti_path=os.getcwd()+'/config.fti'
 )
