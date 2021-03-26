@@ -462,8 +462,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 //======================================================================
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
-//  send_message(server.m_socket, m);
-//  zmq::recv(server.m_socket);  // receive ack
+  send_message(server.m_socket, m);
+  zmq::recv(server.m_socket);  // receive ack
 }
 
 void StorageController::m_create_symlink( io_state_id_t state_id ) {
