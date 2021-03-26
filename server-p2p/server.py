@@ -243,8 +243,8 @@ def accept_delete(msg):
 
     # Attach importance to states on runner and sort:
     sorted_importance = sorted(
-            zip(map(calculate_parent_state_importance, state_cache[runner_id]),
-                state_cache[runner_id]) )
+            zip(list(map(calculate_parent_state_importance, state_cache[runner_id])),
+                state_cache[runner_id]))
 
     reply = cm.Message()
     reply.delete_response.SetInParent()
@@ -401,7 +401,7 @@ def hanlde_job_requests(launcher, nsteps):
             if len(useful_states) > 0:
                 # Select the state_id that is on fewest other runners
                 # TODO: replace sorted zip by arg sort or something or use sorted with key argument ;)
-                parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
+                parent_state_id = sorted(zip(list(map(count_runners_with_state, useful_states)),
                     useful_states))[0][1]
 
                 # find again job for parent_state_id
