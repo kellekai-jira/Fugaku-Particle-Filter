@@ -97,6 +97,7 @@ void melissa_p2p_init(const char *field_name,
 
 double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 {
+#ifdef USE_PYTHON_CALCULATE_WEIGHT
     // Warning returns correct weight only on rank 0! other ranks return -1.0
     // use python interface, export index map
     static std::unique_ptr<PythonInterface> pi;  // gets destroyed when static scope is left!
@@ -106,8 +107,12 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
         is_first_time = false;
     }
 
-    pi->calculate_weight(field.current_step, field.current_state_id, values,
+    return pi->calculate_weight(field.current_step, field.current_state_id, values,
             hidden_values);
+#else
+
+    return 0.44;
+#endif
 }
 
 
