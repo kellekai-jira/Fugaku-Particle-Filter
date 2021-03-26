@@ -312,7 +312,8 @@ void melissa_init_with_index_map(
     field.name = field_name;
     if (is_p2p()) {
       field.current_state_id = runner_id; // We are beginning like this...
-    } 
+    }
+    field.current_state_id = -1; // We are beginning like this...
     field.current_step = 0;
     field.local_vect_size = local_vect_size;
     field.local_hidden_vect_size = local_hidden_vect_size;
