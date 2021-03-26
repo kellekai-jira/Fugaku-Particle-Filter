@@ -274,7 +274,6 @@ void StorageController::m_request_post() {
   m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-  m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
 
   // create symbolic link
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
@@ -284,6 +283,7 @@ void StorageController::m_request_post() {
   if( state_pool.free() == 0 ) {
     server.delete_request(this);
   } else {
+    m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
     state_pool++;
   }
   
