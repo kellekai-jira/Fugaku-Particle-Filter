@@ -36,6 +36,8 @@ void FtiController::init_core() {
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L2, FTI_L4 ) );
   m_io_msg_map.insert( std::pair<io_msg_t,int>( IO_MSG_ALL, FTI_HEAD_MODE_COLL ) );
   m_io_msg_map.insert( std::pair<io_msg_t,int>( IO_MSG_ONE, FTI_HEAD_MODE_SING ) );
+  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_LOCK, IO_TAG_LOCK + 1000000 ) );
+  m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_FREE, IO_TAG_FREE + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_LOAD, IO_TAG_LOAD + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_POST, IO_TAG_POST + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_DUMP, IO_TAG_DUMP + 1000000 ) );
@@ -99,14 +101,18 @@ void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t me
 }
 
 bool FtiController::probe( io_tag_t tag ) {
-  if( tag == IO_TAG_PULL ) {
-    return !m_state_pull_requests.empty();
-  } else if( tag == IO_TAG_PUSH ) {
-    return !m_state_push_requests.empty();
-  } else if( tag == IO_TAG_DUMP ) {
-    return !m_state_dump_requests.empty();
+  if( FTI_AmIaHead() ) {
+    if( tag == IO_TAG_PULL ) {
+      return !m_state_pull_requests.empty();
+    } else if( tag == IO_TAG_PUSH ) {
+      return !m_state_push_requests.empty();
+    } else if( tag == IO_TAG_DUMP ) {
+      return !m_state_dump_requests.empty();
+    } else {
+      return FTI_HeadProbe( m_io_tag_map[tag] );
+    }
   } else {
-    return FTI_HeadProbe( m_io_tag_map[tag] );
+    return FTI_AppProbe( m_io_tag_map[tag] );
   }
 }
 
@@ -238,7 +244,7 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   }
   if( m_dict_bool["master_global"] ) {
     assert( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ) == 0 );
-    m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), FTI_L1 );
+    update_metadata( state_id, IO_STORAGE_L1 );
   }
 
   std::stringstream msg;
@@ -282,7 +288,14 @@ void FtiController::filelist_local( io_state_id_t state_id, std::vector<std::str
 }
 
 void FtiController::update_metadata( io_state_id_t state_id, io_level_t level ) {
+  int dummy[m_dict_int["app_procs_node"]];
+  if( probe( IO_TAG_LOCK ) ) {
+    recv( dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
+    recv( dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
+  }
+  send( dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
   m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), m_io_level_map[level] );
+  send( dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
 }
 
 

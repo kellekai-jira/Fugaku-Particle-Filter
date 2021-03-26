@@ -237,7 +237,14 @@ void StorageController::m_store_head( io_state_id_t state_id ) {
 }
 
 void StorageController::m_store_user( io_state_id_t state_id ) {
+  int dummy;
+  if( m_io->probe( IO_TAG_LOCK ) ) {
+    m_io->recv( &dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
+    m_io->recv( &dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
+  }
+  m_io->send( &dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
   m_io->store( state_id );
+  m_io->send( &dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
   assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }
 
