@@ -108,6 +108,11 @@ state_cache = {}
 state_cache_with_prefetch = {}
 
 
+def dict_append(d, where, what):
+    if where not in d:
+        d[where] = []
+    d[where].append(what)
+
 def bind_socket(t, addr):
     socket = context.socket(t)
     socket.bind(addr)
@@ -165,9 +170,9 @@ def accept_weight(msg):
     else:
         # we mess around with the state id for the first iteration (for init)
         print('Got Weight message', msg, 'but its job was never set to running so far')
-        assert state_id.t == 1
+        assert state_id.t == 1 or state_id.t == 0  # save initial weights without removing any jobs from unscheduled jobs
         messed_id = cm.StateId()
-        messed_id.t = 1
+        messed_id.t = state_id.t
         messed_id.id = msg.runner_id
 
 
@@ -179,13 +184,15 @@ def accept_weight(msg):
     print("Received weight", weight, "for", state_id, ".",
           len(unscheduled_jobs), "unscheduled jobs left to do this cycle")
 
-    gp_socket.send(0)  # send an empty ack. Check this works like this.
+    gp_socket.send(b'')  # send an empty ack.
 
 
     # Update knowledge on cached states:
     runner_id = msg.runner_id
-    state_cache[runner_id].append(state_id)
-    state_cache_with_prefetch[runner_id].append(state_id)
+
+    dict_append(state_cache, runner_id, state_id)
+    dict_append(state_cache_with_prefetch, runner_id, state_id)
+
 
 """
 DNS list of runners
@@ -326,7 +333,7 @@ def accept_prefetch(msg):
         # Reply state id of most important parent state (and not its importance)
         reply.prefetch_resonse.pull_states.append(most_important[1])
 
-        state_cache[runner_id].append(most_important[1])
+        dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
     send_message(gp_socket, reply)
 

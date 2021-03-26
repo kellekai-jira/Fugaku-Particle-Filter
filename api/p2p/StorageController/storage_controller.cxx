@@ -265,8 +265,6 @@ void StorageController::m_request_post() {
 
   assert( weight_message.has_weight() && "m does not contain a weight" );
 
-  printf("Received weight_message (%d): %s\n", msg_size, weight_message.DebugString().c_str());
-
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
   io_id_t ckpt_id = to_ckpt_id( state_id );
 

@@ -123,7 +123,6 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
 
-    printf("Pushing weight to head(%d): %s\n", m.ByteSize(), m.DebugString().c_str());
     char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
     m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
@@ -169,7 +168,7 @@ int melissa_p2p_expose(VEC_T *values,
 
     // Rank 0:
     if (mpi.rank() == 0) {
-        // 3. push weight to server
+        // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
         push_weight_to_head(weight);
 
         // 4. ask server for more work
@@ -199,7 +198,7 @@ int melissa_p2p_expose(VEC_T *values,
                 // in this case the runner id is the state id
                 storage.load(io_state_id_t(0, runner_id));
             }
-        } else if (field.current_step == parent_t && field.current_state_id == job_id) {
+        } else if (field.current_step == parent_t && field.current_state_id == parent_id) {
             // TODO: KAI: or is this handled elsewhere already?
                 printf("Not performing a state load as good state already in memory");
         } else {
