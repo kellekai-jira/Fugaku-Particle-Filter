@@ -331,7 +331,7 @@ def accept_prefetch(msg):
         # This runner shall receive (prefetch) the most important state:
 
         # Get parent state ids of unscheduled jobs
-        parent_state_ids = map(lambda x: x[1], unscheduled_jobs)
+        parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
         # Attach importance to it, sort ascending and get last element
         most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
             parent_state_ids),
