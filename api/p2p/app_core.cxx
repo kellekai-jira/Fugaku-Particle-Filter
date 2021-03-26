@@ -123,6 +123,7 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
 
+    printf("Pushing weight to head(%d): %s\n", m.ByteSize(), m.DebugString().c_str());
     char buf[m.ByteSize()];  // TODO: change bytesize to bytesize long
     m.SerializeToArray(buf, m.ByteSize());
     io.isend( buf, m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
@@ -154,7 +155,7 @@ int melissa_p2p_expose(VEC_T *values,
         // if checkpointing initial state, use runner_id as state id
         field.current_state_id = runner_id; // We are beginning like this...
     }
-    
+
     io_state_id_t state = { field.current_step, field.current_state_id };
 
     storage.store( state );
