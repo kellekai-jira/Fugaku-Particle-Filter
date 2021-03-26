@@ -459,6 +459,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
   storage->state_pool--;
+  storage->m_cached_states.erase(to_ckpt_id(state_id));
 
 }
 
