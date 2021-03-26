@@ -11,9 +11,17 @@
 struct io_state_id_t {
   io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
   io_state_id_t() : t(0), id(0) {}
-  io_id_t t;
+	io_id_t t;
   io_id_t id;
 };
+
+inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
+    return lhs.t == rhs.t && lhs.id == rhs.id;
+}
+
+inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
+    return !(lhs == rhs);
+}  
 
 struct io_var_t {
   void* data;

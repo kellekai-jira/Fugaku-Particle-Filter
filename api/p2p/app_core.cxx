@@ -158,16 +158,16 @@ int melissa_p2p_expose(VEC_T *values,
         field.current_state_id = runner_id; // We are beginning like this...
     }
 
-    io_state_id_t state = { field.current_step, field.current_state_id };
+    io_state_id_t current_state = { field.current_step, field.current_state_id };
 
-    storage.store( state );
+    storage.store( current_state );
 
     // 2. calculate weight and synchronize weight on rank 0
     double weight = calculate_weight(values, hidden_values);
 
     int nsteps = 0;
 
-    int parent_t, parent_id, job_t, job_id;
+    io_state_id_t parent_state, next_state;
 
     // Rank 0:
     if (mpi.rank() == 0) {
@@ -176,24 +176,24 @@ int melissa_p2p_expose(VEC_T *values,
 
         // 4. ask server for more work
         auto job_response = request_work_from_server();
-        parent_t = job_response.parent().t();
-        parent_id = job_response.parent().id();
-        job_t = job_response.job().t();
-        job_id = job_response.job().id();
+        parent_state.t = job_response.parent().t();
+        parent_state.id = job_response.parent().id();
+        next_state.t = job_response.job().t();
+        next_state.id = job_response.job().id();
         nsteps = job_response.nsteps();
     }
 
     // Broadcast to all ranks:
-    MPI_Bcast(&parent_t, 1, MPI_INT, 0, mpi.comm());
-    MPI_Bcast(&parent_id, 1, MPI_INT, 0, mpi.comm());
-    MPI_Bcast(&job_t, 1, MPI_INT, 0, mpi.comm());
-    MPI_Bcast(&job_id, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&parent_state.t, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&parent_state.id, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
 
 
     if (nsteps > 0) {
         // called by every app core
-        if (parent_t < 1) {
+        if (parent_state.t < 1) {
             if (field.current_step == 0) {
                 printf("Not performing a state load as good init state already in memory");
             } else {
@@ -201,15 +201,15 @@ int melissa_p2p_expose(VEC_T *values,
                 // in this case the runner id is the state id
                 storage.load(io_state_id_t(0, runner_id));
             }
-        } else if (field.current_step == parent_t && field.current_state_id == parent_id) {
+        } else if ( current_state == parent_state ) {
             // TODO: KAI: or is this handled elsewhere already?
                 printf("Not performing a state load as good state already in memory");
         } else {
-            storage.load(io_state_id_t(parent_t, parent_id));
+            storage.load( parent_state );
         }
 
-        field.current_step = job_t;
-        field.current_state_id = job_id;
+        field.current_step = next_state.t;
+        field.current_state_id = next_state.id;
     }
     else
     {
