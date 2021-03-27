@@ -54,8 +54,6 @@ enum io_msg_t {
 };
 
 enum io_tag_t {
-  IO_TAG_LOCK,
-  IO_TAG_FREE,
   IO_TAG_LOAD,
   IO_TAG_PEER,
   IO_TAG_PULL,

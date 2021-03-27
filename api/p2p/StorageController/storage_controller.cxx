@@ -197,14 +197,13 @@ void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_
 
 void StorageController::m_pull_head( io_state_id_t state_id ) {
   assert( !m_io->is_local( state_id ) && "state is already local!" );
-  if( state_pool.free() == 0 ) {
+  while( state_pool.free() <= 1  ) {
     server.delete_request(this);
   }
   if( !m_io->is_local( state_id ) ) {
     m_peer->mirror( state_id );
   }
   if( !m_io->is_local( state_id ) ) {
-    sleep(2);
     int id, t;
     m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
@@ -223,7 +222,6 @@ void StorageController::m_load_head( io_state_id_t state ) {
 
 void StorageController::m_load_user( io_state_id_t state ) {
   if( !m_io->is_local( state ) ) {
-    sleep(1);
     int status;
     m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
     // TODO check status
@@ -238,14 +236,7 @@ void StorageController::m_store_head( io_state_id_t state_id ) {
 
 void StorageController::m_store_user( io_state_id_t state_id ) {
   int dummy;
-  if( m_io->probe( IO_TAG_LOCK ) ) {
-    m_io->recv( &dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
-    m_io->recv( &dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
-  }
-  m_io->send( &dummy, sizeof(int), IO_TAG_LOCK, IO_MSG_ALL );
   m_io->store( state_id );
-  m_io->send( &dummy, sizeof(int), IO_TAG_FREE, IO_MSG_ALL );
-  assert( m_io->is_local( state_id ) && "unable to store state to local storage" );
 }
 
 //======================================================================
@@ -262,7 +253,6 @@ void StorageController::m_query_server() {
 
 void StorageController::m_request_post() {
   if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
-
   static mpi_request_t req;
   req.wait();  // be sure that there is nothing else in the mpi send queue
   
@@ -278,6 +268,8 @@ void StorageController::m_request_post() {
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
   io_id_t ckpt_id = to_ckpt_id( state_id );
 
+  m_io->update_metadata( state_id, IO_STORAGE_L1 );
+  assert( m_io->is_local(state_id) && "state should be local"); 
   m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
@@ -285,13 +277,13 @@ void StorageController::m_request_post() {
   // create symbolic link
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
-
+    
+  m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
+  state_pool++;
+  std::cout << "FREE SLOTS: " << state_pool.free() << std::endl;
   // if slot free, keep checkpoint. If not ask to delete a state
   if( state_pool.free() == 0 ) {
     server.delete_request(this);
-  } else {
-    m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-    state_pool++;
   }
   
   int dummy;
@@ -463,9 +455,25 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   auto pull_state = response.delete_response().to_delete();
   io_state_id_t state_id( pull_state.t(), pull_state.id() );
+  
+  std::cout << "HEAD IS REQUESTED TO DELETE (id: "<<state_id.id<<", t: "<<state_id.t<<")" <<  std::endl;
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
+  
+  std::stringstream local;
+  local << storage->m_io->m_dict_string["local_dir"];
+  local << "/";
+  local << storage->m_io->m_dict_string["exec_id"];
+  local << "/l1/";
+  local << std::to_string(to_ckpt_id(state_id));
+  
+
+  struct stat info;
+  assert( stat( local.str().c_str(), &info ) != 0 && "the local checkpoint directory has not been deleted!" );
+  
+  assert(!storage->m_io->is_local(state_id)); 
   storage->state_pool--;
+  std::cout << "free: " << storage->state_pool.free() << std::endl; 
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
 }
