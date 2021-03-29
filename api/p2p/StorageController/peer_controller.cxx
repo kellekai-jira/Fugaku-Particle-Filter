@@ -138,7 +138,7 @@ bool PeerController::mirror( io_state_id_t state_id )
     // go through list of runners (that is shuffled/ put in a good order by the server)
     for (int i = 0; i < dns_reply.runner_response().sockets_size(); i++)
     {
-        std::string addr = dns_reply.runner_response().sockets(i).node_name() + ':' +
+        std::string addr = std::string("tcp://") + dns_reply.runner_response().sockets(i).node_name() + ':' +
             std::to_string(dns_reply.runner_response().sockets(i).port());
 
         std::string port_name = fix_port_name(addr.c_str());
