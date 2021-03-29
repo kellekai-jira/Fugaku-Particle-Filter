@@ -91,7 +91,7 @@ int main(int argc, char * args[])
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        uint32_t sd = rand()%3; 
+        uint32_t sd = rand()%1; 
         sleep(sd);
 
         nsteps = melissa_expose_f("state1", state1.data());

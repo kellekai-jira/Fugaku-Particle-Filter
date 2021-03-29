@@ -313,7 +313,9 @@ void StorageController::m_request_peer() {
 void StorageController::m_request_pull() {
   if( m_io->probe( IO_TAG_PULL ) ) {
     if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
-    pull( m_io->m_state_pull_requests.front() );
+    if(!m_io->is_local(m_io->m_state_pull_requests.front())) {
+      pull( m_io->m_state_pull_requests.front() );
+    }
     m_io->m_state_pull_requests.pop();
   }
 }
