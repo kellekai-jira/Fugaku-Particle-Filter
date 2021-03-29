@@ -282,7 +282,10 @@ def calculate_parent_state_importance(parent_state_id):
     # Number of unscheduled tasks dependent on it
     d = len(list(filter(lambda x: unscheduled_jobs[x] == parent_state_id, unscheduled_jobs)))
 
-    return d / count_runners_with_state(parent_state_id)
+    runners_with_it = count_runners_with_state(parent_state_id)
+    if runners_with_it == 0:
+        runners_with_it = 0.5  # give some motivation to load states from the pfs and avoid div/0
+    return d / runners_with_it
 
 
 def calculate_runner_importance(runner_id):
