@@ -41,7 +41,7 @@ from cluster import cluster
 
 
 class LocalCluster(cluster.Cluster):
-    def __init__(self):
+    def __init__(self, scalasca=False):
         # figure out some stuff on mpiexec....
         # REM: this is executed twice. First to generate the standard argument and then
         # again if it is used. Maybe it would be a good idea to check for the command
@@ -57,6 +57,8 @@ class LocalCluster(cluster.Cluster):
             self.env_variable_pattern = ' -genv %s %s '
 
         self.jobs = {}
+
+        self.scalasca=scalasca
 
 
     def __del__(self):
@@ -81,19 +83,31 @@ class LocalCluster(cluster.Cluster):
         for key, value in additional_env.items():
             additional_env_parameters += self.env_variable_pattern % (key, value)
 
-        run_cmd = '%s -n %d %s %s' % (
-                self.mpiexec,
-                n_procs,
-                additional_env_parameters,
-                cmd)
 
-        print("Launching %s" % run_cmd)
+        splitted = []
+
+        if self.scalasca and not 'server.py' in cmd:  # never run scalasca on p2p server.py
+            splitted = ['scalasca', '-analyze', os.getenv('MPIEXEC'),
+                   '-n %d'% n_procs]
+            splitted += ['-x %s=%s' % (name, value) for name, value in additional_env.items()]
+            splitted += cmd.split()
+        else:
+            run_cmd = '%s -n %d %s %s' % (
+                    self.mpiexec,
+                    n_procs,
+                    additional_env_parameters,
+                    cmd)
+
+
+            splitted = run_cmd.split()
+
+        print("Launching %s" % " ".join(splitted))
 
         if logfile == '':
-            job = subprocess.Popen(run_cmd.split())
+            job = subprocess.Popen(splitted)
         else:
             with open(logfile, 'wb') as f:
-                job = subprocess.Popen(run_cmd.split(), stdout=f)
+                job = subprocess.Popen(splitted, stdout=f)
 
         self.jobs[job.pid] = job
 
