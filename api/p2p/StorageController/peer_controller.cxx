@@ -103,13 +103,11 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
     printf("Bound my state server to %s, publishing %s:%d\n", port_name,
             hostname.c_str(), port);
 
-    state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 }
 
 PeerController::~PeerController()
 {
     zmq_close(state_server_socket);
-    zmq_close(state_request_socket);
 }
 
 
@@ -138,6 +136,12 @@ bool PeerController::mirror( io_state_id_t state_id )
     // go through list of runners (that is shuffled/ put in a good order by the server)
     for (int i = 0; i < dns_reply.runner_response().sockets_size(); i++)
     {
+
+        state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
+
+        const int linger = 1000;  // only try 50 ms to send out messages
+        zmq_setsockopt (state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
+
         std::string addr = std::string("tcp://") + dns_reply.runner_response().sockets(i).node_name() + ':' +
             std::to_string(dns_reply.runner_response().sockets(i).port());
 
@@ -147,46 +151,59 @@ bool PeerController::mirror( io_state_id_t state_id )
         assert( zmq_connect(state_request_socket, port_name.c_str()) == 0 );
 
         send_message(state_request_socket, state_request);
-        auto m = receive_message(state_request_socket);
-        if (m.state_response().has_state_id())
-        {
-            printf("Found it!\n");
-            found = true;
-            // FIXME: assert that stateid is the one requested!
 
-            std::string local_tmp = m_io->m_dict_string["local_dir"] + "/tmp/";
-            std::string local_dir = m_io->m_dict_string["local_dir"] + "/" +
-              m_io->m_dict_string["exec_id"] + "/l1/" + std::to_string(to_ckpt_id(state_id));
 
-            mkdir( local_tmp.c_str(), 0777 );
+        zmq_pollitem_t items[1];
+        items[0] = {state_request_socket, 0, ZMQ_POLLIN, 0};
 
-            for (size_t j = 0; j < m.state_response().filenames_size(); j++)
+        ZMQ_CHECK(zmq_poll(items, 1, 1000));  // wait 100 000 us = 100 ms for an event
+
+        // answer only one request to not block for too long (otherwise this would be a while...)
+        if (items[0].revents & ZMQ_POLLIN) {
+            auto m = receive_message(state_request_socket);
+            if (m.state_response().has_state_id())
             {
+                printf("Found it!\n");
+                found = true;
+                // FIXME: assert that stateid is the one requested!
 
-                assert_more_zmq_messages(state_request_socket);
+                std::string local_tmp = m_io->m_dict_string["local_dir"] + "/tmp/";
+                std::string local_dir = m_io->m_dict_string["local_dir"] + "/" +
+                  m_io->m_dict_string["exec_id"] + "/l1/" + std::to_string(to_ckpt_id(state_id));
 
-                std::string ckpt_file = local_tmp + m.state_response().filenames(j);
-                std::ofstream outfile( ckpt_file, std::ofstream::binary );
+                mkdir( local_tmp.c_str(), 0777 );
 
-                // write to outfile
-                auto data_msg = zmq::recv(state_request_socket);
+                for (size_t j = 0; j < m.state_response().filenames_size(); j++)
+                {
 
-                outfile.write (zmq::data(*data_msg), zmq::size(*data_msg));
-                outfile.close();  // close explicitly to create softlink
+                    assert_more_zmq_messages(state_request_socket);
 
+                    std::string ckpt_file = local_tmp + m.state_response().filenames(j);
+                    std::ofstream outfile( ckpt_file, std::ofstream::binary );
+
+                    // write to outfile
+                    auto data_msg = zmq::recv(state_request_socket);
+
+                    outfile.write (zmq::data(*data_msg), zmq::size(*data_msg));
+                    outfile.close();  // close explicitly to create softlink
+
+                }
+
+                rename( local_tmp.c_str(), local_dir.c_str() );
+
+                if( m_io->m_dict_bool["master_global"]) {
+                  m_io->update_metadata( state_id, IO_STORAGE_L1 );
+                }
+
+                break;
             }
-
-            rename( local_tmp.c_str(), local_dir.c_str() );
-
-            if( m_io->m_dict_bool["master_global"]) {
-              m_io->update_metadata( state_id, IO_STORAGE_L1 );
-            }
-
-            break;
         }
 
 
-        zmq_disconnect(state_request_socket, port_name.c_str());
+        //zmq_disconnect(state_request_socket, port_name.c_str());
+
+        zmq_close(state_request_socket);
+
         if (found) {
             break;
         }

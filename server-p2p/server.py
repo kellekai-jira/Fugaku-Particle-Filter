@@ -323,8 +323,12 @@ def accept_prefetch(msg):
     mean_importance = calculate_mean_importance()
 
 
+
     # Figure out if this compute resource is a receiver or a sender:
     runner_importance = calculate_runner_importance(runner_id)
+
+
+    print('Prefetch Request - mean_importance:', mean_importance, 'runner(%d) importance:' % runner_id, runner_importance)
 
     reply = cm.Message()
     if runner_importance >= mean_importance:
@@ -341,7 +345,7 @@ def accept_prefetch(msg):
             key=first)[-1]
 
         # Reply state id of most important parent state (and not its importance)
-        reply.prefetch_resonse.pull_states.append(most_important[1])
+        reply.prefetch_response.pull_states.append(most_important[1])
 
         dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
