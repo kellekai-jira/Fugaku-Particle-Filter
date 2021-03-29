@@ -183,10 +183,16 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
 
   std::stringstream meta_tmp_dir;
   meta_tmp_dir << m_dict_string["meta_dir"];
+  meta_tmp_dir << "/";
+  meta_tmp_dir << m_dict_string["exec_id"];
+  meta_tmp_dir << "/";
   meta_tmp_dir << "/tmp.head";
 
   std::stringstream local_tmp_dir;
   local_tmp_dir << m_dict_string["local_dir"];
+  local_tmp_dir << "/";
+  local_tmp_dir << m_dict_string["exec_id"];
+  local_tmp_dir << "/";
   local_tmp_dir << "/tmp.head";
 
   std::stringstream local_tmp;

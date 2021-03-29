@@ -26,6 +26,8 @@ int comm_rank = -1;
 
 int main(int argc, char * args[])
 {
+    srand(time(NULL));
+
     if (argc > 1)
     {
         GLOBAL_VECT_SIZE = atoi(args[1]);
@@ -89,8 +91,8 @@ int main(int argc, char * args[])
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        // usleep(10000);
-        // usleep(1000000);
+        uint32_t sd = rand()%3; 
+        sleep(sd);
 
         nsteps = melissa_expose_f("state1", state1.data());
         printf("calculating from timestep %d\n",

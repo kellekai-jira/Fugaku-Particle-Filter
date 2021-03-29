@@ -130,6 +130,10 @@ void StorageController::callback() {
   // containing the state id.
   IO_PROBE( IO_TAG_LOAD, storage.m_request_load() );
 
+  // EVENT
+  // Bob check and serve peer requests
+  storage.m_request_peer();
+
   // QUERY (every x seconds)
   // request -> send (1) cached state list and (2) number of free slots to server
   // response -> receive up to 2 states to prefetch and up to 2 states to delete if neccessary
@@ -139,10 +143,6 @@ void StorageController::callback() {
   // this event is triggered, when the storage controller gets a
   // prefetch instruction from the weight server [requested in 'm_query_server']
   IO_PROBE( IO_TAG_PULL, storage.m_request_pull() );
-
-  // EVENT
-  // Bob check and serve peer requests
-  storage.m_request_peer();
 
   // app core may tell the head to finish application. This will end in a call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
