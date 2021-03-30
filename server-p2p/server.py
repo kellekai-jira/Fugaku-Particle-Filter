@@ -252,6 +252,10 @@ def accept_delete(msg):
                 state_cache[runner_id]),
             key=first)  # only sort by first element (weight) (and not by the second which would be the state id)
 
+    if assimilation_cycle == 0:
+        # don't delete the state ids from time step 0 for now
+        sorted_importance = list(filter(lambda x: x[1].t != 0, sorted_importance))
+
     reply = cm.Message()
     reply.delete_response.SetInParent()
     # Try to delete something with importance < 1 --> must be stored on other resource too.
@@ -261,7 +265,7 @@ def accept_delete(msg):
         # if minimum >= 1: select something that possibly is stored on a different
         # runner too.
         for _, state_id in sorted_importance:
-            runners_with_it = count_runners_with_state
+            runners_with_it = count_runners_with_state(state_id)
             if runners_with_it > 1:
                 reply.delete_response.to_delete.CopyFrom(state_id)
                 break
@@ -270,6 +274,7 @@ def accept_delete(msg):
         print("nothing good was found to be deleted on", runner_id)
         reply.delete_response.to_delete = sorted_importance[0][1]
         print("still deleting something:", reply)
+
 
     state_cache[runner_id].remove(reply.delete_response.to_delete)
 
@@ -331,9 +336,11 @@ def accept_prefetch(msg):
     print('Prefetch Request - mean_importance:', mean_importance, 'runner(%d) importance:' % runner_id, runner_importance)
 
     reply = cm.Message()
-    if runner_importance >= mean_importance:
-        # This is a sender. it shall not prefetch anything:
-        reply.prefetch_response.SetInParent()
+    reply.prefetch_response.SetInParent()
+    if runner_importance >= mean_importance or assimilation_cycle == 0:
+        # This is a sender. it shall not prefetch anything
+        # Also don't prefetch anything in assimilation cycle 0 since everybody has a good parent state for this.
+        pass
     else:
         # This runner shall receive (prefetch) the most important state:
 
@@ -344,10 +351,13 @@ def accept_prefetch(msg):
             parent_state_ids),
             key=first)[-1]
 
-        # Reply state id of most important parent state (and not its importance)
-        reply.prefetch_response.pull_states.append(most_important[1])
+        # Never prefetch states from t = 0. We assume this state exists already. Since
+        # we never delete states for t = 0
+        if most_important[1].t != 0:
+            # Reply state id of most important parent state (and not its importance)
+            reply.prefetch_response.pull_states.append(most_important[1])
 
-        dict_append(state_cache_with_prefetch, runner_id, most_important[1])
+            dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
     send_message(gp_socket, reply)
 
@@ -387,7 +397,7 @@ def handle_general_purpose():
             assert False
 
 
-def hanlde_job_requests(launcher, nsteps):
+def handle_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
@@ -406,8 +416,11 @@ def hanlde_job_requests(launcher, nsteps):
         # try to select a better job where the runner has the cache already and which is
         # only on few other runners
 
-        if runner_id in state_cache:
+
+        # at cycle == 0 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
+        if assimilation_cycle != 0 and runner_id in state_cache:
             parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
+
 
             # Get cached parent state ids
             useful_states = list(filter(lambda x: x in parent_state_ids, state_cache[runner_id]))
@@ -488,6 +501,7 @@ class LauncherConnection:
         ) + LAUNCHER_PING_INTERVAL
 
     def __del__(self):
+        print("Sending Stop Message to Launcher")
         self.text_pusher.send(Stop().encode())
 
     def update_launcher_due_date(self):
@@ -530,6 +544,8 @@ class LauncherConnection:
             self.notify(runner_id,
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
+
+
 
 
 def do_update_step():
@@ -586,6 +602,7 @@ if __name__ == '__main__':
             nsteps = do_update_step()
             if nsteps <= 0:
                 # end: tell launcher to kill everything
+                del launcher
                 print('End!')
                 break
             # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
@@ -593,7 +610,7 @@ if __name__ == '__main__':
             # not necessary since we only answer job requests if job is there... answer_open_job_requests()
 
         if len(unscheduled_jobs) > 0:
-            hanlde_job_requests(launcher, nsteps)
+            handle_job_requests(launcher, nsteps)
 
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():
