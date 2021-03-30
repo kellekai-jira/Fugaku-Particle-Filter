@@ -254,14 +254,14 @@ def accept_delete(msg):
                 state_cache[runner_id]),
             key=first)  # only sort by first element (weight) (and not by the second which would be the state id)
 
-    if assimilation_cycle == 0:
-        # don't delete the state ids from time step 0 for now
+    if assimilation_cycle == 1:  # parent state id's will have t=0
+        # don't delete the state ids from time step 0 for now as they are needed as parents
         sorted_importance = list(filter(lambda x: x[1].t != 0, sorted_importance))
 
     reply = cm.Message()
     reply.delete_response.SetInParent()
     # Try to delete something with importance < 1 --> must be stored on other resource too.
-    if sorted_importance[0][0] < 1:
+    if sorted_importance[0][0] < 1.0:
         reply.delete_response.to_delete.CopyFrom(sorted_importance[0][1])
     else:
         # if minimum >= 1: select something that possibly is stored on a different
@@ -340,10 +340,10 @@ def accept_prefetch(msg):
     reply = cm.Message()
     reply.prefetch_response.SetInParent()
     if runner_importance >= mean_importance or \
-            assimilation_cycle == 0 or \
+            assimilation_cycle == 1 or \
             len(unscheduled_jobs) == 0:
             # this is a sender
-            # or its  assimilation cycle0 where everybody has a good parent state already (we never delete states with t=0 during assimliation cycle 0)
+            # or its  assimilation cycle 1 where everybody has a good parent state already (we never delete states with t=0 during assimliation cycle 2)
             # or there is nothing left to be scheduled so far...
         pass
     else:
@@ -427,8 +427,8 @@ def handle_job_requests(launcher, nsteps):
         # only on few other runners
 
 
-        # at cycle == 0 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
-        if assimilation_cycle != 0 and runner_id in state_cache:
+        # at cycle == 1 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
+        if assimilation_cycle != 1 and runner_id in state_cache:
             parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
 
 
