@@ -255,7 +255,7 @@ void StorageController::m_request_post() {
   if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
   static mpi_request_t req;
   req.wait();  // be sure that there is nothing else in the mpi send queue
-  
+
   Message weight_message;
   int msg_size;
   m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_ONE );
@@ -269,7 +269,7 @@ void StorageController::m_request_post() {
   io_id_t ckpt_id = to_ckpt_id( state_id );
 
   m_io->update_metadata( state_id, IO_STORAGE_L1 );
-  assert( m_io->is_local(state_id) && "state should be local"); 
+  assert( m_io->is_local(state_id) && "state should be local");
   m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
@@ -277,7 +277,7 @@ void StorageController::m_request_post() {
   // create symbolic link
   if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
-    
+
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
   state_pool++;
   std::cout << "FREE SLOTS: " << state_pool.free() << std::endl;
@@ -285,7 +285,7 @@ void StorageController::m_request_post() {
   if( state_pool.free() == 0 ) {
     server.delete_request(this);
   }
-  
+
   int dummy;
   m_io->isend( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL, req );
 
@@ -457,25 +457,25 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   auto pull_state = response.delete_response().to_delete();
   io_state_id_t state_id( pull_state.t(), pull_state.id() );
-  
-  std::cout << "HEAD IS REQUESTED TO DELETE (id: "<<state_id.id<<", t: "<<state_id.t<<")" <<  std::endl;
+
+  std::cout << "HEAD IS REQUESTED TO DELETE (t: "<<state_id.t<<", id: "<<state_id.id<<")" <<  std::endl;
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
-  
+
   std::stringstream local;
   local << storage->m_io->m_dict_string["local_dir"];
   local << "/";
   local << storage->m_io->m_dict_string["exec_id"];
   local << "/l1/";
   local << std::to_string(to_ckpt_id(state_id));
-  
+
 
   struct stat info;
   assert( stat( local.str().c_str(), &info ) != 0 && "the local checkpoint directory has not been deleted!" );
-  
-  assert(!storage->m_io->is_local(state_id)); 
+
+  assert(!storage->m_io->is_local(state_id));
   storage->state_pool--;
-  std::cout << "free: " << storage->state_pool.free() << std::endl; 
+  std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
 }
