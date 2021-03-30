@@ -337,27 +337,27 @@ def accept_prefetch(msg):
 
     reply = cm.Message()
     reply.prefetch_response.SetInParent()
-    if runner_importance >= mean_importance or assimilation_cycle == 0:
-        # This is a sender. it shall not prefetch anything
-        # Also don't prefetch anything in assimilation cycle 0 since everybody has a good parent state for this.
+    if runner_importance >= mean_importance or \
+            assimilation_cycle == 0 or \
+            len(unscheduled_jobs) == 0:
+            # this is a sender
+            # or its  assimilation cycle0 where everybody has a good parent state already (we never delete states with t=0 during assimliation cycle 0)
+            # or there is nothing left to be scheduled so far...
         pass
     else:
         # This runner shall receive (prefetch) the most important state:
 
         # Get parent state ids of unscheduled jobs
-        parent_state_ids = map(lambda x: unscheduled_jobs[x], unscheduled_jobs)
+        parent_state_ids = list(map(lambda x: unscheduled_jobs[x], unscheduled_jobs))
         # Attach importance to it, sort ascending and get last element
         most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
             parent_state_ids),
             key=first)[-1]
 
-        # Never prefetch states from t = 0. We assume this state exists already. Since
-        # we never delete states for t = 0
-        if most_important[1].t != 0:
-            # Reply state id of most important parent state (and not its importance)
-            reply.prefetch_response.pull_states.append(most_important[1])
+        # Reply state id of most important parent state (and not its importance)
+        reply.prefetch_response.pull_states.append(most_important[1])
 
-            dict_append(state_cache_with_prefetch, runner_id, most_important[1])
+        dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
     send_message(gp_socket, reply)
 
