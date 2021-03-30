@@ -241,6 +241,8 @@ def count_runners_with_state(state_id):
     return len(list(filter(lambda x: state_id in state_cache[x], state_cache)))
 
 def accept_delete(msg):
+    # TODO Try to not delete new iterations states if there are old iteratioins states with 0 importance
+
     runner_id = msg.runner_id
 
     update_state_knowledge(msg.delete_request, runner_id)
@@ -349,13 +351,21 @@ def accept_prefetch(msg):
 
         # Get parent state ids of unscheduled jobs
         parent_state_ids = list(map(lambda x: unscheduled_jobs[x], unscheduled_jobs))
-        # Attach importance to it, sort ascending and get last element
-        most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
-            parent_state_ids),
-            key=first)[-1]
 
-        # Reply state id of most important parent state (and not its importance)
-        reply.prefetch_response.pull_states.append(most_important[1])
+        # Filter out states that are already on the runner:
+        parent_state_ids = list(filter(lambda state_id: not state_id in state_cache[runner_id], parent_state_ids))
+
+        if len(parent_state_ids) > 0:
+            # Attach importance to it, sort ascending and get last element
+            most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
+                parent_state_ids),
+                key=first)[-1]
+
+            # Reply state id of most important parent state (and not its importance)
+            reply.prefetch_response.pull_states.append(most_important[1])
+
+
+        # TODO: if prefetching with weight 1: take a state that is only on one runner for fault tollerance?
 
         dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
@@ -622,3 +632,5 @@ if __name__ == '__main__':
 
         # Slow down CPU:
         time.sleep(0.01)
+
+    print(".")
