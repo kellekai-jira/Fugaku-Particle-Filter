@@ -196,7 +196,7 @@ void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_
 }
 
 void StorageController::m_pull_head( io_state_id_t state_id ) {
-  assert( !m_io->is_local( state_id ) && "state is already local!" );
+  if( m_io->is_local( state_id ) ) return;
   while( state_pool.free() <= 1  ) {
     server.delete_request(this);
   }
@@ -287,7 +287,7 @@ void StorageController::m_request_post() {
   }
 
   int dummy;
-  m_io->isend( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL, req );
+  m_io->send( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL );
 
   // ask if something to prefetch
   server.prefetch_request( this );
