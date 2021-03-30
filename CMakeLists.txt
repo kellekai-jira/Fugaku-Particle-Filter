@@ -17,6 +17,10 @@ include_directories(${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 link_libraries(${MPI_LIBRARIES})
 
+
+# GnuInstallDirs
+include(GNUInstallDirs)
+
 # FTI #
 option(WITH_FTI "FTI is needed for automatic recovery from melissa_da_server crashes" OFF)
 if (WITH_FTI)
@@ -36,8 +40,8 @@ if (WITH_FTI)
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
         message(STATUS "FTI will be installed")
         set(FTI_PATH "${CMAKE_INSTALL_PREFIX}/FTI")
-        set(FTI_LIBRARY "${FTI_PATH}/lib/libfti.so")  # TIODO: use gnu package to decide automatically between lib64 and lib
-        set(FTI_INCLUDE_DIR "${FTI_PATH}/include")
+        set(FTI_LIBRARY "${FTI_PATH}/${CMAKE_INSTALL_LIBDIR}/libfti.so")  # TIODO: use gnu package to decide automatically between lib64 and lib
+        set(FTI_INCLUDE_DIR "${FTI_PATH}/${CMAKE_INSTALL_INCLUDEDIR}")
         set(WITH_FTI TRUE)
     else()
         set(FTI_PATH "" CACHE PATH "Path to FTI")
