@@ -78,7 +78,7 @@ else
           -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug \
           -DWITH_FTI_THREADS=ON \
           -DREPORT_TIMING_ALL_RANKS=ON \
-          -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp"
+          -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
           -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p
 
     else
