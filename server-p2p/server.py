@@ -221,7 +221,8 @@ def accept_runner_request(msg):
 
     # remove all faulty runners
     for rid in faulty_runners:
-        del runners[rid]
+        if rid in runners:
+            del runners[rid]
 
     # generate reply:
     reply = cm.Message()
