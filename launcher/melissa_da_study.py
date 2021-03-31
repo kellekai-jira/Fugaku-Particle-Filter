@@ -31,7 +31,7 @@ start_time = int(time.time()*1000)  # in milliseconds
 # These variables are only used in this file.
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
-melissa_with_fti = (os.getenv('WITH_FTI_CHECKOINT_DA_SERVER') == 'TRUE')
+server_may_restart = (os.getenv('WITH_FTI_CHECKOINT_DA_SERVER') == 'TRUE')
 melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
 assert melissa_da_datadir
 
@@ -78,7 +78,7 @@ def run_melissa_da_study(
     if (not os.path.isdir(WORKDIR)):
         os.mkdir(WORKDIR)
 
-    if melissa_with_fti:
+    if server_may_restart:
         copyfile(config_fti_path, WORKDIR+"/config.fti")
 
     os.chdir(WORKDIR)
@@ -157,7 +157,7 @@ def run_melissa_da_study(
             self.last_msg_to = time.time()
             self.last_msg_from = time.time()
             Server.starts += 1
-            assert Server.starts < 2 or melissa_with_fti  # can't restart server without fti!
+            assert Server.starts < 2 or server_may_restart  # can't restart server without fti!
 
             if Server.starts > MAX_SERVER_STARTS:
                 print('Tail of server logs for diagnostics:')

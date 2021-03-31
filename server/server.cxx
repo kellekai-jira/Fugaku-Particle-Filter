@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
 #include "FTmodule.h"
 #endif
 
@@ -64,7 +64,7 @@ int ENSEMBLE_SIZE = 5;
 
 const int MAX_FAIL_COUNT = 5;
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
 FTmodule FT;
 #endif
 MpiManager mpi;
@@ -1162,7 +1162,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
                 part, reinterpret_cast<VEC_T*>(zmq::data(*data_msg)),
                 hidden_part, values_hidden);
             data_msg_hidden.reset();
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
             FT.store_subset(field, runner_state_id, runner_rank);
             // FIXME: store hidden state here too!
 #endif
@@ -1341,7 +1341,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
     if (finished)
     {
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
         // FIXME: shortcut to here if recovering (do not do first background
         // state calculation!)
         FT.recover();
@@ -1366,7 +1366,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                                                        // integrated?
         trigger(STOP_FILTER_UPDATE, current_step);
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
         // REM: we do not profile the time for checkpointing for now
         FT.flushCP(); // TODO: put into one function
         FT.finalizeCP();
@@ -1423,7 +1423,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                 runner_it = get_completely_idle_runner();
             }
         }
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
         FT.initCP(current_step);
 #endif
         D("Finished update step at %ld s unix time", time(NULL));
@@ -1479,7 +1479,7 @@ int main(int argc, char* argv[]) {
 
     init_utils();
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
     FT.init(mpi, current_step);
 #endif
 
@@ -1667,7 +1667,7 @@ int main(int argc, char* argv[]) {
                 init_new_timestep(); // init_new_timestep needs the latest
                                      // timestep id from the assimilator!
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
                 FT.protect_background(mpi, field);
 #endif
 
@@ -1841,7 +1841,7 @@ int main(int argc, char* argv[]) {
     }
     zmq_ctx_destroy(context);
 
-#ifdef WITH_FTI
+#if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
     FT.finalize();
 #endif
     mpi.finalize();
