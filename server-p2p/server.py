@@ -252,6 +252,9 @@ def accept_delete(msg):
     # running job ids
     running_state_ids.extend(list(running_jobs))
     states_to_delete_from = list(filter(lambda x: x not in running_state_ids, state_cache[runner_id]))
+    print("States_to_delete_from", states_to_delete_from)
+
+    assert len(states_to_delete_from) > 0
 
     # Attach importance to states on runner and sort:
 
@@ -267,9 +270,11 @@ def accept_delete(msg):
 
     reply = cm.Message()
     reply.delete_response.SetInParent()
+    found_to_delete = False
     # Try to delete something with importance < 1 --> must be stored on other resource too.
     if sorted_importance[0][0] < 1.0:
         reply.delete_response.to_delete.CopyFrom(sorted_importance[0][1])
+        found_to_delete = True
     else:
         # if minimum >= 1: select something that possibly is stored on a different
         # runner too.
@@ -277,12 +282,13 @@ def accept_delete(msg):
             runners_with_it = count_runners_with_state(state_id)
             if runners_with_it > 1:
                 reply.delete_response.to_delete.CopyFrom(state_id)
+                found_to_delete = True
                 break
 
-    if not reply.delete_response.to_delete:
+    if not found_to_delete:
         print("nothing good was found to be deleted on", runner_id)
         reply.delete_response.to_delete = sorted_importance[0][1]
-        print("still deleting something:", reply)
+        print("still deleting something")
 
 
     print("Deleting", reply.delete_response.to_delete)
@@ -622,7 +628,7 @@ if __name__ == '__main__':
             if nsteps <= 0:
                 # end: tell launcher to kill everything
                 del launcher
-                print('End!')
+                print('Gracefully ending server now.')
                 break
             # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
