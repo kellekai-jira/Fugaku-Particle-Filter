@@ -37,7 +37,7 @@ class TestRun:
                 os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
             runner_cmd='simulation4-p2p',
             total_steps=10,
-            ensemble_size=30,
+            ensemble_size=10,
             procs_runner=self.PROCS_RUNNER,
             nodes_runner=self.NODES_RUNNER,
             n_runners=self.N_RUNNERS,
@@ -66,10 +66,10 @@ def gracefully_ended():
 
     assert text_in_file('Gracefully ending study now.', 'STATS/melissa_launcher.log')
 
-TestRun(2, 1, 3, '')
+TestRun(2, 1, 3, '1')
 gracefully_ended()
 
 time.sleep(3)
 
-TestRun(2, 1, 3, '1')
+TestRun(2, 1, 3, '')
 gracefully_ended()

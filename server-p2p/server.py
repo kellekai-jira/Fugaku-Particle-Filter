@@ -246,11 +246,14 @@ def accept_delete(msg):
 
     update_state_knowledge(msg.delete_request, runner_id)
 
-    # Filter out state_id's from running states! (parent and
-    # running parent state id's
-    running_state_ids = list(map(lambda x: running_jobs[x][2], running_jobs))
-    # running job ids
-    running_state_ids.extend(list(running_jobs))
+    # Filter out parent and job state_id that is running on the same runner:
+    jobs_on_runner = list(filter(lambda jid: running_jobs[jid][1] == runner_id, running_jobs))
+    running_state_ids = []
+    if len(jobs_on_runner) > 0:
+        jid = jobs_on_runner[0]
+        # running job's job id and parent state id
+        running_state_ids = [jid, running_jobs[jid][2]]
+
     states_to_delete_from = list(filter(lambda x: x not in running_state_ids, state_cache[runner_id]))
     print("States_to_delete_from", states_to_delete_from)
 
