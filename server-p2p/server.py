@@ -287,7 +287,7 @@ def accept_delete(msg):
 
     if not found_to_delete:
         print("nothing good was found to be deleted on", runner_id)
-        reply.delete_response.to_delete = sorted_importance[0][1]
+        reply.delete_response.to_delete.CopyFrom(sorted_importance[0][1])
         print("still deleting something")
 
 
