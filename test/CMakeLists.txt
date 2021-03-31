@@ -44,6 +44,8 @@ function(add_python_test test_name test_script)
     list(APPEND PYTHONPATH_LIST ${CMAKE_SOURCE_DIR}/test)
     list(APPEND PYTHONPATH_LIST ${CMAKE_SOURCE_DIR}/launcher)
     list(APPEND PYTHONPATH_LIST ${Melissa_PATH}/share/melissa)
+    list(APPEND PYTHONPATH_LIST ${CMAKE_BINARY_DIR}/common/protocol)
+
     string(REPLACE ";" ":" PYTHONPATH "${PYTHONPATH_LIST}")
 
 

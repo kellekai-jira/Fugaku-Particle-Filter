@@ -10,7 +10,6 @@ class TestRun:
     def __init__(self, procs_runner=2, nodes_runner=1, n_runners=3, has_propagation_time=''):
         print("Running test with procs_runner=%d, nodes_runner=%d, n_runners=%d, has_propagation_time=%s" %
             (procs_runner, nodes_runner, n_runners, has_propagation_time))
-        os.system('killall gdb')
         clean_old_stats()
         self.NODES_RUNNER = nodes_runner
         self.PROCS_RUNNER = procs_runner
