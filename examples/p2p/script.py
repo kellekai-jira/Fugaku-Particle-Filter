@@ -16,7 +16,8 @@ assert PROCS_RUNNER % NODES_RUNNER == 0
 
 def prepare_runner_dir():
     print('Preparing runner directory (%s)' % os.getcwd())
-    shutil.copy('../../config-runner.fti', './config.fti')
+    shutil.copy('%s/examples/p2p/config-runner.fti' %
+            os.getenv('MELISSA_DA_SOURCE_PATH'), './config.fti')
 
     config = configparser.ConfigParser()
     config.read('config.fti')
@@ -26,7 +27,7 @@ def prepare_runner_dir():
 
 
 run_melissa_da_study(
-    server_cmd='python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
+    server_cmd='xterm_gdb python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
     # server_cmd='coverage run %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
     #runner_cmd='xterm_gdb python3 -u %s/simulation.py' % os.getcwd(),
     runner_cmd='xterm_gdb simulation4-p2p',

@@ -90,6 +90,10 @@ add_python_test("test-unresponsive-runner"
 add_python_test("test-python-assimilator"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_python_assimilator.py")
 
+# P2P
+add_python_test("test-p2p-basic"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_p2p_basic.py")
+
 # Should be the last test!
 add_python_test("test-cleanup"
     "${CMAKE_CURRENT_SOURCE_DIR}/test-cleanup.py")
