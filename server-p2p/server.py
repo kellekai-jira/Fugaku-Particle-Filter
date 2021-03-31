@@ -6,6 +6,7 @@ import time
 import zmq
 import p2p_pb2 as cm
 import numpy as np
+from enum import Enum
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -34,7 +35,7 @@ from melissa4py.message import SimulationData
 from melissa4py.message import JobDetails
 from melissa4py.message import Stop
 from melissa4py.message import SimulationStatusMessage
-from melissa4py.fault_tolerance import Simulation, SimulationStatus
+from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to send timeout notifications!
 
 sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
 from utils import get_node_name
@@ -53,7 +54,15 @@ if not cm.StateId.__hash__:
     cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
 
-SimulationStatus.TIMEOUT = 4  # see melissa_messages.h
+
+
+
+class SimulationStatus(Enum):
+    CONNECTED = 0
+    RUNNING = 1
+    FINISHED = 2
+    TIMEOUT = 4
+
 
 from common import parse
 
