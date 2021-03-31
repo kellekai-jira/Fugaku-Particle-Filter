@@ -37,6 +37,7 @@ function(add_python_test test_name test_script)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation1)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation2-pdaf)
     list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/simulation3-empty)
+    list(APPEND PATH_LIST ${CMAKE_BINARY_DIR}/examples/p2p)
     list(APPEND PATH_LIST ${CMAKE_SOURCE_DIR}/test)
     string(REPLACE ";" ":" PATH_ "${PATH_LIST}")
 
