@@ -616,7 +616,7 @@ def do_update_step():
 
 def check_due_date_violations():
     """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
-    for job_id in running_jobs:
+    for job_id in list(running_jobs):
         due_date, runner_id, parent_state_id = running_jobs[job_id]
         if time.time() > due_date:
             faulty_runners.add(runner_id)
