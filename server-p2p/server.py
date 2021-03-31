@@ -217,11 +217,10 @@ def accept_runner_request(msg):
     # generate reply:
     reply = cm.Message()
     reply.runner_response.SetInParent()
-    print('runners:', runners)
-    print('shuffling runner list:', list(runners))
     shuffeled_runners = list(runners)
     # shuffle inplace
     random.shuffle(shuffeled_runners)
+    print('Responding shuffled runner list:', list(runners))
     for rid in shuffeled_runners:
         if rid == runner_id:
             continue
@@ -247,16 +246,24 @@ def accept_delete(msg):
 
     update_state_knowledge(msg.delete_request, runner_id)
 
+    # Filter out state_id's from running states! (parent and
+    # running parent state id's
+    running_state_ids = list(map(lambda x: running_jobs[x][2], running_jobs))
+    # running job ids
+    running_state_ids.extend(list(running_jobs))
+    states_to_delete_from = list(filter(lambda x: x not in running_state_ids, state_cache[runner_id]))
+
     # Attach importance to states on runner and sort:
 
     sorted_importance = sorted(
-            zip(map(calculate_parent_state_importance, state_cache[runner_id]),
-                state_cache[runner_id]),
+            zip(map(calculate_parent_state_importance, states_to_delete_from),
+                states_to_delete_from),
             key=first)  # only sort by first element (weight) (and not by the second which would be the state id)
 
     if assimilation_cycle == 1:  # parent state id's will have t=0
         # don't delete the state ids from time step 0 for now as they are needed as parents
         sorted_importance = list(filter(lambda x: x[1].t != 0, sorted_importance))
+
 
     reply = cm.Message()
     reply.delete_response.SetInParent()
@@ -278,7 +285,9 @@ def accept_delete(msg):
         print("still deleting something:", reply)
 
 
+    print("Deleting", reply.delete_response.to_delete)
     state_cache[runner_id].remove(reply.delete_response.to_delete)
+
 
     send_message(gp_socket, reply)
 
@@ -458,7 +467,7 @@ def handle_job_requests(launcher, nsteps):
 
         running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
                        unscheduled_jobs[the_job])
-        print("Scheduling", running_job)
+        print("Scheduling", the_job, "with job entry", running_job)
         running_jobs[the_job] = running_job
         del unscheduled_jobs[the_job]
 
