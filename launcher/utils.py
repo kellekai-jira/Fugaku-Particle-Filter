@@ -6,6 +6,7 @@ import random
 import shutil
 import logging
 import threading
+from importlib import reload  # to restart the logging ;)
 
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
@@ -49,6 +50,7 @@ LOG_LEVEL_DEBUG = 3
 LOG_LEVEL_LOG   = 2
 LOG_LEVEL_ERROR = 1
 
+
 def logger_function(loglevel):
 
     def l(*args, **kwargs):
@@ -70,6 +72,8 @@ log   = logger_function(LOG_LEVEL_LOG)
 error = logger_function(LOG_LEVEL_ERROR)
 
 def start_logging(workdir):
+    logging.shutdown()
+    reload(logging)
     logfile = workdir+'/melissa_launcher.log'
     logging.basicConfig(format='%(asctime)s %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p',
