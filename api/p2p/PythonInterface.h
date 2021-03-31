@@ -8,6 +8,7 @@
 
 #include "utils.h"
 #include "melissa_da_stype.h"
+#include "api_common.h"
 
 class PythonInterface {
 
@@ -164,11 +165,15 @@ public:
         D("calculate_weight input parameter:");
 
         // Py_INCREF(pValue);
+        MPI_Fint fcomm = MPI_Comm_c2f(comm);
+        PyObject *pFcomm = Py_BuildValue("i", fcomm);
+
         PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime, pId,
                 pBackground,
                 pHidden,
                 pArray_assimilated_index,
                 pArray_assimilated_varid,
+                pFcomm,
                 NULL);
         err(pReturn != NULL, "No return value");
 

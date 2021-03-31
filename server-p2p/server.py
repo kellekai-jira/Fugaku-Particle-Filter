@@ -265,7 +265,6 @@ def accept_delete(msg):
         running_state_ids = [jid, running_jobs[jid][2]]
 
     states_to_delete_from = list(filter(lambda x: x not in running_state_ids, state_cache[runner_id]))
-    print("States_to_delete_from", states_to_delete_from)
 
     assert len(states_to_delete_from) > 0
 
@@ -304,7 +303,7 @@ def accept_delete(msg):
         print("still deleting something")
 
 
-    print("Deleting", reply.delete_response.to_delete)
+    print("Deleting", reply.delete_response.to_delete, "on runner", runner_id)
     state_cache[runner_id].remove(reply.delete_response.to_delete)
 
 
@@ -592,6 +591,8 @@ def do_update_step():
     # Something really stupid for now:
     # Sort by weights. Then take 10 best particles for next generation
     global assimilation_cycle
+
+    print("======= Performing update step after cycle %d ========" % assimilation_cycle)
 
     this_cycle = filter(lambda x: x.t == assimilation_cycle,
                         state_weights)

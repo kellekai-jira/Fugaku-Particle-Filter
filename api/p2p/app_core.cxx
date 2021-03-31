@@ -101,6 +101,7 @@ void melissa_p2p_init(const char *field_name,
 
 double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 {
+#define USE_PYTHON_CALCULATE_WEIGHT
 #ifdef USE_PYTHON_CALCULATE_WEIGHT
     // Warning returns correct weight only on rank 0! other ranks return -1.0
     // use python interface, export index map
