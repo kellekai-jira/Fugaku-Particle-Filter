@@ -92,7 +92,7 @@ add_python_test("test-python-assimilator"
 
 # P2P
 add_python_test("test-p2p-basic"
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_p2p_basic.py")
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-p2p-basic.py")
 
 # Should be the last test!
 add_python_test("test-cleanup"
