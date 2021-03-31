@@ -46,11 +46,11 @@ class MelissaAPI:
         # print ('in python get comm:', res)
         # return res
 
-    def io_init(self, comm):
-        self.c_lib.melissa_io_init_f.restype = MelissaAPI.MPI_Fint
+    def comm_init(self, comm):
+        self.c_lib.melissa_comm_init_f.restype = MelissaAPI.MPI_Fint
         fcomm = comm.py2f()
         print('Python Io init called with fortran comm', fcomm)
-        res = self.c_lib.melissa_io_init_f(ctypes.byref(MelissaAPI.MPI_Fint(fcomm)))
+        res = self.c_lib.melissa_comm_init_f(ctypes.byref(MelissaAPI.MPI_Fint(fcomm)))
         print('Python Io init returned fortran comm', res)
         return comm.f2py(res)
 
@@ -66,7 +66,7 @@ melissa = MelissaAPI()
 
 # IO Melissa init - only necessary for MelissaP2P
 print('Old  comm size:', MPI.COMM_WORLD.size)
-comm = melissa.io_init(MPI.COMM_WORLD)
+comm = melissa.comm_init(MPI.COMM_WORLD)
 print('New  comm size:', comm.size)
 
 #model init

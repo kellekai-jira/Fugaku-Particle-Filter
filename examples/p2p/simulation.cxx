@@ -40,7 +40,7 @@ int main(int argc, char * args[])
 
 
     MPI_Fint fcomm_world = MPI_Comm_c2f(MPI_COMM_WORLD);
-    MPI_Fint fcomm = melissa_io_init_f(&fcomm_world);
+    MPI_Fint fcomm = melissa_comm_init_f(&fcomm_world);
     MPI_Comm comm = MPI_Comm_f2c(fcomm);
 
 

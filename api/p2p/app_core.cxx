@@ -24,19 +24,23 @@ FtiController io;
 MpiController mpi;
 int fti_protect_id;
 
-MPI_Fint melissa_io_init_f(const MPI_Fint *comm_fortran)
+MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 {
-    runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
-    printf("Hello! I'm runner %d\n", runner_id);
+    if (is_p2p()) {
+        runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+        printf("Hello! I'm runner %d\n", runner_id);
 
-    // TODO: only do this if is_p2p() !
-    MPI_Comm comm_c = MPI_Comm_f2c(*comm_fortran);
-    mpi.init( comm_c );
-    storage.io_init( &mpi, &io );
-    comm = mpi.comm();  // TODO: use mpi controller everywhere in api
+        // TODO: only do this if is_p2p() !
+        MPI_Comm comm_c = MPI_Comm_f2c(*old_comm_fortran);
+        mpi.init( comm_c );
+        storage.io_init( &mpi, &io );
+        comm = mpi.comm();  // TODO: use mpi controller everywhere in api
 
 
-    return MPI_Comm_c2f(comm);
+        return MPI_Comm_c2f(comm);
+    } else {
+        return *old_comm_fortran;
+    }
 }
 
 void melissa_p2p_init(const char *field_name,

@@ -88,6 +88,14 @@ function melissa_is_runner() bind(c, name='melissa_is_runner')
     integer(kind=C_INT) :: melissa_is_runner
 end function melissa_is_runner
 
+
+!!! returns new comm world as fortran communicator
+function melissa_comm_init_f(old_comm_world_fortran) bind(c, name='melissa_comm_init_f')
+    use ISO_C_BINDING, only: C_INT
+    integer(kind=C_INT) melissa_comm_init_f
+    integer(kind=C_INT) old_comm_world_fortran
+end function melissa_comm_init_f
+
 end interface
 
 

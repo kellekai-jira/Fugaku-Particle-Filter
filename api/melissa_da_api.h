@@ -31,7 +31,7 @@ void melissa_init(const char *field_name,
 
 /// must be called at the very beginning to replace the one mpi rank with the helper rank
 /// in the case of melissa p2p
-MPI_Fint melissa_io_init_f(const MPI_Fint *comm_fortran);
+MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran);
 
 
 

@@ -31,7 +31,7 @@ start_time = int(time.time()*1000)  # in milliseconds
 # These variables are only used in this file.
 melissa_da_path = os.getenv('MELISSA_DA_PATH')
 assert melissa_da_path
-melissa_with_fti = (os.getenv('MELISSA_DA_WITH_FTI') == 'TRUE')
+melissa_with_fti = (os.getenv('WITH_FTI_CHECKOINT_DA_SERVER') == 'TRUE')
 melissa_da_datadir = os.getenv('MELISSA_DA_DATADIR')
 assert melissa_da_datadir
 

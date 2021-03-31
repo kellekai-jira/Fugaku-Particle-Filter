@@ -44,14 +44,6 @@ MPI_Comm comm;
 
 
 
-bool is_p2p()
-{
-    if (getenv("MELISSA_DA_IS_P2P")) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 
 Server server;

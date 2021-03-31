@@ -56,10 +56,16 @@ if (WITH_FTI)
     # set to TRUE so even if it was ON it's TRUE now. This is easier readable by others
     # relying on the setenv script which exports this variable
     set(WITH_FTI TRUE)
+    set(WITH_FTI_CHECKOINT_DA_SERVER TRUE)
 else()
     set(INSTALL_FTI OFF)
     set(WITH_FTI_THREADS OFF)
+    set(WITH_FTI_CHECKOINT_DA_SERVER FALSE)
 endif()
+
+
+# for p2p ther is no server checkpointing!
+set(WITH_FTI_CHECKOINT_DA_SERVER FALSE)
 
 # ZeroMQ #
 include(BuildZeroMQ)

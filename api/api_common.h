@@ -34,6 +34,15 @@ extern std::vector<INDEX_MAP_T> local_index_map;
 extern std::vector<INDEX_MAP_T> local_index_map_hidden;
 
 
+inline bool is_p2p()
+{
+    if (getenv("MELISSA_DA_IS_P2P")) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 
 struct ConnectedServerRank;
 
