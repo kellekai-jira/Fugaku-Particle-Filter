@@ -1800,6 +1800,7 @@ int main(int argc, char* argv[]) {
 
     if (comm_rank == 0)
     {
+        L("Gracefully ending server now.");
         L("Executed %d assimilation cycles with %d ensemble members each, with "
           "a runner timeout of %lli seconds",
           assimilation_cycles, ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);

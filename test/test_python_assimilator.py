@@ -4,6 +4,9 @@ import mpi4py
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
 
+# always flush prints directly!
+import functools
+print = functools.partial(print, flush=True)
 
 import numpy as np
 
@@ -47,6 +50,7 @@ def calc_indexmap():
 def callback(t, ensemble_list_background, ensemble_list_analysis,
         ensemble_list_hidden_inout, assimilated_index, assimilated_varid):
 
+    print('In Callback, checking asserts')
     assert(ENSEMBLE_SIZE == len(ensemble_list_analysis) == len(ensemble_list_background) == len(ensemble_list_hidden_inout))
     assert t in range(1, TOTAL_STEPS+1)
     for a, b in zip(ensemble_list_background, ensemble_list_analysis):

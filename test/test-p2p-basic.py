@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import configparser
 import time
@@ -7,7 +8,7 @@ import subprocess
 
 from melissa_da_study import *
 class TestRun:
-    def __init__(self, procs_runner=2, nodes_runner=1, n_runners=3, has_propagation_time=''):
+    def __init__(self, procs_runner=2, nodes_runner=1, n_runners=3, has_propagation_time='', is_p2p=True):
         print("Running test with procs_runner=%d, nodes_runner=%d, n_runners=%d, has_propagation_time=%s" %
             (procs_runner, nodes_runner, n_runners, has_propagation_time))
         clean_old_stats()
@@ -17,7 +18,7 @@ class TestRun:
         self.HAS_PROPAGATION_TIME = has_propagation_time
 
         run_melissa_da_study(
-            is_p2p = True,
+            is_p2p=is_p2p,
             runner_cmd='simulation4-p2p',
             total_steps=10,
             ensemble_size=10,
@@ -33,6 +34,13 @@ class TestRun:
                 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
                 'SIMULATION_RANDOM_PROPAGATION_TIME': self.HAS_PROPAGATION_TIME,
                 },
+
+        # for is_p2p=False only:
+            additional_server_env={
+                'MELISSA_DA_PYTHON_ASSIMILATOR_MODULE': 'script_assimilate_python'  # reuse callback from examples dir
+                },
+            assimilator_type=ASSIMILATOR_PYTHON,
+            procs_server=3
         )
 
 
@@ -45,10 +53,18 @@ def gracefully_ended():
 
     assert text_in_file('Gracefully ending study now.', 'STATS/melissa_launcher.log')
 
-TestRun(2, 1, 3, '1')
-gracefully_ended()
-
 time.sleep(3)
 
-TestRun(2, 1, 3, '')
+if 'slow' in sys.argv:
+    print("====== Testing p2p with a slowed down simulation ======")
+    TestRun(2, 1, 3, '1', True)
+elif 'fast' in sys.argv:
+    print("====== Testing p2p with a fast simulation ======")
+    TestRun(2, 1, 3, '', True)
+elif 'no_p2p' in sys.argv:
+    print("====== Testing if p2p config works for centralized servermodel with python assimilator too ======")
+    TestRun(2, 1, 3, '', False)
+else:
+    assert False
+
 gracefully_ended()

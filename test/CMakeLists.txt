@@ -27,9 +27,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function(add_python_test test_name test_script)
+
     add_test(
         NAME ${test_name}
-        COMMAND python3 -u ${test_script}
+        COMMAND python3 -u ${test_script} ${ARGV2}
     )
     # TODO: call clean_up_test() within testcase and not during build
     set(PATH_LIST $ENV{PATH})
@@ -94,8 +95,12 @@ add_python_test("test-python-assimilator"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_python_assimilator.py")
 
 # P2P
-add_python_test("test-p2p-basic"
-    "${CMAKE_CURRENT_SOURCE_DIR}/test-p2p-basic.py")
+add_python_test("test-p2p-basic-slow"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-p2p-basic.py" "slow")
+add_python_test("test-p2p-basic-fast"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-p2p-basic.py" "fast")
+add_python_test("test-p2p-basic-no-p2p"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test-p2p-basic.py" "no_p2p")
 
 # Should be the last test!
 add_python_test("test-cleanup"
