@@ -18,6 +18,9 @@ file(GLOB
      ${CMAKE_CURRENT_SOURCE_DIR}
      p2p/StorageController/*.cxx
      )
+    
+ find_package(Protobuf REQUIRED)
+ include_directories(${Protobuf_INCLUDE_DIRS})
 
  add_library(melissa_da_api SHARED
      ${ALL_API}
@@ -25,8 +28,9 @@ file(GLOB
      ${ALL_STORAGE_CONTROLLER}
     $<TARGET_OBJECTS:melissa_common>
 )
-
-target_link_libraries(melissa_da_api melissa_protocol)
+ 
+target_link_libraries(melissa_da_api PUBLIC melissa_protocol)
+target_link_libraries(melissa_da_api PUBLIC ${Protobuf_LIBRARY})
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)
@@ -48,7 +52,7 @@ add_custom_command(TARGET melissa_da_api
 
 if(WITH_FTI OR WITH_FTI_THREADS)
     target_include_directories(melissa_da_api PUBLIC "${FTI_INCLUDE_DIR}")
-    target_link_libraries(melissa_da_api ${FTI_LIBRARY})
+    target_link_libraries(melissa_da_api PUBLIC ${FTI_LIBRARY})
     target_compile_definitions(melissa_da_api PUBLIC WITH_FTI)
   if(WITH_FTI_THREADS)
     target_compile_definitions(melissa_da_api PUBLIC WITH_FTI_THREADS)
@@ -62,7 +66,7 @@ target_include_directories(melissa_da_api PRIVATE ${PYTHON_INCLUDE_DIR})
 # get numpy include dir:
 target_include_directories(melissa_da_api PRIVATE ${NUMPY_INCLUDE_DIRS})
 
-target_link_libraries(melissa_da_api ${PYTHON_LIBRARY})
+target_link_libraries(melissa_da_api PUBLIC ${PYTHON_LIBRARY})
 
 
 if(INSTALL_FTI)
