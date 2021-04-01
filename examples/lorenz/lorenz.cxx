@@ -3,7 +3,7 @@
 #include <functional>
 #include <mpi.h>
 #include <iostream>
-//#include "../api/melissa_da_api.h"
+#include "../api/melissa_da_api.h"
 
 #define OUT( MSG ) std::cout << MSG << std::endl
 
@@ -19,15 +19,18 @@ size_t nlt, nl, state_min_p, state_max_p;
 std::vector<int> nl_all;
 const int MPI_MIN_BLK = 1;
 
+MPI_Fint fcomm_world;
+MPI_Fint fcomm;
+
 void init_parallel() {
     
     MPI_Init(NULL, NULL);
 
-    //MPI_Fint fcomm_world = MPI_Comm_c2f(MPI_COMM_WORLD);
-    //MPI_Fint fcomm = melissa_comm_init_f(&fcomm_world);
-    //MPI_Comm comm = MPI_Comm_f2c(fcomm);
+    fcomm_world = MPI_Comm_c2f(MPI_COMM_WORLD);
+    fcomm = melissa_comm_init_f(&fcomm_world);
+    comm = MPI_Comm_f2c(fcomm);
     
-    comm = MPI_COMM_WORLD;
+    //comm = MPI_COMM_WORLD;
 
     MPI_Comm_size(comm, &comm_size);
     MPI_Comm_rank(comm, &comm_rank);
@@ -132,17 +135,40 @@ void integrate( std::vector<double> & x, double F, double dt ) {
 int main() {
 
   init_parallel();
+  int zero = 0;
+  int nl_i = nl;
+  melissa_init_f("state1", &nl_i, &zero, &fcomm);
     
   std::vector<double> x_l(nlt);
 
   std::fill(x_l.begin(), x_l.end(), F);
   if( comm_rank == 0 ) x_l[2] += 0.01;
   exchange(x_l);
-  
-  for(int i=0; i<10/dt; i++) {
-    integrate( x_l, F, dt );
-  }
-  
+    
+  static bool is_first_timestep = true;
+  int nsteps = 1;
+  do
+  {
+    for(int i=0; i<10/dt; i++) {
+      integrate( x_l, F, dt );
+    }
+
+
+    nsteps = melissa_expose_f("state1", x_l.data());
+    printf("calculating from timestep %d\n",
+        melissa_get_current_step());
+
+    if (nsteps > 0 && is_first_timestep)
+    {
+      printf("First time step to propagate: %d\n",
+          melissa_get_current_step());
+      is_first_timestep = false;
+    }
+
+    // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
+    MPI_Barrier(comm);
+  } while (nsteps > 0);
+
   size_t off = 0;
   for(int i=0; i<comm_size; i++) {
     if(comm_rank == i) {
