@@ -79,8 +79,14 @@ void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std
   }
 }
 
-void exchange( std::vector<double> x ) {
+void exchange( std::vector<double> & x ) {
   size_t nlt = x.size();
+  if( comm_size == 1 ) {
+    x[0] = x[nlt-3];
+    x[1] = x[nlt-2];
+    x[nlt-1] = x[2];
+    return;
+  }
   if ( comm_rank%2 == 0 ) {
     MPI_Send(&x[nlt-3], 2, MPI_DOUBLE, mpi_right, 42, comm);
     MPI_Recv(&x[0], 2, MPI_DOUBLE, mpi_left, 42, comm, MPI_STATUS_IGNORE);
@@ -129,18 +135,22 @@ int main() {
     
   std::vector<double> x_l(nlt);
 
-  std::fill(x_l.begin(), x_l.end(), 0);
-  if( comm_rank == 0 ) x_l[4] = 1;
-  for(int i=0; i<10; i++) {
+  std::fill(x_l.begin(), x_l.end(), F);
+  if( comm_rank == 0 ) x_l[2] += 0.01;
+  exchange(x_l);
+  
+  for(int i=0; i<10/dt; i++) {
     integrate( x_l, F, dt );
   }
   
+  size_t off = 0;
   for(int i=0; i<comm_size; i++) {
     if(comm_rank == i) {
       for(int j=0; j<nl; j++) {
-        OUT( "x["<<i*nl+j<<"]: " << x_l[2+j] );
+        OUT( "x["<<off+j<<"]: " << x_l[2+j] );
       }
     }
+    off += nl_all[i];
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
