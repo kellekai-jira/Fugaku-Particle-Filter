@@ -9,7 +9,7 @@ from mpi4py import MPI
 import numpy as np
 
 def callback(cycle, ensemble_list_background, ensemble_list_analysis,
-        ensemble_list_hidden_inout):
+        ensemble_list_hidden_inout, assimilated_index, assimilated_varid):
 
     rank = MPI.COMM_WORLD.rank
     print('my rank:', rank)

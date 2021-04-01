@@ -90,7 +90,8 @@ def run_melissa_da_study(
     if is_p2p:
         additional_env['MELISSA_DA_IS_P2P'] = '1'
         # FIXME: install server.py and call via python -m
-        server_cmd = 'python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
+        # FIXME: use cmake's found python!
+        server_cmd = 'python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
 
         assert 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE' in additional_env
 
