@@ -26,6 +26,10 @@ void StorageController::io_init( MpiController* mpi, IoController* io ) {
   m_mpi = mpi;
   m_io = io;
   m_io->register_callback( StorageController::callback );
+  
+  assert(std::getenv("MELISSA_DA_RUNNER_ID"));
+  m_runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+  std::cout << "RUNNER_ID: " << m_runner_id << std::endl;
 
   // heads dont return from init_io !!!
   m_io->init_io(m_mpi);
@@ -42,7 +46,7 @@ void StorageController::init( double capacity_dp, double state_size_dp ) {
   // propagate state size to head
   m_io->send( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
   m_io->send( &state_size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
-
+  
   m_worker_thread = false;
 
 }
