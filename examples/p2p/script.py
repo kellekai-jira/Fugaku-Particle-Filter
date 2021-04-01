@@ -44,7 +44,7 @@ run_melissa_da_study(
     server_timeout=60 * 60,
     additional_env={
         'MELISSA_DA_IS_P2P': '1',
-        'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
+        'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         },
 )

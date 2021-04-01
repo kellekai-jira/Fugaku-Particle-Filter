@@ -178,7 +178,7 @@ def accept_weight(msg):
         del running_jobs[state_id]
     else:
         # we mess around with the state id for the first iteration (for init)
-        print('Got Weight message', msg, 'but its job was never set to running so far')
+        print('Got Weight message', msg, 'but its job was never set to running so far. This may be normal for the initial cycle.')
         assert state_id.t == 1 or state_id.t == 0  # save initial weights without removing any jobs from unscheduled jobs
         messed_id = cm.StateId()
         messed_id.t = state_id.t
