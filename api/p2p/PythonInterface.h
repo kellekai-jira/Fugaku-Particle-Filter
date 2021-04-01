@@ -73,6 +73,8 @@ public:
         pModule = PyImport_Import(pName);
         Py_DECREF(pName);
 
+        D("looking for module %s...",module_name);
+
         err(pModule != NULL,
                 "Cannot find the module file. Is its path in PYTHONPATH?");                   // Could not find module
         pFunc = PyObject_GetAttrString(pModule, "calculate_weight");

@@ -21,6 +21,7 @@ import signal
 import sys
 import socket
 import inspect
+import configparser
 
 from cluster import *
 
@@ -68,7 +69,7 @@ def run_melissa_da_study(
         walltime='xxxx01:00:00',
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
         additional_env={},
-        server_cmd='melissa_da_server'):
+        is_p2p=False):
 
     assert isinstance(cluster, Cluster)
 
@@ -86,6 +87,24 @@ def run_melissa_da_study(
     start_logging(WORKDIR)
 
 
+    if is_p2p:
+        additional_env['MELISSA_DA_IS_P2P'] = '1'
+        # FIXME: install server.py and call via python -m
+        server_cmd = 'python3.6m -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
+
+        assert 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE' in additional_env
+
+        assert procs_runner >= 2
+        procs_server = 1
+        nodes_server = 1
+        create_runner_dir = True
+        print("Running in p2p mode. Ignoring given procs_server, nodes_server, assimilator_type, config_fti_path, create_runner_dir, server_slowdown_factor arguments!")
+        assert procs_runner % nodes_runner == 0
+    else:
+        assert not 'MELISSA_DA_IS_P2P' in additional_env
+        server_cmd = 'melissa_da_server'
+
+    assert n_runners >= 1
 
 
     if callable(n_runners):
@@ -103,7 +122,7 @@ def run_melissa_da_study(
 
     running = True
 
-    def signal_handler(sig, frame):
+    def signal_handler(sig, _):
         debug("Received Signal %d, Cleaning up now!" % sig)
         nonlocal running
         running = False
@@ -194,7 +213,7 @@ def run_melissa_da_study(
             logfile = '' if show_server_log else '%s/server.log.%d' % (WORKDIR, Server.starts)
 
             job_id = cluster.ScheduleJob('melissa_da_server',
-                    walltime,  procs_server, nodes_server, cmd, envs, logfile, is_server=True)
+                    walltime, procs_server, nodes_server, cmd, envs, logfile, is_server=True)
             Job.__init__(self, job_id)
 
     Server.starts = 0
@@ -221,6 +240,15 @@ def run_melissa_da_study(
                     runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
                     os.mkdir(runner_dir)
                     os.chdir(runner_dir)
+
+                if is_p2p:
+                    # Setup FTI config for runner
+                    shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), './config.fti')
+                    config = configparser.ConfigParser()
+                    config.read('config.fti')
+                    config['basic']['node_size'] = str(procs_runner//nodes_runner)
+                    with open('config.fti', 'w') as f:
+                        config.write(f)
 
                 if prepare_runner_dir is not None:
                     if (len(inspect.getargspec(prepare_runner_dir).args) == 1):
@@ -390,8 +418,8 @@ def check_stateless(runner_cmd):  # TODO: do those guys without FTI maybe?
         procs_server=1,
         procs_runner=1,
         n_runners=1,
-        show_server_log = False,
-        show_simulation_log = False)
+        show_server_log=False,
+        show_simulation_log=False)
 
     with open('STATS/server.log.1', 'r') as f:
         for line in f.readlines():

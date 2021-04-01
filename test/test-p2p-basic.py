@@ -16,44 +16,24 @@ class TestRun:
         self.N_RUNNERS = n_runners
         self.HAS_PROPAGATION_TIME = has_propagation_time
 
-        assert self.PROCS_RUNNER >= 2
-        assert self.NODES_RUNNER >= 1
-        assert self.PROCS_RUNNER % self.NODES_RUNNER == 0
-
-        def prepare_runner_dir():
-            print('Preparing runner directory (%s)' % os.getcwd())
-            shutil.copy('%s/examples/p2p/config-runner.fti' %
-                    os.getenv('MELISSA_DA_SOURCE_PATH'), './config.fti')
-
-            config = configparser.ConfigParser()
-            config.read('config.fti')
-            config['basic']['node_size'] = str(self.PROCS_RUNNER//self.NODES_RUNNER)
-            with open('config.fti', 'w') as f:
-                config.write(f)
-
         run_melissa_da_study(
-            server_cmd='python3 -u %s/server-p2p/server.py' %
-                os.getenv('MELISSA_DA_SOURCE_PATH'),  # Activate this line to start the weight server instead!
+            is_p2p = True,
             runner_cmd='simulation4-p2p',
             total_steps=10,
             ensemble_size=10,
             procs_runner=self.PROCS_RUNNER,
             nodes_runner=self.NODES_RUNNER,
             n_runners=self.N_RUNNERS,
-            create_runner_dir=True,
-            prepare_runner_dir=prepare_runner_dir,
             show_server_log=False,
             show_simulation_log=False,
             runner_timeout=60,
             server_timeout=60,
             additional_env={
-                'MELISSA_DA_IS_P2P': '1',
-                'PYTHONPATH': os.getcwd() + ':' + os.getenv('PYTHONPATH'),
+                'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
                 'SIMULATION_RANDOM_PROPAGATION_TIME': self.HAS_PROPAGATION_TIME,
                 },
         )
-
 
 
 # set parameters
