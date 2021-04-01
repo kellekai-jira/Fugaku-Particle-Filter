@@ -642,6 +642,7 @@ if __name__ == '__main__':
             if nsteps <= 0:
                 # end: tell launcher to kill everything
                 del launcher
+                time.sleep(1)  # normally not necessary due to linger?!
                 print('Gracefully ending server now.')
                 break
             # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
