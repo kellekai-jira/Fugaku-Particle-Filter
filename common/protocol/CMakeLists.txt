@@ -1,12 +1,11 @@
-find_package(Protobuf REQUIRED)
-
-include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS p2p.proto)
 
 add_library(melissa_protocol STATIC ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(melissa_protocol PUBLIC ${Protobuf_LIBRARY})
+#target_link_libraries(melissa_protocol PUBLIC ${Protobuf_LIBRARY})
 
+#target_include_directories(melissa_protocol PUBLIC ${Protobuf_INCLUDE_DIRS})
+target_include_directories(melissa_protocol PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_options(melissa_protocol BEFORE PUBLIC -fPIC)
 

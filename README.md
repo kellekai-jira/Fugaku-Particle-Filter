@@ -315,3 +315,17 @@ The biggest part is written in C++ as:
   - launcher interface and the api base as well as many dev-ops things are common between
     the different melissa versions
 
+## MareNostrum4
+
+module files to load:
+
+```
+module load cmake/3.12.0 
+module load intel/2018.2
+module load impi/2018.2
+module load mkl/2018.2
+module load python/3-intel-2018.2
+module load fti/p2p
+module load protobuf/3.5.1
+```
+

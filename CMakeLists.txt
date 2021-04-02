@@ -17,6 +17,9 @@ include_directories(${MPI_INCLUDE_PATH})
 add_definitions(${MPI_C_COMPILE_FLAGS})
 link_libraries(${MPI_LIBRARIES})
 
+find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
+link_libraries(${Protobuf_LIBRARIES})
 
 # GnuInstallDirs
 include(GNUInstallDirs)

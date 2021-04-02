@@ -10,8 +10,8 @@ clean_old_stats()
 
 run_melissa_da_study(
     is_p2p=True,
-    precommand_server='xterm_gdb',
-    runner_cmd='xterm_gdb simulation-lorenz',
+    precommand_server='',
+    runner_cmd='simulation-lorenz',
     total_steps=3,
     ensemble_size=30,
     procs_runner=3,
