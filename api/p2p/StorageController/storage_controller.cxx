@@ -424,6 +424,8 @@ void StorageController::Server::fini() {
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {
 
+  trigger(START_PREFETCH,0);
+
   // TODO server needs to assure that the minimum storage requirements
   // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
   Message request;
@@ -437,9 +439,10 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   request.mutable_prefetch_request()->set_free(storage->state_pool.free());
   request.set_runner_id(storage->m_runner_id);
 
+  trigger(START_PREFETCH_REQ,0);
   send_message(m_socket, request);
-
   auto response = receive_message(m_socket);
+  trigger(STOP_PREFETCH_REQ,0);
 
   auto pull_states = response.prefetch_response().pull_states();
   for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
@@ -452,10 +455,14 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     storage->m_io->remove( { it->t(), it->id() }, IO_STORAGE_L1 );
     storage->state_pool--;
   }
+  
+  trigger(START_PREFETCH,0);
 
 }
 
 void StorageController::Server::delete_request( StorageController* storage ) {
+
+  trigger(START_DELETE,0);
 
   Message request;
 
@@ -466,9 +473,11 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   }
   request.set_runner_id(storage->m_runner_id);
 
+  // measure delete request 
+  trigger(START_DELETE_REQ,0);
   send_message(m_socket, request);
-
   Message response = receive_message(m_socket);
+  trigger(STOP_DELETE_REQ,0);
 
   auto pull_state = response.delete_response().to_delete();
   io_state_id_t state_id( pull_state.t(), pull_state.id() );
@@ -492,6 +501,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   storage->state_pool--;
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
+  
+  trigger(STOP_DELETE,0);
 
 }
 

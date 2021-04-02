@@ -147,17 +147,31 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
 }
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
+  if( level == IO_STORAGE_L1 ) {
+    trigger(START_DELETE_LOCAL,0);
+  } else if ( level == IO_STORAGE_L2 ) {
+    trigger(START_DELETE_PFS,0);
+  }
   IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ),
       FTI_SCES, "failed to remove file" );
+  if( level == IO_STORAGE_L1 ) {
+    trigger(STOP_DELETE_LOCAL,0);
+  } else if ( level == IO_STORAGE_L2 ) {
+    trigger(STOP_DELETE_PFS,0);
+  }
 }
 
 void FtiController::copy( io_state_id_t state_id, io_level_t from, io_level_t to ) {
   assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
   assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
   if( from == IO_STORAGE_L1 ) {
+    trigger(START_PUSH_STATE_TO_PFS,0);
     FTI_Copy( to_ckpt_id(state_id), m_io_level_map[from], m_io_level_map[to] );
+    trigger(STOP_PUSH_STATE_TO_PFS,0);
   } else {
+    trigger(START_COPY_STATE_FROM_PFS,0);
     copy_extern( state_id, from, to );
+    trigger(STOP_COPY_STATE_FROM_PFS,0);
   }
 }
 

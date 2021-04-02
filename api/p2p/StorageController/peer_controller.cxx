@@ -165,6 +165,9 @@ bool PeerController::mirror( io_state_id_t state_id )
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {
+                
+                trigger(START_COPY_STATE_FROM_RUNNER,0);
+                
                 printf("Found it!\n");
                 found = true;
                 // FIXME: assert that stateid is the one requested!
@@ -196,6 +199,8 @@ bool PeerController::mirror( io_state_id_t state_id )
                 if( m_io->m_dict_bool["master_global"]) {
                   m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
+                
+                trigger(STOP_COPY_STATE_FROM_RUNNER,0);
 
             }
         }
