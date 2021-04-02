@@ -74,6 +74,10 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
+    // To do good logging
+    comm_rank = storage.m_mpi->rank();
+    try_init_timing();  // TODO actually we might call this even earlier for the heads just after initing the mpi
+    trigger(START_INIT, 0);
 
     storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
     storage.server.init();

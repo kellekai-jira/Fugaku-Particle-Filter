@@ -41,7 +41,6 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         try_init_timing();
         trigger(START_INIT, 0);
 
-
         return MPI_Comm_c2f(comm);
     } else {
         return *old_comm_fortran;
@@ -268,7 +267,7 @@ void ApiTiming::maybe_report() {
     /// should be called once in a while to check if it is time to write the timing info now!
     if (is_time_to_write()) {
 #ifdef REPORT_TIMING
-        if(comm_rank == 0)
+        if(comm_rank == 0 && !FTI_AmIaHead())
         {
             report(
                     getCommSize(), field.local_vect_size + field.local_hidden_vect_size,
@@ -290,8 +289,7 @@ void ApiTiming::maybe_report() {
                 {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
                 // FIXME: add missing regions!
         }};
-        std::string fn = "melissa_runner" + std::to_string(runner_id);
-        write_region_csv(event_type_translations, fn.c_str(), comm_rank);
+        write_region_csv(event_type_translations, fname, comm_rank);
 #endif
 #endif
 
