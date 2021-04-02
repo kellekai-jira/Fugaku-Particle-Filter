@@ -65,8 +65,10 @@ enum TimingEventType
     STOP_PREFETCH_REQ                 = 41, //(time only for the request)
     START_REQ_RUNNER                  = 42, //(for each runner that is tried)
     STOP_REQ_RUNNER                   = 43, //(for each runner that is tried)
-    START_COPY_STATE_FROM_RUNNER      = 44,
-    STOP_COPY_STATE_FROM_RUNNER       = 45,
+    START_COPY_STATE_FROM_RUNNER      = 44, // parameter = foreign runner id
+    STOP_COPY_STATE_FROM_RUNNER       = 45, // parameter = foreign runner id
+    START_COPY_STATE_TO_RUNNER        = 82, // parameter = foreign runner id
+    STOP_COPY_STATE_TO_RUNNER         = 83, // parameter = foreign runner id
     START_COPY_STATE_FROM_PFS         = 46,
     STOP_COPY_STATE_FROM_PFS          = 47,
     START_DELETE                      = 48, //(sum of following subregions)

@@ -455,8 +455,8 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     storage->m_io->remove( { it->t(), it->id() }, IO_STORAGE_L1 );
     storage->state_pool--;
   }
-  
-  trigger(START_PREFETCH,0);
+
+  trigger(STOP_PREFETCH,0);
 
 }
 
@@ -473,7 +473,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   }
   request.set_runner_id(storage->m_runner_id);
 
-  // measure delete request 
+  // measure delete request
   trigger(START_DELETE_REQ,0);
   send_message(m_socket, request);
   Message response = receive_message(m_socket);
@@ -501,7 +501,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   storage->state_pool--;
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
-  
+
   trigger(STOP_DELETE,0);
 
 }

@@ -25,8 +25,8 @@ run_melissa_da_study(
     additional_env={
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
-        # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
-        'MELISSA_DA_TIMING_REPORT': time.time() + 30,  # write timing events after 30 secons!
+        'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
+        'MELISSA_DA_TIMING_REPORT': time.time() + 300,  # write timing events after 60 secons!
         },
 
     # for is_p2p=False only:

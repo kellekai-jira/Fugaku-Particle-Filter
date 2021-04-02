@@ -34,6 +34,8 @@ void PeerController::handle_requests()
         auto req = receive_message(state_server_socket);
         auto io_state_id = io_state_id_t(req.state_request().state_id().t(), req.state_request().state_id().id());
 
+        trigger(START_COPY_STATE_TO_RUNNER, req.runner_id());
+
         ::melissa_p2p::Message reply;
         reply.mutable_state_response();
         if (!m_io->is_local(io_state_id)) {
@@ -71,6 +73,7 @@ void PeerController::handle_requests()
 
             zmq::send(*data_msg, state_server_socket, flags);
         }
+        trigger(STOP_COPY_STATE_TO_RUNNER, req.runner_id());
 
     }
 }
@@ -139,6 +142,7 @@ bool PeerController::mirror( io_state_id_t state_id )
     for (int i = 0; i < dns_reply.runner_response().sockets_size(); i++)
     {
 
+        trigger(START_REQ_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
         state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 
         const int linger = 1000;  // only try 50 ms to send out messages
@@ -165,9 +169,9 @@ bool PeerController::mirror( io_state_id_t state_id )
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {
-                
-                trigger(START_COPY_STATE_FROM_RUNNER,0);
-                
+                trigger(STOP_REQ_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
+                trigger(START_COPY_STATE_FROM_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
+
                 printf("Found it!\n");
                 found = true;
                 // FIXME: assert that stateid is the one requested!
@@ -199,8 +203,8 @@ bool PeerController::mirror( io_state_id_t state_id )
                 if( m_io->m_dict_bool["master_global"]) {
                   m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
-                
-                trigger(STOP_COPY_STATE_FROM_RUNNER,0);
+
+                trigger(STOP_COPY_STATE_FROM_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
 
             }
         }
@@ -214,6 +218,7 @@ bool PeerController::mirror( io_state_id_t state_id )
             break;
             trigger(PEER_HIT, dns_reply.runner_response().sockets(i).runner_id());
         } else {
+            trigger(STOP_REQ_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
             trigger(PEER_MISS, dns_reply.runner_response().sockets(i).runner_id());
         }
     }
