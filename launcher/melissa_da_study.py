@@ -86,6 +86,14 @@ def run_melissa_da_study(
 
     start_logging(WORKDIR)
 
+    def log_study_args(frame, l):
+        args, _, _, _ = inspect.getargvalues(frame)
+        tmp = {}
+        for a in args:
+            tmp[a] = l[a]
+        log("Study - options: %s" % str(tmp))
+    log_study_args(inspect.currentframe(), locals())
+
 
     if is_p2p:
         additional_env['MELISSA_DA_IS_P2P'] = '1'
