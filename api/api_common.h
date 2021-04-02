@@ -128,7 +128,7 @@ extern std::unique_ptr<ApiTiming> timing;
 inline void try_init_timing() {
     if (!timing) {
 #ifndef REPORT_TIMING_ALL_RANKS
-        if(comm_rank == 0)
+        if(getCommRank() == 0)
 #endif
         {
             printf("initing timing!\n");

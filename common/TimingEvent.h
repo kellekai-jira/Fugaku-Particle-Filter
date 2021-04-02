@@ -20,7 +20,7 @@ enum TimingEventType
     STOP_FILTER_UPDATE                =  5,  // parameter = timestep
     START_IDLE_RUNNER                 =  6,  // parameter = runner_id
     STOP_IDLE_RUNNER                  =  7,  // parameter = runner_id
-    START_PROPAGATE_STATE             =  8,  // parameter = state_id, in p2p server: runner_id
+    START_PROPAGATE_STATE             =  8,  // parameter = state_id
     STOP_PROPAGATE_STATE              =  9,  // parameter = state_id,
     NSTEPS                            = 10, // parameter = nsteps, only used by runner so far
     INIT                              = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
@@ -65,12 +65,8 @@ enum TimingEventType
     STOP_PREFETCH_REQ                 = 41, //(time only for the request)
     START_REQ_RUNNER                  = 42, //(for each runner that is tried)
     STOP_REQ_RUNNER                   = 43, //(for each runner that is tried)
-    START_REQ_RUNNER_LIST             = 84, // parameter = runner id
-    STOP_REQ_RUNNER_LIST              = 85, // parameter = runner id
-    START_COPY_STATE_FROM_RUNNER      = 44, // parameter = foreign runner id
-    STOP_COPY_STATE_FROM_RUNNER       = 45, // parameter = foreign runner id
-    START_COPY_STATE_TO_RUNNER        = 82, // parameter = foreign runner id
-    STOP_COPY_STATE_TO_RUNNER         = 83, // parameter = foreign runner id
+    START_COPY_STATE_FROM_RUNNER      = 44,
+    STOP_COPY_STATE_FROM_RUNNER       = 45,
     START_COPY_STATE_FROM_PFS         = 46,
     STOP_COPY_STATE_FROM_PFS          = 47,
     START_DELETE                      = 48, //(sum of following subregions)
@@ -257,7 +253,7 @@ public:
     }
 
     template<std::size_t SIZE>
-    void write_region_csv(const std::array<EventTypeTranslation, SIZE> &event_type_translations, const char * base_filename, int rank, bool close_different_parameter=false) {
+    void write_region_csv(const std::array<EventTypeTranslation, SIZE> &event_type_translations, const char * base_filename, int rank) {
         std::ofstream outfile ( "trace." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
 
         outfile << "rank,start_time,end_time,region,parameter" << std::endl;
@@ -280,8 +276,7 @@ public:
                     for (auto oevt = open_events.rbegin(); oevt != open_events.rend(); ++oevt)
                     {
                         // REM: -1 as parameter closes last...
-                        if (oevt->type == ett.enter_type &&
-                                (close_different_parameter || oevt->parameter == evt.parameter || evt.parameter == -1))
+                        if (oevt->type == ett.enter_type && (oevt->parameter == evt.parameter || evt.parameter == -1))
                         {
                             //D("Popping event and writing region");
                             outfile << rank
