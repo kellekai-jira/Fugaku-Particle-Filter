@@ -43,16 +43,16 @@ trigger.enabled = True
 
 
 def maybe_write():  # TODO: rename this in maybe_write_timing
-    if maybe_write.wrote:
+    if not trigger.enabled:
         return
 
 
 
     event_type_translations = [
-            (START_ITERATION, STOP_ITERATION, 'ITERATION'),
-            (START_FILTER_UPDATE, STOP_FILTER_UPDATE, 'FILTER_UPDATE'),
-            (START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, 'PROPAGATE_STATE'),
-            (START_IDLE_RUNNER, STOP_IDLE_RUNNER, 'IDLE_RUNNER'),
+            (START_ITERATION, STOP_ITERATION, 'Iteration'),
+            (START_FILTER_UPDATE, STOP_FILTER_UPDATE, 'Filter Update'),
+            (START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, 'Propagation'),
+            (START_IDLE_RUNNER, STOP_IDLE_RUNNER, 'Runner Idle'),
             ]
 
     # copied from write regions in TimingEvent
@@ -60,7 +60,6 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
     # in seconds
     if time.time() >= maybe_write.report_time:
 
-        maybe_write.wrote = True
         trigger.enabled = False
 
         print('write region csv for server')
@@ -99,8 +98,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
                 if not found_anything:
                     print("Event %d is no enter/leave region event? Or it is the first weight/ first time the runner connects" % evt[1])
 
-maybe_write.wrote = False
-
+trigger.enabled = False
 
 
 
@@ -110,6 +108,7 @@ if os.getenv("MELISSA_DA_TIMING_REPORT"):
         print("MELISSA_DA_TIMING_REPORT time was before. No report will be generated")
         trigger.enabled = False  # don't trigger anymore
     else:
+        trigger.enabled = True
         maybe_write.report_time = r
         print("Will report timing information at %lu unix seconds (in %lu seconds)"
                         % (maybe_write.report_time, maybe_write.report_time - time.time()))
