@@ -118,6 +118,7 @@ bool PeerController::mirror( io_state_id_t state_id )
 {
     printf("Runner %d Performing dns request\n", runner_id);
 
+    trigger(START_REQ_RUNNER_LIST, runner_id);
     ::melissa_p2p::Message dns_req;
     // get friendly head rank of the same rank...
     dns_req.mutable_runner_request()->set_head_rank(m_mpi->rank());
@@ -129,11 +130,14 @@ bool PeerController::mirror( io_state_id_t state_id )
     send_message(storage.server.m_socket, dns_req);
 
     auto dns_reply = receive_message(storage.server.m_socket);
+    trigger(STOP_REQ_RUNNER_LIST, runner_id);
 
     ::melissa_p2p::Message state_request;
     state_request.set_runner_id(runner_id);
     state_request.mutable_state_request()->mutable_state_id()->set_t(state_id.t);
     state_request.mutable_state_request()->mutable_state_id()->set_id(state_id.id);
+
+
 
     printf("retrieved %d peers to try from...\n", dns_reply.runner_response().sockets_size());
 
@@ -145,7 +149,7 @@ bool PeerController::mirror( io_state_id_t state_id )
         trigger(START_REQ_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
         state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 
-        const int linger = 1000;  // only try 50 ms to send out messages
+        const int linger = 300;  // ms
         zmq_setsockopt (state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
 
         std::string addr = std::string("tcp://") + dns_reply.runner_response().sockets(i).node_name() + ':' +

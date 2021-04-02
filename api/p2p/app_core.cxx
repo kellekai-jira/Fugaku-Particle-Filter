@@ -283,7 +283,7 @@ void ApiTiming::maybe_report() {
         }
         print_events(fname, comm_rank);
 
-        const std::array<EventTypeTranslation, 23> event_type_translations = {{
+        const std::array<EventTypeTranslation, 25> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                 {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                 {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
@@ -303,11 +303,14 @@ void ApiTiming::maybe_report() {
                 {START_PREFETCH_REQ, STOP_PREFETCH_REQ, "_PREFETCH_REQ"},
                 {START_REQ_RUNNER, STOP_REQ_RUNNER, "_REQ_RUNNER"},
                 {START_COPY_STATE_FROM_RUNNER, STOP_COPY_STATE_FROM_RUNNER, "_COPY_STATE_FROM_RUNNER"},
+                {START_COPY_STATE_TO_RUNNER, STOP_COPY_STATE_TO_RUNNER, "_COPY_STATE_TO_RUNNER"},
                 {START_COPY_STATE_FROM_PFS, STOP_COPY_STATE_FROM_PFS, "_COPY_STATE_FROM_PFS"},
                 {START_DELETE, STOP_DELETE, "_DELETE"},
                 {START_DELETE_REQ, STOP_DELETE_REQ, "_DELETE_REQ"},
                 {START_DELETE_LOCAL, STOP_DELETE_LOCAL, "_DELETE_LOCAL"},
-                {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"}
+                {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"},
+                {START_REQ_RUNNER_LIST, STOP_REQ_RUNNER_LIST, "_REQ_RUNNER_LIST"}
+
         }};
 
         bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event

@@ -83,7 +83,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
                             # REM: -1 as parameter closes last... otherwise same parameter (important for idle and propagate runner events!)
                             if oevt[1] == ett[0] and (oevt[2] == evt[2] or evt[2] == -1):
                                 #D("Popping event and writing region");
-                                f.write(','.join(list(map(str, [oevt[0], evt[0], ett[2], oevt[2]]))) + '\n')
+                                f.write(','.join(list(map(str, [oevt[0] * 1000, evt[0] * 1000, ett[2], oevt[2]]))) + '\n')
 
                                 # remove from stack:
                                 del open_events[-i-1]
@@ -93,7 +93,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
                         if found_anything:
                             break
                         else:
-                            print("Did not find enter region event for %d %d at %f ms" % (evt[1], evt[2], evt[0]))
+                            print("Did not find enter region event for %d %d at %f s" % (evt[1], evt[2], evt[0]))
                     if found_anything:
                         break
                 if not found_anything:

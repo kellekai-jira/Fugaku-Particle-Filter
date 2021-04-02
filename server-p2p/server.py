@@ -673,7 +673,7 @@ if __name__ == '__main__':
         check_due_date_violations()
 
         # Slow down CPU:
-        time.sleep(0.01)
+        time.sleep(0.004)
 
         maybe_write()
 
