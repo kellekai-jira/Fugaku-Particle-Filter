@@ -167,7 +167,8 @@ public:
 
     Timing() :
         // Time since epoch in ms. Set from the launcher.
-        null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
+        null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL")))),
+        fifo_os(getenv("MELISSA_DA_TEST_FIFO"))
     {
         if (getenv("MELISSA_DA_TIMING_REPORT")) {
             report_time = atoll(getenv("MELISSA_DA_TIMING_REPORT"));

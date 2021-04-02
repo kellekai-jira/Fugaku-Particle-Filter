@@ -36,7 +36,7 @@ void mpi_request_t::free() {
 MpiController::MpiController()
 {
     mpi_comm_t mpi_comm = { MPI_COMM_NULL, -1, -1 }; 
-    m_comms.insert( std::pair<std::string, mpi_comm_t>( "mpi_comm_world", { MPI_COMM_NULL, -1, -1 } ) );
+    m_comms.insert( std::pair<std::string, mpi_comm_t>( m_comm_set, std::move(mpi_comm) ) );
 }
 
 void MpiController::init( MPI_Comm & comm )
