@@ -76,8 +76,15 @@ void StorageController::callback() {
   if( !init ) {
     // To do good logging
     comm_rank = storage.m_mpi->rank();
+#ifdef REPORT_TIMING
+#ifndef REPORT_TIMING_ALL_RANKS
+    if (comm_rank == 0)
+#endif
+    {
     try_init_timing();  // TODO actually we might call this even earlier for the heads just after initing the mpi
     trigger(START_INIT, 0);
+    }
+#endif
 
     storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
     storage.server.init();
@@ -128,7 +135,14 @@ void StorageController::callback() {
     trigger(STOP_INIT, 0);
   }
 
+#ifdef REPORT_TIMING
+#ifndef REPORT_TIMING_ALL_RANKS
+    if (comm_rank == 0)
+#endif
+    {
   timing->maybe_report();
+    }
+#endif
 
   // EVENT
   // message from alice, sent after completion of the forecast

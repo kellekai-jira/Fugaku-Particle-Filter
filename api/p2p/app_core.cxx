@@ -38,8 +38,16 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 
         // To do good logging
         comm_rank = mpi.rank();
+#ifdef REPORT_TIMING
+
+#ifndef REPORT_TIMING_ALL_RANKS
+    if (comm_rank == 0)
+#endif
+    {
         try_init_timing();
         trigger(START_INIT, 0);
+    }
+#endif
 
         return MPI_Comm_c2f(comm);
     } else {
@@ -167,7 +175,14 @@ int melissa_p2p_expose(VEC_T *values,
         is_first = false;
     }
 
+#ifdef REPORT_TIMING
+#ifndef REPORT_TIMING_ALL_RANKS
+    if (comm_rank == 0)
+#endif
+    {
     timing->maybe_report();
+    }
+#endif
 
     // Update pointer
     storage.update( fti_protect_id, values, field.local_vect_size );
