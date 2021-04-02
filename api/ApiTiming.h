@@ -121,7 +121,8 @@ public:
             }
             default:
             {
-                E("Wrong timing event (%d) found! this should never ever happen!", it->type);
+                //E("Wrong timing event (%d) found! this should never ever happen!", it->type);
+                L("Wrong timing event (%d) found! This is probably an unimplemented p2p event!", it->type);
                 break;
             }
             }
@@ -168,6 +169,7 @@ public:
         osr.close();
     }
 
+    void maybe_report();
 };
 
 

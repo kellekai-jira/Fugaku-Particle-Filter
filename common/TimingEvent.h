@@ -12,18 +12,95 @@
 enum TimingEventType
 {
     // REM: ADD_RUNNER has no closing event....
-    ADD_RUNNER                  = 0,  // parameter = runner_id
-    REMOVE_RUNNER               = 1,  // parameter = runner_id
-    START_ITERATION             = 2,  // parameter = timestep
-    STOP_ITERATION              = 3,  // parameter = timestep
-    START_FILTER_UPDATE         = 4,  // parameter = timestep
-    STOP_FILTER_UPDATE          = 5,  // parameter = timestep
-    START_IDLE_RUNNER           = 6,  // parameter = runner_id
-    STOP_IDLE_RUNNER            = 7,  // parameter = runner_id
-    START_PROPAGATE_STATE       = 8,  // parameter = state_id
-    STOP_PROPAGATE_STATE        = 9,  // parameter = state_id,
-    NSTEPS                      = 10, // parameter = nsteps, only used by runner so far
-    INIT                        = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
+    ADD_RUNNER                        =  0,  // parameter = runner_id
+    REMOVE_RUNNER                     =  1,  // parameter = runner_id
+    START_ITERATION                   =  2,  // parameter = timestep
+    STOP_ITERATION                    =  3,  // parameter = timestep
+    START_FILTER_UPDATE               =  4,  // parameter = timestep
+    STOP_FILTER_UPDATE                =  5,  // parameter = timestep
+    START_IDLE_RUNNER                 =  6,  // parameter = runner_id
+    STOP_IDLE_RUNNER                  =  7,  // parameter = runner_id
+    START_PROPAGATE_STATE             =  8,  // parameter = state_id
+    STOP_PROPAGATE_STATE              =  9,  // parameter = state_id,
+    NSTEPS                            = 10, // parameter = nsteps, only used by runner so far
+    INIT                              = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
+
+
+    // p2p added stuff:
+    // App Core:
+    START_INIT_APP                    = 12,  // time till first melissa expose
+    STOP_INIT_APP                     = 13,
+    //START_IDLE_RUNNER                 = 14, //(time in melissa expose)
+    //STOP_IDLE_RUNNER                  = 15, //(time in melissa expose)
+    START_JOB_REQUEST                 = 16,
+    STOP_JOB_REQUEST                  = 17, // parameter = next_state.id (=job.id)
+    START_LOAD                        = 18,  // parameter = parent_state.t
+    STOP_LOAD                         = 19,  // parameter = parent_state.id
+    START_CHECK_LOCAL                 = 20,
+    STOP_CHECK_LOCAL                  = 21,
+    START_WAIT_HEAD                   = 22,
+    STOP_WAIT_HEAD                    = 23,
+    //START_PROPAGATE_STATE             = 24,
+    //STOP_PROPAGATE_STATE              = 25,
+    START_CALC_WEIGHT                 = 26, // parameter = job.t
+    STOP_CALC_WEIGHT                  = 27, // parameter = job.id
+    START_LOAD_OBS                    = 28,  //(needs to be done in python)
+    STOP_LOAD_OBS                     = 29,  //(needs to be done in python)
+    START_PUSH_WEIGHT_TO_HEAD         = 30, // parameter = job.t
+    STOP_PUSH_WEIGHT_TO_HEAD          = 31, // parameter = job.id
+    START_STORE                       = 80, // parameter = job.t
+    STOP_STORE                        = 81, // parameter = job.id
+
+    // FTI core:
+    START_INIT_FTI_HEAD               = 32,
+    STOP_INIT_FTI_HEAD                = 33,
+    START_IDLE_FTI_HEAD               = 34,
+    STOP_IDLE_FTI_HEAD                = 35,
+    START_PUSH_STATE_TO_PFS           = 36,
+    STOP_PUSH_STATE_TO_PFS            = 37,
+    START_PREFETCH                    = 38, //(sum of the following subregions)
+    STOP_PREFETCH                     = 39, //(sum of the following subregions)
+    START_PREFETCH_REQ                = 40, //(time only for the request)
+    STOP_PREFETCH_REQ                 = 41, //(time only for the request)
+    START_REQ_RUNNER                  = 42, //(for each runner that is tried)
+    STOP_REQ_RUNNER                   = 43, //(for each runner that is tried)
+    START_COPY_STATE_FROM_RUNNER      = 44,
+    STOP_COPY_STATE_FROM_RUNNER       = 45,
+    START_COPY_STATE_FROM_PFS         = 46,
+    STOP_COPY_STATE_FROM_PFS          = 47,
+    START_DELETE                      = 48, //(sum of following subregions)
+    STOP_DELETE                       = 49, //(sum of following subregions)
+    START_DELETE_REQ                  = 50,
+    STOP_DELETE_REQ                   = 51,
+    START_DELETE_LOCAL                = 52,
+    STOP_DELETE_LOCAL                 = 53,
+    START_DELETE_PFS                  = 54,
+    STOP_DELETE_PFS                   = 55,
+
+
+
+    // Additional single events:
+    PEER_HIT                          = 56,    //(state available at peer)
+    PEER_MISS                         = 57,    //(state not available at peer)
+    PFS_PULL                          = 58,
+    LOCAL_HIT                         = 59,    //(state found local)
+    LOCAL_MISS                        = 60,   //(state not found local)
+    LOCAL_DELETE                      = 61, //(local states deleted)
+    PFS_DELETE                        = 62    //(global states deleted)
+
+    //Server :  --> python!
+    //(these are easily comparable with the old melissa-da measures)
+    //
+    //
+    //also time all requests on the server side!
+
+        // REM: we are not measuring extra memcopies introduced for melissa
+
+    //ITERATION (time per assimilation cycle)
+
+    //FILTER_UPDATE (time to resample)
+
+    //PROPAGATE_STATE (time a particle takes in total from sending out until receiving the weight)
 };
 
 #ifdef REPORT_TIMING
@@ -82,6 +159,8 @@ private:
     bool timing_to_fifo_testing = false;
     std::ofstream fifo_os;
 
+    time_t report_time = 0;
+
 public:
     std::list<TimingEvent> events;  // a big vector should be more performant!
 
@@ -89,6 +168,18 @@ public:
         // Time since epoch in ms. Set from the launcher.
         null_time(std::chrono::milliseconds(atoll(getenv("MELISSA_TIMING_NULL"))))
     {
+        if (getenv("MELISSA_DA_TIMING_REPORT")) {
+            report_time = atoll(getenv("MELISSA_DA_TIMING_REPORT"));
+
+            if (report_time < time(NULL)) {
+                report_time = 0;
+                L("MELISSA_DA_TIMING_REPORT time was before. No report will be generated before the greaceful end of this runner");
+            } else {
+                L("Will report timing information at %lu unix seconds (in %lu seconds)",
+                        report_time, report_time - time(NULL));
+            }
+        }
+
         const char * fifo_file = getenv("MELISSA_DA_TEST_FIFO");
         if (fifo_file != nullptr) {
             timing_to_fifo_testing = true;
@@ -113,12 +204,27 @@ public:
 
     }
 
-    void trigger_event(TimingEventType type, const int parameter) {
+    inline void trigger_event(TimingEventType type, const int parameter) {
         events.push_back(TimingEvent(type, parameter));
 
         if (timing_to_fifo_testing) {
             fifo_os << type << "," << parameter << std::endl;
             fifo_os.flush();
+        }
+    }
+
+    inline bool is_time_to_write() {
+        static bool wrote = false;
+        if (wrote) {
+            // write only once!
+            return false;
+        }
+        // in seconds
+        if (report_time != 0 && time(NULL) >= report_time) {
+            wrote = true;
+            return true;
+        } else {
+            return false;
         }
     }
 

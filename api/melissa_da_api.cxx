@@ -182,12 +182,7 @@ bool first_melissa_init(MPI_Comm comm_) {
 
 #ifdef REPORT_TIMING
     // Start Timing:
-#ifndef REPORT_TIMING_ALL_RANKS
-    if(comm_rank == 0)
-#endif
-    {
-        timing = std::make_unique<ApiTiming>();
-    }
+    try_init_timing();
     trigger(START_ITERATION, last_step);
 #endif
 

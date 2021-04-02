@@ -36,6 +36,11 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         storage.io_init( &mpi, &io );
         comm = mpi.comm();  // TODO: use mpi controller everywhere in api
 
+        // To do good logging
+        comm_rank = mpi.rank();
+        try_init_timing();
+        trigger(START_INIT_APP, 0);
+
 
         return MPI_Comm_c2f(comm);
     } else {
@@ -157,6 +162,14 @@ void push_weight_to_head(double weight)
 int melissa_p2p_expose(VEC_T *values,
                    VEC_T *hidden_values)
 {
+    static bool is_first = true;
+    if (is_first) {
+        trigger(STOP_INIT_APP, 0);
+        is_first = false;
+    }
+
+    timing->maybe_report();
+
     // Update pointer
     storage.update( fti_protect_id, values, field.local_vect_size );
 
@@ -169,11 +182,14 @@ int melissa_p2p_expose(VEC_T *values,
     }
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
-
+    trigger(START_STORE, current_state.t);
     storage.store( current_state );
+    trigger(STOP_STORE, current_state.id);
 
     // 2. calculate weight and synchronize weight on rank 0
+    trigger(START_CALC_WEIGHT, current_state.t);
     double weight = calculate_weight(values, hidden_values);
+    trigger(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
 
@@ -182,8 +198,11 @@ int melissa_p2p_expose(VEC_T *values,
     // Rank 0:
     if (mpi.rank() == 0) {
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
+        trigger(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
         push_weight_to_head(weight);
+        trigger(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
+        trigger(START_JOB_REQUEST, 0);
         // 4. ask server for more work
         auto job_response = request_work_from_server();
         parent_state.t = job_response.parent().t();
@@ -192,6 +211,10 @@ int melissa_p2p_expose(VEC_T *values,
         next_state.id = job_response.job().id();
         nsteps = job_response.nsteps();
     }
+    else
+    {
+        trigger(START_JOB_REQUEST, 0);
+    }
 
     // Broadcast to all ranks:
     MPI_Bcast(&parent_state.t, 1, MPI_INT, 0, mpi.comm());
@@ -199,9 +222,11 @@ int melissa_p2p_expose(VEC_T *values,
     MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
+    trigger(STOP_JOB_REQUEST, next_state.id);
 
 
     if (nsteps > 0) {
+        trigger(START_LOAD, parent_state.t);
         // called by every app core
         if (parent_state.t < 1) {
             if (field.current_step == 0) {
@@ -218,8 +243,11 @@ int melissa_p2p_expose(VEC_T *values,
             storage.load( parent_state );
         }
 
+
         field.current_step = next_state.t;
         field.current_state_id = next_state.id;
+
+        trigger(STOP_LOAD, parent_state.id);
     }
     else
     {
@@ -235,8 +263,29 @@ int melissa_p2p_expose(VEC_T *values,
     return nsteps;
 }
 
+void ApiTiming::maybe_report() {
+    /// should be called once in a while to check if it is time to write the timing info now!
+    if (is_time_to_write()) {
+#ifdef REPORT_TIMING
+        if(comm_rank == 0)
+        {
+            report(
+                    getCommSize(), field.local_vect_size + field.local_hidden_vect_size,
+                    runner_id);
+        }
+#ifdef REPORT_TIMING_ALL_RANKS
+        const std::array<EventTypeTranslation, 3> event_type_translations = {{
+            {START_ITERATION, STOP_ITERATION, "Iteration"},
+                {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
+                {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+        }};
+        std::string fn = "melissa_runner" + std::to_string(runner_id);
+        write_region_csv(event_type_translations, fn.c_str(), comm_rank);
+#endif
+#endif
 
-
+    }
+}
 
 
 

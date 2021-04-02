@@ -121,4 +121,21 @@ extern Field field;
 struct ServerRanks;
 extern Server server;
 
+
+#ifdef REPORT_TIMING
+extern std::unique_ptr<ApiTiming> timing;
+
+inline void try_init_timing() {
+    if (!timing) {
+#ifndef REPORT_TIMING_ALL_RANKS
+        if(getCommRank() == 0)
+#endif
+        {
+            printf("initing timing!\n");
+            timing = std::make_unique<ApiTiming>();
+        }
+    }
+}
+#endif
+
 #endif
