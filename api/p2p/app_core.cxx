@@ -283,13 +283,35 @@ void ApiTiming::maybe_report() {
         }
         print_events(fname, comm_rank);
 
-        const std::array<EventTypeTranslation, 3> event_type_translations = {{
+        const std::array<EventTypeTranslation, 23> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                 {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                 {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
-                // FIXME: add missing regions!
+
+                {START_INIT, STOP_INIT, "_INIT"},
+                {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
+                {START_LOAD, STOP_LOAD, "_LOAD"},
+                {START_CHECK_LOCAL, STOP_CHECK_LOCAL, "_CHECK_LOCAL"},
+                {START_WAIT_HEAD, STOP_WAIT_HEAD, "_WAIT_HEAD"},
+                {START_CALC_WEIGHT, STOP_CALC_WEIGHT, "_CALC_WEIGHT"},
+                {START_LOAD_OBS, STOP_LOAD_OBS, "_LOAD_OBS"},
+                {START_PUSH_WEIGHT_TO_HEAD, STOP_PUSH_WEIGHT_TO_HEAD, "_PUSH_WEIGHT_TO_HEAD"},
+                {START_STORE, STOP_STORE, "_STORE"},
+                {START_IDLE_FTI_HEAD, STOP_IDLE_FTI_HEAD, "_IDLE_FTI_HEAD"},
+                {START_PUSH_STATE_TO_PFS, STOP_PUSH_STATE_TO_PFS, "_PUSH_STATE_TO_PFS"},
+                {START_PREFETCH, STOP_PREFETCH, "_PREFETCH"},
+                {START_PREFETCH_REQ, STOP_PREFETCH_REQ, "_PREFETCH_REQ"},
+                {START_REQ_RUNNER, STOP_REQ_RUNNER, "_REQ_RUNNER"},
+                {START_COPY_STATE_FROM_RUNNER, STOP_COPY_STATE_FROM_RUNNER, "_COPY_STATE_FROM_RUNNER"},
+                {START_COPY_STATE_FROM_PFS, STOP_COPY_STATE_FROM_PFS, "_COPY_STATE_FROM_PFS"},
+                {START_DELETE, STOP_DELETE, "_DELETE"},
+                {START_DELETE_REQ, STOP_DELETE_REQ, "_DELETE_REQ"},
+                {START_DELETE_LOCAL, STOP_DELETE_LOCAL, "_DELETE_LOCAL"},
+                {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"}
         }};
-        write_region_csv(event_type_translations, fname, comm_rank);
+
+        bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event
+        write_region_csv(event_type_translations, fname, comm_rank, close_different_parameter);
 #endif
 #endif
 

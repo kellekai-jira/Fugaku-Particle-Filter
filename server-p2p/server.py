@@ -64,7 +64,7 @@ class SimulationStatus(Enum):
     TIMEOUT = 4
 
 
-from common import parse
+from common import *
 
 assimilation_cycle = 1
 """List of runner ids that are considered faulty. If they send data it is ignored."""
@@ -174,6 +174,10 @@ def accept_weight(msg):
 
     state_id = msg.weight.state_id
 
+    runner_id = msg.runner_id
+    trigger(STOP_PROPAGATE_STATE, runner_id)
+    trigger(START_IDLE_RUNNER, runner_id)
+
     if state_id in running_jobs:
         del running_jobs[state_id]
     else:
@@ -197,7 +201,6 @@ def accept_weight(msg):
 
 
     # Update knowledge on cached states:
-    runner_id = msg.runner_id
 
     dict_append(state_cache, runner_id, state_id)
     dict_append(state_cache_with_prefetch, runner_id, state_id)
@@ -445,6 +448,7 @@ def handle_job_requests(launcher, nsteps):
         assert msg.WhichOneof('content') == 'job_request'
 
         runner_id = msg.runner_id
+        trigger(STOP_IDLE_RUNNER, runner_id)
 
         launcher.notify_runner_connect(runner_id)
 
@@ -482,6 +486,7 @@ def handle_job_requests(launcher, nsteps):
 
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
+        trigger(START_PROPAGATE_STATE, runner_id)
 
         running_job = (time.time() + RUNNER_TIMEOUT, msg.runner_id,
                        unscheduled_jobs[the_job])
@@ -632,19 +637,26 @@ if __name__ == '__main__':
     server_node_name = get_node_name()
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
 
+    trigger(START_ITERATION, assimilation_cycle)
     nsteps = 1
     while True:
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
         if can_do_update_step():
             # will populate unscheduled jobs
+            trigger(START_FILTER_UPDATE, assimilation_cycle)
+            old_assimilation_cycle = assimilation_cycle
             nsteps = do_update_step()
+            trigger(STOP_FILTER_UPDATE, old_assimilation_cycle)
+            trigger(STOP_ITERATION, old_assimilation_cycle)
             if nsteps <= 0:
                 # end: tell launcher to kill everything
                 del launcher
                 time.sleep(1)  # normally not necessary due to linger?!
                 print('Gracefully ending server now.')
                 break
+
+            trigger(START_ITERATION, assimilation_cycle)
             # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
             # not necessary since we only answer job requests if job is there... answer_open_job_requests()
@@ -662,5 +674,7 @@ if __name__ == '__main__':
 
         # Slow down CPU:
         time.sleep(0.01)
+
+        maybe_write()
 
     print(".")

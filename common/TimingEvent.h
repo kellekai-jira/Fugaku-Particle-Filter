@@ -20,7 +20,7 @@ enum TimingEventType
     STOP_FILTER_UPDATE                =  5,  // parameter = timestep
     START_IDLE_RUNNER                 =  6,  // parameter = runner_id
     STOP_IDLE_RUNNER                  =  7,  // parameter = runner_id
-    START_PROPAGATE_STATE             =  8,  // parameter = state_id
+    START_PROPAGATE_STATE             =  8,  // parameter = state_id, in p2p server: runner_id
     STOP_PROPAGATE_STATE              =  9,  // parameter = state_id,
     NSTEPS                            = 10, // parameter = nsteps, only used by runner so far
     INIT                              = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
@@ -253,7 +253,7 @@ public:
     }
 
     template<std::size_t SIZE>
-    void write_region_csv(const std::array<EventTypeTranslation, SIZE> &event_type_translations, const char * base_filename, int rank) {
+    void write_region_csv(const std::array<EventTypeTranslation, SIZE> &event_type_translations, const char * base_filename, int rank, bool close_different_parameter=false) {
         std::ofstream outfile ( "trace." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
 
         outfile << "rank,start_time,end_time,region,parameter" << std::endl;
@@ -276,7 +276,8 @@ public:
                     for (auto oevt = open_events.rbegin(); oevt != open_events.rend(); ++oevt)
                     {
                         // REM: -1 as parameter closes last...
-                        if (oevt->type == ett.enter_type && (oevt->parameter == evt.parameter || evt.parameter == -1))
+                        if (oevt->type == ett.enter_type &&
+                                (close_different_parameter || oevt->parameter == evt.parameter || evt.parameter == -1))
                         {
                             //D("Popping event and writing region");
                             outfile << rank

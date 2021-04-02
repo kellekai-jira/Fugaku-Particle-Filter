@@ -11,7 +11,7 @@ clean_old_stats()
 
 run_melissa_da_study(
     is_p2p=True,
-    precommand_server='xterm_gdb',
+    #precommand_server='xterm_gdb',
     runner_cmd='xterm_gdb simulation4-p2p',
     total_steps=30,
     ensemble_size=30,
