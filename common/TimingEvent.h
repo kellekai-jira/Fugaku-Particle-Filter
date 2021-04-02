@@ -27,19 +27,20 @@ enum TimingEventType
 
 
     // p2p added stuff:
+    // see https://gitlab.inria.fr/melissa/melissa-da/-/issues/65
     // App Core:
-    START_INIT_APP                    = 12,  // time till first melissa expose
-    STOP_INIT_APP                     = 13,
+    START_INIT                    = 12,  // time from comm_init till first melissa expose  or first call to callback in head
+    STOP_INIT                     = 13,
     //START_IDLE_RUNNER                 = 14, //(time in melissa expose)
     //STOP_IDLE_RUNNER                  = 15, //(time in melissa expose)
     START_JOB_REQUEST                 = 16,
     STOP_JOB_REQUEST                  = 17, // parameter = next_state.id (=job.id)
     START_LOAD                        = 18,  // parameter = parent_state.t
     STOP_LOAD                         = 19,  // parameter = parent_state.id
-    START_CHECK_LOCAL                 = 20,
-    STOP_CHECK_LOCAL                  = 21,
-    START_WAIT_HEAD                   = 22,
-    STOP_WAIT_HEAD                    = 23,
+    START_CHECK_LOCAL                 = 20, // parameter = parent_state.t
+    STOP_CHECK_LOCAL                  = 21, // parameter = parent_state.id
+    START_WAIT_HEAD                   = 22,// parameter = job.t
+    STOP_WAIT_HEAD                    = 23,// parameter = job.id
     //START_PROPAGATE_STATE             = 24,
     //STOP_PROPAGATE_STATE              = 25,
     START_CALC_WEIGHT                 = 26, // parameter = job.t
@@ -52,8 +53,8 @@ enum TimingEventType
     STOP_STORE                        = 81, // parameter = job.id
 
     // FTI core:
-    START_INIT_FTI_HEAD               = 32,
-    STOP_INIT_FTI_HEAD                = 33,
+    //START_INIT_FTI_HEAD               = 32,
+    //STOP_INIT_FTI_HEAD                = 33,
     START_IDLE_FTI_HEAD               = 34,
     STOP_IDLE_FTI_HEAD                = 35,
     START_PUSH_STATE_TO_PFS           = 36,
@@ -80,10 +81,10 @@ enum TimingEventType
 
 
     // Additional single events:
-    PEER_HIT                          = 56,    //(state available at peer)
-    PEER_MISS                         = 57,    //(state not available at peer)
+    PEER_HIT                          = 56,    //(state available at peer) parameter = runner_id
+    PEER_MISS                         = 57,    //(state not available at peer) parameter = runner_id
     PFS_PULL                          = 58,
-    LOCAL_HIT                         = 59,    //(state found local)
+    LOCAL_HIT                         = 59,    //(state found local) parameter = id
     LOCAL_MISS                        = 60,   //(state not found local)
     LOCAL_DELETE                      = 61, //(local states deleted)
     PFS_DELETE                        = 62    //(global states deleted)

@@ -39,7 +39,7 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         // To do good logging
         comm_rank = mpi.rank();
         try_init_timing();
-        trigger(START_INIT_APP, 0);
+        trigger(START_INIT, 0);
 
 
         return MPI_Comm_c2f(comm);
@@ -164,7 +164,7 @@ int melissa_p2p_expose(VEC_T *values,
 {
     static bool is_first = true;
     if (is_first) {
-        trigger(STOP_INIT_APP, 0);
+        trigger(STOP_INIT, 0);
         is_first = false;
     }
 
@@ -231,14 +231,15 @@ int melissa_p2p_expose(VEC_T *values,
         if (parent_state.t < 1) {
             if (field.current_step == 0) {
                 printf("Not performing a state load as good init state already in memory");
+                trigger(LOCAL_HIT, parent_state.id);
             } else {
                 // load my very own checkpoint from t=0:
                 // in this case the runner id is the state id
                 storage.load(io_state_id_t(0, runner_id));
             }
         } else if ( current_state == parent_state ) {
-            // TODO: KAI: or is this handled elsewhere already?
                 printf("Not performing a state load as good state already in memory");
+                trigger(LOCAL_HIT, parent_state.id);
         } else {
             storage.load( parent_state );
         }
@@ -271,13 +272,23 @@ void ApiTiming::maybe_report() {
         {
             report(
                     getCommSize(), field.local_vect_size + field.local_hidden_vect_size,
-                    runner_id);
+                    runner_id, false);
         }
+
 #ifdef REPORT_TIMING_ALL_RANKS
+        char fname[256];
+        if (FTI_AmIaHead()) {
+            sprintf(fname, "runner-%03d-head", runner_id);
+        } else {
+            sprintf(fname, "runner-%03d-app", runner_id);
+        }
+        print_events(fname, comm_rank);
+
         const std::array<EventTypeTranslation, 3> event_type_translations = {{
-            {START_ITERATION, STOP_ITERATION, "Iteration"},
+                {START_ITERATION, STOP_ITERATION, "Iteration"},
                 {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                 {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+                // FIXME: add missing regions!
         }};
         std::string fn = "melissa_runner" + std::to_string(runner_id);
         write_region_csv(event_type_translations, fn.c_str(), comm_rank);

@@ -26,7 +26,7 @@ void StorageController::io_init( MpiController* mpi, IoController* io ) {
   m_mpi = mpi;
   m_io = io;
   m_io->register_callback( StorageController::callback );
-  
+
   assert(std::getenv("MELISSA_DA_RUNNER_ID"));
   m_runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
   std::cout << "RUNNER_ID: " << m_runner_id << std::endl;
@@ -46,7 +46,7 @@ void StorageController::init( double capacity_dp, double state_size_dp ) {
   // propagate state size to head
   m_io->send( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
   m_io->send( &state_size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
-  
+
   m_worker_thread = false;
 
 }
@@ -121,8 +121,10 @@ void StorageController::callback() {
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
     }
-
+    trigger(STOP_INIT, 0);
   }
+
+  timing->maybe_report();
 
   // EVENT
   // message from alice, sent after completion of the forecast
@@ -225,9 +227,14 @@ void StorageController::m_load_head( io_state_id_t state ) {
 }
 
 void StorageController::m_load_user( io_state_id_t state ) {
-  if( !m_io->is_local( state ) ) {
+  if( m_io->is_local( state ) ) {
+    trigger(LOCAL_HIT, state.id);
+  } else {
+    trigger(LOCAL_MISS, state.id);
     int status;
+    trigger(START_WAIT_HEAD, state.t);
     m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
+    trigger(STOP_WAIT_HEAD, state.id);
     // TODO check status
   }
   assert( m_io->is_local( state ) && "unable to load state to local storage" );

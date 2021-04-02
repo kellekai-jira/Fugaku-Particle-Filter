@@ -23,11 +23,14 @@ public:
     /// pandas. There is one file containing runner information on all assimilation
     /// cycles (e.g. runner-000.timing-information.csv) and another one having general
     /// run information for the whole run (runner-000.run-information.csv)
-    void report(const int cores_simulation, const size_t state_size, const int runner_id) {
+    void report(const int cores_simulation, const size_t state_size, const int runner_id, bool print_timing_events=true) {
+
 
         char fname[256];
-        sprintf(fname, "runner-%03d", runner_id);
-        print_events(fname, comm_rank);
+        if (print_timing_events) {
+            sprintf(fname, "runner-%03d", runner_id);
+            print_events(fname, comm_rank);
+        }
 
         sprintf(fname, "runner-%03d.timing-information.csv", runner_id);
         std::ofstream os(fname, std::ofstream::app);

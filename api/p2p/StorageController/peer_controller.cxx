@@ -120,6 +120,8 @@ bool PeerController::mirror( io_state_id_t state_id )
     dns_req.mutable_runner_request()->set_head_rank(m_mpi->rank());
     dns_req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
     dns_req.mutable_runner_request()->mutable_socket()->set_port(port);
+    dns_req.mutable_runner_request()->mutable_socket()->set_runner_id(runner_id);  // could optimize this out but it is needed, at least for event triggering
+
     dns_req.set_runner_id(runner_id);
     send_message(storage.server.m_socket, dns_req);
 
@@ -195,7 +197,6 @@ bool PeerController::mirror( io_state_id_t state_id )
                   m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
 
-                break;
             }
         }
 
@@ -206,6 +207,9 @@ bool PeerController::mirror( io_state_id_t state_id )
 
         if (found) {
             break;
+            trigger(PEER_HIT, dns_reply.runner_response().sockets(i).runner_id());
+        } else {
+            trigger(PEER_MISS, dns_reply.runner_response().sockets(i).runner_id());
         }
     }
 

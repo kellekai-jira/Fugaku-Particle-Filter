@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "api_common.h"  // for timing
+
 int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
   FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
@@ -249,7 +251,7 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   local << m_dict_string["exec_id"];
   local << "/l1/";
   local << std::to_string(to_ckpt_id(state_id));
-  
+
   struct stat info;
   assert( stat( local.str().c_str(), &info ) != 0 && "the local checkpoint directory already exists!" );
 
@@ -270,9 +272,12 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
 }
 
 bool FtiController::is_local( io_state_id_t state_id ) {
+  trigger(START_CHECK_LOCAL, state_id.t);
   FTIT_stat st;
   FTI_Stat( to_ckpt_id(state_id), &st );
-  return FTI_ST_IS_LOCAL(st.level);
+  bool res = FTI_ST_IS_LOCAL(st.level);
+  trigger(STOP_CHECK_LOCAL, state_id.id);
+  return res;
 }
 
 bool FtiController::is_global( io_state_id_t state_id ) {
