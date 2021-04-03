@@ -168,7 +168,7 @@ bool PeerController::mirror( io_state_id_t state_id )
         zmq_pollitem_t items[1];
         items[0] = {state_request_socket, 0, ZMQ_POLLIN, 0};
 
-        ZMQ_CHECK(zmq_poll(items, 1, 1000));  // wait 100 000 us = 100 ms for an event
+        ZMQ_CHECK(zmq_poll(items, 1, 6000));  // wait 600 000 us = 600 ms for an event
 
         // answer only one request to not block for too long (otherwise this would be a while...)
         if (items[0].revents & ZMQ_POLLIN) {
