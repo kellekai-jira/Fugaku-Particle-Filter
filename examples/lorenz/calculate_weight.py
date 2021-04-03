@@ -3,24 +3,94 @@ import numpy as np
 import mpi4py
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
+import math
 
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
         comm = MPI.COMM_WORLD.f2py(fcomm)
         print("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
-        state = np.zeros(40, dtype='float64')
-        state[3] = 42.
 
+        assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
+        assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
 
+        share = float(os.environ.get('MELISSA_LORENZ_OBSERVATION_PERCENT'))*0.01
+        blk_size = int(os.environ.get('MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE'))
 
-        background_d = np.frombuffer(background, dtype='float64',
-                             count=len(background) // 8)
+        NG = comm.allreduce(len(background), MPI.SUM)
 
-        #assert (background_d == state).all()  only works for simulation.py
+        nl_all = np.full(comm.size, math.floor(NG / comm.size))
 
-        # TODO: get the correct comm here!
+        nl_mod = NG%comm.size;
+        while nl_mod > 0:
+            for i in range(comm.size):
+                if (nl_mod > 1):
+                    nl_all[i] = nl_all[i] + 1
+                    nl_mod = nl_mod - 1
+                else:
+                    nl_all[i] = nl_all[i] + nl_mod
+                    nl_mod = 0
+                    break
 
-        return 0.42
+        nl = nl_all[comm.rank]
+
+        nl_off = 0;
+        for i in range(comm.rank):
+            nl_off = nl_off + nl_all[i]
+
+        state_min_p = nl_off
+        state_max_p = nl_off + nl - 1
+
+        # compute total number of observations
+        dim_obs = math.floor(share * NG)
+        if dim_obs == 0:
+            dim_obs = 1
+
+        # compute number of regions
+        num_reg = math.floor(dim_obs / blk_size)
+        if dim_obs%blk_size != 0:
+            num_reg = num_reg + 1
+
+        # compute stride for regions
+        stride = math.floor(NG / num_reg)
+
+        # determine number of obs in pe
+        obs_idx = []
+        dim_obs_p = 0
+        cnt_obs = 0
+        for i in range(num_reg):
+            offset = i * stride
+            for j in range(blk_size):
+                index_tmp = offset + j
+                if (index_tmp >= state_min_p) and (index_tmp <= state_max_p):
+                    dim_obs_p = dim_obs_p + 1
+                    obs_idx.append(index_tmp - state_min_p)
+                cnt_obs = cnt_obs + 1
+                if (cnt_obs == dim_obs): break
+                if (index_tmp == state_max_p): break
+            if (cnt_obs == dim_obs): break
+            if (index_tmp == state_max_p): break
+
+        dim_obs_loc = np.full(1, dim_obs_p, dtype='int32')
+        dim_obs_all = np.empty(comm.size, dtype='int32')
+        comm.Allgather([dim_obs_loc, MPI.INT], [dim_obs_all, MPI.INT])
+
+        amode = MPI.MODE_RDONLY
+        fh = MPI.File.Open(comm, "./iter-"+str(cycle)+".obs", amode)
+        if comm.rank == 0:
+            displ = 0
+        else:
+            displ = ctypes.sizeof(c_double)*sum(dim_obs_all[:comm.rank])
+        fh.Set_view(displ)
+        observation = np.empty(dim_obs_p, dtype='float64')
+        fh.Read(observation)
+        fh.Close()
+
+        sum_err = 0
+        for i in range(dim_obs_p):
+            sum_err = sum_err + (background[obs_idx[i]] - observation[i]) ** 2
+
+        return comm.allreduce(sum_err, MPI.SUM)
+
     except Exception as e:
         print('Python Error!')
         print(e)

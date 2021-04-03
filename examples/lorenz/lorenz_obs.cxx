@@ -4,6 +4,10 @@
 #include <mpi.h>
 #include <iostream>
 #include <cmath>
+#include <fstream>
+#include <cstdlib>
+#include <cassert>
+#include <sstream>
 
 #ifdef __LORENZ_DEBUG__
 
@@ -31,23 +35,40 @@ void RK_step( std::vector<double> & x, const std::vector<double> & k1,
 void integrate( std::vector<double> & x, double F, double dt );
 void init_parallel();
 void write_obs( const std::string file_name, std::vector<double> x, 
-    double share, size_t blk_size, int epoch );
+    double share, int epoch );
 
 int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
-const size_t NG = 40;
 const double F = 5;
 const double dt = 0.01;
 const double DT = 10;
-const int iter_max = 1;
-const double PERCENT = 50;
 
-size_t nlt, nl, state_min_p, state_max_p;
+static uint64_t NG;
+static int ITER_MAX;
+static double OBS_PERCENT;
+static uint64_t OBS_BLOCK_SIZE;
+
+uint64_t nlt, nl, state_min_p, state_max_p;
 std::vector<int> nl_all;
 const int MPI_MIN_BLK = 1;
 
 int main() {
+
+  assert( getenv("MELISSA_LORENZ_STATE_DIMENSION") != nullptr );
+  assert( getenv("MELISSA_LORENZ_ITER_MAX") != nullptr );
+  assert( getenv("MELISSA_LORENZ_OBSERVATION_PERCENT") != nullptr );
+  assert( getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE") != nullptr );
+
+  std::istringstream NG_str(getenv("MELISSA_LORENZ_STATE_DIMENSION"));
+  std::istringstream ITER_MAX_str(getenv("MELISSA_LORENZ_ITER_MAX"));
+  std::istringstream OBS_PERCENT_str(getenv("MELISSA_LORENZ_OBSERVATION_PERCENT"));
+  std::istringstream OBS_BLOCK_SIZE_str(getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE"));
+  
+  NG_str >> NG;
+  ITER_MAX_str >> ITER_MAX;
+  OBS_PERCENT_str >> OBS_PERCENT;
+  OBS_BLOCK_SIZE_str >> OBS_BLOCK_SIZE;
 
   init_parallel();
   int zero = 0;
@@ -59,14 +80,14 @@ int main() {
   if( comm_rank == 0 ) x_l[2] += 0.01;
   exchange(x_l);
     
-  for(int iter=0; iter<iter_max; iter++) 
+  for(int iter=0; iter<ITER_MAX; iter++) 
   {
     
     for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
 
-    write_obs( "obs_t", x_l, 0.01*PERCENT, 4, iter );
+    write_obs( "/home/kellekai/STUDY/PhD/Research/Melissa-P2P-Lab/Melissa/melissa-da/examples/lorenz", x_l, 0.01*OBS_PERCENT, iter );
   
   }
 
@@ -97,8 +118,8 @@ void init_parallel() {
     }
 
     std::fill(nl_all.begin(), nl_all.end(), NG / comm_size);
-    size_t comm_size_t = comm_size;
-    size_t nl_mod = NG%comm_size_t;
+    uint64_t comm_uint64_t = comm_size;
+    uint64_t nl_mod = NG%comm_uint64_t;
     while (nl_mod > 0) {
       for(int i=0; i<comm_size; i++) {
         if (nl_mod > MPI_MIN_BLK) {
@@ -115,7 +136,7 @@ void init_parallel() {
     nl = nl_all[comm_rank];
     nlt = nl + 3;
     
-    size_t nl_off = 0;
+    uint64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
     }
@@ -125,22 +146,22 @@ void init_parallel() {
 }
 
 
-void write_obs( const std::string file_name, std::vector<double> x, 
-    double share, size_t blk_size, int epoch ) {
+void write_obs( const std::string file_path, std::vector<double> x, 
+    double share, int epoch ) {
     
-    size_t offset;
-    size_t index_tmp;
+    uint64_t offset;
+    uint64_t index_tmp;
     
     // compute total number of observations
-    size_t dim_obs = std::floor(share * NG);
+    uint64_t dim_obs = std::floor(share * NG);
     if (dim_obs == 0) {
       dim_obs = 1;
     }
     OUT_SYNC( "dim_obs" << dim_obs );
 
     // compute number of regions
-    size_t num_reg = dim_obs / blk_size;
-    if ( dim_obs%blk_size != 0 ) {
+    uint64_t num_reg = dim_obs / OBS_BLOCK_SIZE;
+    if ( dim_obs%OBS_BLOCK_SIZE != 0 ) {
       num_reg++;
     }
 
@@ -149,17 +170,17 @@ void write_obs( const std::string file_name, std::vector<double> x,
     OUT_SYNC( "state_max_p: " << state_max_p );
 
     // compute stride for regions
-    size_t stride = NG / num_reg;
+    uint64_t stride = NG / num_reg;
 
     OUT_SYNC( "stride: " << stride );
 
     // determine number of obs in pe
-    size_t dim_obs_p = 0;
-    size_t cnt_obs = 0;
+    uint64_t dim_obs_p = 0;
+    uint64_t cnt_obs = 0;
     for(int i=0; i<num_reg; i++) {
       offset = i * stride;
       index_tmp;
-      for(int j=0; j<blk_size; j++) {
+      for(int j=0; j<OBS_BLOCK_SIZE; j++) {
         index_tmp = offset + j;
         if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
           dim_obs_p++;
@@ -172,57 +193,51 @@ void write_obs( const std::string file_name, std::vector<double> x,
       if ( index_tmp == state_max_p ) break;
     }
     
-    OUT_SYNC( "dim_obs_p: " << dim_obs_p );
+    OUT_SYNC( "rank: "<<comm_rank<<" dim_obs_p: " << dim_obs_p );
 
-    std::vector<double>obs_p(dim_obs_p);
-    std::vector<double>obs_full_p(nl);
-
-    std::fill(obs_full_p.begin(), obs_full_p.end(), -999.0);
+    std::vector<double> obs_p(dim_obs_p);
+    std::vector<uint64_t> idx_p(dim_obs_p);
 
     //assign indices to index array
-    size_t cnt_obs_p = 0;
+    uint64_t cnt_obs_p = 0;
     for(int i=0; i<num_reg; i++) {
       offset = i * stride;
-      for(int j=0; j<blk_size; j++) {
+      for(int j=0; j<OBS_BLOCK_SIZE; j++) {
         index_tmp = offset + j;
         if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
-          obs_p[cnt_obs_p] = x[index_tmp - state_min_p];
-          obs_full_p[index_tmp - state_min_p] = obs_p[cnt_obs_p];
+          obs_p[cnt_obs_p] = x[index_tmp - state_min_p + 2];  // + 2 due to the halo
+          idx_p[cnt_obs_p] = index_tmp;
           cnt_obs_p++;
-          if(comm_rank==0) OUT( "["<<comm_rank<<"] index_l: " << index_tmp - state_min_p ); 
-          if(comm_rank==0) OUT( "["<<comm_rank<<"] index_g: " << index_tmp ); 
+          //if(comm_rank==0) OUT( "["<<comm_rank<<"] index_l: " << index_tmp - state_min_p ); 
+          //if(comm_rank==0) OUT( "["<<comm_rank<<"] index_g: " << index_tmp ); 
         }
         if ( cnt_obs_p == dim_obs_p ) break;
       }
       if ( cnt_obs_p == dim_obs_p ) break;
     }
     
+
     // write observations
-    //call mpi_allgather( dim_obs_p, 1, MPI_INTEGER, dim_obs_all, &
-    //  1, MPI_INTEGER, comm_model, ierr )
+    uint64_t dim_obs_all[comm_size]; 
+    MPI_Allgather( &dim_obs_p, 1, MPI_UINT64_T, dim_obs_all,
+      1, MPI_UINT64_T, comm );
 
-    //disp = 0
+    uint64_t disp_obs = 0;
+    uint64_t disp_idx = 0;
 
-    //do i = 1, mpi_rank
-    //  disp = disp + dim_obs_all(i) * sizeof( obs_p(1) )
-    //end do
+    for(int i=0; i<comm_rank; i++) {
+      disp_obs += dim_obs_all[i] * sizeof(double);
+      disp_idx += dim_obs_all[i] * sizeof(uint64_t);
+    }
 
-    //call mpi_file_open(comm_model, file_name, & 
-    //  MPI_MODE_WRONLY + MPI_MODE_CREATE, & 
-    //  MPI_INFO_NULL, thefile, ierr)  
-
-    //call mpi_file_set_view(thefile, disp, MPI_DOUBLE_PRECISION, & 
-    //  MPI_DOUBLE_PRECISION, 'native', & 
-    //  MPI_INFO_NULL, ierr)
-
-    //call mpi_file_write(thefile, obs_p, dim_obs_p, MPI_DOUBLE_PRECISION, & 
-    //  MPI_STATUS_IGNORE, ierr)
-
-    //call mpi_file_close(thefile, ierr)
-    //
-    //DEALLOCATE( obs_p )
-    //DEALLOCATE( obs_full_p )
-    //!close(10)
+    std::string file_base = file_path + "/iter-" + std::to_string(epoch);
+    //  "_timestep-" + std::to_string((epoch+1)*DT);
+    std::string file_obs = file_base + ".obs";
+    MPI_File fh;
+    MPI_File_open(comm, file_obs.c_str(), MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, &fh);  
+    MPI_File_set_view(fh, disp_obs, MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+    MPI_File_write(fh, &obs_p[0], dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
 }
 
 void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std::vector<double> & k2, double w, double dt ) {
@@ -232,7 +247,7 @@ void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std
 }
 
 void exchange( std::vector<double> & x ) {
-  size_t nlt = x.size();
+  uint64_t nlt = x.size();
   if( comm_size == 1 ) {
     x[0] = x[nlt-3];
     x[1] = x[nlt-2];
@@ -253,8 +268,8 @@ void exchange( std::vector<double> & x ) {
 }
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
-  size_t N = x_in.size();
-  for(size_t i=2; i<N-1; i++) { 
+  uint64_t N = x_in.size();
+  for(uint64_t i=2; i<N-1; i++) { 
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }
