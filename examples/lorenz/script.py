@@ -24,6 +24,9 @@ run_melissa_da_study(
     additional_env={
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/lorenz:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
+        'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE': '4',
+        'MELISSA_LORENZ_OBSERVATION_PERCENT': '20',
+        'MELISSA_LORENZ_STATE_DIMENSION': '1024',
         # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         },
 

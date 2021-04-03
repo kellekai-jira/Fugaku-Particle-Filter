@@ -59,6 +59,7 @@ int main() {
   assert( getenv("MELISSA_LORENZ_ITER_MAX") != nullptr );
   assert( getenv("MELISSA_LORENZ_OBSERVATION_PERCENT") != nullptr );
   assert( getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE") != nullptr );
+  assert( getenv("MELISSA_LORENZ_OBSERVATION_DIR") != nullptr );
 
   std::istringstream NG_str(getenv("MELISSA_LORENZ_STATE_DIMENSION"));
   std::istringstream ITER_MAX_str(getenv("MELISSA_LORENZ_ITER_MAX"));
@@ -69,6 +70,7 @@ int main() {
   ITER_MAX_str >> ITER_MAX;
   OBS_PERCENT_str >> OBS_PERCENT;
   OBS_BLOCK_SIZE_str >> OBS_BLOCK_SIZE;
+  std::string obs_dir(getenv("MELISSA_LORENZ_OBSERVATION_DIR"));
 
   init_parallel();
   int zero = 0;
@@ -87,7 +89,7 @@ int main() {
       integrate( x_l, F, dt );
     }
 
-    write_obs( "/home/kellekai/STUDY/PhD/Research/Melissa-P2P-Lab/Melissa/melissa-da/examples/lorenz", x_l, 0.01*OBS_PERCENT, iter );
+    write_obs( obs_dir, x_l, 0.01*OBS_PERCENT, iter );
   
   }
 

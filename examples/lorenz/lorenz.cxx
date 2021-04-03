@@ -3,6 +3,9 @@
 #include <functional>
 #include <mpi.h>
 #include <iostream>
+#include <cstdlib>
+#include <cassert>
+#include <sstream>
 #include "../api/melissa_da_api.h"
 
 #define OUT( MSG ) std::cout << MSG << std::endl
@@ -10,10 +13,11 @@
 int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
-const size_t NG = 40;
 const double F = 5;
 const double dt = 0.01;
+const double DT = 10;
 
+static uint64_t NG;
 
 size_t nlt, nl, state_min_p, state_max_p;
 std::vector<int> nl_all;
@@ -134,7 +138,12 @@ void integrate( std::vector<double> & x, double F, double dt ) {
 
 int main() {
 
+  assert( getenv("MELISSA_LORENZ_STATE_DIMENSION") != nullptr );
+  std::istringstream NG_str(getenv("MELISSA_LORENZ_STATE_DIMENSION"));
+  NG_str >> NG;
+
   init_parallel();
+  
   int zero = 0;
   int nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
@@ -149,7 +158,7 @@ int main() {
   int nsteps = 1;
   do
   {
-    for(int i=0; i<10/dt; i++) {
+    for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
 
@@ -169,16 +178,16 @@ int main() {
     MPI_Barrier(comm);
   } while (nsteps > 0);
 
-  size_t off = 0;
-  for(int i=0; i<comm_size; i++) {
-    if(comm_rank == i) {
-      for(int j=0; j<nl; j++) {
-        OUT( "x["<<off+j<<"]: " << x_l[2+j] );
-      }
-    }
-    off += nl_all[i];
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
+  //size_t off = 0;
+  //for(int i=0; i<comm_size; i++) {
+  //  if(comm_rank == i) {
+  //    for(int j=0; j<nl; j++) {
+  //      OUT( "x["<<off+j<<"]: " << x_l[2+j] );
+  //    }
+  //  }
+  //  off += nl_all[i];
+  //  MPI_Barrier(MPI_COMM_WORLD);
+  //}
 
   MPI_Finalize();
 

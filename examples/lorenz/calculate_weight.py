@@ -4,6 +4,9 @@ import mpi4py
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
 import math
+import ctypes
+from ctypes import *
+import os
 
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
@@ -12,9 +15,11 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
 
         assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
+        assert 'MELISSA_LORENZ_OBSERVATION_DIR' in os.environ.keys()
 
         share = float(os.environ.get('MELISSA_LORENZ_OBSERVATION_PERCENT'))*0.01
         blk_size = int(os.environ.get('MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE'))
+        obs_dir = os.environ.get('MELISSA_LORENZ_OBSERVATION_DIR')
 
         NG = comm.allreduce(len(background), MPI.SUM)
 
@@ -75,7 +80,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         comm.Allgather([dim_obs_loc, MPI.INT], [dim_obs_all, MPI.INT])
 
         amode = MPI.MODE_RDONLY
-        fh = MPI.File.Open(comm, "./iter-"+str(cycle)+".obs", amode)
+        fh = MPI.File.Open(comm, obs_dir + "/iter-"+str(cycle)+".obs", amode)
         if comm.rank == 0:
             displ = 0
         else:
