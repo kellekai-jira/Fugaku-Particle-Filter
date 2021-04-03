@@ -8,6 +8,7 @@ import p2p_pb2 as cm
 import numpy as np
 from enum import Enum
 
+
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
 LAUNCHER_TIMEOUT = 60  # seconds
@@ -227,13 +228,14 @@ def accept_runner_request(msg):
         if rid in runners:
             del runners[rid]
 
+
     # generate reply:
     reply = cm.Message()
     reply.runner_response.SetInParent()
-    shuffeled_runners = list(runners)
+    # filter for runners that have the state in question:
+    shuffeled_runners = list(filter(lambda x: msg.runner_request.searched_state_id in state_cache[x], runners))
     # shuffle inplace
     random.shuffle(shuffeled_runners)
-    print('Responding shuffled runner list:', list(runners))
     for rid in shuffeled_runners:
         if rid == runner_id:
             continue
@@ -242,7 +244,9 @@ def accept_runner_request(msg):
             s.CopyFrom(runners[rid][head_rank])
 
 
+    print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)
+    # print('scache was:', state_cache) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
 
 def first(x):
     """Helper to return the first element of something"""
@@ -395,9 +399,9 @@ def accept_prefetch(msg):
             reply.prefetch_response.pull_states.append(most_important[1])
 
 
-        # TODO: if prefetching with weight 1: take a state that is only on one runner for fault tollerance?
+            # TODO: if prefetching with weight 1: take a state that is only on one runner for fault tollerance?
 
-        dict_append(state_cache_with_prefetch, runner_id, most_important[1])
+            dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
     send_message(gp_socket, reply)
 

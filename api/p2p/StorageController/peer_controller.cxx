@@ -125,6 +125,8 @@ bool PeerController::mirror( io_state_id_t state_id )
     dns_req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
     dns_req.mutable_runner_request()->mutable_socket()->set_port(port);
     dns_req.mutable_runner_request()->mutable_socket()->set_runner_id(runner_id);  // could optimize this out but it is needed, at least for event triggering
+    dns_req.mutable_runner_request()->mutable_searched_state_id()->set_t(state_id.t);
+    dns_req.mutable_runner_request()->mutable_searched_state_id()->set_id(state_id.id);
 
     dns_req.set_runner_id(runner_id);
     send_message(storage.server.m_socket, dns_req);

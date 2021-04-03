@@ -63,6 +63,7 @@ message StateResponse {
 message RunnerRequest {
     uint32 head_rank = 1;
     StateServerSocket socket = 2;
+    StateId searched_state_id = 3;
 }
 
 message RunnerResponse {
