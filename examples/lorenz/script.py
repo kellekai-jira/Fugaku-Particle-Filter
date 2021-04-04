@@ -25,8 +25,10 @@ run_melissa_da_study(
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/lorenz:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE': '4',
-        'MELISSA_LORENZ_OBSERVATION_PERCENT': '20',
-        'MELISSA_LORENZ_STATE_DIMENSION': '1024',
+        'MELISSA_LORENZ_ITER_MAX': '3',
+        'MELISSA_LORENZ_OBSERVATION_PERCENT': '50',
+        'MELISSA_LORENZ_STATE_DIMENSION': '40',
+        'MELISSA_LORENZ_OBSERVATION_DIR': '/home/kellekai/STUDY/PhD/Research/Melissa-P2P-Lab/Melissa/melissa-da/examples/lorenz',
         # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         },
 

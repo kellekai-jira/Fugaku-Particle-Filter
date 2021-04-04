@@ -23,6 +23,11 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
 
         NG = comm.allreduce(len(background), MPI.SUM)
 
+        NG = comm.allreduce(len(background_d), MPI.SUM)
+
+        print("STATE DIMENSION: ", NG)
+        print("COMM SIZE: ", comm.size)
+
         nl_all = np.full(comm.size, math.floor(NG / comm.size))
 
         nl_mod = NG%comm.size;
@@ -81,6 +86,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
 
         amode = MPI.MODE_RDONLY
         fh = MPI.File.Open(comm, obs_dir + "/iter-"+str(cycle)+".obs", amode)
+        print("CYCLE", cycle)
         if comm.rank == 0:
             displ = 0
         else:
@@ -92,7 +98,13 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
 
         sum_err = 0
         for i in range(dim_obs_p):
-            sum_err = sum_err + (background[obs_idx[i]] - observation[i]) ** 2
+            sum_err = sum_err + (background_d[obs_idx[i]] - observation[i]) ** 2
+
+        print("errors: ", background_d[obs_idx[:3]] - observation[:3])
+        print("background: ", background_d[obs_idx[:3]])
+        print("observation: ", observation[:3])
+        print("indeces: ", obs_idx[:3])
+        print("dim_obs_p: ", dim_obs_p)
 
         return comm.allreduce(sum_err, MPI.SUM)
 

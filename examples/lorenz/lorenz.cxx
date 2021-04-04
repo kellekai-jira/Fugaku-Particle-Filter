@@ -19,7 +19,7 @@ const double DT = 10;
 
 static uint64_t NG;
 
-size_t nlt, nl, state_min_p, state_max_p;
+uint64_t nlt, nl, state_min_p, state_max_p;
 std::vector<int> nl_all;
 const int MPI_MIN_BLK = 1;
 
@@ -27,18 +27,18 @@ MPI_Fint fcomm_world;
 MPI_Fint fcomm;
 
 void init_parallel() {
-    
+
     MPI_Init(NULL, NULL);
 
     fcomm_world = MPI_Comm_c2f(MPI_COMM_WORLD);
     fcomm = melissa_comm_init_f(&fcomm_world);
     comm = MPI_Comm_f2c(fcomm);
-    
+
     //comm = MPI_COMM_WORLD;
 
     MPI_Comm_size(comm, &comm_size);
     MPI_Comm_rank(comm, &comm_rank);
-    
+
     nl_all.resize(comm_size);
 
     // middle ranks
@@ -53,8 +53,8 @@ void init_parallel() {
     }
 
     std::fill(nl_all.begin(), nl_all.end(), NG / comm_size);
-    size_t comm_size_t = comm_size;
-    size_t nl_mod = NG%comm_size_t;
+    uint64_t comm_uint64_t = comm_size;
+    uint64_t nl_mod = NG%comm_uint64_t;
     while (nl_mod > 0) {
       for(int i=0; i<comm_size; i++) {
         if (nl_mod > MPI_MIN_BLK) {
@@ -70,24 +70,24 @@ void init_parallel() {
 
     nl = nl_all[comm_rank];
     nlt = nl + 3;
-    
-    size_t nl_off = 0;
+
+    uint64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
     }
-    state_min_p = nl_off + 1;
-    state_max_p = nl_off + nl;
+    state_min_p = nl_off;
+    state_max_p = nl_off + nl - 1;
 
 }
 
 void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std::vector<double> & k2, double w, double dt ) {
   for(int i=0; i<x.size(); i++) {
-    x[i] = k1[i] + dt * k2[i]/w; 
+    x[i] = k1[i] + dt * k2[i]/w;
   }
 }
 
 void exchange( std::vector<double> & x ) {
-  size_t nlt = x.size();
+  uint64_t nlt = x.size();
   if( comm_size == 1 ) {
     x[0] = x[nlt-3];
     x[1] = x[nlt-2];
@@ -108,8 +108,8 @@ void exchange( std::vector<double> & x ) {
 }
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
-  size_t N = x_in.size();
-  for(size_t i=2; i<N-1; i++) { 
+  uint64_t N = x_in.size();
+  for(uint64_t i=2; i<N-1; i++) {
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }
@@ -143,17 +143,17 @@ int main() {
   NG_str >> NG;
 
   init_parallel();
-  
+
   int zero = 0;
   int nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
-    
+
   std::vector<double> x_l(nlt);
 
   std::fill(x_l.begin(), x_l.end(), F);
   if( comm_rank == 0 ) x_l[2] += 0.01;
   exchange(x_l);
-    
+
   static bool is_first_timestep = true;
   int nsteps = 1;
   do
@@ -162,10 +162,11 @@ int main() {
       integrate( x_l, F, dt );
     }
 
-
-    nsteps = melissa_expose_f("state1", x_l.data());
+    nsteps = melissa_expose_f("state1", &x_l[2]);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
+
+    exchange(x_l);
 
     if (nsteps > 0 && is_first_timestep)
     {
@@ -179,6 +180,7 @@ int main() {
   } while (nsteps > 0);
 
   //size_t off = 0;
+  //uint64_t off = 0;
   //for(int i=0; i<comm_size; i++) {
   //  if(comm_rank == i) {
   //    for(int j=0; j<nl; j++) {
