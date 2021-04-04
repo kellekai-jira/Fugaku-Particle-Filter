@@ -21,7 +21,13 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         blk_size = int(os.environ.get('MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE'))
         obs_dir = os.environ.get('MELISSA_LORENZ_OBSERVATION_DIR')
 
-        NG = comm.allreduce(len(background), MPI.SUM)
+        background_d = np.frombuffer(background, dtype='float64',
+                             count=len(background) // 8)
+
+        NG = comm.allreduce(len(background_d), MPI.SUM)
+
+        print("STATE DIMENSION: ", NG)
+        print("COMM SIZE: ", comm.size)
 
         NG = comm.allreduce(len(background_d), MPI.SUM)
 

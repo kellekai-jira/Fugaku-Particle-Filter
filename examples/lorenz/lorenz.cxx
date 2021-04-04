@@ -70,7 +70,11 @@ void init_parallel() {
 
     nl = nl_all[comm_rank];
     nlt = nl + 3;
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> aligned to p2p main branch
     uint64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
@@ -109,7 +113,11 @@ void exchange( std::vector<double> & x ) {
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
   uint64_t N = x_in.size();
+<<<<<<< HEAD
   for(uint64_t i=2; i<N-1; i++) {
+=======
+  for(uint64_t i=2; i<N-1; i++) {
+>>>>>>> aligned to p2p main branch
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }
@@ -165,7 +173,6 @@ int main() {
     nsteps = melissa_expose_f("state1", &x_l[2]);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
-
     exchange(x_l);
 
     if (nsteps > 0 && is_first_timestep)
@@ -179,7 +186,6 @@ int main() {
     MPI_Barrier(comm);
   } while (nsteps > 0);
 
-  //size_t off = 0;
   //uint64_t off = 0;
   //for(int i=0; i<comm_size; i++) {
   //  if(comm_rank == i) {

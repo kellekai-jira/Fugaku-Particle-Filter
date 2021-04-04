@@ -92,7 +92,6 @@ int main() {
 
     write_obs( obs_dir, x_l, 0.01*OBS_PERCENT, iter );
 
-
   }
 
   MPI_Finalize();
