@@ -73,7 +73,7 @@ class SlurmMn4Cluster(cluster.Cluster):
         # https://slurm.schedmd.com/faq.html -> 'Can I change my job's size after it has started running?'
             if to_place == 0:
                 break
-        print("could not find enough available nodes!")
+        print("start on node: ", nodes, flush=True)
         assert to_place == 0  # otherwise did not found enough nodes in reservation...
 
         return list(nodes)
@@ -116,7 +116,7 @@ class SlurmMn4Cluster(cluster.Cluster):
         if logfile != '':
             output_param = '--output=%s' % logfile
 
-        run_cmd = 'srun --verbose -N %d -n %d --cpus-per-task=%d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
+        run_cmd = 'srun --immediate --verbose -N %d -n %d --cpus-per-task=%d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
                 n_cpus_per_proc,

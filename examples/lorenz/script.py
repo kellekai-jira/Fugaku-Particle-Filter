@@ -1,6 +1,7 @@
 import os
 import shutil
 import configparser
+import time
 
 os.system('killall gdb')
 
@@ -31,6 +32,8 @@ run_melissa_da_study(
         'MELISSA_LORENZ_OBSERVATION_PERCENT': '20',
         'MELISSA_LORENZ_STATE_DIMENSION': '1048576',
         'MELISSA_LORENZ_OBSERVATION_DIR': '/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/melissa-da/examples/lorenz',
+        'MELISSA_DA_TEST_FIFO': '/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/melissa-da/examples/lorenz/timing.trace',
+        'MELISSA_DA_TIMING_REPORT': str(time.time() + 300),  # write timing events after 60 secons!
         # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         },
 

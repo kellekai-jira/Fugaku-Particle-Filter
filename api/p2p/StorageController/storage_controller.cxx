@@ -429,6 +429,7 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
 
   m_socket = zmq_socket(storage.m_zmq_context, ZMQ_REQ);
   std::string port_name = fix_port_name(melissa_server_master_gp_node);
+  std::cout << "HEAD CONNECTS TO IP: " << port_name << std::endl;
   assert( zmq_connect(m_socket, port_name.c_str()) == 0 );
 }
 
