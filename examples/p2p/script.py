@@ -1,6 +1,7 @@
 import os
 import shutil
 import configparser
+import time
 
 os.system('killall gdb')
 
@@ -12,9 +13,10 @@ run_melissa_da_study(
     cluster=SlurmMn4Cluster('bsc93'),
     walltime='02:00:00',
     is_p2p=True,
-    precommand_server='',
-    runner_cmd='valgrind --log-file="filename-%p" simulation4-p2p',
-    total_steps=3,
+    #precommand_server='xterm_gdb',
+    # runner_cmd='xterm_gdb simulation4-p2p',
+    runner_cmd='simulation4-p2p',
+    total_steps=30,
     ensemble_size=30,
     procs_runner=3,
     nodes_runner=1,
@@ -26,7 +28,8 @@ run_melissa_da_study(
     additional_env={
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
-        # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
+        'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
+        'MELISSA_DA_TIMING_REPORT': time.time() + 300,  # write timing events after 60 secons!
         },
 
     # for is_p2p=False only:
