@@ -603,24 +603,47 @@ def do_update_step():
 
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
 
-    this_cycle = filter(lambda x: x.t == assimilation_cycle,
-                        state_weights)
+    this_cycle = list(filter(lambda x: x.t == assimilation_cycle,
+                        state_weights))
 
-    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
+    sum_weights = np.sum(list(map(lambda x: state_weights[x], this_cycle)))
 
-    assert len(best_10) == 10
+    # normalize state weights:
+    state_weights_normalized = list(map(lambda x: state_weights[x] / sum_weights, this_cycle))
+
+    print("Weights this cycle:", this_cycle)
+    out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
+    #print("Particles:", out_particles)
 
     assimilation_cycle += 1
-
-    # add each 4 times to unscheduled_jobs
     job_id = 0
-    for i in range(PARTICLES):
-        parent_state_id = best_10[i % len(best_10)]
+    for op in out_particles:
+        parent_state_id = op
         jid = cm.StateId()
         jid.t = assimilation_cycle
         jid.id = job_id
         unscheduled_jobs[jid] = parent_state_id
         job_id += 1
+    print("new unscheduled jobs:", unscheduled_jobs)
+
+
+
+    # residual resampling: Otherwise we could use random.choice with the p parameter(copied from dorits notebook)
+    # N = len(weights)
+    # indexes = np.zeros(N, 'i')
+    # num_copies = (np.floor(N*np.asarray(weights))).astype(int)
+    # k = 0
+    # for i in range(N):
+        # for _ in range(num_copies[i]):
+            # indexes[k] = i
+            # k += 1
+
+    # residual = N*weights - num_copies
+    # residual /= sum(residual)
+
+
+
+
 
     return 1 if assimilation_cycle < CYCLES else 0
 
