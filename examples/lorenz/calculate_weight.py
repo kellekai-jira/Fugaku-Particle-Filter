@@ -106,11 +106,11 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         for i in range(dim_obs_p):
             sum_err = sum_err + (background_d[obs_idx[i]] - observation[i]) ** 2
 
-        print("errors: ", background_d[obs_idx[:3]] - observation[:3])
-        print("background: ", background_d[obs_idx[:3]])
-        print("observation: ", observation[:3])
-        print("indeces: ", obs_idx[:3])
-        print("dim_obs_p: ", dim_obs_p)
+        print("errors: ", background_d[obs_idx[:3]] - observation[:3], flush=True)
+        print("background: ", background_d[obs_idx[:3]], flush=True)
+        print("observation: ", observation[:3], flush=True)
+        print("indeces: ", obs_idx[:3], flush=True)
+        print("dim_obs_p: ", dim_obs_p, flush=True)
 
         return comm.allreduce(sum_err, MPI.SUM)
 
