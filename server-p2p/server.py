@@ -20,6 +20,14 @@ RUNNER_TIMEOUT = int(sys.argv[4])
 # 5 Server slowdown factor
 LAUNCHER_NODE_NAME = sys.argv[6]
 
+
+# define stepsize of assimilation window
+# warmup stepsize is set below...
+if os.getenv('MELISSA_DA_NSTEPS'):
+    NSTEPS = int(os.getenv('MELISSA_DA_NSTEPS'))
+else:
+    NSTEPS = 1
+
 print('Melissa Server started with %d particles for %d cycles' %
       (PARTICLES, CYCLES))
 print("RUNNER_TIMEOUT:", RUNNER_TIMEOUT)
@@ -645,7 +653,8 @@ def do_update_step():
 
 
 
-    return 1 if assimilation_cycle < CYCLES else 0
+
+    return NSTEPS if assimilation_cycle < CYCLES else 0
 
 
 def check_due_date_violations():
@@ -665,7 +674,16 @@ if __name__ == '__main__':
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
 
     trigger(START_ITERATION, assimilation_cycle)
-    nsteps = 1
+    # Timesteps for warmup:
+    if os.getenv("MELISSA_DA_WARMUP_NSTEPS"):
+        nsteps = int(os.getenv("MELISSA_DA_WARMUP_NSTEPS"))
+    elif os.getenv("MELISSA_DA_NSTEPS"):
+        nsteps = int(os.getenv("MELISSA_DA_NSTEPS"))
+    else:
+        nsteps = 1
+
+
+
     while True:
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
