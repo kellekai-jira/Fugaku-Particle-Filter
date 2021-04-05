@@ -44,8 +44,7 @@ class SlurmCluster(cluster.Cluster):
             self.node_occupation = {}
             # alternative: compare to https://docs.ray.io/en/latest/deploying-on-slurm.html
             # to get the node names...
-
-            out = subprocess.check_output(['srun', 'hostname'])
+            out = subprocess.check_output(['scontrol', 'show', 'hostnames'])
             for line in out.split(b'\n'):
                 if line != b'':
                     hostname = (line.split(b'.')[0]).decode("utf-8")

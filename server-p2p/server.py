@@ -59,12 +59,11 @@ class Alive:
 # patch state id so we can use it as dict index:
 # TODO Better would be: Generate another class around it that has the state_id as member !
 # (might break if Protobuf will define their own hash function)
-if not cm.StateId.__hash__:
-    cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
-
-
-
-
+# if not cm.StateId.__hash__:
+# very dirty to not have the but latest protobuf on juwels defines this function with
+# an error handler...
+# https://groups.google.com/g/protobuf/c/0p0EMmEWiKQ?pli=1
+cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
 class SimulationStatus(Enum):
     CONNECTED = 0
