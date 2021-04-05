@@ -20,7 +20,7 @@ class TestRun:
         run_melissa_da_study(
             is_p2p=is_p2p,
             runner_cmd='simulation4-p2p',
-            total_steps=10,
+            total_steps=3,
             ensemble_size=10,
             procs_runner=self.PROCS_RUNNER,
             nodes_runner=self.NODES_RUNNER,
