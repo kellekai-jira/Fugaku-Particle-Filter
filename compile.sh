@@ -87,21 +87,19 @@ else
     if [ "$MELISSA_PROFILING" == "" ];
     then
         echo here, juwels...
-        CC=mpicc CXX=mpic++ FC=mpifort cmake .. \
+        cmake .. \
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_INSTALL_PREFIX=install \
           -DCMAKE_CXX_COMPILER=mpicxx \
           -DCMAKE_Fortran_COMPILER=mpif90 \
           -DCMAKE_C_COMPILER=mpicc \
+          -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
           -DINSTALL_FTI=OFF \
           -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug \
-          -DWITH_FTI_THREADS=OFF \
+          -DWITH_FTI_THREADS=ON \
           -DREPORT_TIMING_ALL_RANKS=ON \
-          -DFTI_PATH=/gpfs/projects/bsc93/bsc93655/melissaP2P/FTI/fti/install \
-          -DCMAKE_PREFIX_PATH=melissa/install/share/cmake/ZeroMQ \
-          -DProtobuf_LIBRARIES=/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/protobuf-3.15.6/install/lib/libprotobuf.so \
-          -DProtobuf_INCLUDE_DIR=/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/protobuf-3.15.6/install/include \
-          -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0
+          -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
+          -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p
 
     else
         echo here, juwels with profiling...
@@ -116,8 +114,8 @@ else
             -DCMAKE_INSTALL_PREFIX=install \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_C_COMPILER="$CC" \
-            -DCMAKE_Fortran_COMPILER="$F90"
-            #-DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
+            -DCMAKE_Fortran_COMPILER="$F90" \
+            -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
             #-DCMAKE_CXX_COMPILER_WORKS=1 \
             #-DCMAKE_C_COMPILER_WORKS=1 \
             #-DCMAKE_Fortran_COMPILER_WORKS=1
