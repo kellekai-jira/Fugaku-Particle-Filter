@@ -10,7 +10,7 @@ MpiManager::MpiManager() :
 
 void MpiManager::init()
 {
-#if WITH_FTI && WITH_FTI_THREADS
+#if defined(WITH_FTI) && defined(WITH_FTI_THREADS)
     int provided;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
     if( provided < MPI_THREAD_MULTIPLE ) {
