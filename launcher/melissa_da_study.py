@@ -394,6 +394,7 @@ def run_melissa_da_study(
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
                     running = False
+                    # TODO get error if python error occured!
                     log('Gracefully ending study now.')
                     [runners[k].remove() for k in runners]
                     runners.clear()

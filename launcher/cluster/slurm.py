@@ -219,10 +219,13 @@ class SlurmCluster(cluster.Cluster):
         # TODO: put a reasonable value... depending on the research on some metric...
         return 0.5
 
+
     def CleanUp(self, runner_executable):
+
         if self.in_salloc:
-            subprocess.call(['srun', 'bash', '-c', 'killall %s; killall melissa_da_server' %
+            subprocess.call(['srun', 'bash', '-c', 'killall %s; killall melissa_da_server; killall python3' %
                 runner_executable])
+
             # REM: the following is not done to gracefully end serverjobs.... (and finish e.g. their trace writing...) TODO: but do something like this on ctrl c :
         # for to_cancel in self.started_jobs:
             # subprocess.call(['scancel', str(to_cancel)])
