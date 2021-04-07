@@ -97,7 +97,7 @@ IF(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
     # for nice traces:
     set(CMAKE_C_FLAGS_DEBUG "-g -rdynamic -traceback")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -rdynamic -traceback -std=c++14")
-    set(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback")
+    set(CMAKE_Fortran_FLAGS_DEBUG "-g -rdynamic -traceback -check all")
 ELSE()
     #set(CMAKE_Fortran_FLAGS "-fdefault-real-8 -m64")
     set(CMAKE_Fortran_FLAGS "-CcdRR8 -m64")

@@ -114,8 +114,8 @@ else
             -DCMAKE_INSTALL_PREFIX=install \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_C_COMPILER="$CC" \
-            -DCMAKE_Fortran_COMPILER="$F90" \
-            -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
+            -DCMAKE_Fortran_COMPILER="$F90"
+            #-DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
             #-DCMAKE_CXX_COMPILER_WORKS=1 \
             #-DCMAKE_C_COMPILER_WORKS=1 \
             #-DCMAKE_Fortran_COMPILER_WORKS=1
