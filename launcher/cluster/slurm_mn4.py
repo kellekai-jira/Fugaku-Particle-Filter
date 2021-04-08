@@ -3,7 +3,11 @@ import cluster
 import os
 import subprocess
 import multiprocessing
-from ClusterShell.NodeSet import NodeSet
+try:
+
+    from ClusterShell.NodeSet import NodeSet
+except ModuleNotFoundError:
+    NodeSet = None
 
 #import logging
 import time
