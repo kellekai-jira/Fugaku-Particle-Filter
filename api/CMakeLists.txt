@@ -18,9 +18,6 @@ file(GLOB
      ${CMAKE_CURRENT_SOURCE_DIR}
      p2p/StorageController/*.cxx
      )
-    
- # find_package(Protobuf REQUIRED)
- # include_directories(${Protobuf_INCLUDE_DIRS})
 
  add_library(melissa_da_api SHARED
      ${ALL_API}
@@ -28,9 +25,8 @@ file(GLOB
      ${ALL_STORAGE_CONTROLLER}
     $<TARGET_OBJECTS:melissa_common>
 )
- 
+
 target_link_libraries(melissa_da_api PUBLIC melissa_protocol)
-#target_link_libraries(melissa_da_api PUBLIC ${Protobuf_LIBRARY})
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)

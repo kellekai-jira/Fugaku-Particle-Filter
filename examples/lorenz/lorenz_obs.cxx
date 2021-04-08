@@ -67,7 +67,6 @@ int main() {
   std::istringstream OBS_BLOCK_SIZE_str(getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE"));
 
   NG_str >> NG;
-  
   ITER_MAX_str >> ITER_MAX;
   OBS_PERCENT_str >> OBS_PERCENT;
   OBS_BLOCK_SIZE_str >> OBS_BLOCK_SIZE;

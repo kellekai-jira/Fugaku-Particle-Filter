@@ -151,7 +151,7 @@ bool PeerController::mirror( io_state_id_t state_id )
         trigger(START_REQ_RUNNER, dns_reply.runner_response().sockets(i).runner_id());
         state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
 
-        const int linger = 600;  // ms
+        const int linger = 300;  // ms
         zmq_setsockopt (state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
 
         std::string addr = std::string("tcp://") + dns_reply.runner_response().sockets(i).node_name() + ':' +
@@ -168,11 +168,10 @@ bool PeerController::mirror( io_state_id_t state_id )
         zmq_pollitem_t items[1];
         items[0] = {state_request_socket, 0, ZMQ_POLLIN, 0};
 
-        ZMQ_CHECK(zmq_poll(items, 1, 600000));  // wait 600 000 us = 600 ms for an event
+        ZMQ_CHECK(zmq_poll(items, 1, 6000));  // wait 600 000 us = 600 ms for an event
 
         // answer only one request to not block for too long (otherwise this would be a while...)
         if (items[0].revents & ZMQ_POLLIN) {
-            std::cout << "RECEIVED ANSWER FROM " << port_name << std::endl;
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {

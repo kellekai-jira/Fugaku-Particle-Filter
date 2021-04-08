@@ -96,7 +96,7 @@ else
           -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
           -DINSTALL_FTI=OFF \
           -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug \
-          -DWITH_FTI_THREADS=ON \
+          -DWITH_FTI_THREADS=OFF \
           -DREPORT_TIMING_ALL_RANKS=ON \
           -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
           -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p
@@ -114,8 +114,8 @@ else
             -DCMAKE_INSTALL_PREFIX=install \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_C_COMPILER="$CC" \
-            -DCMAKE_Fortran_COMPILER="$F90" \
-            -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
+            -DCMAKE_Fortran_COMPILER="$F90"
+            #-DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install
             #-DCMAKE_CXX_COMPILER_WORKS=1 \
             #-DCMAKE_C_COMPILER_WORKS=1 \
             #-DCMAKE_Fortran_COMPILER_WORKS=1

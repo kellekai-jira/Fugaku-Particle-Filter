@@ -1,6 +1,6 @@
 [basic]
 head = 1
-node_size = 48
+node_size = 3
 ckpt_dir = ../Local
 glbl_dir = ../Global
 meta_dir = ../Meta

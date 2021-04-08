@@ -20,6 +20,14 @@ RUNNER_TIMEOUT = int(sys.argv[4])
 # 5 Server slowdown factor
 LAUNCHER_NODE_NAME = sys.argv[6]
 
+
+# define stepsize of assimilation window
+# warmup stepsize is set below...
+if os.getenv('MELISSA_DA_NSTEPS'):
+    NSTEPS = int(os.getenv('MELISSA_DA_NSTEPS'))
+else:
+    NSTEPS = 1
+
 print('Melissa Server started with %d particles for %d cycles' %
       (PARTICLES, CYCLES))
 print("RUNNER_TIMEOUT:", RUNNER_TIMEOUT)
@@ -51,12 +59,11 @@ class Alive:
 # patch state id so we can use it as dict index:
 # TODO Better would be: Generate another class around it that has the state_id as member !
 # (might break if Protobuf will define their own hash function)
-if not cm.StateId.__hash__:
-    cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
-
-
-
-
+# if not cm.StateId.__hash__:
+# very dirty to not have the but latest protobuf on juwels defines this function with
+# an error handler...
+# https://groups.google.com/g/protobuf/c/0p0EMmEWiKQ?pli=1
+cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
 class SimulationStatus(Enum):
     CONNECTED = 0
@@ -603,26 +610,50 @@ def do_update_step():
 
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
 
-    this_cycle = filter(lambda x: x.t == assimilation_cycle,
-                        state_weights)
+    this_cycle = list(filter(lambda x: x.t == assimilation_cycle,
+                        state_weights))
 
-    best_10 = sorted(this_cycle, key=lambda x: state_weights[x])[-10:]
+    sum_weights = np.sum(list(map(lambda x: state_weights[x], this_cycle)))
 
-    assert len(best_10) == 10
+    # normalize state weights:
+    state_weights_normalized = list(map(lambda x: state_weights[x] / sum_weights, this_cycle))
+
+    print("Weights this cycle:", this_cycle)
+    out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
+    #print("Particles:", out_particles)
 
     assimilation_cycle += 1
-
-    # add each 4 times to unscheduled_jobs
     job_id = 0
-    for i in range(PARTICLES):
-        parent_state_id = best_10[i % len(best_10)]
+    for op in out_particles:
+        parent_state_id = op
         jid = cm.StateId()
         jid.t = assimilation_cycle
         jid.id = job_id
         unscheduled_jobs[jid] = parent_state_id
         job_id += 1
+    print("new unscheduled jobs:", unscheduled_jobs)
 
-    return 1 if assimilation_cycle < CYCLES else 0
+
+
+    # residual resampling: Otherwise we could use random.choice with the p parameter(copied from dorits notebook)
+    # N = len(weights)
+    # indexes = np.zeros(N, 'i')
+    # num_copies = (np.floor(N*np.asarray(weights))).astype(int)
+    # k = 0
+    # for i in range(N):
+        # for _ in range(num_copies[i]):
+            # indexes[k] = i
+            # k += 1
+
+    # residual = N*weights - num_copies
+    # residual /= sum(residual)
+
+
+
+
+
+
+    return NSTEPS if assimilation_cycle < CYCLES else 0
 
 
 def check_due_date_violations():
@@ -642,7 +673,16 @@ if __name__ == '__main__':
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
 
     trigger(START_ITERATION, assimilation_cycle)
-    nsteps = 1
+    # Timesteps for warmup:
+    if os.getenv("MELISSA_DA_WARMUP_NSTEPS"):
+        nsteps = int(os.getenv("MELISSA_DA_WARMUP_NSTEPS"))
+    elif os.getenv("MELISSA_DA_NSTEPS"):
+        nsteps = int(os.getenv("MELISSA_DA_NSTEPS"))
+    else:
+        nsteps = 1
+
+
+
     while True:
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
