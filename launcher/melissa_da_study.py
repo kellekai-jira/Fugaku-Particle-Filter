@@ -55,6 +55,9 @@ def run_melissa_da_study(
         procs_server=1,
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
+        local_ckpt_dir='../Local',
+        global_ckpt_dir='../Global',
+        meta_ckpt_dir='../Meta',
         show_server_log = True,
         show_simulation_log = True,
         config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
@@ -256,6 +259,10 @@ def run_melissa_da_study(
                     config = configparser.ConfigParser()
                     config.read('config.fti')
                     config['basic']['node_size'] = str(procs_runner//nodes_runner)
+                    config['basic']['ckpt_dir'] = local_ckpt_dir
+                    config['basic']['glbl_dir'] = global_ckpt_dir
+                    config['basic']['meta_dir'] = meta_ckpt_dir
+                    config['advanced']['local_test'] = '0'
                     with open('config.fti', 'w') as f:
                         config.write(f)
 

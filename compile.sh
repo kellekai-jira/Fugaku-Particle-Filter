@@ -7,7 +7,7 @@ if [ "$ARCH" == "marenostrum" ];
 then
     echo "INSTALL ON MARENOSTRUM..."
     CC=mpicc CXX=mpic++ FC=mpifort cmake .. \
-      -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=install \
       -DCMAKE_CXX_COMPILER=mpicxx \
       -DCMAKE_Fortran_COMPILER=mpif90 \

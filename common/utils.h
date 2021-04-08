@@ -121,15 +121,15 @@ void check_data_types();
 extern MPI_Datatype MPI_MY_INDEX_MAP_T;
 void create_MPI_INDEX_MAP_T();
 
-namespace std {
-    template<typename T, typename... Args>
-    unique_ptr<T> std::make_unique(Args&&... args);
-}
-
-template<typename T, typename... Args>
-std::unique_ptr<T> std::make_unique(Args&&... args) {
-        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
+//namespace std {
+//    template<typename T, typename... Args>
+//    unique_ptr<T> std::make_unique(Args&&... args);
+//}
+//
+//template<typename T, typename... Args>
+//std::unique_ptr<T> std::make_unique(Args&&... args) {
+//        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+//}
 
 /// sums over a vector
 template <class T>

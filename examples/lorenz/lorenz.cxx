@@ -1,6 +1,8 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <iterator>
+#include <random>
 #include <mpi.h>
 #include <iostream>
 #include <cstdlib>
@@ -25,6 +27,19 @@ const int MPI_MIN_BLK = 1;
 
 MPI_Fint fcomm_world;
 MPI_Fint fcomm;
+
+
+// for noise generation
+const double mean = 0.0;
+const double stddev = 0.000000000000001;
+
+template<typename F>
+void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
+    for (auto& x : data) {
+        x = x + dist(generator);
+    }
+}
+
 
 void init_parallel() {
 
@@ -70,11 +85,6 @@ void init_parallel() {
 
     nl = nl_all[comm_rank];
     nlt = nl + 3;
-<<<<<<< HEAD
-
-=======
-
->>>>>>> aligned to p2p main branch
     uint64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
@@ -113,11 +123,7 @@ void exchange( std::vector<double> & x ) {
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
   uint64_t N = x_in.size();
-<<<<<<< HEAD
   for(uint64_t i=2; i<N-1; i++) {
-=======
-  for(uint64_t i=2; i<N-1; i++) {
->>>>>>> aligned to p2p main branch
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }
@@ -152,6 +158,10 @@ int main() {
 
   init_parallel();
 
+  std::mt19937 generator(std::random_device{}());
+  auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
+                              std::mt19937(std::random_device{}()));
+
   int zero = 0;
   int nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
@@ -160,6 +170,7 @@ int main() {
 
   std::fill(x_l.begin(), x_l.end(), F);
   if( comm_rank == 0 ) x_l[2] += 0.01;
+  add_noise( x_l, dist, generator );
   exchange(x_l);
 
   static bool is_first_timestep = true;
@@ -173,6 +184,8 @@ int main() {
     nsteps = melissa_expose_f("state1", &x_l[2]);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
+
+    add_noise( x_l, dist, generator );
     exchange(x_l);
 
     if (nsteps > 0 && is_first_timestep)

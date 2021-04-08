@@ -113,7 +113,6 @@ void melissa_p2p_init(const char *field_name,
 
 double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 {
-    std::cout << "CYCLE_APPCORE: " << field.current_step << std::endl;
 #define USE_PYTHON_CALCULATE_WEIGHT
 #ifdef USE_PYTHON_CALCULATE_WEIGHT
     // Warning returns correct weight only on rank 0! other ranks return -1.0
@@ -140,6 +139,7 @@ void push_weight_to_head(double weight)
     static mpi_request_t req;
     static std::vector<char> buf;  // Isend wants us to not change this if still waiting!
     static bool wait = false;
+    static char buf[256];
     if( wait ) {
         D("Waiting for Head rank!");
         if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue

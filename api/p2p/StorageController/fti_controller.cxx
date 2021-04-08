@@ -215,11 +215,11 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   local_tmp << local_tmp_dir.str();
 
   if( m_dict_bool["master_local"] ) {
-    assert( mkdir( local_tmp_dir.str().c_str(), 0777 ) == 0 );
+    IO_TRY( mkdir( local_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
   }
 
   if( m_dict_bool["master_global"] ) {
-    assert( mkdir( meta_tmp_dir.str().c_str(), 0777 ) == 0 );
+    IO_TRY( mkdir( meta_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
   }
 
   m_mpi->barrier();
@@ -267,13 +267,13 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   local << std::to_string(to_ckpt_id(state_id));
 
   struct stat info;
-  assert( stat( local.str().c_str(), &info ) != 0 && "the local checkpoint directory already exists!" );
+  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory already exists!" );
 
   if( m_dict_bool["master_local"] ) {
-    assert( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ) == 0 );
+    IO_TRY( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ), 0, "unable to rename local directory" );
   }
   if( m_dict_bool["master_global"] ) {
-    assert( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ) == 0 );
+    IO_TRY( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ), 0, "unable to rename meta directory" );
     update_metadata( state_id, IO_STORAGE_L1 );
   }
 

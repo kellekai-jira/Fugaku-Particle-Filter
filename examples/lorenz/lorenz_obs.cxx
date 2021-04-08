@@ -56,17 +56,18 @@ const int MPI_MIN_BLK = 1;
 int main() {
 
   assert( getenv("MELISSA_LORENZ_STATE_DIMENSION") != nullptr );
-  assert( getenv("MELISSA_LORENZ_ITER_MAX") != nullptr );
+  assert( getenv("MELISSA_LORENZ_NUMBER_OF_EPOCHS") != nullptr );
   assert( getenv("MELISSA_LORENZ_OBSERVATION_PERCENT") != nullptr );
   assert( getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE") != nullptr );
   assert( getenv("MELISSA_LORENZ_OBSERVATION_DIR") != nullptr );
 
   std::istringstream NG_str(getenv("MELISSA_LORENZ_STATE_DIMENSION"));
-  std::istringstream ITER_MAX_str(getenv("MELISSA_LORENZ_ITER_MAX"));
+  std::istringstream ITER_MAX_str(getenv("MELISSA_LORENZ_NUMBER_OF_EPOCHS"));
   std::istringstream OBS_PERCENT_str(getenv("MELISSA_LORENZ_OBSERVATION_PERCENT"));
   std::istringstream OBS_BLOCK_SIZE_str(getenv("MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE"));
 
   NG_str >> NG;
+  
   ITER_MAX_str >> ITER_MAX;
   OBS_PERCENT_str >> OBS_PERCENT;
   OBS_BLOCK_SIZE_str >> OBS_BLOCK_SIZE;

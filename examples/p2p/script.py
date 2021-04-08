@@ -10,6 +10,8 @@ clean_old_stats()
 
 
 run_melissa_da_study(
+    cluster=SlurmMn4Cluster('bsc93'),
+    walltime='02:00:00',
     is_p2p=True,
     #precommand_server='xterm_gdb',
     # runner_cmd='xterm_gdb simulation4-p2p',

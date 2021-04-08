@@ -27,7 +27,7 @@ void StorageController::io_init( MpiController* mpi, IoController* io ) {
   m_io = io;
   m_io->register_callback( StorageController::callback );
 
-  assert(std::getenv("MELISSA_DA_RUNNER_ID"));
+  IO_TRY( std::getenv("MELISSA_DA_RUNNER_ID") != nullptr, true, "MELISSA_DA_RUNNER_ID variable is not set" );
   m_runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
   std::cout << "RUNNER_ID: " << m_runner_id << std::endl;
 
@@ -430,7 +430,7 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
   m_socket = zmq_socket(storage.m_zmq_context, ZMQ_REQ);
   std::string port_name = fix_port_name(melissa_server_master_gp_node);
   std::cout << "HEAD CONNECTS TO IP: " << port_name << std::endl;
-  assert( zmq_connect(m_socket, port_name.c_str()) == 0 );
+  IO_TRY( zmq_connect(m_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
 }
 
 void StorageController::Server::fini() {
@@ -510,7 +510,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
 
   struct stat info;
-  assert( stat( local.str().c_str(), &info ) != 0 && "the local checkpoint directory has not been deleted!" );
+  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
 
   assert(!storage->m_io->is_local(state_id));
   storage->state_pool--;

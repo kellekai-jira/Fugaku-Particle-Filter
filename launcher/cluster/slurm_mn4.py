@@ -116,7 +116,7 @@ class SlurmMn4Cluster(cluster.Cluster):
         if logfile != '':
             output_param = '--output=%s' % logfile
 
-        run_cmd = 'srun --immediate --verbose -N %d -n %d --cpus-per-task=%d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
+        run_cmd = 'srun --immediate --exclusive --verbose -N %d -n %d --cpus-per-task=%d --ntasks-per-node=%d %s --time=%s --account=%s %s %s --job-name=%s %s' % (
                 n_nodes,
                 n_procs,
                 n_cpus_per_proc,
@@ -129,7 +129,9 @@ class SlurmMn4Cluster(cluster.Cluster):
                 name,
                 cmd)
 
-        print("Launching %s" % run_cmd, flush=True)
+        print("Launching %s ..." % run_cmd, flush=True)
+        time.sleep(1)
+        print("[done]", flush=True)
 
         # if logfile == '':
         with open('log.out', 'wb') as f:
@@ -239,7 +241,7 @@ class SlurmMn4Cluster(cluster.Cluster):
         if kind != SERVER and self.IsServerNode(node):
             return OCCUPIED
 
-        run_cmd = 'srun --immediate -N 1 -n %d --cpus-per-task=%d --nodelist=%s  echo foo' % (
+        run_cmd = 'srun --immediate --exclusive -N 1 -n %d --cpus-per-task=%d --nodelist=%s  echo foo' % (
                 n_procs,
                 n_cpus_per_proc,
                 node )
