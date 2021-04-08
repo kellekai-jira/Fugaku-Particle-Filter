@@ -140,13 +140,13 @@ def bind_socket(t, addr):
 
 
 # Socket for job requests
-addr = "tcp://127.0.0.1:4000"  # TODO: make ports changeable, maybe even select them automatically!
+addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
 print('binding to', addr)
 job_socket, port_job_socket = \
         bind_socket(zmq.REP, addr)
 
 # Socket for general purpose requests
-addr = "tcp://127.0.0.1:4001"
+addr = "tcp://*:4001"
 print('binding to', addr)
 gp_socket, port_gp_socket = \
         bind_socket(zmq.REP, addr)
