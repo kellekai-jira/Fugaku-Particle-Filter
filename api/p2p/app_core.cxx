@@ -137,12 +137,13 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 void push_weight_to_head(double weight)
 {
     static mpi_request_t req;
-    static std::vector<char> buf;  // Isend wants us to not change this if still waiting!
+    static std::vector<char> buf = {0};  // Isend wants us to not change this if still waiting!
+
     static bool wait = false;
     if( wait ) {
         D("Waiting for Head rank!");
         if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
-        int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL );
+        int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ONE );
     }
 
     // Now we can change buf!
@@ -162,6 +163,7 @@ void push_weight_to_head(double weight)
 
     m.SerializeToArray(buf.data(), bs);
     io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
+    //req.wait();  // be synchronous on juwels with wrf for now
     wait = true;
 }
 

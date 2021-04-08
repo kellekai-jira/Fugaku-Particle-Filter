@@ -316,7 +316,7 @@ void StorageController::m_request_post() {
   }
 
   int dummy;
-  m_io->send( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ALL );
+  m_io->send( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ONE );
 
   // ask if something to prefetch
   server.prefetch_request( this );
