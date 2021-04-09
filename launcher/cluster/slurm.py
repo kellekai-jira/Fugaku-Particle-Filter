@@ -18,7 +18,7 @@ class SlurmCluster(cluster.Cluster):
         p = re.compile("\d\d?:\d\d?:\d\d?");
         assert p.match(wt)  # no valid slurm walltime
 
-    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=False):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=False, max_ranks_per_node=48):
         """
         Arguments:
 
@@ -26,6 +26,7 @@ class SlurmCluster(cluster.Cluster):
         account {str}                           slurm account to use
         partition {str}                         slurm partition to use if not empty
         reserve_jobs_outside_salloc {bool}      True if we permit to reserve jobs outside the own salloc allocation.
+        max_ranks_per_node {int}                How many ranks can be allocated at a maximum per node. Only important if in_salloc is True
 
         """
 
@@ -35,40 +36,55 @@ class SlurmCluster(cluster.Cluster):
         self.started_jobs = []
         self.salloc_jobids = []
         self.reserve_jobs_outside_salloc = reserve_jobs_outside_salloc
+        self.max_ranks_per_node = max_ranks_per_node
 
         # REM: if using in_salloc and if a job quits nodes are not freed.
         # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
         # see the git stash for some regex  parsing to get the node allocation...
 
         if self.in_salloc:
-            self.node_occupation = {}
+            self.core_occupation = {}
             # alternative: compare to https://docs.ray.io/en/latest/deploying-on-slurm.html
             # to get the node names...
             out = subprocess.check_output(['scontrol', 'show', 'hostnames'])
             for line in out.split(b'\n'):
                 if line != b'':
                     hostname = (line.split(b'.')[0]).decode("utf-8")
-                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': ""}
+                    for proc in range(max_ranks_per_node):
+                        self.core_occupation[(hostname, proc)] = {'kind': EMPTY, 'job_id': ""}
 
 
-    def set_nodes_to(self, kind, n_nodes):
+    def set_cores_to(self, kind, n_nodes, n_cores, wants_empty_node):
         assert n_nodes > 0
-        to_place = n_nodes
-        nodes = set()
-        tmp = copy.deepcopy(self.node_occupation)
+        assert n_cores > 0
+        assert n_cores <= n_nodes * self.max_ranks_per_node # Prevent oversubscription
+        to_place = self.max_ranks_per_node * n_nodes
+        assert to_place % 1 == 0
+
+        def empty_node(nodename):
+            if wants_empty_node:
+                return len(list(filter(lambda k: k[0] == nodename and self.core_occupation[k]['kind'] != EMPTY,
+                    self.core_occupation))) == 0  # did not find anything else before on this node
+            else:
+                return True
+
+        cores = set()
+        tmp = copy.deepcopy(self.core_occupation)
         for k, v in tmp.items():
-            if v['kind'] == EMPTY:
+            if v['kind'] == EMPTY and empty_node(k[0]):
                 tmp[k]['kind'] = kind
-                nodes.add(k)
+                cores.add(k)
                 to_place -= 1
 
             if to_place == 0:
                 break
         if to_place == 0:
-            self.node_occupation = tmp
-            return list(nodes)
+            self.core_occupation = tmp
+            return list(cores)
         else:  # did not find enough space in the reservation... reserver outside...
 
+            print('trying to find a spot for cores,nodes:', n_cores, n_nodes)
+            print(tmp)
             assert self.reserve_jobs_outside_salloc  # otherwise this is not permitted!
             return []
 
@@ -85,15 +101,16 @@ class SlurmCluster(cluster.Cluster):
 
         node_list_param = ''
 
-        nodes = []
+        nodes = set()
 
 
         if self.in_salloc:
             # Generate node_list
             if is_server:
-                nodes = self.set_nodes_to(SERVER, n_nodes)
+                cores = self.set_cores_to(SERVER, n_nodes, n_procs, True)
             else:
-                nodes = self.set_nodes_to(SIMULATION, n_nodes)
+                cores = self.set_cores_to(SIMULATION, n_nodes, n_procs, False)
+            nodes = set(map(lambda k: k[0], cores))
 
         if len(nodes) > 0:
             node_list_param = '--nodelist=%s' % ','.join(nodes)
@@ -137,6 +154,8 @@ class SlurmCluster(cluster.Cluster):
         if self.in_salloc and len(nodes) > 0:
             pid = str(proc.pid)
             self.salloc_jobids.append(pid)
+            for k in cores:
+                self.core_occupation[k]['job_id'] = pid
             print("in salloc, using pid:", pid)
             for node in nodes:
                 self.node_occupation[node]['job_id'] = pid
@@ -171,10 +190,10 @@ class SlurmCluster(cluster.Cluster):
                 state = cluster.STATE_RUNNING
             else:
                 state = cluster.STATE_STOP
-                for k, v in self.node_occupation.items():
+                for k, v in self.core_occupation.items():
                     if v['job_id'] == job_id:
-                        self.node_occupation[k]['job_id'] = ""
-                        self.node_occupation[k]['kind'] = EMPTY
+                        self.core_occupation[k]['job_id'] = ""
+                        self.core_occupation[k]['kind'] = EMPTY
 
 
             #logging.debug('Checking for job_id %d: state: %d' % (job_id, state))

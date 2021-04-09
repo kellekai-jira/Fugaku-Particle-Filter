@@ -28,28 +28,13 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
         self.devel_nodes = 0
         self.max_devel_nodes = max_devel_nodes
 
-        self.account = account
-        self.partition = partition
-        self.in_salloc = in_salloc
-        self.started_jobs = []
-        self.salloc_jobids = []
-        self.reserve_jobs_outside_salloc = reserve_jobs_outside_salloc
+        super().__init__(account, partition, in_salloc, reserve_jobs_outside_salloc, max_ranks_per_node=48)
 
-        # REM: if using in_salloc and if a job quits nodes are not freed.
-        # So they cannot be subscribed again. Unfortunately there is no way to figure out the status of nodes in a salloc if jobs are running on them or not (at least i did not find.)
-        # see the git stash for some regex  parsing to get the node allocation...
 
         if self.in_salloc:
-            assert partition == None  # Partition must not be defined if in salloc!, at least on juwels
-            self.node_occupation = {}
-            # alternative: compare to https://docs.ray.io/en/latest/deploying-on-slurm.html
-            # to get the node names...
+            assert partition == None  # Partition must not be defined if in salloc on juwels
 
-            out = subprocess.check_output(['scontrol', 'show', 'hostnames'])
-            for line in out.split(b'\n'):
-                if line != b'':
-                    hostname = (line.split(b'.')[0]).decode("utf-8")
-                    self.node_occupation[hostname] = {'kind': EMPTY, 'job_id': ""}
+
 
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
@@ -65,14 +50,16 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
 
         node_list_param = ''
 
-        nodes = []
+        nodes = set()
 
         if self.in_salloc:
+
             # Generate node_list
             if is_server:
-                nodes = self.set_nodes_to(SERVER, n_nodes)
+                cores = self.set_cores_to(SERVER, n_nodes, n_procs, True)
             else:
-                nodes = self.set_nodes_to(SIMULATION, n_nodes)
+                cores = self.set_cores_to(SIMULATION, n_nodes, n_procs, False)
+            nodes = set(map(lambda k: k[0], cores))
 
         if len(nodes) > 0:
             node_list_param = '--nodelist=%s' % ','.join(nodes)
@@ -131,6 +118,8 @@ class SlurmJuwelsCluster(cluster.SlurmCluster):
             pid = str(proc.pid)
             self.salloc_jobids.append(pid)
             print("in salloc, using pid:", pid)
+            for k in cores:
+                self.core_occupation[k]['job_id'] = pid
             return pid
         # else:
             # with open(logfile, 'wb') as f:

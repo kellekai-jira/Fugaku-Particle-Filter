@@ -76,6 +76,10 @@ def run_melissa_da_study(
 
     assert isinstance(cluster, Cluster)
 
+    # Test that procs can be nicely partitioned on different nodes
+    assert (procs_runner / nodes_runner ) % 1 == 0
+    assert (procs_server / nodes_server ) % 1 == 0
+
     old_cwd = os.getcwd()
     WORKDIR = old_cwd + '/STATS'
 
@@ -258,7 +262,10 @@ def run_melissa_da_study(
                     shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), './config.fti')
                     config = configparser.ConfigParser()
                     config.read('config.fti')
-                    config['basic']['node_size'] = str(procs_runner//nodes_runner)
+                    if nodes_runner >= 1:
+                        config['basic']['node_size'] = str(procs_runner//nodes_runner)
+                    else:
+                        config['basic']['node_size'] = str(procs_runner)
                     config['basic']['ckpt_dir'] = local_ckpt_dir
                     config['basic']['glbl_dir'] = global_ckpt_dir
                     config['basic']['meta_dir'] = meta_ckpt_dir
