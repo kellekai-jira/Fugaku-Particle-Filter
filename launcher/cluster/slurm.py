@@ -18,7 +18,7 @@ class SlurmCluster(cluster.Cluster):
         p = re.compile("\d\d?:\d\d?:\d\d?");
         assert p.match(wt)  # no valid slurm walltime
 
-    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=True):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=False):
         """
         Arguments:
 

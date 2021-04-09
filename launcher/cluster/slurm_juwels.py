@@ -13,7 +13,7 @@ SIMULATION = 2
 
 class SlurmJuwelsCluster(cluster.SlurmCluster):
 
-    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=True, max_devel_nodes=-1):
+    def __init__(self, account, partition=None, in_salloc=(os.getenv('SLURM_JOB_ID') is not None), reserve_jobs_outside_salloc=False, max_devel_nodes=-1):
         """
         Arguments:
 
