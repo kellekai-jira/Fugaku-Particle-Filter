@@ -683,7 +683,15 @@ if __name__ == '__main__':
 
 
 
+    server_loops_last_second = 0
+    last_second = 0
     while True:
+        server_loops_last_second += 1
+        if int(time.time()) > last_second:
+            last_second = int(time.time())
+            print('server_loops_last_second: %d' % server_loops_last_second)
+            server_loops_last_second = 0
+
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
         if can_do_update_step():
