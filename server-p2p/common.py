@@ -31,6 +31,21 @@ START_IDLE_RUNNER                 =  6  # parameter = runner_id
 STOP_IDLE_RUNNER                  =  7  # parameter = runner_id
 START_PROPAGATE_STATE             =  8  # parameter = state_id
 STOP_PROPAGATE_STATE              =  9  # parameter = state_id,
+
+# Server only
+START_ACCEPT_WEIGHT               =  100
+STOP_ACCEPT_WEIGHT                =  101
+START_ACCEPT_DELETE               =  102
+STOP_ACCEPT_DELETE                =  103
+START_ACCEPT_RUNNER_REQUEST       =  104
+STOP_ACCEPT_RUNNER_REQUEST        =  105
+START_ACCEPT_PREFETCH             =  106
+STOP_ACCEPT_PREFETCH              =  107
+START_HANDLE_JOB_REQ              =  108
+STOP_HANDLE_JOB_REQ               =  109
+START_CALC_PAR_STATE_IMPORTANCE   =  111
+STOP_CALC_PAR_STATE_IMPORTANCE    =  110
+
 def trigger(what, parameter):
     if trigger.enabled:
         now = time.time() - trigger.null_time
@@ -53,6 +68,12 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
             (START_FILTER_UPDATE, STOP_FILTER_UPDATE, 'Filter Update'),
             (START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, 'Propagation'),
             (START_IDLE_RUNNER, STOP_IDLE_RUNNER, 'Runner Idle'),
+            (START_ACCEPT_WEIGHT               , STOP_ACCEPT_WEIGHT                , '_ACCEPT_WEIGHT'),
+            (START_ACCEPT_DELETE               , STOP_ACCEPT_DELETE                , '_ACCEPT_DELETE'),
+            (START_ACCEPT_RUNNER_REQUEST       , STOP_ACCEPT_RUNNER_REQUEST        , '_ACCEPT_RUNNER_REQUEST'),
+            (START_ACCEPT_PREFETCH             , STOP_ACCEPT_PREFETCH              , '_ACCEPT_PREFETCH'),
+            (START_HANDLE_JOB_REQ              , STOP_HANDLE_JOB_REQ               , '_HANDLE_JOB_REQ'),
+            (START_CALC_PAR_STATE_IMPORTANCE   , STOP_CALC_PAR_STATE_IMPORTANCE    , '_CALC_PAR_STATE_IMPORTANCE'),
             ]
 
     # copied from write regions in TimingEvent

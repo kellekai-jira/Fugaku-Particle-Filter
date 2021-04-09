@@ -177,6 +177,7 @@ def send_message(socket, data):
 
 def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
+    trigger(START_ACCEPT_WEIGHT, 0)
 
     assert msg.WhichOneof('content') == 'weight'
 
@@ -213,6 +214,8 @@ def accept_weight(msg):
     dict_append(state_cache, runner_id, state_id)
     dict_append(state_cache_with_prefetch, runner_id, state_id)
 
+    trigger(STOP_ACCEPT_WEIGHT, 0)
+
 
 """
 DNS list of runners
@@ -223,6 +226,7 @@ Fromat:
 """
 runners = {}
 def accept_runner_request(msg):
+    trigger(START_ACCEPT_RUNNER_REQUEST, 0)
     # store request
     runner_id = msg.runner_id
     head_rank = msg.runner_request.head_rank
@@ -254,6 +258,7 @@ def accept_runner_request(msg):
     print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)
     # print('scache was:', state_cache) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
+    trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
 
 def first(x):
     """Helper to return the first element of something"""
@@ -264,7 +269,10 @@ def count_runners_with_state(state_id):
     return len(list(filter(lambda x: state_id in state_cache[x], state_cache)))
 
 def accept_delete(msg):
+    trigger(START_ACCEPT_DELETE, 0)
     # TODO Try to not delete new iterations states if there are old iteratioins states with 0 importance
+
+    # FIXME: first delete old stuff without any importance calculation!
 
     runner_id = msg.runner_id
 
@@ -323,8 +331,11 @@ def accept_delete(msg):
 
     send_message(gp_socket, reply)
 
+    trigger(STOP_ACCEPT_DELETE, 0)
+
 
 def calculate_parent_state_importance(parent_state_id):
+    trigger(START_CALC_PAR_STATE_IMPORTANCE, 0)
     # Calculate the importance of a parent state id
 
     # Number of unscheduled tasks dependent on it
@@ -333,6 +344,7 @@ def calculate_parent_state_importance(parent_state_id):
     runners_with_it = count_runners_with_state(parent_state_id)
     if runners_with_it == 0:
         runners_with_it = 0.5  # give some motivation to load states from the pfs and avoid div/0
+    trigger(STOP_CALC_PAR_STATE_IMPORTANCE, 0)
     return d / runners_with_it
 
 
@@ -350,6 +362,7 @@ def update_state_knowledge(msg, runner_id):
     state_cache_with_prefetch[runner_id] = msg.cached_states  # fixme: probably we need a copy here!
 
 def accept_prefetch(msg):
+    trigger(START_ACCEPT_PREFETCH, 0)
     #
     # TODO [sebastian]
     # receive prefetch capacity (currently maximum 5 states)
@@ -411,6 +424,7 @@ def accept_prefetch(msg):
             dict_append(state_cache_with_prefetch, runner_id, most_important[1])
 
     send_message(gp_socket, reply)
+    trigger(STOP_ACCEPT_PREFETCH, 0)
 
 
 
@@ -452,6 +466,7 @@ def handle_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
 
+    trigger(START_HANDLE_JOB_REQ, 0)
 
     msg = receive_message_nonblocking(job_socket)
 
@@ -504,6 +519,7 @@ def handle_job_requests(launcher, nsteps):
         print("Scheduling", the_job, "with job entry", running_job)
         running_jobs[the_job] = running_job
         del unscheduled_jobs[the_job]
+    trigger(STOP_HANDLE_JOB_REQ, 0)
 
 
 
