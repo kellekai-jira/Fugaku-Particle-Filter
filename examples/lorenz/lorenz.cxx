@@ -9,6 +9,7 @@
 #include <cassert>
 #include <sstream>
 #include "../api/melissa_da_api.h"
+#include <cmath>
 
 #define OUT( MSG ) std::cout << MSG << std::endl
 
@@ -16,8 +17,9 @@ int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
 const double F = 5;
-const double dt = 0.01;
-const double DT = 10;
+const double dt = 0.001;
+const double DT = 0.05;
+const double PI = 3.141592653589793238463;
 
 static uint64_t NG;
 
@@ -31,7 +33,7 @@ MPI_Fint fcomm;
 
 // for noise generation
 const double mean = 0.0;
-const double stddev = 0.000000000000001;
+double stddev;
 
 template<typename F>
 void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
@@ -39,7 +41,6 @@ void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
         x = x + dist(generator);
     }
 }
-
 
 void init_parallel() {
 
@@ -150,6 +151,22 @@ void integrate( std::vector<double> & x, double F, double dt ) {
   exchange(x);
 }
 
+double index_function( size_t idx ) {
+    double norm = 1;
+    double unit = 2*PI/NG;
+    double freq = 100;
+    return norm * cos( (double)(freq * unit * idx) );
+}
+
+void init_state( std::vector<double> & x ) {
+    size_t idx = state_min_p;
+    std::fill(x.begin(), x.end(), F);
+    for(auto &x_i : x) {
+        x_i += index_function( idx++ );
+    }
+    exchange( x );
+}
+
 int main() {
 
   assert( getenv("MELISSA_LORENZ_STATE_DIMENSION") != nullptr );
@@ -157,6 +174,8 @@ int main() {
   NG_str >> NG;
 
   init_parallel();
+
+  stddev = sqrt(0.2/NG);
 
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
@@ -167,11 +186,7 @@ int main() {
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
 
   std::vector<double> x_l(nlt);
-
-  std::fill(x_l.begin(), x_l.end(), F);
-  if( comm_rank == 0 ) x_l[2] += 0.01;
-  add_noise( x_l, dist, generator );
-  exchange(x_l);
+  init_state( x_l );
 
   static bool is_first_timestep = true;
   int nsteps = 1;
@@ -180,6 +195,8 @@ int main() {
     for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
+    add_noise( x_l, dist, generator );
+    exchange(x_l);
 
     nsteps = melissa_expose_f("state1", &x_l[2]);
     printf("calculating from timestep %d\n",

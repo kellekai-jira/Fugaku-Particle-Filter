@@ -28,6 +28,9 @@
 #define OUT( MSG )
 #endif // __LORENZ_DEBUG__
 
+
+double index_function( size_t idx );
+void init_state( std::vector<double> & x );
 void exchange( std::vector<double> & x );
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F);
 void RK_step( std::vector<double> & x, const std::vector<double> & k1,
@@ -41,8 +44,9 @@ int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
 const double F = 5;
-const double dt = 0.01;
-const double DT = 10;
+const double dt = 0.001;
+const double DT = 0.05;
+const double PI = 3.141592653589793238463;
 
 static uint64_t NG;
 static int ITER_MAX;
@@ -77,10 +81,7 @@ int main() {
   int nl_i = nl;
 
   std::vector<double> x_l(nlt);
-
-  std::fill(x_l.begin(), x_l.end(), F);
-  if( comm_rank == 0 ) x_l[2] += 0.01;
-  exchange(x_l);
+  init_state( x_l );
 
   for(int iter=0; iter<=ITER_MAX; iter++)
   {
@@ -297,3 +298,18 @@ void integrate( std::vector<double> & x, double F, double dt ) {
   exchange(x);
 }
 
+double index_function( size_t idx ) {
+    double norm = 1;
+    double unit = 2*PI/NG;
+    double freq = 100;
+    return norm * cos( (double)(freq * unit * idx) );
+}
+
+void init_state( std::vector<double> & x ) {
+    size_t idx = state_min_p;
+    std::fill(x.begin(), x.end(), F);
+    for(auto &x_i : x) {
+        x_i += index_function( idx++ );
+    }
+    exchange( x );
+}

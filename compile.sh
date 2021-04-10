@@ -17,7 +17,7 @@ then
       -DWITH_FTI_THREADS=ON \
       -DREPORT_TIMING_ALL_RANKS=ON \
       -DFTI_PATH=/gpfs/projects/bsc93/bsc93655/melissaP2P/FTI/fti/install \
-      -DCMAKE_PREFIX_PATH=melissa/install/share/cmake/ZeroMQ \
+      -DCMAKE_PREFIX_PATH=melissa/install \
       -DProtobuf_LIBRARIES=/apps/PROTOBUF/3.5.1/INTEL/lib/libprotobuf.so \
       -DProtobuf_INCLUDE_DIR=/apps/PROTOBUF/3.5.1/INTEL/include \
       -DCMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 -std=c++14"
