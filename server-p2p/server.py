@@ -125,6 +125,10 @@ state_cache = {}
 state_cache_with_prefetch = {}
 
 
+def first(x):
+    """Helper to return the first element of something"""
+    return x[0]
+
 def dict_append(d, where, what):
     if where not in d:
         d[where] = []
@@ -152,11 +156,23 @@ gp_socket, port_gp_socket = \
         bind_socket(zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
+weights_this_cycle = 0
 
-def can_do_update_step():
-    """simplest case where we wait that all particles were propagated always"""
-    return len(unscheduled_jobs) == 0 and \
-        len(list(filter(lambda x: x.t == assimilation_cycle, state_weights))) == PARTICLES
+
+# hold those varibales updated to avoid abusive use of list, filter, map, len and sorted
+"""
+Amount of runners that hold a specific state request.
+Warning: in case of a lots of job/prefetch failure this list may be outdated and needs to be recalculated from
+state_cache ! This is not yet implemented
+""" # FIXME: see comment^^
+runners_with_it = {}
+
+
+"""
+Amount of jobs that depend on a specific parent_state_id in this assimilation_cycle
+"""
+dependent_jobs = {}
+
 
 # Populate unscheduled jobs
 for p in range(PARTICLES):
@@ -168,12 +184,43 @@ for p in range(PARTICLES):
     parent_id.t = 0
     parent_id.id = p
 
+    dependent_jobs[parent_id] = 1
+    runners_with_it[parent_id] = -1
+
     unscheduled_jobs[job_id] = parent_id
 
 print('Server up now')
 
 def send_message(socket, data):
     socket.send(data.SerializeToString())
+
+def maybe_update():
+    """
+    simplest case where we wait that all particles were propagated always
+    called always after a weight arrived.
+
+    """
+    global weights_this_cycle
+    if weights_this_cycle == PARTICLES and len(unscheduled_jobs) == 0:
+        # will populate unscheduled jobs
+        trigger(START_FILTER_UPDATE, assimilation_cycle)
+        weights_this_cycle = 0
+        old_assimilation_cycle = assimilation_cycle
+        nsteps = do_update_step()
+        trigger(STOP_FILTER_UPDATE, old_assimilation_cycle)
+        trigger(STOP_ITERATION, old_assimilation_cycle)
+        if nsteps <= 0:
+            # end: tell launcher to kill everything
+            global launcher
+            del launcher
+            time.sleep(1)  # normally not necessary due to linger?!
+            print('Gracefully ending server now.')
+            exit(0)
+        trigger(START_ITERATION, assimilation_cycle)
+        # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
+
+        # not necessary since we only answer job requests if job is there... answer_open_job_requests()
+
 
 def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
@@ -187,7 +234,15 @@ def accept_weight(msg):
     trigger(STOP_PROPAGATE_STATE, runner_id)
     trigger(START_IDLE_RUNNER, runner_id)
 
-    if state_id in running_jobs:
+
+    good_state = state_id in running_jobs
+    if good_state:
+        global weights_this_cycle
+        weights_this_cycle += 1
+        runners_with_it[state_id] = 1
+        parent_state_id = running_jobs[state_id][2]
+        dependent_jobs[parent_state_id] -= 1
+
         del running_jobs[state_id]
     else:
         # we mess around with the state id for the first iteration (for init)
@@ -196,8 +251,6 @@ def accept_weight(msg):
         messed_id = cm.StateId()
         messed_id.t = state_id.t
         messed_id.id = msg.runner_id
-
-
 
     weight = msg.weight.weight
 
@@ -208,13 +261,15 @@ def accept_weight(msg):
 
     gp_socket.send(b'')  # send an empty ack.
 
-
     # Update knowledge on cached states:
 
     dict_append(state_cache, runner_id, state_id)
     dict_append(state_cache_with_prefetch, runner_id, state_id)
 
     trigger(STOP_ACCEPT_WEIGHT, 0)
+
+    if good_state:
+        maybe_update()
 
 
 """
@@ -260,14 +315,6 @@ def accept_runner_request(msg):
     # print('scache was:', state_cache) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
 
-def first(x):
-    """Helper to return the first element of something"""
-    return x[0]
-
-def count_runners_with_state(state_id):
-    # Number of runners that have the state in their memory (or are about to get it)
-    return len(list(filter(lambda x: state_id in state_cache[x], state_cache)))
-
 def accept_delete(msg):
     trigger(START_ACCEPT_DELETE, 0)
     # TODO Try to not delete new iterations states if there are old iteratioins states with 0 importance
@@ -278,6 +325,7 @@ def accept_delete(msg):
 
     update_state_knowledge(msg.delete_request, runner_id)
 
+
     # Filter out parent and job state_id that is running on the same runner:
     jobs_on_runner = list(filter(lambda jid: running_jobs[jid][1] == runner_id, running_jobs))
     running_state_ids = []
@@ -286,8 +334,13 @@ def accept_delete(msg):
         # running job's job id and parent state id
         running_state_ids = [jid, running_jobs[jid][2]]
 
-    states_to_delete_from = list(filter(lambda x: x not in running_state_ids, state_cache[runner_id]))
+    states_to_delete_from = filter(lambda x: x not in running_state_ids, state_cache[runner_id])
 
+    if assimilation_cycle == 1:  # parent state id's will have t=0
+        # don't delete the state ids from time step 0 for now as they are needed as parents
+        states_to_delete_from = filter(lambda x: x.t != 0, states_to_delete_from)
+
+    states_to_delete_from = list(states_to_delete_from)
     assert len(states_to_delete_from) > 0
 
     # Attach importance to states on runner and sort:
@@ -297,9 +350,6 @@ def accept_delete(msg):
                 states_to_delete_from),
             key=first)  # only sort by first element (weight) (and not by the second which would be the state id)
 
-    if assimilation_cycle == 1:  # parent state id's will have t=0
-        # don't delete the state ids from time step 0 for now as they are needed as parents
-        sorted_importance = list(filter(lambda x: x[1].t != 0, sorted_importance))
 
 
     reply = cm.Message()
@@ -313,8 +363,8 @@ def accept_delete(msg):
         # if minimum >= 1: select something that possibly is stored on a different
         # runner too.
         for _, state_id in sorted_importance:
-            runners_with_it = count_runners_with_state(state_id)
-            if runners_with_it > 1:
+            r = runners_with_it[state_id]
+            if r > 1:
                 reply.delete_response.to_delete.CopyFrom(state_id)
                 found_to_delete = True
                 break
@@ -330,6 +380,7 @@ def accept_delete(msg):
 
 
     send_message(gp_socket, reply)
+    runners_with_it[reply.delete_response.to_delete] -= 1
 
     trigger(STOP_ACCEPT_DELETE, 0)
 
@@ -338,14 +389,15 @@ def calculate_parent_state_importance(parent_state_id):
     trigger(START_CALC_PAR_STATE_IMPORTANCE, 0)
     # Calculate the importance of a parent state id
 
-    # Number of unscheduled tasks dependent on it
-    d = len(list(filter(lambda x: unscheduled_jobs[x] == parent_state_id, unscheduled_jobs)))
-
-    runners_with_it = count_runners_with_state(parent_state_id)
-    if runners_with_it == 0:
-        runners_with_it = 0.5  # give some motivation to load states from the pfs and avoid div/0
+    r = runners_with_it[parent_state_id]
+    if r == 0:
+        r = 0.5  # give some motivation to load states from the pfs and avoid div/0
+    if parent_state_id in dependent_jobs:
+        d = dependent_jobs[parent_state_id]
+    else:
+        d = 0
     trigger(STOP_CALC_PAR_STATE_IMPORTANCE, 0)
-    return d / runners_with_it
+    return d / r
 
 
 def calculate_runner_importance(runner_id):
@@ -410,18 +462,17 @@ def accept_prefetch(msg):
         parent_state_ids = list(filter(lambda state_id: not state_id in state_cache[runner_id], parent_state_ids))
 
         if len(parent_state_ids) > 0:
-            # Attach importance to it, sort ascending and get last element
-            most_important = sorted(zip(map(calculate_parent_state_importance, parent_state_ids),
-                parent_state_ids),
-                key=first)[-1]
+            most_important = argmax(map(calculate_parent_state_importance, parent_state_ids),
+                parent_state_ids)
 
             # Reply state id of most important parent state (and not its importance)
-            reply.prefetch_response.pull_states.append(most_important[1])
+            reply.prefetch_response.pull_states.append(most_important)
 
 
             # TODO: if prefetching with weight 1: take a state that is only on one runner for fault tollerance?
 
-            dict_append(state_cache_with_prefetch, runner_id, most_important[1])
+            dict_append(state_cache_with_prefetch, runner_id, most_important)
+            runners_with_it[most_important] += 1
 
     send_message(gp_socket, reply)
     trigger(STOP_ACCEPT_PREFETCH, 0)
@@ -461,6 +512,26 @@ def handle_general_purpose():
             print("Wrong message type received!")
             assert False
 
+def argmin(values, args):
+    m = None
+    argi = -1
+    for i, v in enumerate(values):
+        if not m or v < m:
+            m = v
+            argi = i
+    if argi != -1:
+        return args[argi]
+
+def argmax(values, args):
+    m = None
+    argi = -1
+    for i, v in enumerate(values):
+        if not m or v > m:
+            m = v
+            argi = i
+    if argi != -1:
+        return args[argi]
+
 
 def handle_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
@@ -494,14 +565,12 @@ def handle_job_requests(launcher, nsteps):
 
             if len(useful_states) > 0:
                 # Select the state_id that is on fewest other runners
-                # TODO: replace sorted zip by arg sort or something or use sorted with key argument ;)
-                parent_state_id = sorted(zip(map(count_runners_with_state, useful_states),
-                    useful_states),
-                    key=first)[0][1]
+                parent_state_id = argmin(map(lambda x: runners_with_it[x], useful_states),  # todo use numpy argmin?
+                    useful_states)
 
                 # find again job for parent_state_id
-                the_job = list(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
-                        unscheduled_jobs))[0]
+                the_job = next(filter(lambda x: unscheduled_jobs[x] == parent_state_id,
+                        unscheduled_jobs))
 
 
         reply = cm.Message()
@@ -642,6 +711,11 @@ def do_update_step():
     job_id = 0
     for op in out_particles:
         parent_state_id = op
+        if parent_state_id not in dependent_jobs:
+            dependent_jobs[parent_state_id] = 1
+        else:
+            dependent_jobs[parent_state_id] += 1
+
         jid = cm.StateId()
         jid.t = assimilation_cycle
         jid.id = job_id
@@ -664,11 +738,6 @@ def do_update_step():
     # residual = N*weights - num_copies
     # residual /= sum(residual)
 
-
-
-
-
-
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
 
@@ -686,6 +755,7 @@ def check_due_date_violations():
 
 if __name__ == '__main__':
     server_node_name = get_node_name()
+    global launcher
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
 
     trigger(START_ITERATION, assimilation_cycle)
@@ -710,24 +780,8 @@ if __name__ == '__main__':
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
-        if can_do_update_step():
-            # will populate unscheduled jobs
-            trigger(START_FILTER_UPDATE, assimilation_cycle)
-            old_assimilation_cycle = assimilation_cycle
-            nsteps = do_update_step()
-            trigger(STOP_FILTER_UPDATE, old_assimilation_cycle)
-            trigger(STOP_ITERATION, old_assimilation_cycle)
-            if nsteps <= 0:
-                # end: tell launcher to kill everything
-                del launcher
-                time.sleep(1)  # normally not necessary due to linger?!
-                print('Gracefully ending server now.')
-                break
 
-            trigger(START_ITERATION, assimilation_cycle)
-            # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
-
-            # not necessary since we only answer job requests if job is there... answer_open_job_requests()
+        # REM: maybe_update is called only after a weight arrived in handle_general_purpose()
 
         if len(unscheduled_jobs) > 0:
             handle_job_requests(launcher, nsteps)
@@ -741,8 +795,6 @@ if __name__ == '__main__':
         check_due_date_violations()
 
         # Slow down CPU:
-        time.sleep(0.004)
+        time.sleep(0.0001)
 
         maybe_write()
-
-    print(".")
