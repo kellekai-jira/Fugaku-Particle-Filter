@@ -167,7 +167,7 @@ class SlurmCluster(cluster.Cluster):
     def CheckJobState(self, job_id):
         state = cluster.STATE_WAITING
         if self.in_salloc and (job_id in self.salloc_jobids):
-            ret_code = subprocess.call(["ps", job_id], stdout=subprocess.DEVNULL)
+            ret_code = subprocess.call(["ps", job_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if ret_code == 0:
                 state = cluster.STATE_RUNNING
             else:

@@ -1,4 +1,4 @@
-###################################################################
+
 #                            Melissa                              #
 #-----------------------------------------------------------------#
 #   COPYRIGHT (C) 2017  by INRIA and EDF. ALL RIGHTS RESERVED.    #
@@ -132,6 +132,16 @@ def run_melissa_da_study(
         def check_state(self):
             return self.cstate
 
+        def remove(self):
+           Job.jobs.remove(self)
+
+        def __del__(self):
+            if hasattr(self, 'job_id'):
+                debug("Killing Job job_id=%s" % str(self.job_id))
+                cluster.KillJob(self.job_id)
+
+    Job.jobs = []
+
     def refresh_states():
         while running:
             jobs = [j for j in Job.jobs if j.cstate != STATE_STOP]
@@ -262,12 +272,14 @@ def run_melissa_da_study(
                 if len(runners) < mr:  # TODO depend on check load here!
                     runner_id = next_runner_id
                     next_runner_id += 1
-                    debug('Starting runner %d', runner_id)
+                    debug('Starting runner %d' % runner_id)
                     runners[runner_id] = Runner(runner_id, server.node_name)
                 else:
                     while len(runners) > mr:
                         log("killing a runner as too many runners are up")
-                        del runners[random.choice(list(runners))]
+                        to_remove = random.choice(list(runners))
+                        runners[to_remove].remove()
+                        del runners[to_remove]
                         # TODO: notify server!
 
 
@@ -279,6 +291,8 @@ def run_melissa_da_study(
                 else:
                     error('Server timed out!')
                 runners.clear()
+                # clear is sometimes not enough to kill all zombies so we call cleanup
+                server.remove()
                 del server
                 server = None
                 cluster.CleanUp(EXECUTABLE)
@@ -305,11 +319,13 @@ def run_melissa_da_study(
                             time.time() - runner.start_running_time > runner_timeout:
                         error(('Runner %d is killed as it did not register at the server'
                               + ' within %d seconds') % (runner_id, runner_timeout))
+                        runners[runner_id].remove()
                         del runners[runner_id]
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner %d is killed as its job is not up anymore' %
                                 runner_id)
                         # TODO: notify server!
+                        runners[runner_id].remove()
                         del runners[runner_id]
 
 
@@ -327,6 +343,7 @@ def run_melissa_da_study(
                     server.node_name = msg['node_name']
                 elif msg['type'] == MSG_TIMEOUT:
                     error('Server wants me to crash runner %d' % msg['runner_id'])
+                    runners[msg['runner_id']].remove()
                     del runners[msg['runner_id']]
                 elif msg['type'] == MSG_REGISTERED:
                     runners[msg['runner_id']].server_knows_it = True
@@ -336,6 +353,7 @@ def run_melissa_da_study(
                     running = False
                     log('Gracefully ending study now.')
                     runners.clear()
+                    server.remove()
                     del server
                     break
 

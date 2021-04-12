@@ -1,5 +1,4 @@
-from melissa_da_study import *
-
+import repex
 
 
 import time
@@ -8,6 +7,8 @@ import os
 import sys
 #from matplotlib import pyplot as plt
 import numpy as np
+
+from melissa_da_study import *
 
 random.seed(43)
 def free_resources():
@@ -49,7 +50,7 @@ def runners_now():
 
 
 
-if len(sys.argv) == 0:
+def run():
     clean_old_stats()
     run_melissa_da_study(
             runner_cmd='simulation1',
@@ -63,39 +64,64 @@ if len(sys.argv) == 0:
             nodes_server=NODES_SERVER,
             procs_runner=3,
             nodes_runner=NODES_RUNNER,
+            server_timeout=120,
             n_runners=runners_now,
             show_server_log=False,
             show_simulation_log=False,
             additional_server_env={  # necessary for jean-zay
-                'LD_LIBRARY_PATH': '/gpfsscratch/rech/moy/rkop006/conda_envs/lib:' +
-                os.getenv('LD_LIBRARY_PATH')
+                'LD_LIBRARY_PATH': os.getenv('LD_LIBRARY_PATH') + ':/gpfsscratch/rech/moy/rkop006/conda_envs/lib'
                 },
             walltime='00:45:00')
+
+if len(sys.argv) == 1:
+    HOME = os.getenv("HOME")
+    en = 'test-elasticity'
+    repex.run(
+            EXPERIMENT_NAME=en,
+            INPUT_FILES=[HOME+'/workspace/melissa-da/build/CMakeCache.txt'],
+            GIT_REPOS=[HOME+'/workspace/melissa-da'],
+            experiment_function=run)
+
 else:
     # make a nice plot:
-
-    updates_per_second = {}
+    dt = 10  # seconds
+    start_t = None
+    updates_per_dt = {}
     with open(sys.argv[1], 'r') as f:
         for line in f.readlines():
-            if 'Finished updat' in line:
+            # if 'Finished up' in line:
+            if 'Finished sta' in line:
                 second = int(line.split(" ")[4])
-                if not second in updates_per_second:
-                    updates_per_second[second] = 0
-                updates_per_second[second] += 1
+                if not start_t:
+                    start_t = second
+
+                i = (second - start_t)//dt
+
+                if not i in updates_per_dt:
+                    updates_per_dt[i] = 0
+                updates_per_dt[i] += 1
 
     # for now assume they start in the same...
     import numpy as np
     from matplotlib import pyplot as plt
-    a = np.array(list(updates_per_second.items()))
-    xs = a.T[0]
+    a = np.array(list(updates_per_dt.items()))
+    xs = a.T[0] * dt
     updates = a.T[1]
+    updates = updates / np.max(updates) * np.max(ys)  # normalize!
     # transform xs into minutes:
     xs -= xs.min()
     xs = xs / 60
     print(xs.shape)
     print(updates.shape)
-    plt.plot(xs, updates)
-    plt.plot(ts, ys)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.plot(xs, updates, label='state updates per dt (normalized by max)')
+    ax1.plot(ts, ys, label='active runners')
+    ax1.set_xlabel('t in minutes')
+    ax1.legend()
+
+    #ax2.plot(ys, updates)
+    ax2.set_xlabel('state updates per dt')
+    ax2.set_ylabel('active runners')
     plt.show()
-    #print(updates_per_second)
+    print(updates_per_dt)
 

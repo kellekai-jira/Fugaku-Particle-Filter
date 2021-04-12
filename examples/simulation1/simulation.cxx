@@ -193,8 +193,12 @@ int main(int argc, char * args[])
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        usleep(10000);
-        // usleep(1000000);
+        // usleep(10000);
+        // usleep(800000);
+        uint32_t sd = rand()%1000 * 2000;  // 2 s max
+        usleep(sd);
+        printf("Worked %d s \n", sd/1000000);
+
 
 #ifdef USE_HIDDEN_STATE
         nsteps = melissa_expose_d("variableX", state1.data(),

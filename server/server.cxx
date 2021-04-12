@@ -1099,6 +1099,9 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             runner_timestep == 0
             || running_sub_task != running_sub_tasks.end());
 
+
+        D("Finished state propagation at %ld s unix time", time(NULL));
+
         // This is necessary if a task was finished on rank 0. then it crashes
         // on another rank. so rank 0 needs to undo this!
         if (running_sub_task != running_sub_tasks.end())
