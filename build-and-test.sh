@@ -69,7 +69,7 @@ cd -- "$melissa_sa_binary_dir"
 cmake \
 	-DCMAKE_BUILD_TYPE="$build_type" \
 	-DCMAKE_INSTALL_PREFIX="$melissa_sa_prefix_dir" \
-	-- "$melissa_sa_source_dir"
+	"$melissa_sa_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
 
@@ -89,7 +89,7 @@ cmake \
 	-DENABLE_HDF5=ON -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi/ \
 	-DCMAKE_BUILD_TYPE="$build_type" \
 	-DCMAKE_INSTALL_PREFIX="$fti_prefix_dir" \
-	-- "$fti_source_dir"
+	"$fti_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
 
@@ -105,7 +105,7 @@ cmake \
 	-DFTI_PATH="$fti_prefix_dir" \
 	-DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
     -DMelissa_DIR="$melissa_sa_prefix_dir/share/cmake/Melissa" \
-	-- "$melissa_da_source_dir"
+	"$melissa_da_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
 ctest --stop-on-failure --output-on-failure --timeout 300
