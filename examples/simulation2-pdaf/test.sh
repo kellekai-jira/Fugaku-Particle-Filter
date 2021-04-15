@@ -33,7 +33,7 @@ cd -
 rm -f failed.log
 
 function my_diff {
-  python "$MELISSA_DA_SOURCE_PATH/examples/simulation2-pdaf/diff.py" "$fn1" "$verification_path/$fn2"
+  python2 "$MELISSA_DA_SOURCE_PATH/examples/simulation2-pdaf/diff.py" "$fn1" "$verification_path/$fn2"
   res=$?
   if [ "$res" != "0" ];
   then
