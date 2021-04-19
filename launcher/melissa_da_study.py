@@ -114,21 +114,25 @@ def run_melissa_da_study(
 
 
     class Job:
+        jobs = []
+
         def __init__(self, job_id):
             self.job_id = job_id
             self.state = STATE_WAITING
             self.cstate = STATE_WAITING
-            Job.jobs.append(self)
+
+            jobs = [j for j in Job.jobs if j.cstate != STATE_STOP]
+            jobs.append(self)
+            Job.jobs = jobs
 
         def check_state(self):
             return self.cstate
 
-    Job.jobs = []
-
     def refresh_states():
         while running:
-            for job in Job.jobs:
-                job.cstate = cluster.CheckJobState(job.job_id)
+            jobs = [j for j in Job.jobs if j.cstate != STATE_STOP]
+            for j in jobs:
+                j.cstate = cluster.CheckJobState(j.job_id)
 
             time.sleep(.1)
     state_refresher = defer(refresh_states)
@@ -260,7 +264,6 @@ def run_melissa_da_study(
                 else:
                     error('Server timed out!')
                 runners.clear()
-                # clear is sometimes not enough to kill all zombies so we call cleanup
                 del server
                 server = None
                 cluster.CleanUp(EXECUTABLE)
