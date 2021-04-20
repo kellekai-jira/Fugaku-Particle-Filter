@@ -32,8 +32,7 @@ private:
       int port;
       void* m_zmq_context;
       void * state_server_socket;
-      void * state_request_socket;
-      
+
       IoController* m_io;
       MpiController* m_mpi;
 

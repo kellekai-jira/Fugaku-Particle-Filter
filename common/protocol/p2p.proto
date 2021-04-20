@@ -47,6 +47,16 @@ message JobResponse {
 }
 
 // headrank <-> headrank
+message StateAvailRequest {
+    StateId state_id = 1;
+}
+
+message StateAvailResponse {
+    StateId state_id = 1;
+    StateServerSocket socket = 2;
+    bool available = 3;
+}
+
 message StateRequest {
     StateId state_id = 1;
 }
@@ -136,6 +146,8 @@ message Message {
         RunnerResponse runner_response = 12;
 
         // Messages Runner - Runner
+        StateAvailRequest state_avail_request = 18;
+        StateAvailResponse state_avail_response = 19;
         StateRequest state_request = 13;
         StateResponse state_response = 14;
 
