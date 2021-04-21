@@ -312,12 +312,10 @@ void FtiController::filelist_local( io_state_id_t state_id, std::vector<std::str
   ckptfiles.clear();
   std::string directory = m_dict_string["local_dir"] + "/" +
     m_dict_string["exec_id"] + "/l1/" + std::to_string(to_ckpt_id(state_id));
-  printf("in filelist_local, directory: %s\n", directory.c_str());
   for(int i = 0; i<m_dict_int["app_procs_node"]; i++) {
     std::string filepath = directory + "/" + "Ckpt" + std::to_string(to_ckpt_id(state_id)) +
       "-Rank" + std::to_string(m_kernel.topo->body[i]) + "." + m_kernel.conf->suffix;
     ckptfiles.push_back(filepath);
-    std::cout << filepath << std::endl;
   }
 }
 

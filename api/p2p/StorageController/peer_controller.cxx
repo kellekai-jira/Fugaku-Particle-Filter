@@ -22,18 +22,15 @@
 #include <chrono>
 using boost::asio::ip::udp;
 
-
-void PeerController::handle_requests()
+void PeerController::handle_avail_request()
 {
     // Check for udp state avail requests:
-
     boost::array<char, 1024> buf;
     udp::endpoint remote_endpoint;
     boost::system::error_code error;
     size_t numbytes = m_udp_socket.receive_from(boost::asio::buffer(buf),
             remote_endpoint, 0, error);
 
-    //D("State avail request incoming...");
 
     if (error) {
         if (error == boost::asio::error::would_block) {
@@ -73,16 +70,14 @@ void PeerController::handle_requests()
                     remote_endpoint, 0, ignored_error);
         }
     }
+}
 
-    // poll on state server socket now
-    zmq_pollitem_t items[1];
-    items[0] = {state_server_socket, 0, ZMQ_POLLIN, 0};
 
-    //D("polling on state server socket");
-    ZMQ_CHECK(zmq_poll(items, 1, 0));
 
-    // answer only one request to not block for too long (otherwise this would be a while...)
-    if (items[0].revents & ZMQ_POLLIN) {
+
+void PeerController::handle_state_request()
+{
+    if (has_msg(state_server_socket)) {
         auto req = receive_message(state_server_socket);
         // respond to state request
 
@@ -141,6 +136,12 @@ void PeerController::handle_requests()
     }
 }
 
+void PeerController::handle_requests()
+{
+    handle_avail_request();
+    handle_state_request();
+}
+
 
 PeerController::PeerController( IoController* io, void* zmq_context, MpiController* mpi )
     : m_udp_socket(m_io_service, udp::endpoint(udp::v4(), 0))
@@ -189,23 +190,31 @@ long long now_ms()
 }
 
 
-
-bool PeerController::mirror( io_state_id_t state_id )
+::melissa_p2p::Message PeerController::dns_req(const io_state_id_t & state_id )
 {
-    trigger(START_REQ_RUNNER, 0);
+    trigger(START_REQ_RUNNER_LIST, runner_id);
 
-    bool found = false;
-    auto start = now_ms();
-    unsigned long long last_dns = 0;
-    const int linger = 0;  // ms
+    ::melissa_p2p::Message req;
+    // get friendly head rank of the same rank...
+    req.mutable_runner_request()->set_head_rank(m_mpi->rank());
+    req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
+    req.mutable_runner_request()->mutable_socket()->set_port(port);
+    req.mutable_runner_request()->mutable_socket()->set_port_udp(port_udp);
+    req.mutable_runner_request()->mutable_socket()->set_runner_id(runner_id);  // could optimize this out but it is needed, at least for event triggering
+    req.mutable_runner_request()->mutable_searched_state_id()->set_t(state_id.t);
+    req.mutable_runner_request()->mutable_searched_state_id()->set_id(state_id.id);
 
+    req.set_runner_id(runner_id);
+    send_message(storage.server.m_socket, req);
 
-    ::melissa_p2p::Message state_request;
-    state_request.set_runner_id(runner_id);
-    state_request.mutable_state_request()->mutable_state_id()->set_t(state_id.t);
-    state_request.mutable_state_request()->mutable_state_id()->set_id(state_id.id);
+    auto res = receive_message(storage.server.m_socket);
+    trigger(STOP_REQ_RUNNER_LIST, runner_id);
+    return res;
+}
 
-
+bool PeerController::flush_out_state_avail_reqs(udp::socket & socket,
+        const io_state_id_t & state_id )
+{
     ::melissa_p2p::Message state_avail_request;
     state_avail_request.set_runner_id(runner_id);
     state_avail_request.mutable_state_avail_request()->mutable_state_id()->set_t(state_id.t);
@@ -214,130 +223,73 @@ bool PeerController::mirror( io_state_id_t state_id )
     size_t s = state_avail_request.ByteSize();
     state_avail_request.SerializeToArray(state_avail_send_buf.data(), s);
 
-    ::melissa_p2p::Message dns_req;
-    // get friendly head rank of the same rank...
-    dns_req.mutable_runner_request()->set_head_rank(m_mpi->rank());
-    dns_req.mutable_runner_request()->mutable_socket()->set_node_name(hostname);
-    dns_req.mutable_runner_request()->mutable_socket()->set_port(port);
-    dns_req.mutable_runner_request()->mutable_socket()->set_port_udp(port_udp);
-    dns_req.mutable_runner_request()->mutable_socket()->set_runner_id(runner_id);  // could optimize this out but it is needed, at least for event triggering
-    dns_req.mutable_runner_request()->mutable_searched_state_id()->set_t(state_id.t);
-    dns_req.mutable_runner_request()->mutable_searched_state_id()->set_id(state_id.id);
+    auto dns_reply = dns_req(state_id);
+    int peer_count = dns_reply.runner_response().sockets_size();
+    D("retrieved %d peers to try from...", peer_count);
 
-    udp::socket socket(m_io_service);
-    socket.open(udp::v4());
-    socket.non_blocking(true);  // set nonblocking after open!
 
-    //while (!found && (now_ms() - start < 5000l)) {  // try for one second to get from peer.
-    while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
-        handle_requests();  // don't block out other guys that ask for attention ;)
-        if (now_ms() - last_dns > 5000l) {
+    if (peer_count == 0) {
+        return false;
+    }
 
-            // redo a request all 5 s
+    for (int i = 0; i < peer_count; ++i) {
+        std::string addr = dns_reply.runner_response().sockets(i).node_name();
+        int port = dns_reply.runner_response().sockets(i).port_udp();
 
-            // repeat this every 5 seconds:
-            last_dns = now_ms();
-            D("Runner %d Performing dns request", runner_id);
+        std::string fixed_host_name = fix_port_name(addr.c_str());
+        D("ask %s:%d for state", fixed_host_name.c_str(), port);
 
-            trigger(START_REQ_RUNNER_LIST, runner_id);
-
-            dns_req.set_runner_id(runner_id);
-            send_message(storage.server.m_socket, dns_req);
-
-            auto dns_reply = receive_message(storage.server.m_socket);
-            int peer_count = dns_reply.runner_response().sockets_size();
-            D("retrieved %d peers to try from...", peer_count);
-
-            trigger(STOP_REQ_RUNNER_LIST, runner_id);
-
-            if (peer_count == 0) {
-                trigger(STOP_REQ_RUNNER, 0);
-                return false;
-            }
-
-            for (int i = 0; i < peer_count; ++i) {
-                std::string addr = dns_reply.runner_response().sockets(i).node_name();
-                int port = dns_reply.runner_response().sockets(i).port_udp();
-
-                std::string fixed_host_name = fix_port_name(addr.c_str());
-                D("ask %s:%d for state", fixed_host_name.c_str(), port);
-
-                udp::resolver resolver(m_io_service);
-                boost::system::error_code error;
-                udp::resolver::query query(fixed_host_name, std::to_string(port), udp::resolver::query::numeric_service);
-                auto res = resolver.resolve(query, error);
-                if (error) {
-                    if (error == boost::asio::error::host_not_found) {
-                        D("host not found: %s:", fixed_host_name.c_str());
-                        continue;
-                    } else {
-                        throw boost::system::system_error(error);
-                    }
-                }
-
-                udp::endpoint receiver_endpoint = *res;
-
-                socket.send_to(boost::asio::buffer(state_avail_send_buf, s), receiver_endpoint);
-            }
-        }
-
-        boost::array<char, 1024> recv_buf;
-        udp::endpoint sender_endpoint;
+        udp::resolver resolver(m_io_service);
         boost::system::error_code error;
-        size_t len = socket.receive_from(
-                boost::asio::buffer(recv_buf), sender_endpoint, 0, error);
-
+        udp::resolver::query query(fixed_host_name, std::to_string(port), udp::resolver::query::numeric_service);
+        auto res = resolver.resolve(query, error);
         if (error) {
-            if (error == boost::asio::error::would_block) {
-                // nothing received
+            if (error == boost::asio::error::host_not_found) {
+                D("host not found: %s:", fixed_host_name.c_str());
                 continue;
             } else {
                 throw boost::system::system_error(error);
             }
         }
 
-        ::melissa_p2p::Message m_a;
-        m_a.ParseFromArray(recv_buf.data(), len);
-        if (!(m_a.state_avail_response().available() && m_a.state_avail_response().state_id().t() == state_id.t
-                    && m_a.state_avail_response().state_id().id() == state_id.id)) {
-            continue;
-        }
-        //D("State available from runner %d, ip:%s:%d", m_a.runner_id(), m_a.state_avail_response().socket().node_name().c_str(), m_a.state_avail_response().socket().port());
-        void * state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
+        udp::endpoint receiver_endpoint = *res;
 
-        zmq_setsockopt(state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
+        socket.send_to(boost::asio::buffer(state_avail_send_buf, s), receiver_endpoint);
+    }
+    return true;
+}
 
-        std::string addr = std::string("tcp://") + m_a.state_avail_response().socket().node_name() + ':' +
-            std::to_string(m_a.state_avail_response().socket().port());
+bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
+        const std::string & port_name, const int peer_runner_id)
+{
 
-        std::string port_name = fix_port_name(addr.c_str());
-        D("Try to retrieve State %d,%d at %s", state_id.t, state_id.id, port_name.c_str());
+    const int linger = 0;  // ms
+    bool found = false;
 
-        IO_TRY( zmq_connect(state_request_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
+    ::melissa_p2p::Message state_request;
+    state_request.set_runner_id(runner_id);
+    state_request.mutable_state_request()->mutable_state_id()->set_t(state_id.t);
+    state_request.mutable_state_request()->mutable_state_id()->set_id(state_id.id);
 
-        send_message(state_request_socket, state_request);
+    // Open a socket to the sender
+    void * state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
+    zmq_setsockopt(state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
+    IO_TRY( zmq_connect(state_request_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
+    send_message(state_request_socket, state_request);
 
-
-        zmq_pollitem_t items[1];
-        items[0] = {state_request_socket, 0, ZMQ_POLLIN, 0};
-
-        D("now poll  until got state");
-        while (found == false) {
-        //int t = 2000 + rand() % 4000;
-        //D("try for %d ms to receive the real state", t);
-        //ZMQ_CHECK(zmq_poll(items, 1, t));  // wait time in ms
-        handle_requests();
-        ZMQ_CHECK(zmq_poll(items, 1, 10));  // wait time in ms
-        //D("...");
-        if (items[0].revents & ZMQ_POLLIN) {
-            D("here");
+    int poll_ms = 2000 + rand() % 4000;
+    int stop_poll_ms = now_ms() + poll_ms;
+    D("%s has %d ms to send me state state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
+    while (found == false && now_ms() < stop_poll_ms) {
+        //handle_requests();  // don't block out other guys that ask for attention ;)
+        if (has_msg(state_request_socket, 0)) {
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {
-                trigger(START_COPY_STATE_FROM_RUNNER, m_a.runner_id() );
-                trigger(PEER_HIT, m_a.runner_id());
+                trigger(START_COPY_STATE_FROM_RUNNER, peer_runner_id );
+                trigger(PEER_HIT, peer_runner_id);
+                D("Got it! Start copying state...");
 
-                D("()()()()()()()()()()()Start copying state from runner...");
                 found = true;
                 // FIXME: assert that stateid is the one requested!
 
@@ -369,14 +321,72 @@ bool PeerController::mirror( io_state_id_t state_id )
                     m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
 
-                trigger(STOP_COPY_STATE_FROM_RUNNER, m_a.runner_id());
+                trigger(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
             }
-
         }
+    }
+    zmq_close(state_request_socket);  // abandon the request of the state.
+
+    return found;
+}
+
+
+bool PeerController::mirror( io_state_id_t state_id )
+{
+    trigger(START_REQ_RUNNER, 0);
+
+    bool found = false;
+    auto start = now_ms();
+    unsigned long long next_flush_ms = 0;
+    const int linger = 0;
+
+
+
+
+    udp::socket socket(m_io_service);
+    socket.open(udp::v4());
+    socket.non_blocking(true);  // set nonblocking after open!
+
+    boost::array<char, 1024> recv_buf;
+
+    while (!found && (now_ms() - start < 5000l)) {
+    //while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
+        //handle_requests();  // don't block out other guys that ask for attention ;)
+        if (now_ms() > next_flush_ms) {
+            // repeat this every 5 seconds:
+            next_flush_ms = now_ms() + 5000l;
+            if (!flush_out_state_avail_reqs(socket, state_id)) {
+                trigger(STOP_REQ_RUNNER, 0);
+            }
         }
-        zmq_close(state_request_socket);  // abandon the request of the state.
 
+        // now wait for some avail responses arriving via udp....
+        udp::endpoint sender_endpoint;
+        boost::system::error_code error;
+        size_t len = socket.receive_from(
+                boost::asio::buffer(recv_buf), sender_endpoint, 0, error);
 
+        if (error) {
+            if (error == boost::asio::error::would_block) {
+                // nothing received
+                continue;
+            } else {
+                throw boost::system::system_error(error);
+            }
+        }
+
+        ::melissa_p2p::Message m_a;
+        m_a.ParseFromArray(recv_buf.data(), len);
+        if (!(m_a.state_avail_response().available() && m_a.state_avail_response().state_id().t() == state_id.t
+                    && m_a.state_avail_response().state_id().id() == state_id.id)) {
+            D("Got an state_avail_response but of the wrong state");
+            continue;
+        }
+
+        std::string addr = std::string("tcp://") + m_a.state_avail_response().socket().node_name() + ':' +
+            std::to_string(m_a.state_avail_response().socket().port());
+        std::string port_name = fix_port_name(addr.c_str());
+        found = get_state_from_peer(state_id, port_name, m_a.runner_id());
     }
 
     trigger(STOP_REQ_RUNNER, found ? 1 : 0);
