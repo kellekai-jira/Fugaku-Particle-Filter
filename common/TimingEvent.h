@@ -63,8 +63,8 @@ enum TimingEventType
     STOP_PREFETCH                     = 39, //(sum of the following subregions)
     START_PREFETCH_REQ                = 40, //(time only for the request)
     STOP_PREFETCH_REQ                 = 41, //(time only for the request)
-    START_REQ_RUNNER                  = 42, //(for each runner that is tried)
-    STOP_REQ_RUNNER                   = 43, //(for each runner that is tried)
+    START_REQ_RUNNER                  = 42, //
+    STOP_REQ_RUNNER                   = 43, // parameter = 1 if found a runner that has the state. 0 otherwise.
     START_REQ_RUNNER_LIST             = 84, // parameter = runner id
     STOP_REQ_RUNNER_LIST              = 85, // parameter = runner id
     START_COPY_STATE_FROM_RUNNER      = 44, // parameter = foreign runner id
@@ -86,7 +86,7 @@ enum TimingEventType
 
     // Additional single events:
     PEER_HIT                          = 56,    //(state available at peer) parameter = runner_id
-    PEER_MISS                         = 57,    //(state not available at peer) parameter = runner_id
+    //PEER_MISS                         = 57,    //(state not available at peer) parameter = runner_id
     PFS_PULL                          = 58,
     LOCAL_HIT                         = 59,    //(state found local) parameter = id
     LOCAL_MISS                        = 60,   //(state not found local)
@@ -162,7 +162,8 @@ private:
     }
 
     bool timing_to_fifo_testing = false;
-    std::ofstream fifo_os;
+
+    std::unique_ptr<std::ofstream> fifo_os;
 
     time_t report_time = 0;
 
@@ -188,7 +189,7 @@ public:
         const char * fifo_file = getenv("MELISSA_DA_TEST_FIFO");
         if (fifo_file != nullptr) {
             timing_to_fifo_testing = true;
-            fifo_os = std::ofstream(fifo_file);
+            fifo_os = std::make_unique<std::ofstream>(fifo_file);
             std::fprintf(
                     stderr, "connected to fifo %s\n",
                     fifo_file
@@ -213,8 +214,8 @@ public:
         events.push_back(TimingEvent(type, parameter));
 
         if (timing_to_fifo_testing) {
-            fifo_os << type << "," << parameter << std::endl;
-            fifo_os.flush();
+            *fifo_os << type << "," << parameter << std::endl;
+            fifo_os->flush();
         }
     }
 

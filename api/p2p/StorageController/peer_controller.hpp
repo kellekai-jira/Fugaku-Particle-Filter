@@ -7,6 +7,12 @@
 #include "ZeroMQ.h"
 #include "helpers.h"
 
+#define BOOST_ERROR_CODE_HEADER_ONLY
+#define BOOST_SYSTEM_NO_DEPRECATED
+#include <boost/asio.hpp>
+#include <boost/array.hpp>
+#include <boost/system/error_code.hpp>
+
 class Peer {
   public:
     Peer();
@@ -14,7 +20,6 @@ class Peer {
 
 class PeerController {
   public:
-
       PeerController( IoController* io, void* zmq_context, MpiController* mpi );
       ~PeerController();
 
@@ -27,14 +32,20 @@ class PeerController {
 
 private:
 
-	    std::string get_file_name_from_path( const std::string& path );
+      std::string get_file_name_from_path( const std::string& path );
       std::string hostname;
       int port;
+      int port_udp;
       void* m_zmq_context;
       void * state_server_socket;
 
       IoController* m_io;
       MpiController* m_mpi;
+
+
+
+    boost::asio::io_service m_io_service;
+    boost::asio::ip::udp::socket m_udp_socket;
 
 };
 

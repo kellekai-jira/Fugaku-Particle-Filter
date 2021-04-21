@@ -17,6 +17,7 @@ message StateId {
 message StateServerSocket {
     string node_name = 1;
     uint32 port = 2;
+    uint32 port_udp = 4;
     uint32 runner_id = 3;
 }
 
@@ -49,16 +50,19 @@ message JobResponse {
 // headrank <-> headrank
 message StateAvailRequest {
     StateId state_id = 1;
+    uint64 timestamp = 2;
 }
 
 message StateAvailResponse {
     StateId state_id = 1;
     StateServerSocket socket = 2;
     bool available = 3;
+    uint64 timestamp = 4;
 }
 
 message StateRequest {
     StateId state_id = 1;
+    uint64 timestamp = 2;
 }
 
 message StateResponse {

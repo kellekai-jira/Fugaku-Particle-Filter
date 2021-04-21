@@ -11,14 +11,14 @@ clean_old_stats()
 
 run_melissa_da_study(
     is_p2p=True,
-    #precommand_server='xterm_gdb',
-    # runner_cmd='xterm_gdb simulation4-p2p',
+    precommand_server='xterm_gdb',
     runner_cmd='simulation4-p2p',
-    total_steps=30,
-    ensemble_size=30,
-    procs_runner=3,
+    #runner_cmd='simulation4-p2p',
+    total_steps=5,
+    ensemble_size=5,
+    procs_runner=2,
     nodes_runner=1,
-    n_runners=3,
+    n_runners=2,
     show_server_log=False,
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
@@ -27,7 +27,7 @@ run_melissa_da_study(
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
-        'MELISSA_DA_TIMING_REPORT': str(time.time() + 300),  # write timing events after 60 secons!
+        'MELISSA_DA_TIMING_REPORT': str(time.time() + 120),  # write timing events after 60 secons!
         },
 
     # for is_p2p=False only:
