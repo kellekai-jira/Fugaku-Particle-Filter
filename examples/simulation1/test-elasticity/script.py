@@ -62,7 +62,7 @@ def run():
             cluster=SlurmCluster('igf@cpu'),
             procs_server=2,
             nodes_server=NODES_SERVER,
-            procs_runner=3,
+            procs_runner=40,
             nodes_runner=NODES_RUNNER,
             server_timeout=120,
             n_runners=runners_now,

@@ -133,7 +133,8 @@ def run_melissa_da_study(
             return self.cstate
 
         def remove(self):
-           Job.jobs.remove(self)
+            if self in Job.jobs:
+                Job.jobs.remove(self)
 
         def __del__(self):
             if hasattr(self, 'job_id'):
