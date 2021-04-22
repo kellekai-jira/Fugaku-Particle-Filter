@@ -24,13 +24,14 @@ link_libraries(${Protobuf_LIBRARIES})
 # GnuInstallDirs
 include(GNUInstallDirs)
 
+include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
+
 # FTI #
 option(WITH_FTI "FTI is needed for automatic recovery from melissa_da_server crashes" OFF)
 if (WITH_FTI)
     option(WITH_FTI_THREADS "Threads will perform server checkpoints in the background. Activation increases the performance when using FTI." OFF)
     option(INSTALL_FTI OFF)
     if(INSTALL_FTI)
-        include(${CMAKE_ROOT}/Modules/ExternalProject.cmake)
         ExternalProject_Add(FTI
             GIT_REPOSITORY https://gitlab.bsc.es/kkeller/fti.git
             GIT_TAG melissa-p2p
@@ -65,6 +66,38 @@ else()
     set(WITH_FTI_THREADS OFF)
     set(WITH_FTI_CHECKOINT_DA_SERVER FALSE)
 endif()
+
+
+# Boost headers only for udp
+
+#ExternalProject_Add(Boost
+    #URL https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.zip
+    ##PATCH_COMMAND ""
+
+    #PREFIX "${CMAKE_CURRENT_BINARY_DIR}/Boost"
+
+    ##SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/Boost-src
+
+    #DOWNLOAD_NO_EXTRACT TRUE
+
+    #CONFIGURE_COMMAND ""
+    #BUILD_COMMAND ""
+    #INSTALL_COMMAND unzip "${CMAKE_CURRENT_BINARY_DIR}/Boost/src/boost_1_67_0.zip" "boost_1_67_0/boost/*" -d install
+
+
+    #TEST_COMMAND ""
+
+    #LOG_DOWNLOAD 1
+    #LOG_CONFIGURE 1
+    #LOG_INSTALL 1
+#)
+
+
+#set(BOOST_ROOT "${CMAKE_CURRENT_BINARY_DIR}/src/Boost-build/install/boost_1_67_0")
+#set(Boost_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/Boost-build/install/boost_1_67_0")
+#set(Boost_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Boost/src/ex-Boost1234/boost_1_67_0/boost")
+find_package(Boost COMPONENTS system)
+
 
 
 # for p2p ther is no server checkpointing!

@@ -64,7 +64,6 @@ target_include_directories(melissa_da_api PRIVATE ${NUMPY_INCLUDE_DIRS})
 
 target_link_libraries(melissa_da_api PUBLIC ${PYTHON_LIBRARY})
 
-find_package(Boost)
 target_include_directories(melissa_da_api PUBLIC ${Boost_INCLUDE_DIRS})
 
 if(INSTALL_FTI)

@@ -99,7 +99,9 @@ else
           -DWITH_FTI_THREADS=OFF \
           -DREPORT_TIMING_ALL_RANKS=ON \
           -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
-          -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p
+          -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p \
+          -DBOOST_ROOT=/p/project/prcoe03/sebastian/wrf2/boost/boost_1_64_0
+
 
     else
         echo here, juwels with profiling...
