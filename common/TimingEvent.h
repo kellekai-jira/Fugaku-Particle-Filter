@@ -87,9 +87,9 @@ enum TimingEventType
     // Additional single events:
     PEER_HIT                          = 56,    //(state available at peer) parameter = runner_id
     PEER_MISS                         = 57,    //(state not available at peer)
-    PFS_PULL                          = 58,
-    LOCAL_HIT                         = 59,    //(state found local) parameter = id
-    LOCAL_MISS                        = 60,   //(state not found local)
+    PFS_PULL                          = 58,    // state pulled from pfs as it could not be mirrored from another peer
+    LOCAL_HIT                         = 59,    //(state requested by next job found local, does not concern prefetched stuff) parameter = id
+    LOCAL_MISS                        = 60,    //(state requested by next not found local, does not concern prefetched stuff) parameter = id
     LOCAL_DELETE                      = 61, //(local states deleted)
     PFS_DELETE                        = 62    //(global states deleted)
 

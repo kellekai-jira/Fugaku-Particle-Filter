@@ -284,7 +284,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     send_message(state_request_socket, state_request);
 
     srand(time(NULL) + runner_id);
-    int poll_ms = 10000 + rand() % 4000;
+    int poll_ms = 1000 + rand() % 3000;
     long long stop_poll_ms = now_ms() + poll_ms;
     D("%s has %d ms to send me state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
     while (found == false && now_ms() < stop_poll_ms) {
@@ -364,8 +364,8 @@ bool PeerController::mirror( io_state_id_t state_id )
 
     boost::array<char, 1024> recv_buf;
 
-    //while (!found && (now_ms() - start < 5000l)) {
-    while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
+    while (!found && (now_ms() - start < 3000l)) {
+    //while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
         handle_requests();  // don't block out other guys that ask for attention ;)
         if (now_ms() > next_flush_ms) {
             // repeat this every 5 seconds:

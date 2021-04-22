@@ -229,6 +229,7 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   }
   if( !m_io->is_local( state_id ) ) {
     int id, t;
+    trigger(PFS_PULL, 0);
     m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
