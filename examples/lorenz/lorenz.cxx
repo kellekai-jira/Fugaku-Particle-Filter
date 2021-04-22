@@ -201,10 +201,6 @@ int main() {
     nsteps = melissa_expose_f("state1", &x_l[2]);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
-
-    add_noise( x_l, dist, generator );
-    exchange(x_l);
-
     if (nsteps > 0 && is_first_timestep)
     {
       printf("First time step to propagate: %d\n",
