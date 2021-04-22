@@ -291,6 +291,7 @@ def run_melissa_da_study(
                     error('Server Job not up anymore!')
                 else:
                     error('Server timed out!')
+                [runners[k].remove() for k in runners]
                 runners.clear()
                 # clear is sometimes not enough to kill all zombies so we call cleanup
                 server.remove()
@@ -353,6 +354,7 @@ def run_melissa_da_study(
                 elif msg['type'] == MSG_STOP:
                     running = False
                     log('Gracefully ending study now.')
+                    [runners[k].remove() for k in runners]
                     runners.clear()
                     server.remove()
                     del server

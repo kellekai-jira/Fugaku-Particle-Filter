@@ -13,7 +13,8 @@
 #include <csignal>
 
 
-int GLOBAL_VECT_SIZE = 40* 10000;
+//int GLOBAL_VECT_SIZE = 40* 10000;
+int GLOBAL_VECT_SIZE = 40;
 // const int GLOBAL_VECT_SIZE = 1000;
 // const int GLOBAL_VECT_SIZE = 1000*100*10;
 // const int GLOBAL_VECT_SIZE = 1000*1000*10;
@@ -193,11 +194,12 @@ int main(int argc, char * args[])
 
         // simulate some calculation
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
-        // usleep(10000);
+        usleep(10000);
         // usleep(800000);
-        uint32_t sd = rand()%1000 * 2000;  // 2 s max
-        usleep(sd);
-        printf("Worked %d s \n", sd/1000000);
+        // Activate the following e.g. for elasticity testing
+        //uint32_t sd = rand()%1000 * 2000;  // 2 s max
+        //usleep(sd);
+        //printf("Worked %d s \n", sd/1000000);
 
 
 #ifdef USE_HIDDEN_STATE
