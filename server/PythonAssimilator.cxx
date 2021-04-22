@@ -255,7 +255,7 @@ void py::finalize() {
     D("Freed python context.");
 }
 
-void py::err(bool no_fail, const char * error_str) {
+void py::err(bool no_fail, const char * error_str) { // FIXME change condition from no_fail to fail... seems to read better
     if (!no_fail || PyErr_Occurred())
     {
         L("Error! %s", error_str);

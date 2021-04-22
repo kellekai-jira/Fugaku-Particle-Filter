@@ -1044,14 +1044,6 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         field_name, zmq::data(*header_msg) + 4 * sizeof(int),
         sizeof(field_name) - 1);
 
-    // good runner_rank, good state id?
-    auto running_sub_task = std::find_if(
-        running_sub_tasks.begin(), running_sub_tasks.end(),
-        [runner_id, runner_rank,
-         runner_state_id](std::shared_ptr<SubTask>& st) {
-        return st->runner_id == runner_id && st->state_id == runner_state_id
-        && st->runner_rank == runner_rank;
-    });
 
 
     // notify launcher about newly connected runner.
@@ -1094,6 +1086,15 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
     }
     else
     {
+        // good runner_rank, good state id?
+        auto running_sub_task = std::find_if(
+            running_sub_tasks.begin(), running_sub_tasks.end(),
+            [runner_id, runner_rank,
+             runner_state_id](std::shared_ptr<SubTask>& st) {
+            return st->runner_id == runner_id && st->state_id == runner_state_id
+            && st->runner_rank == runner_rank;
+        });
+
         assert(
             runner_timestep == 0
             || running_sub_task != running_sub_tasks.end());
@@ -1123,28 +1124,6 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         D("local server offset %lu, sendcount=%lu", part.local_offset_server,
           part.send_count);
 
-
-        // D("values[0] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        // &
-        // data_msg))
-        // [0]);
-        // D("values[1] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        // &
-        // data_msg))
-        // [1]);
-        // D("values[2] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        // &
-        // data_msg))
-        // [2]);
-        // D("values[3] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        // &
-        // data_msg))
-        // [3]);
-        // D("values[4] = %.3f", reinterpret_cast<VEC_T*>(zmq_msg_data(
-        // &
-        // data_msg))
-        // [4]);
-
         const Part& hidden_part = field->getPartHidden(runner_rank);
         VEC_T* values_hidden = nullptr;
 
@@ -1159,9 +1138,6 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
                 == hidden_part.send_count * sizeof(VEC_T));
             values_hidden =
                 reinterpret_cast<VEC_T*>(zmq::data(*data_msg_hidden));
-            // D("hidden values received:");
-            // print_vector(std::vector<VEC_T>(values_hidden, values_hidden +
-            // hidden_part.send_count));
         }
 
 
