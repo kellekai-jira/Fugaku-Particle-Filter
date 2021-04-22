@@ -289,17 +289,20 @@ def accept_runner_request(msg):
         runners[runner_id] = {}
     runners[runner_id][head_rank] = msg.runner_request.socket
 
+    good_runners = state_cache.keys()
     # remove all faulty runners
     for rid in faulty_runners:
         if rid in runners:
             del runners[rid]
+        if rid in good_runners:
+            good_runners.remove(rid)
 
 
     # generate reply:
     reply = cm.Message()
     reply.runner_response.SetInParent()
     # filter for runners that have the state in question:
-    shuffeled_runners = list(filter(lambda x: msg.runner_request.searched_state_id in state_cache[x], runners))
+    shuffeled_runners = list(filter(lambda x: msg.runner_request.searched_state_id in state_cache[x], good_runners))
     # shuffle inplace
     random.shuffle(shuffeled_runners)
     for rid in shuffeled_runners:
@@ -309,6 +312,8 @@ def accept_runner_request(msg):
             s = reply.runner_response.sockets.add()
             s.CopyFrom(runners[rid][head_rank])
 
+    if len(shuffeled_runners) == 0:
+        print("could not find any runner with this state in", state_cache)
 
     print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)

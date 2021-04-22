@@ -93,7 +93,7 @@ int main(int argc, char * args[])
         // If the simulations are too fast our testcase will not use all model task runners (Assimilation stopped before they could register...)
         if (getenv("SIMULATION_RANDOM_PROPAGATION_TIME"))
         {
-            uint32_t sd = rand()%1000 * 10000;
+            uint32_t sd = rand()%1000 * 1000;
             usleep(sd);
             printf("Worked %d s \n", sd/1000000);
         }

@@ -86,7 +86,7 @@ enum TimingEventType
 
     // Additional single events:
     PEER_HIT                          = 56,    //(state available at peer) parameter = runner_id
-    //PEER_MISS                         = 57,    //(state not available at peer) parameter = runner_id
+    PEER_MISS                         = 57,    //(state not available at peer)
     PFS_PULL                          = 58,
     LOCAL_HIT                         = 59,    //(state found local) parameter = id
     LOCAL_MISS                        = 60,   //(state not found local)
