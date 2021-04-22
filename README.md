@@ -42,24 +42,29 @@ Further examples can be found in the [examples/](examples/) directory.
 
 On Ubuntu 18.04 dependency installation can be done like this:
 ```sh
-apt install \
-    build-essential \
-    cmake \
-    gfortran \
-    bc \
-    psmisc \
-    git \
-    libhdf5-openmpi-dev \
-    libopenblas-dev \
-    libopenmpi-dev \
-    libpython3.7-dev \
-    libssl-dev \
-    libzmq5-dev \
-    pkg-config \
-    python \
-    python-numpy \
-    python3.7
-sudo python3.7 -m pip install numpy pandas mpi4py
+apt-get update && apt-get --yes install \
+	build-essential \
+	clang \
+	cmake \
+	gfortran \
+	git \
+  libboost-dev \
+	libhdf5-openmpi-dev \
+	libopenblas-dev \
+	libopenmpi-dev \
+	libpython3-all-dev \
+	libzmq5-dev \
+	pkg-config \
+	protobuf-compiler \
+	python \
+	python-numpy \
+	python3 \
+	python3-mpi4py \
+	python3-numpy \
+	python3-pandas \
+	python3-pip \
+	python3-zmq
+pip3 install protobuf
 ```
 
 - download PDAF V1.15 (you need to give your mail on their [website](http://pdaf.awi.de/download/index.php?id=ab341070863ac82737b9e4613c72f997) to get a download link)
