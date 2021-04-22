@@ -34,6 +34,7 @@ import logging
 import os
 import subprocess
 import sys
+import traceback
 
 
 from cluster import cluster
@@ -131,15 +132,20 @@ class LocalCluster(cluster.Cluster):
     def CleanUp(self, executable):
         pid = os.getpid()
         for job_id in list(self.jobs):
-            job = self.jobs[job_id]
-            if not job:  # sometimes the CheckState deletes it in the mean time
-                continue
+            if job_id in self.jobs:
+                try:
+                    job = self.jobs[job_id]
+                    if not job:
+                        continue
 
-            if job.poll() is None:
-                msg = 'pid={:d}: LocalCluster terminating process {:d}'
-                print(msg.format(pid, job.pid))
-                job.terminate()
-                job.wait()
+                    if job.poll() is None:
+                        msg = 'pid={:d}: LocalCluster terminating process {:d}'
+                        print(msg.format(pid, job.pid))
+                        job.terminate()
+                        job.wait()
+                except Exception:
+                    print("Could not clean up this job. Maybe an uncritical race condition:")
+                    traceback.print_exc()
 
         self.jobs = {}
 
