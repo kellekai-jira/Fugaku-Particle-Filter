@@ -53,9 +53,23 @@ fi
 elif [ "$USER" == "rkop006" ];
 then
 	# jean zay:
+    echo on jean zay!
         cmake .. \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_INSTALL_PREFIX=install
+          -DINSTALL_FTI=OFF \
+          -DWITH_FTI=ON \
+          -DWITH_FTI_THREADS=OFF \
+          -DREPORT_TIMING_ALL_RANKS=ON \
+          -DSLOW_MPI_DIR="/gpfsscratch/rech/moy/rkop006/tmp" \
+          -DINSTALL_FTI=ON \
+          -DINSTALL_BOOST=OFF \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DProtobuf_ROOT=/gpfsscratch/rech/moy/rkop006/conda_envs \
+          -DProtobuf_INCLUDE_DIR=/gpfsscratch/rech/moy/rkop006/conda_envs/include \
+          -DProtobuf_LIBRARY=/gpfsscratch/rech/moy/rkop006/conda_envs/lib/libprotobuf.so
+
+          #-DBOOST_ROOT=/gpfsscratch/rech/moy/rkop006/conda_envs
+
 elif [ "$(hostname)" == "linux-rol5" ];
 then
     #cmake .. -DZeroMQ_DIR=$HOME/workspace/melissa/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DMPIEX....
@@ -95,7 +109,7 @@ else
           -DCMAKE_C_COMPILER=mpicc \
           -DZeroMQ_ROOT=$HOME/workspace/melissa-da/melissa/install \
           -DINSTALL_FTI=OFF \
-          -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug \
+          -DWITH_FTI=ON \
           -DWITH_FTI_THREADS=OFF \
           -DREPORT_TIMING_ALL_RANKS=ON \
           -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
