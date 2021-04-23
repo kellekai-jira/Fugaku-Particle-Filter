@@ -231,7 +231,14 @@ int melissa_p2p_expose(VEC_T *values,
 
         trigger(START_JOB_REQUEST, 0);
         // 4. ask server for more work
-        auto job_response = request_work_from_server();
+        ::melissa_p2p::JobResponse job_response;
+        do {
+            job_response = request_work_from_server();
+            if (!job_response.has_parent()) {
+                D("Server does not has any good jobs for me. Retry in 500 ms");
+                usleep(500000); // retry after 500ms
+            }
+        } while (!job_response.has_parent());
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
         next_state.t = job_response.job().t();

@@ -70,7 +70,7 @@ endif()
 
 # Boost headers only for udp
 
-option(INSTALL_BOOST "Download and install a good version of boost" ON)
+option(INSTALL_BOOST "Download and install a good version of boost" OFF)
 if(INSTALL_BOOST)
     message("installing boost")
     ExternalProject_Add(BOOST

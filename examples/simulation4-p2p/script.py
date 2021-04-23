@@ -24,7 +24,7 @@ run_melissa_da_study(
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
     server_timeout=60 * 60,
     additional_env={
-        'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
+        'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/simulation4-p2p:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         'MELISSA_DA_TIMING_REPORT': str(time.time() + 120),  # write timing events after 60 secons!
