@@ -491,6 +491,7 @@ def handle_job_requests(launcher, nsteps):
             reply.job_response.parent.CopyFrom(parent_id)
             remove_unscheduled_job(job_id, parent_id)
             stealable_jobs -= 1
+            dict_append(due_dates, int(time.time() + RUNNER_TIMEOUT), runner_id)
         else:
             new_job = has_scheduled(runner_id)
             if new_job:
@@ -514,7 +515,6 @@ def handle_job_requests(launcher, nsteps):
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
         trigger(STOP_HANDLE_JOB_REQ, 0)
-
 
 
 class LauncherConnection:
@@ -672,18 +672,19 @@ def check_due_date_violations():
         if dd > now:
             break
         else:
-            for rid in dd:
+            for rid in due_dates[dd]:
                 faulty_runners.add(rid)
-                launcher.notify(runner_id, SimulationStatus.TIMEOUT)
+                launcher.notify(rid, SimulationStatus.TIMEOUT)
 
                 if rid in scheduled_jobs:
                     job_id, parent_id = scheduled_jobs[rid]
                     dict_append(unscheduled_jobs, parent_id, job_id)
 
                 if rid in running_jobs:
-                    job_id, parent_id = scheduled_jobs[rid]
-                    dict_append(unscheduled_jobs, parent_id, job_id)
-                    stealable_jobs += 1
+                    global stealable_jobs
+                    for job_id, parent_id in running_jobs[rid]:
+                        dict_append(unscheduled_jobs, parent_id, job_id)
+                        stealable_jobs += 1
 
 
 if __name__ == '__main__':
