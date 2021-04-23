@@ -100,6 +100,7 @@ else
           -DREPORT_TIMING_ALL_RANKS=ON \
           -DSLOW_MPI_DIR="/p/scratch/prcoe03/tmp" \
           -DFTI_PATH=/p/project/prcoe03/sebastian/wrf2/FTI-p2p \
+          -DINSTALL_BOOST=OFF \
           -DBOOST_ROOT=/p/project/prcoe03/sebastian/wrf2/boost/boost_1_64_0
 
 
