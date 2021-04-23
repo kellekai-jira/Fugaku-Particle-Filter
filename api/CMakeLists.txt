@@ -64,11 +64,15 @@ target_include_directories(melissa_da_api PRIVATE ${NUMPY_INCLUDE_DIRS})
 
 target_link_libraries(melissa_da_api PUBLIC ${PYTHON_LIBRARY})
 
-target_include_directories(melissa_da_api PUBLIC ${Boost_INCLUDE_DIRS})
-
 if(INSTALL_FTI)
     add_dependencies(melissa_da_api FTI)
 endif(INSTALL_FTI)
+
+if(INSTALL_BOOST)
+    add_dependencies(melissa_da_api BOOST)
+endif(INSTALL_BOOST)
+
+target_include_directories(melissa_da_api PUBLIC ${Boost_INCLUDE_DIRS})
 
 install(TARGETS melissa_da_api LIBRARY DESTINATION lib)
 
