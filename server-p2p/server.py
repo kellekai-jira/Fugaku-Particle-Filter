@@ -44,12 +44,13 @@ from melissa4py.message import SimulationData
 from melissa4py.message import JobDetails
 from melissa4py.message import Stop
 from melissa4py.message import SimulationStatusMessage
-from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to send timeout notifications!
+from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to end timeout notifications!
 
 sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
 from utils import get_node_name
 
 context = zmq.Context()
+context.setsockopt(zmq.LINGER, 0)
 
 # Tuning melissa4py adding messages needed in Melissa-DA context
 class Alive:
@@ -109,7 +110,7 @@ Jobs scheduled to a runner. This is important to react correctly to prefetch req
 Example:
     {runner_id: (job_id, parent_id)}
 """
-scheduled_jobs = {}
+scheduled_jobs = {}  #FIXME: shceduled job due date!
 
 """
 Jobs currently running on some runner.
@@ -123,12 +124,56 @@ Example:
 running_jobs = {}
 
 
-"""
-Due dates
+class DueDates:
+    """
+    Due dates
 
-{due date (int in s): [runner_id 1, runner_id2...]}
-"""
-due_dates = {}
+    {due date (int in s): set((unner_id 1, job_id), (runner_id2..., job_id)}
+    """
+    due_dates = {}
+
+    @staticmethod
+    def add(runner_id, job_id):
+        dict_append(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
+
+    @staticmethod
+    def remove(runner_id, job_id):
+        """Trys to find and remove associated due dates"""
+        to_find = (runner_id, job_id)
+        print('Try to find ', to_find, 'in', DueDates.due_dates)
+        found = False
+        for dd in DueDates.due_dates:
+            if to_find in DueDates.due_dates[dd]:
+                DueDates.due_dates[dd].remove(to_find)
+                if len(DueDates.due_dates[dd]) == 0:
+                    del DueDates.due_dates[dd]
+                found = True
+                break
+
+        assert found
+
+    @staticmethod
+    def check_violations():
+        """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
+        now = int(time.time())
+        for dd in list(DueDates.due_dates):
+            if dd > now:
+                break
+            else:
+                for rid, _ in DueDates.due_dates[dd]:
+                    launcher.notify(rid, SimulationStatus.TIMEOUT)
+                    faulty_runners.add(rid)
+
+                    if rid in scheduled_jobs:
+                        job_id, parent_id = scheduled_jobs[rid]
+                        dict_append(unscheduled_jobs, parent_id, job_id)
+
+                    if rid in running_jobs:
+                        global stealable_jobs
+                        for job_id, parent_id in running_jobs[rid]:
+                            dict_append(unscheduled_jobs, parent_id, job_id)
+                            stealable_jobs += 1
+                del DueDates.due_dates[dd]
 
 """
 Contains all runners and which states they have prefetched
@@ -145,42 +190,36 @@ def dict_append(d, where, what):
         d[where] = []
     d[where].append(what)
 
-def bind_socket(t, addr):
-    socket = context.socket(t)
-    socket.bind(addr)
-    port = socket.getsockopt(zmq.LAST_ENDPOINT)
-    port = port.decode().split(':')[-1]
-    port = int(port)
-    return socket, port
-
-
 # Socket for job requests
 addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
 print('binding to', addr)
 job_socket, port_job_socket = \
-        bind_socket(zmq.REP, addr)
+        bind_socket(context, zmq.REP, addr)
 
 # Socket for general purpose requests
+gp_socket = None
 addr = "tcp://*:4001"
 print('binding to', addr)
 gp_socket, port_gp_socket = \
-        bind_socket(zmq.REP, addr)
+        bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
 weights_this_cycle = 0
 stealable_jobs = PARTICLES  # Those are jobs that are not yet running. only if such jobs exist we accept job requests.
 
+def init_ens():
 # Populate unscheduled jobs
-for p in range(PARTICLES):
-    job_id = cm.StateId()
-    job_id.t = assimilation_cycle
-    job_id.id = p
+    for p in range(PARTICLES):
+        job_id = cm.StateId()
+        job_id.t = assimilation_cycle
+        job_id.id = p
 
-    parent_id = cm.StateId()
-    parent_id.t = 0
-    parent_id.id = p
+        parent_id = cm.StateId()
+        parent_id.t = 0
+        parent_id.id = p
 
-    dict_append(unscheduled_jobs, parent_id, job_id)
+        dict_append(unscheduled_jobs, parent_id, job_id)
+init_ens()
 
 print('Server up now')
 
@@ -230,28 +269,26 @@ def accept_weight(msg):
     trigger(STOP_PROPAGATE_STATE, runner_id)
     trigger(START_IDLE_RUNNER, runner_id)
 
-
-    # remove runners due date:
-    for dd in due_dates:
-        if runner_id in due_dates[dd]:
-            due_dates[dd].remove(runner_id)
-
     weight = msg.weight.weight
 
     # remove from running_jobs
-    if runner_id in running_jobs:  # only if a runner first connects it might not solve a job yet... then we do not store the weight and go on.
-        delete = [rj for rj in running_jobs[runner_id] if rj[0] == state_id]
-        assert len(delete) == 1
-        running_jobs[runner_id].remove(delete[0])
-    else:
+    if runner_id not in running_jobs:
         print('Got Weight message', msg, 'but its job was never set to running so far. This may be normal for the initial cycle.')
-        assert state_id.t == 0 or state_id.t == 1
+        assert state_id.t == 0
+    else:
+        running_job = [rj for rj in running_jobs[runner_id] if rj[0] == state_id]
 
-    if state_id.t > 0:
-        # store result
-        weights_this_cycle += 1
-        state_weights[state_id] = weight
-        print("Received weight", weight, "for", state_id, ".")
+        if len(running_job) > 0:
+            # assert len(delete) == 1  is not matched if runner timed out!
+            running_jobs[runner_id].remove(running_job[0])
+
+            # store result
+            weights_this_cycle += 1
+            state_weights[state_id] = weight
+            print("Received weight", weight, "for", state_id, ".")
+
+            print("dd removal from accept weight")
+            DueDates.remove(runner_id, state_id)
 
     gp_socket.send(b'')  # send an empty ack.
 
@@ -281,7 +318,7 @@ def accept_runner_request(msg):
         runners[runner_id] = {}
     runners[runner_id][head_rank] = msg.runner_request.socket
 
-    good_runners = state_cache.keys()
+    good_runners = list(state_cache)
     # remove all faulty runners
     for rid in faulty_runners:
         if rid in runners:
@@ -305,7 +342,7 @@ def accept_runner_request(msg):
             s.CopyFrom(runners[rid][head_rank])
 
     if len(shuffeled_runners) == 0:
-        print("could not find any runner with this state in", state_cache)
+        print("Could not find any runner with this state in", state_cache)
 
     print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)
@@ -321,7 +358,6 @@ def accept_delete(msg):
 
     # don't delete what is scheduled
     # Don't delete working stuff (stuff that is about to be written + stuff that is about to be calculated.... see running_jobs
-    print('---running_jobs:', running_jobs)
     blacklist = ([scheduled_jobs[runner_id][1]] if runner_id in scheduled_jobs else []) + [ rj[0] for rj in running_jobs[runner_id] ] + [ rj[1] for rj in running_jobs[runner_id] ]
     delete_from = [s for s in state_cache[runner_id] if s not in blacklist]
 
@@ -369,6 +405,7 @@ def remove_unscheduled_job(job_id, parent_id):
     if len(unscheduled_jobs[parent_id]) == 0:
         del unscheduled_jobs[parent_id]
 
+
 def select_new_job(runner_id):
     """
     Select a new job that would be nice on this runner
@@ -390,17 +427,27 @@ def select_new_job(runner_id):
 
     job_id = np.random.choice(unscheduled_jobs[parent_id])
 
+
     remove_unscheduled_job(job_id, parent_id)
     return job_id, parent_id
 
-def has_scheduled(runner_id):
+def has_scheduled(runner_id, refresh_due_date=True):
     # Ensure that something is scheduled for this runner: (otherwise schedule something or return None)
-    if runner_id not in scheduled_jobs:
+    if runner_id in scheduled_jobs:
+        if refresh_due_date:
+            # find old due date of this job and set it to now. this path is reached when handle_jobrequest calls has_scheduled and there was something scheduled already
+            print("dd removal from has_scheduled")
+            DueDates.remove(runner_id, scheduled_jobs[runner_id][0])
+    else:
         new_job = select_new_job(runner_id)
         if new_job:
             scheduled_jobs[runner_id] = new_job
         else:
             return None
+
+
+    if refresh_due_date:
+        DueDates.add(runner_id, scheduled_jobs[runner_id][0])
 
     return scheduled_jobs[runner_id]
 
@@ -433,8 +480,9 @@ def receive_message_nonblocking(socket):
 
         if msg.runner_id in faulty_runners:
             print("Ignoring faulty runner's message:", msg)
-            gp_socket.reply(0)
-            return
+            socket.send(b'')
+
+            return None
     except zmq.error.Again:
         # could not poll anything
         pass
@@ -483,24 +531,20 @@ def handle_job_requests(launcher, nsteps):
 
         # at cycle == 1 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
         if assimilation_cycle == 1:
-            print('---- unscheduled jobs', unscheduled_jobs)
-            print('---- scheduled jobs', scheduled_jobs)
             parent_id = list(unscheduled_jobs.keys())[0]
             job_id = unscheduled_jobs[parent_id][0]
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
             remove_unscheduled_job(job_id, parent_id)
+            dict_append(running_jobs, runner_id, (job_id, parent_id))
             stealable_jobs -= 1
-            dict_append(due_dates, int(time.time() + RUNNER_TIMEOUT), runner_id)
+            DueDates.add(runner_id, job_id)
         else:
             new_job = has_scheduled(runner_id)
             if new_job:
                 del scheduled_jobs[runner_id]
 
-
                 dict_append(running_jobs, runner_id, new_job)
-
-                dict_append(due_dates, int(time.time() + RUNNER_TIMEOUT), runner_id)
 
                 print("Scheduling", new_job)
                 reply.job_response.job.CopyFrom(new_job[0])
@@ -665,26 +709,6 @@ def do_update_step():
 
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
-def check_due_date_violations():
-    """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
-    now = int(time.time())
-    for dd in due_dates:
-        if dd > now:
-            break
-        else:
-            for rid in due_dates[dd]:
-                faulty_runners.add(rid)
-                launcher.notify(rid, SimulationStatus.TIMEOUT)
-
-                if rid in scheduled_jobs:
-                    job_id, parent_id = scheduled_jobs[rid]
-                    dict_append(unscheduled_jobs, parent_id, job_id)
-
-                if rid in running_jobs:
-                    global stealable_jobs
-                    for job_id, parent_id in running_jobs[rid]:
-                        dict_append(unscheduled_jobs, parent_id, job_id)
-                        stealable_jobs += 1
 
 
 if __name__ == '__main__':
@@ -726,7 +750,7 @@ if __name__ == '__main__':
 
         launcher.ping()
 
-        check_due_date_violations()
+        DueDates.check_violations()
 
         # Slow down CPU:
         time.sleep(0.0001)
