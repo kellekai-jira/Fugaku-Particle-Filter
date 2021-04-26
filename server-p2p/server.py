@@ -390,6 +390,11 @@ def accept_delete(msg):
     # don't delete what is scheduled
     # Don't delete working stuff (stuff that is about to be written + stuff that is about to be calculated.... see running_jobs
     blacklist = ([scheduled_jobs[runner_id][1]] if runner_id in scheduled_jobs else []) + [ rj[0] for rj in running_jobs[runner_id] ] + [ rj[1] for rj in running_jobs[runner_id] ]
+    if assimilation_cycle == 1:
+        # never delete the base state in the first iteration:
+        # print('blacklist before:', blacklist)
+        blacklist = blacklist + [ s for s in delete_from if s.t == 0]
+        # print('blacklist after:', blacklist)
     delete_from = [s for s in delete_from if s not in blacklist]
 
     too_old = []    # delete state that is too old --> O(#state cache)
