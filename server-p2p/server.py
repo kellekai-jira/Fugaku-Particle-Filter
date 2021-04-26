@@ -8,6 +8,8 @@ import p2p_pb2 as cm
 import numpy as np
 from enum import Enum
 
+from collections import OrderedDict
+
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -130,11 +132,11 @@ class DueDates:
 
     {due date (int in s): set((unner_id 1, job_id), (runner_id2..., job_id)}
     """
-    due_dates = {}
+    due_dates = OrderedDict()
 
     @staticmethod
     def add(runner_id, job_id):
-        dict_append(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
+        dict_set_add(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
 
     @staticmethod
     def remove(runner_id, job_id):
@@ -144,10 +146,8 @@ class DueDates:
         found = False
         for dd in DueDates.due_dates:
             if to_find in DueDates.due_dates[dd]:
-                DueDates.due_dates[dd].remove(to_find)
-                if len(DueDates.due_dates[dd]) == 0:
-                    del DueDates.due_dates[dd]
                 found = True
+                dict_set_remove(DueDates.due_dates, dd, to_find)
                 break
 
         assert found
@@ -156,7 +156,7 @@ class DueDates:
     def check_violations():
         """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
         now = int(time.time())
-        for dd in list(DueDates.due_dates):
+        for dd in list(DueDates.due_dates):  # FIXME: check that ordered! but probably not necessary!
             if dd > now:
                 break
             else:
@@ -178,10 +178,36 @@ class DueDates:
 """
 Contains all runners and which states they have prefetched
 
-Format:
-    {runner_id: [state_id,...]}
+Format (by state):
+    {state_id: set(runner_id,...)}
 """
-state_cache = {}
+class StateCache:
+    c = {}
+
+    @staticmethod
+    def add_runner(state_id, runner_id):
+        dict_set_add(StateCache.c, state_id, runner_id)
+
+    @staticmethod
+    def remove_runner(state_id, runner_id):
+        dict_set_remove(StateCache.c, state_id, runner_id)
+
+    @staticmethod
+    def get_runners(state_id):
+        if state_id in StateCache.c:
+            return list(StateCache.c[state_id])
+        else:
+            return None
+
+
+
+    def update(msg, runner_id):
+        # Update knowledge about state caches of runners:
+        for state_id in msg.cached_states:
+            StateCache.add_runner(state_id, runner_id)
+
+
+
 
 
 
@@ -189,6 +215,16 @@ def dict_append(d, where, what):
     if where not in d:
         d[where] = []
     d[where].append(what)
+
+def dict_set_add(d, where, what):
+    if where not in d:
+        d[where] = set()
+    d[where].add(what)
+
+def dict_set_remove(d, where, what):
+    d[where].remove(what)
+    if len(d[where]) == 0:
+        del d[where]
 
 # Socket for job requests
 addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
@@ -293,8 +329,7 @@ def accept_weight(msg):
     gp_socket.send(b'')  # send an empty ack.
 
     # Update knowledge on cached states:
-
-    dict_append(state_cache, runner_id, state_id)
+    StateCache.add_runner(state_id, runner_id)
 
     trigger(STOP_ACCEPT_WEIGHT, 0)
 
@@ -318,35 +353,29 @@ def accept_runner_request(msg):
         runners[runner_id] = {}
     runners[runner_id][head_rank] = msg.runner_request.socket
 
-    good_runners = list(state_cache)
-    # remove all faulty runners
-    for rid in faulty_runners:
-        if rid in runners:
-            del runners[rid]
-        if rid in good_runners:
-            good_runners.remove(rid)
-
-
     # generate reply:
     reply = cm.Message()
     reply.runner_response.SetInParent()
-    # filter for runners that have the state in question:
-    shuffeled_runners = list(filter(lambda x: msg.runner_request.searched_state_id in state_cache[x], good_runners))
-    # shuffle inplace
-    random.shuffle(shuffeled_runners)
-    for rid in shuffeled_runners:
-        if rid == runner_id:
-            continue
-        if head_rank in runners[rid]:
-            s = reply.runner_response.sockets.add()
-            s.CopyFrom(runners[rid][head_rank])
 
-    if len(shuffeled_runners) == 0:
-        print("Could not find any runner with this state in", state_cache)
+    state_id = msg.runner_request.searched_state_id
+    shuffeled_runners = StateCache.get_runners(state_id)
+    if shuffeled_runners:
+        # shuffle inplace
+        random.shuffle(shuffeled_runners)
+
+        # filter for runners that have the state in question:
+        for rid in shuffeled_runners:
+            assert rid != runner_id
+            if head_rank in runners[rid]:
+                s = reply.runner_response.sockets.add()
+                s.CopyFrom(runners[rid][head_rank])
+
+    if len(reply.runner_response.sockets) == 0:
+        print("Could not find any runner with this state in", StateCache.c)
 
     print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)
-    # print('scache was:', state_cache) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
+    # print('scache was:', ) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
 
 def accept_delete(msg):
@@ -354,12 +383,14 @@ def accept_delete(msg):
 
     runner_id = msg.runner_id
 
-    update_state_knowledge(msg.delete_request, runner_id)
+    StateCache.update(msg.delete_request, runner_id)
+
+    delete_from = msg.delete_request.cached_states
 
     # don't delete what is scheduled
     # Don't delete working stuff (stuff that is about to be written + stuff that is about to be calculated.... see running_jobs
     blacklist = ([scheduled_jobs[runner_id][1]] if runner_id in scheduled_jobs else []) + [ rj[0] for rj in running_jobs[runner_id] ] + [ rj[1] for rj in running_jobs[runner_id] ]
-    delete_from = [s for s in state_cache[runner_id] if s not in blacklist]
+    delete_from = [s for s in delete_from if s not in blacklist]
 
     too_old = []    # delete state that is too old --> O(#state cache)
     not_important = []  # delete state that is not important for any job this iteration anymore --> O(#state cache * #unscheduled jobs) , hashmaps might help?
@@ -388,17 +419,13 @@ def accept_delete(msg):
     reply.delete_response.to_delete.CopyFrom(to_delete)
 
     print("Deleting", reply.delete_response.to_delete, "on runner", runner_id)
-    state_cache[runner_id].remove(reply.delete_response.to_delete)
+    StateCache.remove_runner(to_delete, runner_id)
 
     send_message(gp_socket, reply)
 
     trigger(STOP_ACCEPT_DELETE, 0)
 
 
-
-def update_state_knowledge(msg, runner_id):
-    # Update knowledge about state caches of runners:
-    state_cache[runner_id] = msg.cached_states
 
 def remove_unscheduled_job(job_id, parent_id):
     unscheduled_jobs[parent_id].remove(job_id)
@@ -414,19 +441,16 @@ def select_new_job(runner_id):
         return
 
     found = False
-    if runner_id in state_cache:
-        states = state_cache[runner_id]
-        for s in states:
-            if s in unscheduled_jobs:
-                parent_id = s
-                found = True
-                break
+    for s in unscheduled_jobs:
+        if s in StateCache.c and runner_id in StateCache.c[s]:
+            parent_id = s
+            found = True
+            break
 
     if not found:
         parent_id = np.random.choice(list(unscheduled_jobs))
 
     job_id = np.random.choice(unscheduled_jobs[parent_id])
-
 
     remove_unscheduled_job(job_id, parent_id)
     return job_id, parent_id
@@ -455,14 +479,14 @@ def accept_prefetch(msg):
     trigger(START_ACCEPT_PREFETCH, 0)
 
     runner_id = msg.runner_id
-    update_state_knowledge(msg.prefetch_request, runner_id)
+    StateCache.update(msg.prefetch_request, runner_id)
     reply = cm.Message()
     reply.prefetch_response.SetInParent()
 
     if assimilation_cycle > 1:
         new_job = has_scheduled(runner_id)
         if new_job:  # sometimes has_scheduled cannot schedule anything as no jobs are left...
-            if new_job[1] in state_cache[runner_id]:
+            if runner_id in StateCache.c[new_job[1]]:
                 # This runner does not need to prefetch anything
                 pass
             else:

@@ -14,7 +14,7 @@ run_melissa_da_study(
     server_cmd='python3 -m cProfile -o server.cprof ' + os.getenv('MELISSA_DA_SOURCE_PATH') + '/server-p2p/server.py',  # to read the output try with pyprof2calltree -k -i server.cprof
     runner_cmd='simulation4-p2p',
     #runner_cmd='simulation4-p2p',
-    total_steps=1000,
+    total_steps=10,
     ensemble_size=5,
     procs_runner=2,
     nodes_runner=1,
