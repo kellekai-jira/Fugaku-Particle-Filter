@@ -11,14 +11,14 @@ clean_old_stats()
 
 run_melissa_da_study(
     is_p2p=True,
-    precommand_server='xterm_gdb',
-    runner_cmd='xterm_gdb simulation4-p2p',
+    server_cmd='python3 -m cProfile -o server.cprof ' + os.getenv('MELISSA_DA_SOURCE_PATH') + '/server-p2p/server.py',  # to read the output try with pyprof2calltree -k -i server.cprof
+    runner_cmd='simulation4-p2p',
     #runner_cmd='simulation4-p2p',
-    total_steps=5,
+    total_steps=1000,
     ensemble_size=5,
     procs_runner=2,
     nodes_runner=1,
-    n_runners=2,
+    n_runners=4,
     show_server_log=False,
     show_simulation_log=False,
     runner_timeout=10,  # 60 seconds time for debugging!

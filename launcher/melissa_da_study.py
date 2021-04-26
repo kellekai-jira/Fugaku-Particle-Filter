@@ -72,7 +72,8 @@ def run_melissa_da_study(
         walltime='xxxx01:00:00',
         prepare_runner_dir=None,  # is executed within the runner dir before the runner is launched. useful to e.g. copy config files for this runner into this directory...
         additional_env={},
-        is_p2p=False):
+        is_p2p=False,
+        server_cmd=''):
 
     assert isinstance(cluster, Cluster)
 
@@ -106,7 +107,8 @@ def run_melissa_da_study(
         additional_env['MELISSA_DA_IS_P2P'] = '1'
         # FIXME: install server.py and call via python -m
         # FIXME: use cmake's found python!
-        server_cmd = 'python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
+        if server_cmd == '':
+            server_cmd = 'python3 -u %s/server-p2p/server.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
 
         assert 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE' in additional_env
 
@@ -118,7 +120,8 @@ def run_melissa_da_study(
         assert procs_runner % nodes_runner == 0
     else:
         assert not 'MELISSA_DA_IS_P2P' in additional_env
-        server_cmd = 'melissa_da_server'
+        if server_cmd == '':
+            server_cmd = 'melissa_da_server'
 
     assert n_runners >= 1
 
