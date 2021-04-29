@@ -26,7 +26,7 @@ int comm_rank = -1;
 
 int main(int argc, char * args[])
 {
-    srand(time(NULL));
+    srand(time(NULL) + atoi(getenv("MELISSA_DA_RUNNER_ID")));
 
     if (argc > 1)
     {
