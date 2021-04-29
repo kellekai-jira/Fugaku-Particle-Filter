@@ -117,7 +117,7 @@ def run_melissa_da_study(
         nodes_server = 1
         create_runner_dir = True
         print("Running in p2p mode. Ignoring given procs_server, nodes_server, assimilator_type, config_fti_path, create_runner_dir, server_slowdown_factor arguments!")
-        assert procs_runner % nodes_runner == 0
+        assert procs_runner / nodes_runner == int(procs_runner / nodes_runner)
     else:
         assert not 'MELISSA_DA_IS_P2P' in additional_env
         if server_cmd == '':
