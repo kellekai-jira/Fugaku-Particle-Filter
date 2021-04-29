@@ -330,6 +330,9 @@ def accept_weight(msg):
             print("Received weight", weight, "for", state_id, ".")
 
             DueDates.remove(runner_id, state_id)
+        else:
+            print("Got strange weight! The runner should send one of ", running_jobs[runner_id], 'but I got', state_id)
+            assert state_id.t == 0
 
     gp_socket.send(b'')  # send an empty ack.
 
@@ -565,13 +568,14 @@ def handle_job_requests(launcher, nsteps):
         # at cycle == 1 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
         if assimilation_cycle == 1:
             parent_id = list(unscheduled_jobs.keys())[0]
-            job_id = unscheduled_jobs[parent_id][0]
-            reply.job_response.job.CopyFrom(job_id)
-            reply.job_response.parent.CopyFrom(parent_id)
-            unscheduled_jobs[parent_id].pop()
+            job_id = unscheduled_jobs[parent_id].pop()
             if len(unscheduled_jobs[parent_id]) == 0:
                 del unscheduled_jobs[parent_id]
+
+            reply.job_response.job.CopyFrom(job_id)
+            reply.job_response.parent.CopyFrom(parent_id)
             amount_unscheduled_jobs -= 1
+            print("Scheduling", (job_id, parent_id))
             dict_append(running_jobs, runner_id, (job_id, parent_id))
             stealable_jobs -= 1
             DueDates.add(runner_id, job_id)

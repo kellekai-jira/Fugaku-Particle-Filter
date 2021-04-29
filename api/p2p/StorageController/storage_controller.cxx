@@ -528,6 +528,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
   send_message(server.m_socket, m);
+  D("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
 }
 

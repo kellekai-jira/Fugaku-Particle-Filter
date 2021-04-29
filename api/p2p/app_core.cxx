@@ -153,7 +153,7 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
 
-    D("Pushing weight message(size = %d) to server: %s", m.ByteSize(), m.DebugString().c_str());
+    D("Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
     size_t bs = m.ByteSize();  // TODO: change bytesize to bytesize long
 
     if (bs > buf.size())
@@ -239,6 +239,7 @@ int melissa_p2p_expose(VEC_T *values,
                 usleep(500000); // retry after 500ms
             }
         } while (!job_response.has_parent());
+        D("Now  I work on %s", job_response.DebugString().c_str());
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
         next_state.t = job_response.job().t();
