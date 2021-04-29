@@ -142,7 +142,6 @@ class DueDates:
     def remove(runner_id, job_id):
         """Trys to find and remove associated due dates"""
         to_find = (runner_id, job_id)
-        print('Try to find ', to_find, 'in', DueDates.due_dates)
         found = False
         for dd in DueDates.due_dates:
             if to_find in DueDates.due_dates[dd]:
@@ -167,13 +166,13 @@ class DueDates:
 
                     if rid in scheduled_jobs:
                         job_id, parent_id = scheduled_jobs[rid]
-                        unscheduled_jobs[parent_id].append(job_id)
+                        dict_append(unscheduled_jobs, parent_id, job_id)
                         amount_unscheduled_jobs += 1
                         stealable_jobs += 1
 
                     if rid in running_jobs:
                         for job_id, parent_id in running_jobs[rid]:
-                            unscheduled_jobs[parent_id].append(job_id)
+                            dict_append(unscheduled_jobs, parent_id, job_id)
                             amount_unscheduled_jobs += 1
                             stealable_jobs += 1
                 del DueDates.due_dates[dd]
@@ -259,7 +258,6 @@ def init_ens():
         dict_append(unscheduled_jobs, parent_id, job_id)
 init_ens()
 
-print('uj init', unscheduled_jobs)
 
 amount_unscheduled_jobs = PARTICLES
 weights_this_cycle = 0
@@ -331,7 +329,6 @@ def accept_weight(msg):
             state_weights[state_id] = weight
             print("Received weight", weight, "for", state_id, ".")
 
-            print("dd removal from accept weight")
             DueDates.remove(runner_id, state_id)
 
     gp_socket.send(b'')  # send an empty ack.
@@ -378,10 +375,9 @@ def accept_runner_request(msg):
                 s = reply.runner_response.sockets.add()
                 s.CopyFrom(runners[rid][head_rank])
 
-    if len(reply.runner_response.sockets) == 0:
-        print("Could not find any runner with this state in", StateCache.c)
+    # if len(reply.runner_response.sockets) == 0:
+        # print("Could not find any runner with this state in", StateCache.c)
 
-    print('Runner request to get', msg.runner_request.searched_state_id,'::', reply)
     send_message(gp_socket, reply)
     # print('scache was:', ) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
@@ -457,7 +453,6 @@ def select_new_job(runner_id):
             break
 
     if not found:
-        print('uj', unscheduled_jobs)
         parent_id = np.random.choice(list(unscheduled_jobs))  # fixme: this might be made faster! the list is O(n)
 
     job_id = unscheduled_jobs[parent_id].pop()
@@ -473,7 +468,6 @@ def has_scheduled(runner_id, refresh_due_date=True):
     if runner_id in scheduled_jobs:
         if refresh_due_date:
             # find old due date of this job and set it to now. this path is reached when handle_jobrequest calls has_scheduled and there was something scheduled already
-            print("dd removal from has_scheduled")
             DueDates.remove(runner_id, scheduled_jobs[runner_id][0])
     else:
         new_job = select_new_job(runner_id)
@@ -705,7 +699,6 @@ def do_update_step():
 
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
 
-    print('state_weights:', state_weights)
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
@@ -714,9 +707,7 @@ def do_update_step():
     # normalize state weights:
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
 
-    print("Weights this cycle:", this_cycle)
     out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
-    #print("Particles:", out_particles)
 
     assimilation_cycle += 1
     job_id = 0
@@ -732,7 +723,6 @@ def do_update_step():
     stealable_jobs = PARTICLES
     amount_unscheduled_jobs = PARTICLES
     weights_this_cycle = 0
-    print("new unscheduled jobs:", unscheduled_jobs)
 
 
 
@@ -774,8 +764,8 @@ if __name__ == '__main__':
     while True:
         server_loops_last_second += 1
         if int(time.time()) > last_second:
-            last_second = int(time.time())
-            print('server_loops_last_second: %d' % server_loops_last_second)
+            last_second = int(time.time()) + 4
+            print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
