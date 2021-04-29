@@ -136,7 +136,7 @@ class DueDates:
 
     @staticmethod
     def add(runner_id, job_id):
-        dict_set_add(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
+        dict_append(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
 
     @staticmethod
     def remove(runner_id, job_id):
@@ -147,7 +147,7 @@ class DueDates:
         for dd in DueDates.due_dates:
             if to_find in DueDates.due_dates[dd]:
                 found = True
-                dict_set_remove(DueDates.due_dates, dd, to_find)
+                dict_remove(DueDates.due_dates, dd, to_find)
                 break
 
         assert found
@@ -155,6 +155,7 @@ class DueDates:
     @staticmethod
     def check_violations():
         """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
+        global stealable_jobs, amount_unscheduled_jobs
         now = int(time.time())
         for dd in list(DueDates.due_dates):  # FIXME: check that ordered! but probably not necessary!
             if dd > now:
@@ -166,12 +167,14 @@ class DueDates:
 
                     if rid in scheduled_jobs:
                         job_id, parent_id = scheduled_jobs[rid]
-                        dict_append(unscheduled_jobs, parent_id, job_id)
+                        unscheduled_jobs[parent_id].append(job_id)
+                        amount_unscheduled_jobs += 1
+                        stealable_jobs += 1
 
                     if rid in running_jobs:
-                        global stealable_jobs
                         for job_id, parent_id in running_jobs[rid]:
-                            dict_append(unscheduled_jobs, parent_id, job_id)
+                            unscheduled_jobs[parent_id].append(job_id)
+                            amount_unscheduled_jobs += 1
                             stealable_jobs += 1
                 del DueDates.due_dates[dd]
 
@@ -179,18 +182,22 @@ class DueDates:
 Contains all runners and which states they have prefetched
 
 Format (by state):
-    {state_id: set(runner_id,...)}
+    {state_id: list(runner_id,...)}
 """
 class StateCache:
-    c = {}
+    c = {} # FIXME: might be faster with [] as inner container!
+    cr = {}
 
     @staticmethod
     def add_runner(state_id, runner_id):
-        dict_set_add(StateCache.c, state_id, runner_id)
+        dict_append(StateCache.c, state_id, runner_id)
+        dict_append(StateCache.cr, runner_id, state_id)
+
 
     @staticmethod
     def remove_runner(state_id, runner_id):
-        dict_set_remove(StateCache.c, state_id, runner_id)
+        dict_remove(StateCache.c, state_id, runner_id)
+        dict_remove(StateCache.cr, runner_id, state_id)
 
     @staticmethod
     def get_runners(state_id):
@@ -199,29 +206,26 @@ class StateCache:
         else:
             return None
 
+    @staticmethod
+    def get_by_runner(runner_id):
+        return StateCache.cr[runner_id]
 
-
+    @staticmethod
     def update(msg, runner_id):
         # Update knowledge about state caches of runners:
+        # This is the operation probably quite often and it is freaking slow!
+        for s in StateCache.cr[runner_id]:
+            dict_remove(StateCache.c, s, runner_id)
+        StateCache.cr[runner_id] = msg.cached_states
         for state_id in msg.cached_states:
-            StateCache.add_runner(state_id, runner_id)
-
-
-
-
-
+            dict_append(StateCache.c, state_id, runner_id)
 
 def dict_append(d, where, what):
     if where not in d:
         d[where] = []
     d[where].append(what)
 
-def dict_set_add(d, where, what):
-    if where not in d:
-        d[where] = set()
-    d[where].add(what)
-
-def dict_set_remove(d, where, what):
+def dict_remove(d, where, what):
     d[where].remove(what)
     if len(d[where]) == 0:
         del d[where]
@@ -240,8 +244,6 @@ gp_socket, port_gp_socket = \
         bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
-weights_this_cycle = 0
-stealable_jobs = PARTICLES  # Those are jobs that are not yet running. only if such jobs exist we accept job requests.
 
 def init_ens():
 # Populate unscheduled jobs
@@ -257,6 +259,12 @@ def init_ens():
         dict_append(unscheduled_jobs, parent_id, job_id)
 init_ens()
 
+print('uj init', unscheduled_jobs)
+
+amount_unscheduled_jobs = PARTICLES
+weights_this_cycle = 0
+stealable_jobs = PARTICLES  # Those are jobs that are not yet running. only if such jobs exist we accept job requests.
+
 print('Server up now')
 
 def send_message(socket, data):
@@ -269,9 +277,9 @@ def maybe_update():
     called always after a weight arrived.
 
     """
-    global weights_this_cycle
+    global weights_this_cycle, amount_unscheduled_jobs
     print(f"Can we do an update? weights_this_cycle={weights_this_cycle}/{PARTICLES}, len(unscheduled_jobs)={len(unscheduled_jobs)}, stealable_jobs={stealable_jobs})")
-    if weights_this_cycle == PARTICLES and len(unscheduled_jobs) == 0 and stealable_jobs == 0:
+    if weights_this_cycle == PARTICLES and amount_unscheduled_jobs == 0 and stealable_jobs == 0:
         # will populate unscheduled jobs
         trigger(START_FILTER_UPDATE, assimilation_cycle)
         old_assimilation_cycle = assimilation_cycle
@@ -432,32 +440,32 @@ def accept_delete(msg):
 
 
 
-def remove_unscheduled_job(job_id, parent_id):
-    unscheduled_jobs[parent_id].remove(job_id)
-    if len(unscheduled_jobs[parent_id]) == 0:
-        del unscheduled_jobs[parent_id]
-
-
 def select_new_job(runner_id):
     """
     Select a new job that would be nice on this runner
     """
-    if len(unscheduled_jobs) == 0:
+    global amount_unscheduled_jobs
+    if amount_unscheduled_jobs == 0:
         return
 
     found = False
-    for s in unscheduled_jobs:
-        if s in StateCache.c and runner_id in StateCache.c[s]:
+
+    for s in StateCache.get_by_runner(runner_id):
+        if s in unscheduled_jobs: #and len(unscheduled_jobs[s]) > 0:
             parent_id = s
             found = True
             break
 
     if not found:
-        parent_id = np.random.choice(list(unscheduled_jobs))
+        print('uj', unscheduled_jobs)
+        parent_id = np.random.choice(list(unscheduled_jobs))  # fixme: this might be made faster! the list is O(n)
 
-    job_id = np.random.choice(unscheduled_jobs[parent_id])
+    job_id = unscheduled_jobs[parent_id].pop()
+    if len(unscheduled_jobs[parent_id]) == 0:
+        del unscheduled_jobs[parent_id]
 
-    remove_unscheduled_job(job_id, parent_id)
+    amount_unscheduled_jobs -= 1
+
     return job_id, parent_id
 
 def has_scheduled(runner_id, refresh_due_date=True):
@@ -491,7 +499,7 @@ def accept_prefetch(msg):
     if assimilation_cycle > 1:
         new_job = has_scheduled(runner_id)
         if new_job:  # sometimes has_scheduled cannot schedule anything as no jobs are left...
-            if runner_id in StateCache.c[new_job[1]]:
+            if runner_id in StateCache.get_runners(new_job[1]):
                 # This runner does not need to prefetch anything
                 pass
             else:
@@ -538,6 +546,7 @@ def handle_general_purpose():
 def handle_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
+    global amount_unscheduled_jobs
 
 
     msg = receive_message_nonblocking(job_socket)
@@ -564,7 +573,10 @@ def handle_job_requests(launcher, nsteps):
             job_id = unscheduled_jobs[parent_id][0]
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
-            remove_unscheduled_job(job_id, parent_id)
+            unscheduled_jobs[parent_id].pop()
+            if len(unscheduled_jobs[parent_id]) == 0:
+                del unscheduled_jobs[parent_id]
+            amount_unscheduled_jobs -= 1
             dict_append(running_jobs, runner_id, (job_id, parent_id))
             stealable_jobs -= 1
             DueDates.add(runner_id, job_id)
@@ -689,7 +701,7 @@ def do_update_step():
     and returns false if this was the last cycle"""
     # Something really stupid for now:
     # Sort by weights. Then take 10 best particles for next generation
-    global assimilation_cycle, stealable_jobs, weights_this_cycle
+    global assimilation_cycle, stealable_jobs, weights_this_cycle, amount_unscheduled_jobs
 
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
 
@@ -718,6 +730,7 @@ def do_update_step():
         job_id += 1
 
     stealable_jobs = PARTICLES
+    amount_unscheduled_jobs = PARTICLES
     weights_this_cycle = 0
     print("new unscheduled jobs:", unscheduled_jobs)
 
