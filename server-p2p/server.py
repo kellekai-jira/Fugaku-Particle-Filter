@@ -204,7 +204,7 @@ class StateCache:
         if state_id in StateCache.c:
             return list(StateCache.c[state_id])
         else:
-            return None
+            return []
 
     @staticmethod
     def get_by_runner(runner_id):
