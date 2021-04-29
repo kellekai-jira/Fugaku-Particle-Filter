@@ -453,7 +453,8 @@ def select_new_job(runner_id):
             break
 
     if not found:
-        parent_id = np.random.choice(list(unscheduled_jobs))  # fixme: this might be made faster! the list is O(n)
+        # parent_id = np.random.choice(list(unscheduled_jobs))  # fixme: this might be made faster! the list is O(n)
+        parent_id = next(iter(unscheduled_jobs))  # made it faster
 
     job_id = unscheduled_jobs[parent_id].pop()
     if len(unscheduled_jobs[parent_id]) == 0:
