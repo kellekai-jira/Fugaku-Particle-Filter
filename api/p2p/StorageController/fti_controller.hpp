@@ -21,7 +21,7 @@ inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
 
 inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return !(lhs == rhs);
-}  
+}
 
 struct io_var_t {
   void* data;
@@ -35,14 +35,14 @@ struct io_ckpt_t {
 };
 
 inline io_id_t to_ckpt_id(io_state_id_t state_id) {
-  // this should work for up to 10000 members!
-  assert(state_id.id < 10000 && "too many state_ids!");
-  return state_id.t*10000 + state_id.id;
+  // this should work for up to 100000 members!
+  assert(state_id.id < 100000 && "too many state_ids!");
+  return state_id.t*100000 + state_id.id;
 }
 
 inline io_state_id_t to_state_id(const io_id_t ckpt_id) {
-  // this should work for up to 10000 members!
-  return { ckpt_id / 10000, ckpt_id % 10000 };
+  // this should work for up to 100000 members!
+  return { ckpt_id / 100000, ckpt_id % 100000 };
 }
 
 class FtiController : public IoController {
