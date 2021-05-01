@@ -77,7 +77,6 @@ def run():
                 'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/simulation4-p2p:' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
                 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
-                'MELISSA_DA_TIMING_REPORT': str(time.time() + 300),  # write timing events after 60 secons!
                 },
             is_p2p=True)
 
@@ -95,18 +94,15 @@ else:
     dt = 10  # seconds
     start_t = None
     updates_per_dt = {}
+    second = 0
     with open(sys.argv[1], 'r') as f:
         for line in f.readlines():
+            if 'server loops last 5' in line:
+                second += 5
             if 'Received weight' in line:
-                second = int(line.split(" ")[4])
-                if not start_t:
-                    start_t = second
-
-                i = (second - start_t)//dt
-
-                if not i in updates_per_dt:
-                    updates_per_dt[i] = 0
-                updates_per_dt[i] += 1
+                if not second in updates_per_dt:
+                    updates_per_dt[second] = 0
+                updates_per_dt[second] += 1
 
     # for now assume they start in the same...
     import numpy as np
@@ -121,7 +117,7 @@ else:
     print(xs.shape)
     print(updates.shape)
     fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.plot(xs, updates, label='state updates per dt (normalized by max)')
+    ax1.plot(xs, updates, label='weights received per dt (normalized by max)')
     ax1.plot(ts, ys, label='active runners')
     ax1.set_xlabel('t in minutes')
     ax1.legend()
