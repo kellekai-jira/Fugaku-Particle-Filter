@@ -161,8 +161,10 @@ class DueDates:
                 break
             else:
                 for rid, _ in DueDates.due_dates[dd]:
-                    launcher.notify(rid, SimulationStatus.TIMEOUT)
-                    faulty_runners.add(rid)
+                    if rid not in faulty_runners:
+                        launcher.notify(rid, SimulationStatus.TIMEOUT)
+                        faulty_runners.add(rid)
+                        print("Due date passed for runner id %d" % rid)
 
                     if rid in scheduled_jobs:
                         job_id, parent_id = scheduled_jobs[rid]
@@ -688,6 +690,7 @@ class LauncherConnection:
 
     def notify_runner_connect(self, runner_id):
         if not runner_id in self.known_runners:
+            print("Server registering Runner ID %d" % runner_id)
             self.notify(runner_id,
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
@@ -713,6 +716,8 @@ def do_update_step():
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
 
     out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
+
+    print(f"we got {len(set(out_particles))} different particles!")
 
     assimilation_cycle += 1
     job_id = 0
@@ -790,6 +795,6 @@ if __name__ == '__main__':
         DueDates.check_violations()
 
         # Slow down CPU:
-        time.sleep(0.0001)
+        time.sleep(0.000001)
 
         maybe_write()
