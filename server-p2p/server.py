@@ -209,7 +209,10 @@ class StateCache:
 
     @staticmethod
     def get_by_runner(runner_id):
-        return StateCache.cr[runner_id]
+        if runner_id in StateCache.cr:
+            return StateCache.cr[runner_id]
+        else:
+            return []
 
     @staticmethod
     def update(msg, runner_id):
@@ -358,6 +361,7 @@ def accept_runner_request(msg):
     trigger(START_ACCEPT_RUNNER_REQUEST, 0)
     # store request
     runner_id = msg.runner_id
+    launcher.notify_runner_connect(runner_id)
     head_rank = msg.runner_request.head_rank
     if not runner_id in runners:
         runners[runner_id] = {}
@@ -690,10 +694,10 @@ class LauncherConnection:
 
     def notify_runner_connect(self, runner_id):
         if not runner_id in self.known_runners:
-            print("Server registering Runner ID %d" % runner_id)
             self.notify(runner_id,
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
+            print("Server registering Runner ID %d" % runner_id)
 
 
 

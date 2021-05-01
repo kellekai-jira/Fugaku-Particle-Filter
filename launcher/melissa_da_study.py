@@ -123,14 +123,12 @@ def run_melissa_da_study(
         if server_cmd == '':
             server_cmd = 'melissa_da_server'
 
-    assert n_runners >= 1
-
-
     if callable(n_runners):
         max_runners = n_runners
     else:
         max_runners = lambda : n_runners
 
+    assert max_runners() >= 1
 
 
     # TODO: dirty: setting global variables. Use a class variable or sth like this...

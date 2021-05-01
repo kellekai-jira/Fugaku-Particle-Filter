@@ -30,6 +30,10 @@ module load python/3.7.5  # don't have this while compiling!
 conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 
 
+# dont forget six and pyzmq, six with
+# conda install --prefix /gpfsscratch/rech/moy/rkop006/conda_envs --force-reinstall six
+
+
 
 # let the server find lib  python:  (don't know why I need to do this manually...)
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfsscratch/rech/moy/rkop006/conda_envs/lib
@@ -61,6 +65,7 @@ conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 #libgfortran-ng            7.3.0                hdf63c60_0
 #libpng                    1.6.37               hbc83047_0
 #libprotobuf               3.14.0               h8c45485_0
+#libsodium                 1.0.18               h7b6447c_0
 #libstdcxx-ng              9.1.0                hdf63c60_0
 #libtiff                   4.1.0                h2733197_1
 #libuuid                   1.0.3                h1bed415_2
@@ -90,6 +95,7 @@ conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 #python                    3.7.10               hdb3f193_0
 #python-dateutil           2.8.1              pyhd3eb1b0_0
 #pytz                      2021.1             pyhd3eb1b0_0
+#pyzmq                     20.0.0           py37h2531618_1
 #qt                        5.9.7                h5867ecd_1
 #readline                  8.1                  h27cfd23_0
 #setuptools                52.0.0           py37h06a4308_0
@@ -100,11 +106,12 @@ conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 #tornado                   6.1              py37h27cfd23_0
 #wheel                     0.36.2             pyhd3eb1b0_0
 #xz                        5.2.5                h7b6447c_0
+#zeromq                    4.3.4                h2531618_0
 #zlib                      1.2.11               h7b6447c_3
-#zstd                      1.4.9                haebb681_0
 
 
 
 
+source /gpfsscratch/rech/moy/rkop006/melissa-p2p/build/install/bin/melissa_da_set_env.sh
 ulimit -s unlimited
 ulimit -c 4000000

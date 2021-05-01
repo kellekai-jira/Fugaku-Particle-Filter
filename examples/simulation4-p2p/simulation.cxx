@@ -13,8 +13,8 @@
 #include <csignal>
 
 
-//int GLOBAL_VECT_SIZE = 1024*1024;
-int GLOBAL_VECT_SIZE = 40;
+int GLOBAL_VECT_SIZE = 1024*1024;
+//int GLOBAL_VECT_SIZE = 40;
 // const int GLOBAL_VECT_SIZE = 1000;
 // const int GLOBAL_VECT_SIZE = 1000*100*10;
 // const int GLOBAL_VECT_SIZE = 1000*1000*10;

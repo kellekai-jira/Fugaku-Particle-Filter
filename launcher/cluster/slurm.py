@@ -154,11 +154,9 @@ class SlurmCluster(cluster.Cluster):
         if self.in_salloc and len(nodes) > 0:
             pid = str(proc.pid)
             self.salloc_jobids.append(pid)
+            print("in salloc, using pid:", pid)
             for k in cores:
                 self.core_occupation[k]['job_id'] = pid
-            print("in salloc, using pid:", pid)
-            for node in nodes:
-                self.node_occupation[node]['job_id'] = pid
             return pid
         # else:
             # with open(logfile, 'wb') as f:
@@ -228,6 +226,12 @@ class SlurmCluster(cluster.Cluster):
         if self.in_salloc and (job_id in self.salloc_jobids):
             os.system('kill '+job_id)
             # remove from node occupation!
+
+            for k, v in self.core_occupation.items():
+                if v['job_id'] == job_id:
+                    self.core_occupation[k]['job_id'] = ""
+                    self.core_occupation[k]['kind'] = EMPTY
+
             return
 
         print("scancel", job_id)

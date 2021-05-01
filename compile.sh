@@ -61,7 +61,8 @@ then
           -DWITH_FTI_THREADS=OFF \
           -DREPORT_TIMING_ALL_RANKS=ON \
           -DSLOW_MPI_DIR="/gpfsscratch/rech/moy/rkop006/tmp" \
-          -DINSTALL_FTI=ON \
+          -DINSTALL_FTI=OFF \
+          -DFTI_PATH=/gpfsscratch/rech/moy/rkop006/FTI-p2p \
           -DINSTALL_BOOST=OFF \
           -DCMAKE_INSTALL_PREFIX=install \
           -DProtobuf_ROOT=/gpfsscratch/rech/moy/rkop006/conda_envs \
