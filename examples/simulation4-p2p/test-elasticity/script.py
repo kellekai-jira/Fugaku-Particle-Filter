@@ -37,7 +37,7 @@ print(ts, ys)
 
 start_time = time.time()
 
-NODES_SERVER = 2
+NODES_SERVER = 1
 NODES_RUNNER = 1
 
 def runners_now():
@@ -60,7 +60,7 @@ def run():
             # not necessary to add cluster. By default an automatic selection for the cluster
             # is done. See the cluster_selector() method.
             cluster=SlurmCluster('igf@cpu'),
-            procs_server=2,
+            procs_server=1,
             nodes_server=NODES_SERVER,
             procs_runner=40,
             nodes_runner=NODES_RUNNER,
