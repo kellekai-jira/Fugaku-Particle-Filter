@@ -334,7 +334,7 @@ def run_melissa_da_study(
                 else:
                     while len(runners) > mr:
                         to_remove = random.choice(list(runners))
-                        log("killing a runner (with id=%d) as too many runners are up", to_remove)
+                        log("killing a runner (with id=%d) as too many runners are up" % to_remove)
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!

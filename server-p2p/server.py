@@ -711,7 +711,6 @@ def do_update_step():
     # normalize state weights and resample
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
-    print('state_weights', state_weights_normalized)
     out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
 
     assert stealable_jobs == 0
