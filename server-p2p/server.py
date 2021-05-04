@@ -113,7 +113,7 @@ class DueDates:
         dict_append(DueDates.rpp, parent_id, runner_id)
         dict_append(DueDates.all_per_runner, runner_id, (due_time, job_id, parent_id))
 
-        print("adding due date at", due_time, runner_id, job_id, parent_id)
+        # print("adding due date at", due_time, runner_id, job_id, parent_id)
 
     @staticmethod
     def remove(runner_id, job_id):
@@ -123,7 +123,7 @@ class DueDates:
             if jid == job_id:
                 found = True
                 break
-        print("removing due date", runner_id, job_id, parent_id)
+        # print("removing due date", runner_id, job_id, parent_id)
         assert found
         del DueDates.all_per_runner[runner_id][i]  # remove from all by runner
 
@@ -159,10 +159,10 @@ class DueDates:
         DueDates.last_check = now
         for dd in list(DueDates.due_dates):  # FIXME: check that ordered! but probably not necessary!
             if dd > now:
-                print('checking dd > now:', dd, '>', now)
+                # print('checking dd > now:', dd, '>', now)
                 break
             else:
-                print("now", now, "dd", dd, 'runners that crash:', DueDates.due_dates[dd])
+                # print("now", now, "dd", dd, 'runners that crash:', DueDates.due_dates[dd])
                 for rid, jid, pid in DueDates.due_dates[dd]:
                     if rid not in faulty_runners:
                         launcher.notify(rid, SimulationStatus.TIMEOUT)
