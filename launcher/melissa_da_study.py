@@ -333,8 +333,8 @@ def run_melissa_da_study(
                     runners[runner_id] = Runner(runner_id, server.node_name)
                 else:
                     while len(runners) > mr:
-                        log("killing a runner as too many runners are up")
                         to_remove = random.choice(list(runners))
+                        log("killing a runner (with id=%d) as too many runners are up", to_remove)
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
