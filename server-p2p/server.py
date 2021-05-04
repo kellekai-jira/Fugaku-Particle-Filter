@@ -6,6 +6,7 @@ import time
 import zmq
 import p2p_pb2 as cm
 import numpy as np
+import math
 from enum import Enum
 
 from collections import OrderedDict
@@ -22,6 +23,7 @@ RUNNER_TIMEOUT = int(sys.argv[4])
 # 5 Server slowdown factor
 LAUNCHER_NODE_NAME = sys.argv[6]
 
+stealable_jobs = PARTICLES
 
 # define stepsize of assimilation window
 # warmup stepsize is set below...
@@ -94,71 +96,55 @@ Example:
 """
 state_weights = {}
 
-"""
-Unscheduled jobs. They represent particles that will be needed to propagate for this
-iteration.
-
-Data structure consits of pairs:
-    parent_state_id: [new state id == job id, ...]
-
-Example:
-    {StateId: StateId, (2,60): [(1,43)]}
-"""
-unscheduled_jobs = {}
-
-"""
-Jobs scheduled to a runner. This is important to react correctly to prefetch requests
-
-Example:
-    {runner_id: (job_id, parent_id)}
-"""
-scheduled_jobs = {}  #FIXME: shceduled job due date!
-
-"""
-Jobs currently running on some runner.
-
-Data structure constis of triples:
-    due data: [list of new state id == job id, runner_id, parent_state_id]
-
-Example:
-    {runner_id:  [(job_id, parent_id)]}
-"""
-running_jobs = {}
-
-
 class DueDates:
     """
     Due dates
 
-    {due date (int in s): set((unner_id 1, job_id), (runner_id2..., job_id)}
+    {due date (int in s): set((unner_id 1, job_id, parent_id), (runner_id2..., job_id, parent_id)}
     """
     due_dates = OrderedDict()
     last_check = 0
 
     @staticmethod
-    def add(runner_id, job_id):
+    def add(runner_id, job_id, parent_id):
         due_time = int(time.time()) + RUNNER_TIMEOUT
-        dict_append(DueDates.due_dates, due_time, (runner_id, job_id))
-        print("adding due date at", due_time, runner_id, job_id)
+        dict_append(DueDates.due_dates, due_time, (runner_id, job_id, parent_id))
+        print("adding due date at", due_time, runner_id, job_id, parent_id)
 
     @staticmethod
     def remove(runner_id, job_id):
         """Trys to find and remove associated due dates"""
-        to_find = (runner_id, job_id)
         found = False
-        for dd in DueDates.due_dates:
-            if to_find in DueDates.due_dates[dd]:
-                found = True
-                dict_remove(DueDates.due_dates, dd, to_find)
-                break
+        for dd in list(DueDates.due_dates):
+            for i, elem in enumerate(DueDates.due_dates[dd]):
+                if elem[0] == runner_id and elem[1] == job_id:
+                    found = True
+                    del DueDates.due_dates[dd][i]
+                    if len(DueDates.due_dates[dd]) == 0:
+                        del DueDates.due_dates[dd]
+                    parent_id = elem[2]
+                    break
 
-        print("removing due date", runner_id, job_id)
+        print("removing due date", runner_id, job_id, parent_id)
         assert found
+
+        return parent_id
+
+    @staticmethod
+    def get_by_runner(runner_id):
+        res = []
+        for dd in DueDates.due_dates:
+            for i, elem in enumerate(DueDates.due_dates[dd]):
+                if elem[0] == runner_id:
+                    res.append(elem[2])
+
+        return res
 
     @staticmethod
     def check_violations():
         """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
         global stealable_jobs
+
         now = int(time.time())
         if DueDates.last_check == now:
             return
@@ -170,23 +156,23 @@ class DueDates:
                 break
             else:
                 print("now", now, "dd", dd, 'runners that crash:', DueDates.due_dates[dd])
-                for rid, _ in DueDates.due_dates[dd]:
+                for rid, jid, pid in DueDates.due_dates[dd]:
                     if rid not in faulty_runners:
                         launcher.notify(rid, SimulationStatus.TIMEOUT)
                         faulty_runners.add(rid)
+                        del runners_last[rid]
+
                         print("Due date passed for runner id %d" % rid)
 
                     if rid in scheduled_jobs:
-                        job_id, parent_id = scheduled_jobs[rid]
-                        dict_append(unscheduled_jobs, parent_id, job_id)
                         del scheduled_jobs[rid]
+                    else:
+                        stealable_jobs += 1
 
-                    if rid in running_jobs:
-                        for job_id, parent_id in running_jobs[rid]:
-                            dict_append(unscheduled_jobs, parent_id, job_id)
-                            stealable_jobs += 1
+                    if pid not in alpha:
+                        alpha[pid] = 0
+                    alpha[pid] += 1
 
-                        running_jobs[rid] = []
                 del DueDates.due_dates[dd]
 
 """
@@ -258,24 +244,7 @@ gp_socket, port_gp_socket = \
         bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
-
-def init_ens():
-# Populate unscheduled jobs
-    for p in range(PARTICLES):
-        job_id = cm.StateId()
-        job_id.t = assimilation_cycle
-        job_id.id = p
-
-        parent_id = cm.StateId()
-        parent_id.t = 0
-        parent_id.id = p
-
-        dict_append(unscheduled_jobs, parent_id, job_id)
-init_ens()
-
-
 weights_this_cycle = 0
-stealable_jobs = PARTICLES  # Those are jobs that are not yet running. only if such jobs exist we accept job requests.
 
 print('Server up now')
 
@@ -290,8 +259,8 @@ def maybe_update():
 
     """
     global weights_this_cycle, stealable_jobs
-    print(f"Can we do an update? weights_this_cycle={weights_this_cycle}/{PARTICLES}, len(unscheduled_jobs)={len(unscheduled_jobs)}, stealable_jobs={stealable_jobs})")
-    if weights_this_cycle == PARTICLES and len(unscheduled_jobs) == 0 and stealable_jobs == 0:
+    print(f"Can we do an update? len(unscheduled_jobs)={len(alpha)}, stealable_jobs={stealable_jobs})")
+    if weights_this_cycle == PARTICLES and len(alpha) == 0 and stealable_jobs == 0:
         # will populate unscheduled jobs
         trigger(START_FILTER_UPDATE, assimilation_cycle)
         old_assimilation_cycle = assimilation_cycle
@@ -315,7 +284,6 @@ def accept_weight(msg):
     """remove jobs from the running_jobs list where we receive the weights"""
     trigger(START_ACCEPT_WEIGHT, 0)
 
-    global weights_this_cycle
 
     assert msg.WhichOneof('content') == 'weight'
 
@@ -326,24 +294,14 @@ def accept_weight(msg):
     trigger(START_IDLE_RUNNER, runner_id)
 
     weight = msg.weight.weight
-
-    # remove from running_jobs
-    if runner_id not in running_jobs or len(running_jobs[runner_id]) == 0 or state_id.t == 0:
-        print('Got Weight message', msg, 'but its job was never set to running so far. This may be normal for the initial cycle.')
-        assert (runner_id in faulty_runners) or (state_id.t == 0)
+    if state_id.t == 0:
+        print("got starting weight. Ignoring it")
     else:
         print("Received weight", weight, "for", state_id, ".")
-        runners_job = [rj for rj in running_jobs[runner_id] if rj[0] == state_id]
-        # a job may be running in more than one runner finally,
-        # especially in the first iteration
-
-        assert len(runners_job) == 1
-
-        running_jobs[runner_id].remove(runners_job[0])
-
-        DueDates.remove(runner_id, state_id)
+        DueDates.remove(runner_id, state_id)  # this fails if we get a weight that was never a due date added for!
 
         # store result
+        global weights_this_cycle
         weights_this_cycle += 1
         state_weights[state_id] = weight
 
@@ -403,6 +361,13 @@ def accept_runner_request(msg):
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
 
 def accept_delete(msg):
+    """
+    Deletes
+    1. old stuff
+    2. a state no further jobs depend on
+    3. a job from the next assimilation cycle with lowest weight
+    4. a random job
+    """
     trigger(START_ACCEPT_DELETE, 0)
 
     runner_id = msg.runner_id
@@ -413,7 +378,9 @@ def accept_delete(msg):
 
     # don't delete what is scheduled
     # Don't delete working stuff (stuff that is about to be written + stuff that is about to be calculated.... see running_jobs
-    blacklist = ([scheduled_jobs[runner_id][1]] if runner_id in scheduled_jobs else []) + [ rj[0] for rj in running_jobs[runner_id] ] + [ rj[1] for rj in running_jobs[runner_id] ]
+    blacklist = DueDates.get_by_runner(runner_id)
+    if runner_id in scheduled_jobs:
+        blacklist.append(scheduled_jobs[runner_id][1])
     if assimilation_cycle == 1:
         # never delete the base state in the first iteration:
         # print('blacklist before:', blacklist)
@@ -430,17 +397,31 @@ def accept_delete(msg):
             too_old.append(s)
             break
 
-        elif s.t == assimilation_cycle - 1 and s not in unscheduled_jobs:
+        elif s.t == assimilation_cycle - 1 and s not in alpha:
             not_important.append(s)
 
         elif s.t == assimilation_cycle:
             too_new.append(s)
 
-    all_lists = too_old + not_important + too_new
+
+    all_lists = too_old + not_important
+
 
     if len(all_lists) == 0:
-        # delete something randomly
-        to_delete = np.random.choice(delete_from)
+        if len(too_new) != 0:
+            # delete new state with lowest weight
+            to_delete = too_new[0]
+            lowest_weight = state_weights[to_delete]
+            for tn in too_new[1:]:
+                w = state_weights[tn]
+                if w < lowest_weight:
+                    to_delete = tn
+                    lowest_weight = w
+
+        else:
+            # delete something randomly
+            # to_delete = np.random.choice(delete_from)
+            to_delete = delete_from[0]
     else:
         to_delete = all_lists[0]  # take first possible...
 
@@ -450,53 +431,10 @@ def accept_delete(msg):
     print("Deleting", reply.delete_response.to_delete, "on runner", runner_id)
     StateCache.remove_runner(to_delete, runner_id)
 
+
     send_message(gp_socket, reply)
 
     trigger(STOP_ACCEPT_DELETE, 0)
-
-
-
-def select_new_job(runner_id):
-    """
-    Select a new job that would be nice on this runner
-    """
-    if len(unscheduled_jobs) == 0:
-        return
-
-    found = False
-
-    for s in StateCache.get_by_runner(runner_id):
-        if s in unscheduled_jobs: #and len(unscheduled_jobs[s]) > 0:
-            parent_id = s
-            found = True
-            break
-
-    if not found:
-        # parent_id = np.random.choice(list(unscheduled_jobs))  # fixme: this might be made faster! the list is O(n)
-        try:
-            parent_id = next(iter(unscheduled_jobs))  # made it faster
-        except Exception as e:
-            print('uj', unscheduled_jobs)
-            raise(e)
-
-    job_id = unscheduled_jobs[parent_id].pop()
-    if len(unscheduled_jobs[parent_id]) == 0:
-        del unscheduled_jobs[parent_id]
-
-    DueDates.add(runner_id, job_id)
-
-    return job_id, parent_id
-
-def has_scheduled(runner_id):
-    # Ensure that something is scheduled for this runner: (otherwise schedule something or return None)
-    if runner_id not in scheduled_jobs:
-        new_job = select_new_job(runner_id)
-        if new_job:
-            scheduled_jobs[runner_id] = new_job
-        else:
-            return None
-
-    return scheduled_jobs[runner_id]
 
 def accept_prefetch(msg):
     trigger(START_ACCEPT_PREFETCH, 0)
@@ -507,15 +445,25 @@ def accept_prefetch(msg):
     reply.prefetch_response.SetInParent()
 
     if assimilation_cycle > 1:  # never prefetch in iteration 1!
-        new_job = has_scheduled(runner_id)
+        if runner_id not in scheduled_jobs:
+            parent_id = select_good_new_parent(runner_id)
+            if parent_id:
+                job_id = generate_job_id()
+                scheduled_jobs[runner_id] = (job_id, parent_id)
 
-        if new_job:  # sometimes has_scheduled cannot schedule anything as no jobs are left...
-            if runner_id in StateCache.get_runners(new_job[1]):
+                alpha[parent_id] -= 1
+                if alpha[parent_id] == 0:
+                    del alpha[parent_id]
+
+                DueDates.add(runner_id, job_id, parent_id)
+
+        if runner_id in scheduled_jobs:
+            if runner_id in StateCache.get_runners(scheduled_jobs[runner_id][1]):
                 # This runner does not need to prefetch anything
                 pass
             else:
                 # This runner should prefetch this parent state
-                reply.prefetch_response.pull_states.append(new_job[1])
+                reply.prefetch_response.pull_states.append(scheduled_jobs[runner_id][1])
 
     send_message(gp_socket, reply)
     trigger(STOP_ACCEPT_PREFETCH, 0)
@@ -554,10 +502,56 @@ def handle_general_purpose():
             print("Wrong message type received!")
             assert False
 
+def runners_per_parent(parent_id):
+    # FIXME this will take way too long!
+    res = set()
+    # check with due dates:
+    for dd in DueDates.due_dates:
+        for elem in DueDates.due_dates[dd]:
+            if elem[2] == parent_id:
+                res.add(elem[0])
+
+
+    print("res", len(res))
+    return len(res)
+
+runners_last = {}
+alpha = {}
+scheduled_jobs = {}
+
+
+def select_good_new_parent(runner_id):
+    # global assimilation_cycle
+    if assimilation_cycle == 1:
+        parent_id = cm.StateId()
+        parent_id.t = 0
+        parent_id.id = runner_id
+        if parent_id not in alpha:
+            alpha[parent_id] = 0
+        alpha[parent_id] += 1
+        return parent_id
+    else:
+        R = len(runners_last)
+        P = len(alpha)
+        Q = P / R
+        # FIXME: start counting at offset!
+        for parent_id in alpha:
+            if math.ceil(alpha[parent_id] / Q) - runners_per_parent(parent_id) >= 1:
+                return parent_id
+
+next_job_id = 0
+def generate_job_id():
+    global next_job_id
+    job_id = cm.StateId()
+    job_id.t = assimilation_cycle
+    job_id.id = next_job_id
+    next_job_id += 1
+    return job_id
+
 def handle_job_requests(launcher, nsteps):
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
-
+    global stealable_jobs
 
     msg = receive_message_nonblocking(job_socket)
 
@@ -575,41 +569,37 @@ def handle_job_requests(launcher, nsteps):
         reply = cm.Message()
         reply.job_response.SetInParent()
 
-        global stealable_jobs
+        remove_from_alpha = True
 
-        found = True
-
-        # at cycle == 1 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
-        if assimilation_cycle == 1:
-            parent_id = list(unscheduled_jobs.keys())[0]
-            job_id = unscheduled_jobs[parent_id].pop()
-            if len(unscheduled_jobs[parent_id]) == 0:
-                del unscheduled_jobs[parent_id]
-
-            parent_id = cm.StateId()
-            parent_id.t = 0
-            parent_id.id = runner_id
+        if runner_id in scheduled_jobs:
+            job_id, parent_id = scheduled_jobs[runner_id]
+            del scheduled_jobs[runner_id]
+            # in this case we remove the duedate for the scheduled state:
+            DueDates.remove(runner_id, job_id)
+            remove_from_alpha = False
+        elif runners_last[runner_id] in alpha:
+            parent_id = runners_last[runner_id]
         else:
-            new_job = has_scheduled(runner_id)
-            if new_job:
-                del scheduled_jobs[runner_id]
+            parent_id = select_good_new_parent(runner_id)
 
-                job_id, parent_id = new_job
+        if parent_id:
+            # bookkeeping
+            if remove_from_alpha:
+                alpha[parent_id] -= 1
+                if alpha[parent_id] == 0:
+                    del alpha[parent_id]
+            runners_last[runner_id] = parent_id
 
+            stealable_jobs -= 1
 
-            else:
-                found = False
-                # implement steal maybe
+            job_id = generate_job_id()
 
-        if found:
-            trigger(STOP_IDLE_RUNNER, runner_id)
-            trigger(START_PROPAGATE_STATE, runner_id)
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
             print("Scheduling", (job_id, parent_id))
-            dict_append(running_jobs, runner_id, (job_id, parent_id))
-            stealable_jobs -= 1
-            DueDates.add(runner_id, job_id)
+            trigger(STOP_IDLE_RUNNER, runner_id)
+            trigger(START_PROPAGATE_STATE, runner_id)
+            DueDates.add(runner_id, job_id, parent_id)
 
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
@@ -707,59 +697,37 @@ class LauncherConnection:
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
             print("Server registering Runner ID %d" % runner_id)
+            runners_last[runner_id] = None
 
 
 
 
 def do_update_step():
-    """Does actual update step with resampling. Is required to fill the unscheduled_jobs
-    and returns false if this was the last cycle"""
-    # Something really stupid for now:
-    # Sort by weights. Then take 10 best particles for next generation
-    global assimilation_cycle, stealable_jobs, weights_this_cycle
-
+    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
-
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
+    # normalize state weights and resample
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
-
-    # normalize state weights:
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
-
+    print('state_weights', state_weights_normalized)
     out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
 
-    print(f"we got {len(set(out_particles))} different particles!")
+    assert stealable_jobs == 0
+    stealable_jobs = PARTICLES
 
     assimilation_cycle += 1
-    job_id = 0
-    for op in out_particles:
-        parent_state_id = op
-
-        jid = cm.StateId()
-        jid.t = assimilation_cycle
-        jid.id = job_id
-        dict_append(unscheduled_jobs, parent_state_id, jid)
-        job_id += 1
-
-    stealable_jobs = PARTICLES
+    next_job_id = 0
     weights_this_cycle = 0
 
+    for op in out_particles:
+        parent_id = op
+        if op not in alpha:
+            alpha[op] = 0
+        alpha[op] += 1
 
-
-    # residual resampling: Otherwise we could use random.choice with the p parameter(copied from dorits notebook)
-    # N = len(weights)
-    # indexes = np.zeros(N, 'i')
-    # num_copies = (np.floor(N*np.asarray(weights))).astype(int)
-    # k = 0
-    # for i in range(N):
-        # for _ in range(num_copies[i]):
-            # indexes[k] = i
-            # k += 1
-
-    # residual = N*weights - num_copies
-    # residual /= sum(residual)
+    print(f"we got P={len(alpha)} different particles!")
 
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
