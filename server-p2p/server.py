@@ -97,47 +97,54 @@ Example:
 state_weights = {}
 
 class DueDates:
-    """
-    Due dates
-
-    {due date (int in s): set((unner_id 1, job_id, parent_id), (runner_id2..., job_id, parent_id)}
-    """
     due_dates = OrderedDict()
     last_check = 0
+
+    rpp = {}  # runners per parent
+
+    all_per_runner = {}
 
     @staticmethod
     def add(runner_id, job_id, parent_id):
         due_time = int(time.time()) + RUNNER_TIMEOUT
+
+        # storing the same info 3 times for quicker access
         dict_append(DueDates.due_dates, due_time, (runner_id, job_id, parent_id))
+        dict_append(DueDates.rpp, parent_id, runner_id)
+        dict_append(DueDates.all_per_runner, runner_id, (due_time, job_id, parent_id))
+
         print("adding due date at", due_time, runner_id, job_id, parent_id)
 
     @staticmethod
     def remove(runner_id, job_id):
         """Trys to find and remove associated due dates"""
         found = False
-        for dd in list(DueDates.due_dates):
-            for i, elem in enumerate(DueDates.due_dates[dd]):
-                if elem[0] == runner_id and elem[1] == job_id:
-                    found = True
-                    del DueDates.due_dates[dd][i]
-                    if len(DueDates.due_dates[dd]) == 0:
-                        del DueDates.due_dates[dd]
-                    parent_id = elem[2]
-                    break
-
+        for i, (dd, jid, parent_id) in enumerate(DueDates.all_per_runner[runner_id]):
+            if jid == job_id:
+                found = True
+                break
         print("removing due date", runner_id, job_id, parent_id)
         assert found
+        del DueDates.all_per_runner[runner_id][i]  # remove from all by runner
+
+        found = False
+        for i, elem in enumerate(DueDates.due_dates[dd]):
+            if elem[0] == runner_id and elem[1] == job_id:
+                del DueDates.due_dates[dd][i]  # remove from due_dates
+                if len(DueDates.due_dates[dd]) == 0:
+                    del DueDates.due_dates[dd]
+                found = True
+                break
+
+        assert found
+
+        dict_remove(DueDates.rpp, parent_id, runner_id) #remove from rpp
 
         return parent_id
 
     @staticmethod
     def get_by_runner(runner_id):
-        res = []
-        for dd in DueDates.due_dates:
-            for i, elem in enumerate(DueDates.due_dates[dd]):
-                if elem[0] == runner_id:
-                    res.append(elem[2])
-
+        res = [apr[1] for apr in DueDates.all_per_runner[runner_id]] + [apr[0] for apr in DueDates.all_per_runner[runner_id]]
         return res
 
     @staticmethod
@@ -173,7 +180,17 @@ class DueDates:
                         alpha[pid] = 0
                     alpha[pid] += 1
 
-                del DueDates.due_dates[dd]
+                    dict_remove(DueDates.rpp, pid, rid)  # remove from rpp
+                    dict_remove(DueDates.all_per_runner, rid, (dd, jid, pid))
+
+                del DueDates.due_dates[dd]  # remove from due dates
+
+    @staticmethod
+    def runners_per_parent(parent_id):
+        if parent_id in DueDates.rpp:
+            return len(set(DueDates.rpp[parent_id]))
+        else:
+            return 0
 
 """
 Contains all runners and which states they have prefetched
@@ -502,18 +519,7 @@ def handle_general_purpose():
             print("Wrong message type received!")
             assert False
 
-def runners_per_parent(parent_id):
-    # FIXME this will take way too long!
-    res = set()
-    # check with due dates:
-    for dd in DueDates.due_dates:
-        for elem in DueDates.due_dates[dd]:
-            if elem[2] == parent_id:
-                res.add(elem[0])
 
-
-    print("res", len(res))
-    return len(res)
 
 runners_last = {}
 alpha = {}
@@ -536,7 +542,7 @@ def select_good_new_parent(runner_id):
         Q = P / R
         # FIXME: start counting at offset!
         for parent_id in alpha:
-            if math.ceil(alpha[parent_id] / Q) - runners_per_parent(parent_id) >= 1:
+            if math.ceil(alpha[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1:
                 return parent_id
 
 next_job_id = 0
