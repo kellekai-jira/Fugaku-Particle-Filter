@@ -69,6 +69,9 @@ void melissa_p2p_init(const char *field_name,
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+
+    field.current_state_id = runner_id;  // Start like this!
+
     if (local_index_map_ != nullptr) {
     // store local_index_map to reuse in weight calculation
         local_index_map.resize(local_vect_size);
@@ -263,18 +266,9 @@ int melissa_p2p_expose(VEC_T *values,
     if (nsteps > 0) {
         trigger(START_LOAD, parent_state.t);
         // called by every app core
-        if (parent_state.t < 1) {
-            if (field.current_step == 0) {
-                printf("Not performing a state load as good init state already in memory");
-                trigger(LOCAL_HIT, parent_state.id);
-            } else {
-                // load my very own checkpoint from t=0:
-                // in this case the runner id is the state id
-                storage.load(io_state_id_t(0, runner_id));
-            }
-        } else if ( current_state == parent_state ) {
-                printf("Not performing a state load as good state already in memory");
-                trigger(LOCAL_HIT, parent_state.id);
+        if ( current_state == parent_state ) {
+            printf("Not performing a state load as good state already in memory");
+            trigger(LOCAL_HIT, parent_state.id);
         } else {
             storage.load( parent_state );
         }

@@ -133,10 +133,13 @@ class DueDates:
     {due date (int in s): set((unner_id 1, job_id), (runner_id2..., job_id)}
     """
     due_dates = OrderedDict()
+    last_check = 0
 
     @staticmethod
     def add(runner_id, job_id):
-        dict_append(DueDates.due_dates, int(time.time() + RUNNER_TIMEOUT), (runner_id, job_id))
+        due_time = int(time.time()) + RUNNER_TIMEOUT
+        dict_append(DueDates.due_dates, due_time, (runner_id, job_id))
+        print("adding due date at", due_time, runner_id, job_id)
 
     @staticmethod
     def remove(runner_id, job_id):
@@ -149,6 +152,7 @@ class DueDates:
                 dict_remove(DueDates.due_dates, dd, to_find)
                 break
 
+        print("removing due date", runner_id, job_id)
         assert found
 
     @staticmethod
@@ -156,10 +160,16 @@ class DueDates:
         """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
         global stealable_jobs
         now = int(time.time())
+        if DueDates.last_check == now:
+            return
+
+        DueDates.last_check = now
         for dd in list(DueDates.due_dates):  # FIXME: check that ordered! but probably not necessary!
             if dd > now:
+                print('checking dd > now:', dd, '>', now)
                 break
             else:
+                print("now", now, "dd", dd, 'runners that crash:', DueDates.due_dates[dd])
                 for rid, _ in DueDates.due_dates[dd]:
                     if rid not in faulty_runners:
                         launcher.notify(rid, SimulationStatus.TIMEOUT)
@@ -169,12 +179,14 @@ class DueDates:
                     if rid in scheduled_jobs:
                         job_id, parent_id = scheduled_jobs[rid]
                         dict_append(unscheduled_jobs, parent_id, job_id)
-                        stealable_jobs += 1
+                        del scheduled_jobs[rid]
 
                     if rid in running_jobs:
                         for job_id, parent_id in running_jobs[rid]:
                             dict_append(unscheduled_jobs, parent_id, job_id)
                             stealable_jobs += 1
+
+                        running_jobs[rid] = []
                 del DueDates.due_dates[dd]
 
 """
@@ -201,7 +213,7 @@ class StateCache:
     @staticmethod
     def get_runners(state_id):
         if state_id in StateCache.c:
-            return list(StateCache.c[state_id])
+            return [x for x in StateCache.c[state_id] if x not in faulty_runners]
         else:
             return []
 
@@ -277,7 +289,7 @@ def maybe_update():
     called always after a weight arrived.
 
     """
-    global weights_this_cycle
+    global weights_this_cycle, stealable_jobs
     print(f"Can we do an update? weights_this_cycle={weights_this_cycle}/{PARTICLES}, len(unscheduled_jobs)={len(unscheduled_jobs)}, stealable_jobs={stealable_jobs})")
     if weights_this_cycle == PARTICLES and len(unscheduled_jobs) == 0 and stealable_jobs == 0:
         # will populate unscheduled jobs
@@ -316,25 +328,24 @@ def accept_weight(msg):
     weight = msg.weight.weight
 
     # remove from running_jobs
-    if runner_id not in running_jobs:
+    if runner_id not in running_jobs or len(running_jobs[runner_id]) == 0 or state_id.t == 0:
         print('Got Weight message', msg, 'but its job was never set to running so far. This may be normal for the initial cycle.')
-        assert state_id.t == 0
+        assert (runner_id in faulty_runners) or (state_id.t == 0)
     else:
-        running_job = [rj for rj in running_jobs[runner_id] if rj[0] == state_id]
+        print("Received weight", weight, "for", state_id, ".")
+        runners_job = [rj for rj in running_jobs[runner_id] if rj[0] == state_id]
+        # a job may be running in more than one runner finally,
+        # especially in the first iteration
 
-        if len(running_job) > 0:
-            # assert len(delete) == 1  is not matched if runner timed out!
-            running_jobs[runner_id].remove(running_job[0])
+        assert len(runners_job) == 1
 
-            # store result
-            weights_this_cycle += 1
-            state_weights[state_id] = weight
-            print("Received weight", weight, "for", state_id, ".")
+        running_jobs[runner_id].remove(runners_job[0])
 
-            DueDates.remove(runner_id, state_id)
-        else:
-            print("Got strange weight! The runner should send one of ", running_jobs[runner_id], 'but I got', state_id)
-            assert state_id.t == 0
+        DueDates.remove(runner_id, state_id)
+
+        # store result
+        weights_this_cycle += 1
+        state_weights[state_id] = weight
 
     gp_socket.send(b'')  # send an empty ack.
 
@@ -376,8 +387,11 @@ def accept_runner_request(msg):
 
         # filter for runners that have the state in question:
         for rid in shuffeled_runners:
-            assert rid != runner_id
-            if head_rank in runners[rid]:
+            if rid == runner_id:
+                print("Warning: Why is this runner asking me if it holds this state already??")
+                continue
+            # can be that we do know its in this runners state but we dont know its adress!
+            if rid in runners and head_rank in runners[rid]:
                 s = reply.runner_response.sockets.add()
                 s.CopyFrom(runners[rid][head_rank])
 
@@ -469,25 +483,18 @@ def select_new_job(runner_id):
     if len(unscheduled_jobs[parent_id]) == 0:
         del unscheduled_jobs[parent_id]
 
+    DueDates.add(runner_id, job_id)
 
     return job_id, parent_id
 
-def has_scheduled(runner_id, refresh_due_date=True):
+def has_scheduled(runner_id):
     # Ensure that something is scheduled for this runner: (otherwise schedule something or return None)
-    if runner_id in scheduled_jobs:
-        if refresh_due_date:
-            # find old due date of this job and set it to now. this path is reached when handle_jobrequest calls has_scheduled and there was something scheduled already
-            DueDates.remove(runner_id, scheduled_jobs[runner_id][0])
-    else:
+    if runner_id not in scheduled_jobs:
         new_job = select_new_job(runner_id)
         if new_job:
             scheduled_jobs[runner_id] = new_job
         else:
             return None
-
-
-    if refresh_due_date:
-        DueDates.add(runner_id, scheduled_jobs[runner_id][0])
 
     return scheduled_jobs[runner_id]
 
@@ -499,8 +506,9 @@ def accept_prefetch(msg):
     reply = cm.Message()
     reply.prefetch_response.SetInParent()
 
-    if assimilation_cycle > 1:
+    if assimilation_cycle > 1:  # never prefetch in iteration 1!
         new_job = has_scheduled(runner_id)
+
         if new_job:  # sometimes has_scheduled cannot schedule anything as no jobs are left...
             if runner_id in StateCache.get_runners(new_job[1]):
                 # This runner does not need to prefetch anything
@@ -569,6 +577,8 @@ def handle_job_requests(launcher, nsteps):
 
         global stealable_jobs
 
+        found = True
+
         # at cycle == 1 just send a random job since we don't send any prefetch and delete requests where t=0 ;)
         if assimilation_cycle == 1:
             parent_id = list(unscheduled_jobs.keys())[0]
@@ -576,28 +586,30 @@ def handle_job_requests(launcher, nsteps):
             if len(unscheduled_jobs[parent_id]) == 0:
                 del unscheduled_jobs[parent_id]
 
+            parent_id = cm.StateId()
+            parent_id.t = 0
+            parent_id.id = runner_id
+        else:
+            new_job = has_scheduled(runner_id)
+            if new_job:
+                del scheduled_jobs[runner_id]
+
+                job_id, parent_id = new_job
+
+
+            else:
+                found = False
+                # implement steal maybe
+
+        if found:
+            trigger(STOP_IDLE_RUNNER, runner_id)
+            trigger(START_PROPAGATE_STATE, runner_id)
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
             print("Scheduling", (job_id, parent_id))
             dict_append(running_jobs, runner_id, (job_id, parent_id))
             stealable_jobs -= 1
             DueDates.add(runner_id, job_id)
-        else:
-            new_job = has_scheduled(runner_id)
-            if new_job:
-                del scheduled_jobs[runner_id]
-
-                dict_append(running_jobs, runner_id, new_job)
-
-                print("Scheduling", new_job)
-                reply.job_response.job.CopyFrom(new_job[0])
-                reply.job_response.parent.CopyFrom(new_job[1])
-                stealable_jobs -= 1
-
-                trigger(STOP_IDLE_RUNNER, runner_id)
-                trigger(START_PROPAGATE_STATE, runner_id)
-            else:
-                pass # implement steal maybe
 
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
