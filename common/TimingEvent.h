@@ -63,14 +63,23 @@ enum TimingEventType
     STOP_PREFETCH                     = 39, //(sum of the following subregions)
     START_PREFETCH_REQ                = 40, //(time only for the request)
     STOP_PREFETCH_REQ                 = 41, //(time only for the request)
-    START_REQ_RUNNER                  = 42, //
+
+    START_REQ_RUNNER                  = 42, //  this region comparses all the following events in this block
     STOP_REQ_RUNNER                   = 43, // parameter = 1 if found a runner that has the state. 0 otherwise.
     START_REQ_RUNNER_LIST             = 84, // parameter = runner id
     STOP_REQ_RUNNER_LIST              = 85, // parameter = runner id
+    START_REQ_STATE_FROM_RUNNER       = 86,
+    STOP_REQ_STATE_FROM_RUNNER        = 87, // parameter = 1 if found a runner that has the state. 0 otherwise.
     START_COPY_STATE_FROM_RUNNER      = 44, // parameter = foreign runner id
     STOP_COPY_STATE_FROM_RUNNER       = 45, // parameter = foreign runner id
+
+    START_HANDLE_AVAIL_REQ            = 88,
+    STOP_HANDLE_AVAIL_REQ             = 89, // parameter = 1 if found a runner that has the state. 0 otherwise.
+    START_HANDLE_STATE_REQ            = 90,
+    STOP_HANDLE_STATE_REQ             = 91, // parameter = 1 if found a runner that has the state. 0 otherwise.
     START_COPY_STATE_TO_RUNNER        = 82, // parameter = foreign runner id
     STOP_COPY_STATE_TO_RUNNER         = 83, // parameter = foreign runner id
+
     START_COPY_STATE_FROM_PFS         = 46,
     STOP_COPY_STATE_FROM_PFS          = 47,
     START_DELETE                      = 48, //(sum of following subregions)

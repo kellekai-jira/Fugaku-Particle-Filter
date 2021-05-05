@@ -41,6 +41,7 @@ void PeerController::handle_avail_request()
     } else {
         // received something
 
+        trigger(START_HANDLE_AVAIL_REQ, 0);
         ::melissa_p2p::Message req;
         req.ParseFromArray(buf.data(), numbytes);
 
@@ -48,6 +49,7 @@ void PeerController::handle_avail_request()
         ::melissa_p2p::Message reply;
         reply.mutable_state_avail_response()->set_available(false);
 
+        int res = 0;
         if (req.has_state_avail_request()) {
 
             D("got state avail req: %s", req.state_avail_request().DebugString().c_str());
@@ -64,6 +66,7 @@ void PeerController::handle_avail_request()
                 reply.mutable_state_avail_response()->set_available(true);
 
                 reply.set_runner_id(runner_id);
+                res = 1;
             }
             size_t s = reply.ByteSize();
             reply.SerializeToArray(buf.data(), s);
@@ -71,6 +74,8 @@ void PeerController::handle_avail_request()
             m_udp_socket.send_to(boost::asio::buffer(buf, s),
                     remote_endpoint, 0, ignored_error);
         }
+
+        trigger(STOP_HANDLE_AVAIL_REQ, res);
     }
 }
 
@@ -80,6 +85,7 @@ void PeerController::handle_avail_request()
 void PeerController::handle_state_request()
 {
     if (has_msg(state_server_socket, 0)) {
+        trigger(START_HANDLE_STATE_REQ, 0);
 
         auto req = receive_message(state_server_socket);
         // respond to state request
@@ -93,6 +99,8 @@ void PeerController::handle_state_request()
         if (!m_io->is_local(io_state_id)) {
             D("but this state is not available locally");
             send_message(state_server_socket, reply);
+
+            trigger(STOP_HANDLE_STATE_REQ, 0);
             return;
         }
 
@@ -136,6 +144,7 @@ void PeerController::handle_state_request()
         }
         D("sent full state message");
         trigger(STOP_COPY_STATE_TO_RUNNER, req.runner_id());
+        trigger(STOP_HANDLE_STATE_REQ, 1);
     }
 }
 
@@ -281,6 +290,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     void * state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
     zmq_setsockopt(state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
     IO_TRY( zmq_connect(state_request_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
+    trigger(START_REQ_STATE_FROM_RUNNER, 0);
     send_message(state_request_socket, state_request);
 
     srand(time(NULL) + runner_id);
@@ -289,13 +299,14 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     D("%s has %d ms to send me state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
     while (found == false && now_ms() < stop_poll_ms) {
     //while (found == false) {
-        handle_requests();  // don't block out other guys that ask for attention ;)
+        //handle_requests();  // don't block out other guys that ask for attention ;)  -- this somehow destroys our measurements at the same time!
+        handle_avail_request();
         if (has_msg(state_request_socket, 0)) {
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {
+                trigger(STOP_REQ_STATE_FROM_RUNNER, 1);
                 trigger(START_COPY_STATE_FROM_RUNNER, peer_runner_id );
-                trigger(PEER_HIT, peer_runner_id);
                 D("Got a positive state message response, start receiving state from peer...");
 
                 found = true;
@@ -331,6 +342,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
                     m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
 
+                trigger(PEER_HIT, peer_runner_id);
                 trigger(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
             }
             else
@@ -341,6 +353,10 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
         }
     }
     zmq_close(state_request_socket);  // abandon the request of the state.
+
+    if (!found) {
+        trigger(STOP_REQ_STATE_FROM_RUNNER, found ? 1 : 0);
+    }
 
     return found;
 }
@@ -364,15 +380,17 @@ bool PeerController::mirror( io_state_id_t state_id )
 
     boost::array<char, 1024> recv_buf;
 
-    while (!found && (now_ms() - start < 3000l)) {
+    while (!found && (now_ms() - start < 150l)) {  // instead of 3000l  // time to try to findn a peer
     //while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
-        handle_requests();  // don't block out other guys that ask for attention ;)
+        //handle_requests();  // don't block out other guys that ask for attention ;)
+        handle_avail_request();
         if (now_ms() > next_flush_ms) {
             // repeat this every 5 seconds:
             next_flush_ms = now_ms() + 5000l;
             if (!flush_out_state_avail_reqs(socket, state_id)) {
                 trigger(STOP_REQ_RUNNER, 0);
             }
+            // FIXME: only wait really short for avail reqs to arrive
         }
 
         // now wait for some avail responses arriving via udp....
@@ -398,6 +416,7 @@ bool PeerController::mirror( io_state_id_t state_id )
             continue;
         }
 
+        // Received something. exploit:
         std::string addr = std::string("tcp://") + m_a.state_avail_response().socket().node_name() + ':' +
             std::to_string(m_a.state_avail_response().socket().port());
         std::string port_name = fix_port_name(addr.c_str());
