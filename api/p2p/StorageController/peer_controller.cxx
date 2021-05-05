@@ -303,8 +303,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     D("%s has %d ms to send me state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
     while (found == false && now_ms() < stop_poll_ms) {
     //while (found == false) {
-        //handle_requests();  // don't block out other guys that ask for attention ;)  -- this somehow destroys our measurements at the same time!
-        handle_avail_request();
+        handle_requests();  // don't block out other guys that ask for attention ;)  -- this somehow destroys our measurements at the same time!
         if (has_msg(state_request_socket, 0)) {
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
@@ -386,8 +385,7 @@ bool PeerController::mirror( io_state_id_t state_id )
 
     while (!found && (now_ms() - start < 150l)) {  // instead of 3000l  // time to try to findn a peer
     //while (!found) {  // for debugging reasons we do not allow to load stuff from the pfs once it is on a runner...
-        //handle_requests();  // don't block out other guys that ask for attention ;)
-        handle_avail_request();
+        handle_requests();  // don't block out other guys that ask for attention ;)
         if (now_ms() > next_flush_ms) {
             // repeat this every 5 seconds:
             next_flush_ms = now_ms() + 5000l;

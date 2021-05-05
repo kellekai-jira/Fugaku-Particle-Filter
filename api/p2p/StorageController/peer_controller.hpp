@@ -53,7 +53,6 @@ private:
 
     boost::asio::io_service m_io_service;
     boost::asio::ip::udp::socket m_udp_socket;
-
 };
 
 #endif // _PEER_CONTROLLER_H_
