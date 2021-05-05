@@ -141,6 +141,27 @@ std::unique_ptr<Field> field(nullptr);
 std::unique_ptr<ServerTiming> timing(nullptr);
 #endif
 
+void report_timing() {
+#ifdef REPORT_TIMING
+    if (comm_rank == 0)
+    {
+        timing->report(
+            field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,
+            field->globalVectSize(), field->globalVectSizeHidden());
+    }
+#ifdef REPORT_TIMING_ALL_RANKS
+    const std::array<EventTypeTranslation, 4> event_type_translations = {
+        {{START_ITERATION, STOP_ITERATION, "Iteration"},
+            {START_FILTER_UPDATE, STOP_FILTER_UPDATE, "Filter Update"},
+            {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+            {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE,
+             "State propagation"}}};
+    timing->write_region_csv(
+        event_type_translations, "melissa_server", comm_rank);
+#endif
+#endif
+}
+
 
 struct RunnerRankConnection
 {
@@ -1743,6 +1764,14 @@ int main(int argc, char* argv[]) {
                     cycles = 0;
                 }
 #endif
+
+#ifdef REPORT_TIMING
+                if (timing->is_time_to_write()) {
+                    report_timing();
+                }
+#endif
+
+
             }
 
             if (comm_rank != 0)
@@ -1804,11 +1833,6 @@ int main(int argc, char* argv[]) {
         L("Executed %d assimilation cycles with %d ensemble members each, with "
           "a runner timeout of %lli seconds",
           assimilation_cycles, ENSEMBLE_SIZE, MAX_RUNNER_TIMEOUT);
-#ifdef REPORT_TIMING
-        timing->report(
-            field->local_vect_sizes_runner.size(), comm_size, ENSEMBLE_SIZE,
-            field->globalVectSize(), field->globalVectSizeHidden());
-#endif
     }
 
 
@@ -1822,18 +1846,8 @@ int main(int argc, char* argv[]) {
         launcher.reset();
     }
 
-#ifdef REPORT_TIMING
-#ifdef REPORT_TIMING_ALL_RANKS
-    const std::array<EventTypeTranslation, 4> event_type_translations = {
-        {{START_ITERATION, STOP_ITERATION, "Iteration"},
-            {START_FILTER_UPDATE, STOP_FILTER_UPDATE, "Filter Update"},
-            {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
-            {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE,
-             "State propagation"}}};
-    timing->write_region_csv(
-        event_type_translations, "melissa_server", comm_rank);
-#endif
-#endif
+
+    report_timing();
 
     zmq_close(data_response_socket);
     if (comm_rank == 0)
