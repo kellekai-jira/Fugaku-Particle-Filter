@@ -60,7 +60,9 @@ void FtiController::init_core() {
   m_dict_bool.insert( std::pair<std::string,bool>( "master_global", m_kernel.topo->masterGlobal ) );
   auto strip_id = [](std::string path, std::string id) {
     auto start_position_to_erase = path.find(std::string("/"+id));
-    path.erase(start_position_to_erase, path.size());
+    if (start_position_to_erase != std::string::npos) {
+        path.erase(start_position_to_erase, path.size());
+    }
     return path;
   };
   m_dict_string.insert( std::pair<std::string,std::string>( "global_dir", strip_id(m_kernel.conf->glbalDir,m_kernel.exec->id) ) );
