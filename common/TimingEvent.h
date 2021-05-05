@@ -90,7 +90,7 @@ enum TimingEventType
     PFS_PULL                          = 58,    // state pulled from pfs as it could not be mirrored from another peer
     LOCAL_HIT                         = 59,    //(state requested by next job found local, does not concern prefetched stuff) parameter = id
     LOCAL_MISS                        = 60,    //(state requested by next not found local, does not concern prefetched stuff) parameter = id
-    LOCAL_DELETE                      = 61, //(local states deleted)
+    LOCAL_DELETE                      = 61,    //(local states deleted)
     PFS_DELETE                        = 62    //(global states deleted)
 
     //Server :  --> python!
@@ -260,7 +260,7 @@ public:
     void write_region_csv(const std::array<EventTypeTranslation, SIZE> &event_type_translations, const char * base_filename, int rank, bool close_different_parameter=false) {
         std::ofstream outfile ( "trace." + std::string(base_filename) + "." + std::to_string(rank) + ".csv");
 
-        outfile << "rank,start_time,end_time,region,parameter" << std::endl;
+        outfile << "rank,start_time,end_time,region,parameter_open,parameter_close" << std::endl;
 
         std::list<TimingEvent> open_events;
 
@@ -289,6 +289,7 @@ public:
                                 << ',' << std::setprecision( 11 ) << to_millis(evt.time)
                                 << ',' << ett.name
                                 << ',' << oevt->parameter
+                                << ',' << evt.parameter
                                 << std::endl;
 
                             // remove from stack:
