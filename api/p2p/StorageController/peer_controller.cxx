@@ -172,6 +172,10 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
     const int linger = 0;
     zmq_setsockopt (state_server_socket, ZMQ_LINGER, &linger, sizeof(int));
 
+    const int send_timeout = 1000;  // wait at  longest 1000 ms for sending!
+    zmq_setsockopt (state_server_socket, ZMQ_SNDTIMEO, &send_timeout, sizeof(int));
+
+
     ZMQ_CHECK(zmq_bind(state_server_socket, "tcp://*:*"));
     size_t size = sizeof(port_name);
     zmq_getsockopt( state_server_socket, ZMQ_LAST_ENDPOINT, &port_name, &size );
