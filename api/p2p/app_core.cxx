@@ -341,8 +341,8 @@ void ApiTiming::maybe_report() {
                 {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"},
                 {START_REQ_RUNNER_LIST, STOP_REQ_RUNNER_LIST, "_REQ_RUNNER_LIST"},
                 {START_REQ_STATE_FROM_RUNNER, STOP_REQ_STATE_FROM_RUNNER, "_REQ_STATE_FROM_RUNNER"},
-                {START_HANDLE_AVAIL_REQ, START_HANDLE_AVAIL_REQ, "_HANDLE_AVAIL_REQ"},
-                {START_HANDLE_STATE_REQ, START_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"}
+                {START_HANDLE_AVAIL_REQ, STOP_HANDLE_AVAIL_REQ, "_HANDLE_AVAIL_REQ"},
+                {START_HANDLE_STATE_REQ, STOP_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"}
         }};
 
         bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event
