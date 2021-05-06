@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -N 50
+#SBATCH -N 250
 #SBATCH -A igf@cpu
-#SBATCH --time=0:20:0
+#SBATCH --time=0:25:0
 
 source $HOME/setenv_melissa-p2p.sh
 
