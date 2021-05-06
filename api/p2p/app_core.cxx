@@ -9,6 +9,7 @@
 
 #include "StorageController/helpers.h"
 
+#include <unistd.h>
 
 #include <cstdlib>
 #include <memory>
@@ -289,6 +290,16 @@ int melissa_p2p_expose(VEC_T *values,
         field.current_state_id = -1;
     }
 
+    // Do some fancy logging:
+
+    if (comm_rank == 0) {
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long av_pages = sysconf(_SC_AVPHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        long long total = pages * page_size;
+        long long avail = av_pages * page_size;
+        printf("Total mem available: %llu / %llu MiB\n", avail/1024/1024, total/1024/1024);
+    }
 
     return nsteps;
 }
