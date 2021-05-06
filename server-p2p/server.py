@@ -291,7 +291,7 @@ def maybe_update():
             time.sleep(1)  # normally not necessary due to linger?!
             print('Gracefully ending server now.')
             exit(0)
-        trigger(START_ITERATION, assimilation_cycle)
+        trigger(START_ITERATION, len(alpha))
         # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
         # not necessary since we only answer job requests if job is there... answer_open_job_requests()

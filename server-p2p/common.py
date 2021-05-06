@@ -85,7 +85,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
 
         print('write region csv for server')
         with open('trace.melissa_p2p_server.csv', 'w+') as f:
-            f.write("start_time,end_time,region,parameter\n")
+            f.write("start_time,end_time,region,parameter_open,parameter_close\n")
 
             open_events = []
 
@@ -101,9 +101,9 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
                     elif evt[1] == ett[1]:
                         for i, oevt in enumerate(reversed(open_events)):
                             # REM: -1 as parameter closes last... otherwise same parameter (important for idle and propagate runner events!)
-                            if oevt[1] == ett[0] and (oevt[2] == evt[2] or evt[2] == -1):
+                            if oevt[1] == ett[0] and (oevt[2] == evt[2] or evt[2] == -1 or ett[0] == START_ITERATION):
                                 #D("Popping event and writing region");
-                                f.write(','.join(list(map(str, [oevt[0] * 1000, evt[0] * 1000, ett[2], oevt[2]]))) + '\n')
+                                f.write(','.join(list(map(str, [oevt[0] * 1000, evt[0] * 1000, ett[2], oevt[2], evt[2]]))) + '\n')
 
                                 # remove from stack:
                                 del open_events[-i-1]
