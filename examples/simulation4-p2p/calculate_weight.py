@@ -4,6 +4,8 @@ import mpi4py
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
 
+import random
+
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
         comm = MPI.COMM_WORLD.f2py(fcomm)
@@ -21,6 +23,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         # TODO: get the correct comm here!
 
         return 0.42
+        return random.random()
     except Exception as e:
         print('Python Error!')
         print(e)
