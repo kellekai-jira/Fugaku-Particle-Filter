@@ -17,7 +17,7 @@
 
 #define IO_PROBE( tag, func ) do { if( storage.m_io->probe( tag ) ) {func; return;} } while(0)
 
-#define STORAGE_MAX_PREFETCH 10 // 5 states
+#define STORAGE_MAX_PREFETCH 4 // 5 states
 
 using namespace melissa_p2p;
 

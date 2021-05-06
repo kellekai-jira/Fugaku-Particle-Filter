@@ -295,6 +295,9 @@ int melissa_p2p_expose(VEC_T *values,
 
 void ApiTiming::maybe_report() {
     /// should be called once in a while to check if it is time to write the timing info now!
+    if (runner_id != 0) {
+        return;
+    }
     if (is_time_to_write()) {
 #ifdef REPORT_TIMING
         if(comm_rank == 0 && !FTI_AmIaHead())
