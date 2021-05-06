@@ -184,9 +184,10 @@ void StorageController::callback() {
   if (time(NULL) > next_try_delete) {
       next_try_delete = time(NULL) + 10;
 
-      while (del_q.front().t < last_assimilation_cycle-1) {
+      while (del_q.size() > 0 && del_q.front().t < last_assimilation_cycle-1) {
           auto to_remove = del_q.front();
           FTI_Remove(to_ckpt_id(to_remove), 4);
+          storage.m_remove_symlink(to_ckpt_id(to_remove));
           D("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
           del_q.pop();
       }
@@ -573,5 +574,28 @@ void StorageController::m_create_symlink( io_state_id_t state_id ) {
   target_meta << m_io->m_dict_string["meta_dir"] << "/" << m_io->m_dict_string["exec_id"] << "/l4/" << to_ckpt_id(state_id);
   link_meta << m_io->m_dict_string["meta_dir"] <<  "/" << to_ckpt_id(state_id);
   symlink( target_meta.str().c_str(), link_meta.str().c_str() );
+
+}
+
+
+void StorageController::m_remove_symlink( const io_id_t io_id ) {
+
+  std::stringstream link_global;
+  std::stringstream link_meta;
+
+  link_global << m_io->m_dict_string["global_dir"] << "/" << io_id;
+
+  if (remove(link_global.str().c_str()) == -1) {
+      if (errno != ENOENT) {
+          E("Error removing target directory.");
+      }
+  }
+
+  link_meta << m_io->m_dict_string["meta_dir"] <<  "/" << io_id;
+  if (remove(link_meta.str().c_str()) == -1) {
+      if (errno != ENOENT) {
+          E("Error removing target directory.");
+      }
+  }
 
 }

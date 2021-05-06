@@ -43,6 +43,7 @@ class StorageController {
 
     // TODO put in private
     void m_create_symlink( io_state_id_t state_id );
+    void m_remove_symlink( const io_id_t io_id );
 
   private:
 
