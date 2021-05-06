@@ -463,7 +463,12 @@ def accept_prefetch(msg):
 
     if assimilation_cycle > 1:  # never prefetch in iteration 1!
         if runner_id not in scheduled_jobs:
-            parent_id = select_good_new_parent(runner_id)
+
+            if runners_last[runner_id] in alpha:
+                parent_id = runners_last[runner_id]
+            else:
+                parent_id = select_good_new_parent(runner_id)
+
             if parent_id:
                 job_id = generate_job_id()
                 scheduled_jobs[runner_id] = (job_id, parent_id)
@@ -525,8 +530,11 @@ runners_last = {}
 alpha = {}
 scheduled_jobs = {}
 
-
+# for stats:
+state_loads = 0
+last_P = PARTICLES
 def select_good_new_parent(runner_id):
+    global state_loads
     # global assimilation_cycle
     if assimilation_cycle == 1:
         parent_id = cm.StateId()
@@ -535,15 +543,28 @@ def select_good_new_parent(runner_id):
         if parent_id not in alpha:
             alpha[parent_id] = 0
         alpha[parent_id] += 1
+        state_loads += 1
         return parent_id
     else:
-        R = len(runners_last)
         P = len(alpha)
+        if P == 0:
+            return
+        R = len(runners_last)
         Q = P / R
         # FIXME: start counting at offset!
         for parent_id in alpha:
             if math.ceil(alpha[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1:
+                state_loads += 1
                 return parent_id
+        assert False  # should never arrive here!
+
+        # todo: cache the 2 of them in numpy arrays to be faster!:
+        # parent_ids = list(alpha)
+        # importances = [alpha[pid]/(DueDates.runners_per_parent(pid) + 1/PARTICLES) for pid in parent_ids]
+        # if len(importances) > 0:
+            # index = np.argmax(importances)
+            # state_loads += 1
+            # return parent_ids[index]
 
 next_job_id = 0
 def generate_job_id():
@@ -709,8 +730,10 @@ class LauncherConnection:
 
 
 def do_update_step():
-    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs
+    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
+    print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, max={last_P+len(runners_last)-1}")
+    state_loads = 0
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
@@ -732,7 +755,9 @@ def do_update_step():
             alpha[op] = 0
         alpha[op] += 1
 
-    print(f"we got P={len(alpha)} different particles!")
+    last_P = len(alpha)
+
+    print(f"we got P={last_P} different particles!")
 
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
