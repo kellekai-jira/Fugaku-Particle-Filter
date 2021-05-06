@@ -113,5 +113,7 @@ conda activate /gpfsscratch/rech/moy/rkop006/conda_envs
 
 
 source /gpfsscratch/rech/moy/rkop006/melissa-p2p/build/install/bin/melissa_da_set_env.sh
+#fix Protobuf:
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfsscratch/rech/moy/rkop006/conda_envs/lib
 ulimit -s unlimited
 ulimit -c 4000000
