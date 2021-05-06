@@ -10,9 +10,16 @@
 #include <cstdio>
 #include <cmath>
 #include <string>
+#include <queue>
+#include <fti.h>  // TODO: remove this from here!
 
 #include "api_common.h"
 // TODO error checking!
+
+//dirty:
+time_t next_try_delete = 0;
+std::queue<io_state_id_t> del_q;
+int last_assimilation_cycle = 1;
 
 //======================================================================
 //  STORAGE CONTROLLER INITIALIZATION
@@ -20,6 +27,8 @@
 
 // init MPI
 // init IO
+
+
 
 void StorageController::io_init( MpiController* mpi, IoController* io ) {
 
@@ -170,6 +179,18 @@ void StorageController::callback() {
 
   // app core may tell the head to finish application. This will end in a call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
+
+
+  if (time(NULL) > next_try_delete) {
+      next_try_delete = time(NULL) + 10;
+
+      while (del_q.front().t < last_assimilation_cycle-1) {
+          auto to_remove = del_q.front();
+          FTI_Remove(to_ckpt_id(to_remove), 4);
+          D("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+          del_q.pop();
+      }
+  }
 
 }
 
@@ -530,6 +551,14 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   send_message(server.m_socket, m);
   D("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
+
+  int t = m.weight().state_id().t();
+  if (t > last_assimilation_cycle) {  // what assimilation cycle are we working on? important for auto removing later
+      last_assimilation_cycle = t;
+  }
+
+  // its good, we can give it free for delete...
+  del_q.push(io_state_id_t(t, m.weight().state_id().id()));
 }
 
 void StorageController::m_create_symlink( io_state_id_t state_id ) {
