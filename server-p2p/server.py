@@ -276,7 +276,7 @@ def maybe_update():
 
     """
     global weights_this_cycle, stealable_jobs
-    print(f"Can we do an update? len(unscheduled_jobs)={len(alpha)}, stealable_jobs={stealable_jobs})")
+    print(f"Can we do an update? Weights_this_cycle={weights_this_cycle}, len(unscheduled_jobs)={len(alpha)}, stealable_jobs={stealable_jobs})")
     if weights_this_cycle == PARTICLES and len(alpha) == 0 and stealable_jobs == 0:
         # will populate unscheduled jobs
         trigger(START_FILTER_UPDATE, assimilation_cycle)
