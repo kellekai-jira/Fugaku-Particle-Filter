@@ -307,7 +307,7 @@ def accept_weight(msg):
     state_id = msg.weight.state_id
 
     runner_id = msg.runner_id
-    trigger(STOP_PROPAGATE_STATE, runner_id)
+    trigger(STOP_PROPAGATE_STATE, state_id.id)
     trigger(START_IDLE_RUNNER, runner_id)
 
     weight = msg.weight.weight
@@ -625,7 +625,7 @@ def handle_job_requests(launcher, nsteps):
             reply.job_response.parent.CopyFrom(parent_id)
             print("Scheduling", (job_id, parent_id))
             trigger(STOP_IDLE_RUNNER, runner_id)
-            trigger(START_PROPAGATE_STATE, runner_id)
+            trigger(START_PROPAGATE_STATE, job_id.id)
             DueDates.add(runner_id, job_id, parent_id)
 
         reply.job_response.nsteps = nsteps
@@ -741,6 +741,8 @@ def do_update_step():
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
     out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
+    # if assimilation_cycle < 4:  # don't do anything interesting in the first 4 hours
+        # out_particles = this_cycle  # keep all particles...
 
     assert stealable_jobs == 0
     stealable_jobs = PARTICLES
