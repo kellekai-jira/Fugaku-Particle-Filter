@@ -454,6 +454,7 @@ int melissa_expose(
     }
 
     // TODO: this will block other fields!
+    D("nsteps %d", nsteps);
 
     return nsteps;
 }

@@ -157,6 +157,7 @@ void PeerController::handle_requests()
 #ifdef DISABLE_P2P
     return;
 #endif
+    //assert(false);
     handle_avail_request();
     handle_state_request();
 }
