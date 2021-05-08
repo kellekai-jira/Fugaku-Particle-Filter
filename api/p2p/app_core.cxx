@@ -310,61 +310,63 @@ int melissa_p2p_expose(VEC_T *values,
 
 void ApiTiming::maybe_report() {
     /// should be called once in a while to check if it is time to write the timing info now!
-    if (runner_id != 0) {
-        return;
-    }
+    //if (runner_id != 0) {
+        //return;
+    //}
     if (is_time_to_write()) {
-#ifdef REPORT_TIMING
-        if(comm_rank == 0 && !FTI_AmIaHead())
+#ifdef REPORT_TIMING  // TODO: clean up defines with all ranks too!
+        if(comm_rank == 0 )
         {
+            if (!FTI_AmIaHead()) {
             report(
                     getCommSize(), field.local_vect_size + field.local_hidden_vect_size,
                     runner_id, false);
-        }
+            }
 
-#ifdef REPORT_TIMING_ALL_RANKS
-        char fname[256];
-        if (FTI_AmIaHead()) {
-            sprintf(fname, "runner-%03d-head", runner_id);
-        } else {
-            sprintf(fname, "runner-%03d-app", runner_id);
-        }
-        print_events(fname, comm_rank);
+            char fname[256];
+            if (FTI_AmIaHead()) {
+                sprintf(fname, "runner-%03d-head", runner_id);
+            } else {
+                sprintf(fname, "runner-%03d-app", runner_id);
+            }
+            print_events(fname, comm_rank);
 
-        const std::array<EventTypeTranslation, 28> event_type_translations = {{
+            const std::array<EventTypeTranslation, 28> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
-                {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
-                {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
+                    {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
+                    {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
 
-                {START_INIT, STOP_INIT, "_INIT"},
-                {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
-                {START_LOAD, STOP_LOAD, "_LOAD"},
-                {START_CHECK_LOCAL, STOP_CHECK_LOCAL, "_CHECK_LOCAL"},
-                {START_WAIT_HEAD, STOP_WAIT_HEAD, "_WAIT_HEAD"},
-                {START_CALC_WEIGHT, STOP_CALC_WEIGHT, "_CALC_WEIGHT"},
-                {START_LOAD_OBS, STOP_LOAD_OBS, "_LOAD_OBS"},
-                {START_PUSH_WEIGHT_TO_HEAD, STOP_PUSH_WEIGHT_TO_HEAD, "_PUSH_WEIGHT_TO_HEAD"},
-                {START_STORE, STOP_STORE, "_STORE"},
-                {START_IDLE_FTI_HEAD, STOP_IDLE_FTI_HEAD, "_IDLE_FTI_HEAD"},
-                {START_PUSH_STATE_TO_PFS, STOP_PUSH_STATE_TO_PFS, "_PUSH_STATE_TO_PFS"},
-                {START_PREFETCH, STOP_PREFETCH, "_PREFETCH"},
-                {START_PREFETCH_REQ, STOP_PREFETCH_REQ, "_PREFETCH_REQ"},
-                {START_REQ_RUNNER, STOP_REQ_RUNNER, "_REQ_RUNNER"},
-                {START_COPY_STATE_FROM_RUNNER, STOP_COPY_STATE_FROM_RUNNER, "_COPY_STATE_FROM_RUNNER"},
-                {START_COPY_STATE_TO_RUNNER, STOP_COPY_STATE_TO_RUNNER, "_COPY_STATE_TO_RUNNER"},
-                {START_COPY_STATE_FROM_PFS, STOP_COPY_STATE_FROM_PFS, "_COPY_STATE_FROM_PFS"},
-                {START_DELETE, STOP_DELETE, "_DELETE"},
-                {START_DELETE_REQ, STOP_DELETE_REQ, "_DELETE_REQ"},
-                {START_DELETE_LOCAL, STOP_DELETE_LOCAL, "_DELETE_LOCAL"},
-                {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"},
-                {START_REQ_RUNNER_LIST, STOP_REQ_RUNNER_LIST, "_REQ_RUNNER_LIST"},
-                {START_REQ_STATE_FROM_RUNNER, STOP_REQ_STATE_FROM_RUNNER, "_REQ_STATE_FROM_RUNNER"},
-                {START_HANDLE_AVAIL_REQ, STOP_HANDLE_AVAIL_REQ, "_HANDLE_AVAIL_REQ"},
-                {START_HANDLE_STATE_REQ, STOP_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"}
-        }};
+                    {START_INIT, STOP_INIT, "_INIT"},
+                    {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
+                    {START_LOAD, STOP_LOAD, "_LOAD"},
+                    {START_CHECK_LOCAL, STOP_CHECK_LOCAL, "_CHECK_LOCAL"},
+                    {START_WAIT_HEAD, STOP_WAIT_HEAD, "_WAIT_HEAD"},
+                    {START_CALC_WEIGHT, STOP_CALC_WEIGHT, "_CALC_WEIGHT"},
+                    {START_LOAD_OBS, STOP_LOAD_OBS, "_LOAD_OBS"},
+                    {START_PUSH_WEIGHT_TO_HEAD, STOP_PUSH_WEIGHT_TO_HEAD, "_PUSH_WEIGHT_TO_HEAD"},
+                    {START_STORE, STOP_STORE, "_STORE"},
+                    {START_IDLE_FTI_HEAD, STOP_IDLE_FTI_HEAD, "_IDLE_FTI_HEAD"},
+                    {START_PUSH_STATE_TO_PFS, STOP_PUSH_STATE_TO_PFS, "_PUSH_STATE_TO_PFS"},
+                    {START_PREFETCH, STOP_PREFETCH, "_PREFETCH"},
+                    {START_PREFETCH_REQ, STOP_PREFETCH_REQ, "_PREFETCH_REQ"},
+                    {START_REQ_RUNNER, STOP_REQ_RUNNER, "_REQ_RUNNER"},
+                    {START_COPY_STATE_FROM_RUNNER, STOP_COPY_STATE_FROM_RUNNER, "_COPY_STATE_FROM_RUNNER"},
+                    {START_COPY_STATE_TO_RUNNER, STOP_COPY_STATE_TO_RUNNER, "_COPY_STATE_TO_RUNNER"},
+                    {START_COPY_STATE_FROM_PFS, STOP_COPY_STATE_FROM_PFS, "_COPY_STATE_FROM_PFS"},
+                    {START_DELETE, STOP_DELETE, "_DELETE"},
+                    {START_DELETE_REQ, STOP_DELETE_REQ, "_DELETE_REQ"},
+                    {START_DELETE_LOCAL, STOP_DELETE_LOCAL, "_DELETE_LOCAL"},
+                    {START_DELETE_PFS, STOP_DELETE_PFS, "_DELETE_PFS"},
+                    {START_REQ_RUNNER_LIST, STOP_REQ_RUNNER_LIST, "_REQ_RUNNER_LIST"},
+                    {START_REQ_STATE_FROM_RUNNER, STOP_REQ_STATE_FROM_RUNNER, "_REQ_STATE_FROM_RUNNER"},
+                    {START_HANDLE_AVAIL_REQ, STOP_HANDLE_AVAIL_REQ, "_HANDLE_AVAIL_REQ"},
+                    {START_HANDLE_STATE_REQ, STOP_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"}
+            }};
 
-        bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event
-        write_region_csv(event_type_translations, fname, comm_rank, close_different_parameter);
+            bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event
+            write_region_csv(event_type_translations, fname, comm_rank, close_different_parameter);
+        }
+#ifdef REPORT_TIMING_ALL_RANKS
 #endif
 #endif
 
