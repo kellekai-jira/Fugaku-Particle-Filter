@@ -240,10 +240,15 @@ int melissa_p2p_expose(VEC_T *values,
         trigger(START_JOB_REQUEST, 0);
         // 4. ask server for more work
         ::melissa_p2p::JobResponse job_response;
+        bool entered_loop = false;
         do {
             job_response = request_work_from_server();
             if (!job_response.has_parent()) {
-                D("Server does not has any good jobs for me. Retry in 500 ms");
+                if (!entered_loop)
+                {
+                    entered_loop = true;
+                    D("Server does not have any good jobs for me. Retrying in 500 ms intervals");
+                }
                 usleep(500000); // retry after 500ms
             }
         } while (!job_response.has_parent());
