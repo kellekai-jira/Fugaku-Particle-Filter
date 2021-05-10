@@ -336,7 +336,7 @@ void ApiTiming::maybe_report() {
             }
             print_events(fname, comm_rank);
 
-            const std::array<EventTypeTranslation, 28> event_type_translations = {{
+            const std::array<EventTypeTranslation, 29> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                     {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                     {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
@@ -365,7 +365,8 @@ void ApiTiming::maybe_report() {
                     {START_REQ_RUNNER_LIST, STOP_REQ_RUNNER_LIST, "_REQ_RUNNER_LIST"},
                     {START_REQ_STATE_FROM_RUNNER, STOP_REQ_STATE_FROM_RUNNER, "_REQ_STATE_FROM_RUNNER"},
                     {START_HANDLE_AVAIL_REQ, STOP_HANDLE_AVAIL_REQ, "_HANDLE_AVAIL_REQ"},
-                    {START_HANDLE_STATE_REQ, STOP_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"}
+                    {START_HANDLE_STATE_REQ, STOP_HANDLE_STATE_REQ, "_HANDLE_STATE_REQ"},
+                    {START_PUSH_WEIGHT_TO_SERVER, STOP_PUSH_WEIGHT_TO_SERVER, "_PUSH_WEIGHT_TO_SERVER"}
             }};
 
             bool close_different_parameter = is_p2p(); // In p2p api we allow to close regions even with different parameters in start and stop event

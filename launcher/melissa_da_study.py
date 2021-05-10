@@ -193,7 +193,7 @@ def run_melissa_da_study(
             self.last_msg_to = time.time()
             self.last_msg_from = time.time()
             Server.starts += 1
-            assert Server.starts < 2 or server_may_restart  # can't restart server without fti!
+            assert Server.starts < 2 or server_may_restart  # can't restart server without fti! TODO: cleanly kill everything in this case!
 
             if Server.starts > MAX_SERVER_STARTS:
                 print('Tail of server logs for diagnostics:')

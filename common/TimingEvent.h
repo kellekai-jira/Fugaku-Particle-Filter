@@ -63,6 +63,8 @@ enum TimingEventType
     STOP_PREFETCH                     = 39, //(sum of the following subregions)
     START_PREFETCH_REQ                = 40, //(time only for the request)
     STOP_PREFETCH_REQ                 = 41, //(time only for the request)
+    START_PUSH_WEIGHT_TO_SERVER         = 92, // parameter = job.t
+    STOP_PUSH_WEIGHT_TO_SERVER          = 93, // parameter = job.id
 
     START_REQ_RUNNER                  = 42, //  this region comparses all the following events in this block
     STOP_REQ_RUNNER                   = 43, // parameter = 1 if found a runner that has the state. 0 otherwise.

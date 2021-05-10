@@ -14,7 +14,7 @@ from collections import OrderedDict
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
-LAUNCHER_TIMEOUT = 60  # seconds
+LAUNCHER_TIMEOUT = 6000  # seconds
 
 CYCLES = int(sys.argv[1])
 PARTICLES = int(sys.argv[2])

@@ -549,6 +549,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 //======================================================================
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
+  trigger(START_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().t());
   send_message(server.m_socket, m);
   D("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
@@ -560,6 +561,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
 
   // its good, we can give it free for delete...
   del_q.push(io_state_id_t(t, m.weight().state_id().id()));
+  trigger(STOP_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().id());
 }
 
 void StorageController::m_create_symlink( io_state_id_t state_id ) {
