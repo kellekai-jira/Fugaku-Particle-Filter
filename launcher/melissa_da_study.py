@@ -168,6 +168,10 @@ def run_melissa_da_study(
         def remove(self):
             if self in Job.jobs:
                 Job.jobs.remove(self)
+                if hasattr(self, 'job_id'):
+                    debug("Killing Job job_id=%s" % str(self.job_id))
+                    cluster.KillJob(self.job_id)
+
 
         def __del__(self):
             if hasattr(self, 'job_id'):
