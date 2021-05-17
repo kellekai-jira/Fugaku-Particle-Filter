@@ -59,7 +59,7 @@ trigger.enabled = True
 
 def maybe_write():  # TODO: rename this in maybe_write_timing
     if not trigger.enabled:
-        return
+        return False
 
 
 
@@ -118,6 +118,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
                         break
                 if not found_anything:
                     print("Event %d is no enter/leave region event? Or it is the first weight/ first time the runner connects" % evt[1])
+        return True
 
 trigger.enabled = False
 

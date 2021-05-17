@@ -182,6 +182,18 @@ void push_weight_to_head(double weight)
 
     send_message(job_socket, m);
 
+
+    do
+    {
+#ifdef REPORT_TIMING
+#ifndef REPORT_TIMING_ALL_RANKS
+                    if (comm_rank == 0)
+#endif
+                    {
+                    timing->maybe_report();
+                    }
+#endif
+    } while (!has_msg(job_socket, 10));
     auto r = receive_message(job_socket);
 
     return r.job_response();
@@ -249,14 +261,6 @@ int melissa_p2p_expose(VEC_T *values,
                     entered_loop = true;
                     D("Server does not have any good jobs for me. Retrying in 500 ms intervals");
 
-#ifdef REPORT_TIMING
-#ifndef REPORT_TIMING_ALL_RANKS
-                    if (comm_rank == 0)
-#endif
-                    {
-                    timing->maybe_report();
-                    }
-#endif
                 }
                 usleep(500000); // retry after 500ms
             }
