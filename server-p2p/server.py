@@ -530,11 +530,34 @@ runners_last = {}
 alpha = {}
 scheduled_jobs = {}
 
+
+def trigger_select(runner_id, state_id, was_cached):
+    if trigger.enabled:
+        now = time.time() - trigger.null_time
+        trigger_select.evts.append((now, runner_id, assimilation_cycle-1, state_id, was_cached))
+trigger_select.evts = []
+
+
+def write_trigger_select_events():
+    with open('select_events.melissa_p2p_server.csv', 'w+') as f:
+        f.write("time,runner_id,state_t,state_id,was_cached\n")
+        for evt in trigger_select.evts:
+            it = list(evt)
+            it[0] = it[0]*1000
+            it[-1] = 1 if it[-1] else 0
+            f.write(",".join([str(x) for x in it]))
+            f.write("\n")
+
+
+def needs_runner(parent_id, Q):
+    return math.ceil(alpha[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1
+
 # for stats:
 state_loads = 0
+state_loads_wo_cache = 0
 last_P = PARTICLES
 def select_good_new_parent(runner_id):
-    global state_loads
+    global state_loads, state_loads_wo_cache
     # global assimilation_cycle
     if assimilation_cycle == 1:
         parent_id = cm.StateId()
@@ -544,6 +567,8 @@ def select_good_new_parent(runner_id):
             alpha[parent_id] = 0
         alpha[parent_id] += 1
         state_loads += 1
+        state_loads_wo_cache += 1
+        trigger_select(runner_id, parent_id.id, False)
         return parent_id
     else:
         P = len(alpha)
@@ -551,10 +576,19 @@ def select_good_new_parent(runner_id):
             return
         R = len(runners_last)
         Q = P / R
+        for parent_id in StateCache.get_by_runner(runner_id):
+            if parent_id in alpha and needs_runner(parent_id, Q):
+                state_loads_wo_cache += 1
+                trigger_select(runner_id, parent_id.id, True)
+                return parent_id
+
+
         # FIXME: start counting at offset!
         for parent_id in alpha:
-            if math.ceil(alpha[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1:
+            if needs_runner(parent_id, Q):
+                state_loads_wo_cache += 1
                 state_loads += 1
+                trigger_select(runner_id, parent_id.id, False)
                 return parent_id
         assert False  # should never arrive here!
 
@@ -730,10 +764,11 @@ class LauncherConnection:
 
 
 def do_update_step():
-    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads
+    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
-    print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, max={last_P+len(runners_last)-1}")
+    print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
     state_loads = 0
+    state_loads_wo_cache = 0
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
@@ -809,4 +844,7 @@ if __name__ == '__main__':
         # Slow down CPU:
         time.sleep(0.000001)
 
-        maybe_write()
+
+        if maybe_write():
+            # also write trigger select events
+            write_trigger_select_events()
