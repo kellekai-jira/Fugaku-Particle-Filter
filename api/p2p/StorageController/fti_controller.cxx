@@ -137,9 +137,10 @@ void FtiController::fini() {
   FTI_Finalize();
 }
 
-void FtiController::load( io_state_id_t state_id, io_level_t level ) {
+bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
-  FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] );
+
+  return FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] ) == FTI_SCES;
 }
 
 void FtiController::store( io_state_id_t state_id, io_level_t level ) {

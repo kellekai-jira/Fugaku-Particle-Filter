@@ -102,7 +102,10 @@ enum TimingEventType
     LOCAL_HIT                         = 59,    //(state requested by next job found local, does not concern prefetched stuff) parameter = id
     LOCAL_MISS                        = 60,    //(state requested by next not found local, does not concern prefetched stuff) parameter = id
     LOCAL_DELETE                      = 61,    //(local states deleted)
-    PFS_DELETE                        = 62    //(global states deleted)
+    PFS_DELETE                        = 62,    //(global states deleted)
+
+
+    DIRTY_LOAD                        = 94     // happens if a race condition on state loads occurs (is local) and the state load needs to be redone, parameter state.id
 
     //Server :  --> python!
     //(these are easily comparable with the old melissa-da measures)

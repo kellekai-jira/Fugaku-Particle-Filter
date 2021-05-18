@@ -52,7 +52,7 @@ class FtiController : public IoController {
     void fini();
     io_id_t protect( void* buffer, size_t size, io_type_t type );
     void update( io_id_t varid, void* buffer, size_t size );
-    void load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
+    bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
     void copy( io_state_id_t state, io_level_t from, io_level_t to );

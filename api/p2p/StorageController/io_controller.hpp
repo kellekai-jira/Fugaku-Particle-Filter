@@ -76,7 +76,7 @@ class IoController {
       virtual void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
       virtual void copy( io_state_id_t state, io_level_t from, io_level_t to ) = 0;
       virtual void copy_extern( io_state_id_t state, io_level_t from, io_level_t to ) = 0;
-      virtual void load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
+      virtual bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
       virtual void request( io_state_id_t state_id ) = 0;
       virtual bool probe( io_tag_t tag ) = 0;
       virtual void register_callback( void (*f)(void) ) = 0;

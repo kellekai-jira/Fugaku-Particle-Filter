@@ -276,10 +276,18 @@ void StorageController::m_load_user( io_state_id_t state ) {
     trigger(START_WAIT_HEAD, state.t);
     m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
     trigger(STOP_WAIT_HEAD, state.id);
-    // TODO check status
+    assert( m_io->is_local( state ) && "unable to load state to local storage" );
   }
-  assert( m_io->is_local( state ) && "unable to load state to local storage" );
-  m_io->load( state );
+  //try {
+    while (!m_io->load( state )){
+        D("try again...");
+        int status;
+        // FIXME: remove this and let server send to app cores where they need to find the state from!
+        trigger(START_WAIT_HEAD, state.t);
+            m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
+            trigger(DIRTY_LOAD, state.id);
+        trigger(STOP_WAIT_HEAD, state.id);
+    }
 }
 
 void StorageController::m_store_head( io_state_id_t state_id ) {
