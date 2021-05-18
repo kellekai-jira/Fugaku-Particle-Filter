@@ -839,7 +839,8 @@ if __name__ == '__main__':
 
         launcher.ping()
 
-        DueDates.check_violations()
+        if trigger.enabled:  # FIXME: hack to not crash runners that are about to write traces!
+            DueDates.check_violations()
 
         # Slow down CPU:
         time.sleep(0.000001)
