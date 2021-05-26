@@ -58,9 +58,9 @@ def run_melissa_da_study(
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
         meta_ckpt_dir='../Meta',
-        show_server_log = True,
-        show_simulation_log = True,
-        config_fti_path = os.path.join(melissa_da_datadir, "config.fti"),
+        show_server_log=True,
+        show_simulation_log=True,
+        config_fti_path=os.path.join(melissa_da_datadir, "config.fti"),
         server_slowdown_factor=1,  # the higher this number the slower the server. 0 is minimum...
         runner_timeout=10,
         server_timeout=30,
@@ -74,6 +74,8 @@ def run_melissa_da_study(
         additional_env={},
         is_p2p=False,
         server_cmd=''):
+
+    global server_may_restart
 
     assert isinstance(cluster, Cluster)
 
@@ -104,6 +106,7 @@ def run_melissa_da_study(
 
 
     if is_p2p:
+        server_may_restart = True  # p2p uses pickle for restart and thus the server may always restart
         additional_env['MELISSA_DA_IS_P2P'] = '1'
         # FIXME: install server.py and call via python -m
         # FIXME: use cmake's found python!

@@ -7,6 +7,7 @@ import zmq
 import p2p_pb2 as cm
 import numpy as np
 import math
+import pickle
 from enum import Enum
 
 from collections import OrderedDict
@@ -383,7 +384,7 @@ def accept_delete(msg):
     1. old stuff
     2. a state no further jobs depend on
     3. a job from the next assimilation cycle with lowest weight
-    4. a random job
+    4. a random job that is  neither scheduled nor running
     """
     trigger(START_ACCEPT_DELETE, 0)
 
@@ -772,6 +773,8 @@ def do_update_step():
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
+
+
     # normalize state weights and resample
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
@@ -791,6 +794,12 @@ def do_update_step():
         if op not in alpha:
             alpha[op] = 0
         alpha[op] += 1
+
+
+
+    with open('checkpoint.bin.tmp', 'wb') as f:
+        pickle.dump(alpha, f)
+    os.rename('checkpoint.bin.tmp', f'checkpoint.bin.{assimilation_cycle}')
 
     last_P = len(alpha)
 
@@ -813,6 +822,21 @@ if __name__ == '__main__':
         nsteps = int(os.getenv("MELISSA_DA_NSTEPS"))
     else:
         nsteps = 1
+
+    # check if we can restart the server
+    is_restart = False
+    for last_assimilation_cycle in range(1, CYCLES):
+        if not os.path.exists(f'checkpoint.bin.{last_assimilation_cycle+1}'):
+            break
+        else:
+            is_restart = True
+
+    if is_restart:
+        checkpoint_file_name = f'checkpoint.bin.{last_assimilation_cycle}'
+        print(f'Restarting from {checkpoint_file_name} ...')
+        with open(checkpoint_file_name, 'rb') as f:
+            alpha = pickle.load(f)
+            assimilation_cycle = last_assimilation_cycle
 
 
 
