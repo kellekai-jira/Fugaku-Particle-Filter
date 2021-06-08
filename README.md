@@ -4,12 +4,12 @@ At the moment the code is in a rather living state with many parts being under h
 development.
 Feel free to create merge requests ;)
 
-## TLDR - How to run a DA Study:
+## TLDR - How to run a DA study:
 1. [Install Melissa-DA & dependencies](#1.-Install)
 2. [Instrument and link your model against Melissa-DA](#2.-Instrument-and-link-a-model-against-Melissa-DA) (or use one of the example models to
     start)
 3. [Configure your assimilator by writing a new assimilator or writing a new
-    pdaf-wrapper library to be preloaded at runtime](#3.-Configure-the-Assimilation-Update-Phase) (or use one of the existing Assimilators
+    pdaf-wrapper library to be preloaded at runtime](#3.-Configure-the-Assimilation-Update-Phase) (or use one of the existing assimilators
     for the beginning)
 4. Launch your simulation from within a simple python script:
 ```python
