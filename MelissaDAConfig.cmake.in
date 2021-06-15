@@ -10,7 +10,7 @@
 
 set(PN MelissaDA)
 set_and_check(${PN}_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/include")
-set_and_check(${PN}_LIBRARY "@CMAKE_INSTALL_PREFIX@/lib/libmelissa_api.so")
+set_and_check(${PN}_LIBRARY "@CMAKE_INSTALL_PREFIX@/lib/libmelissa_da_api.so")
 
 # Build flags, libraries and includes needed for projects building other
 # melissa-pdaf assimilators/pdaf-wrappers:
