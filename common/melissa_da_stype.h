@@ -4,8 +4,12 @@
 #define VEC_T char
 #define VARID_T int  // TODO: change to short in future? As I do not know for now how to do shorts in Fortran I stay with ints so far.
 
+#if __cplusplus <= 199711L
+  #warning "Not compiling against C so the alignment check cannot be performed!"
+#else
 static_assert(alignof(VEC_T) == 1,
               "VEC_T alignment must be 1 to avoid problems with unaligned memory accesses");
+#endif
 
 // #define INDEX_MAP_T unsigned int  // TODO:  use this as index map type?!
 // #define MPI_INDEX_MAP_T MPI_UNSIGNED //_INT
