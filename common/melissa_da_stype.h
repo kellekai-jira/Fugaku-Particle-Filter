@@ -4,7 +4,8 @@
 #define VEC_T char
 #define VARID_T int  // TODO: change to short in future? As I do not know for now how to do shorts in Fortran I stay with ints so far.
 
-#if __cplusplus <= 199711L
+
+#if (not defined(__cplusplus)) || (__cplusplus <= 199711L)
   #warning "Not compiling against C so the alignment check cannot be performed!"
 #else
 static_assert(alignof(VEC_T) == 1,
