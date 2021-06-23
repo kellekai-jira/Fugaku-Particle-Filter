@@ -54,32 +54,13 @@ melissa_da_binary_dir="$cwd/build.melissa-da"
 melissa_da_prefix_dir="$cwd/prefix.melissa-da"
 
 
+
 # this information may be buried somewhere in the logs when using continuous
 # integration so just print it here
 cmake --version
 
 
-echo 'building FTI'
-
-fti_source_dir="$(canonicalize_path "$raw_fti_path")"
-fti_binary_dir="$cwd/build.fti"
-fti_prefix_dir="$cwd/prefix.fti"
-
-mkdir -- "$fti_binary_dir"
-cd -- "$fti_binary_dir"
-
-cmake \
-	-DENABLE_TESTS=OFF \
-	-DENABLE_EXAMPLES=OFF \
-	-DENABLE_HDF5=ON -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi/ \
-	-DCMAKE_BUILD_TYPE="$build_type" \
-	-DCMAKE_INSTALL_PREFIX="$fti_prefix_dir" \
-	"$fti_source_dir"
-cmake --build . -- --jobs="$num_jobs"
-cmake --build . --target install
-
-
-echo 'building Melissa DA'
+echo 'building Melissa DA (with building FTI)'
 mkdir -- "$melissa_da_binary_dir"
 cd -- "$melissa_da_binary_dir"
 cmake \

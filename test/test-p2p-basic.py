@@ -30,7 +30,7 @@ class TestRun:
             runner_timeout=60,
             server_timeout=60,
             additional_env={
-                'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/p2p:' + os.getenv('PYTHONPATH'),
+                'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/simulation4-p2p:' + os.getenv('PYTHONPATH'),
                 'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
                 'SIMULATION_RANDOM_PROPAGATION_TIME': self.HAS_PROPAGATION_TIME,
                 },
