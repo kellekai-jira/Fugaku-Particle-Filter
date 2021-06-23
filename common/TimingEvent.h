@@ -20,7 +20,7 @@ enum TimingEventType
     STOP_FILTER_UPDATE                =  5,  // parameter = timestep
     START_IDLE_RUNNER                 =  6,  // parameter = runner_id
     STOP_IDLE_RUNNER                  =  7,  // parameter = runner_id
-    START_PROPAGATE_STATE             =  8,  // parameter = state_id
+    START_PROPAGATE_STATE             =  8,  // parameter = state_id, parent_id on runner
     STOP_PROPAGATE_STATE              =  9,  // parameter = state_id,
     NSTEPS                            = 10, // parameter = nsteps, only used by runner so far
     INIT                              = 11, // no parameter  // defines init ... it is not always 0 as the timing api is not called at the NULL environment variable...
