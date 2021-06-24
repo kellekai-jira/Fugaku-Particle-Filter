@@ -27,4 +27,3 @@ install(
     TARGETS melissa_comm4py
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-add_subdirectory(protocol)

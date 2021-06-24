@@ -1766,8 +1766,13 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef REPORT_TIMING
-                if (timing->is_time_to_write()) {
-                    report_timing();
+#ifndef REPORT_TIMING_ALL_RANKS
+                if (comm_rank == 0)
+#endif
+                {
+                    if (timing->is_time_to_write()) {
+                        report_timing();
+                    }
                 }
 #endif
 
