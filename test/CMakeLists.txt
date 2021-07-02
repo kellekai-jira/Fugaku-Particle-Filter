@@ -26,8 +26,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-find_package(Melissa CONFIG REQUIRED)
-
 function(add_python_test test_name test_script)
     add_test(
         NAME ${test_name}
@@ -63,7 +61,6 @@ function(add_python_test test_name test_script)
             MELISSA_DA_WITH_FTI=${WITH_FTI}
             MELISSA_DA_REPORT_TIMING=${REPORT_TIMING}
             MELISSA_DA_SOURCE_PATH=${CMAKE_SOURCE_DIR}
-            MELISSA_INSTALL_PREFIX=${Melissa_PATH}
             MELISSA_DA_DATASET_PATH=${PDAF_PATH}/tutorial/inputs_online/
             MPIEXEC=${MPIEXEC}
             PYTHONPATH=${PYTHONPATH}

@@ -18,7 +18,7 @@ install(FILES melissa_da_stype.h DESTINATION include)
 
 # comm4py
 
-add_library(melissa_comm4py SHARED comm4py.c)
+add_library(melissa_comm4py SHARED melissa_comm4py.c melissa_utils.c melissa_messages.c)
 target_link_libraries(melissa_comm4py PUBLIC zmq)
 install(
     TARGETS melissa_comm4py

@@ -14,19 +14,17 @@
 *    Bertrand Iooss,                                              *
 ******************************************************************/
 
-#include "melissa_messages.h"
-#include "melissa_utils.h"
 
-#include <arpa/inet.h>
-#include <ifaddrs.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
-
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
 #include <zmq.h>
+#include "melissa_utils.h"
+#include "melissa_messages.h"
 
 #define PORT_NUMBER 5555
 
@@ -40,6 +38,7 @@ struct cmessage_s
 
 typedef struct cmessage_s cmessage_t;
 
+void get_node_name (char *node_name);
 void init_context();
 void bind_message_rcv(char* port_number);
 void bind_message_resp(char* port_number);
@@ -49,6 +48,7 @@ void connect_message_rcv(char* node_name,
 void connect_message_snd(char* node_name,
                          char* port_number);
 void wait_message(char* buff);
+void poll_message(char* buff, size_t len);
 void get_resp_message(char* msg);
 void send_message(char* msg);
 void send_resp_message(char* msg);
@@ -69,6 +69,34 @@ void send_options (char* options);
 void close_message();
 cmessage_t message;
 
+
+void get_node_name (char *node_name)
+{
+    struct ifaddrs *ifap, *ifa;
+    struct sockaddr_in *sa;
+    char   *addr;
+    char ok = 0;
+
+    getifaddrs (&ifap);
+    for (ifa = ifap; ifa; ifa = ifa->ifa_next)
+    {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family==AF_INET)
+        {
+            sa = (struct sockaddr_in *) ifa->ifa_addr;
+            addr = inet_ntoa(sa->sin_addr);
+            if (strcmp (ifa->ifa_name, "ib0") == 0)
+            {
+                sprintf(node_name, "%s", addr);
+                ok = 1;
+                break;
+            }
+        }
+    }
+    if (ok == 0)
+    {
+        gethostname(node_name, MPI_MAX_PROCESSOR_NAME);
+    }
+}
 
 void init_context ()
 {
@@ -129,8 +157,24 @@ void bind_message_resp(char* port_number)
     melissa_bind (message.message_resp, name);
 }
 
+//void wait_message(char* buff)
+//{
+//    zmq_msg_t msg;
+//    fprintf(stdout, "wait message\n");
+//    int size = zmq_msg_recv (&msg, message.message_puller, 0);
+//    if (get_message_type(zmq_msg_get_data(&msg)) == STOP)
+//    {
+//        sprintf (buff, "stop");
+//    }
+//    else
+//    {
+//        memcpy (buff, zmq_msg_get_data(&msg), size);
+//    }
+//}
+
 void wait_message(char* buff)  // TODO: why parsing it like this! this is ugly! than later I  have to redo stirng parsing....
 {
+//    char text[MELISSA_MESSAGE_LEN];
     char* buff_ptr = NULL;
     zmq_msg_t msg;
     zmq_msg_init (&msg);
@@ -180,6 +224,83 @@ void wait_message(char* buff)  // TODO: why parsing it like this! this is ugly! 
             break;
         }
     }
+}
+
+void poll_message(char* buff, size_t len)  // TODO: why parsing it like this! this is ugly! than later I  have to redo stirng parsing....
+{
+    /// will put null in buff if nothing polled!
+//    char text[MELISSA_MESSAGE_LEN];
+    char* buff_ptr = NULL;
+
+    zmq_pollitem_t items [1];
+    items[0].socket = message.message_puller;
+    items[0].events = ZMQ_POLLIN;
+    //items[0] = {message.message_puller, 0, ZMQ_POLLIN, 0};
+    if (zmq_poll(items, 1, 0) < 0)
+    {
+        int err = errno;
+        int zmq_err = zmq_errno();
+        printf("zmq error %d, errno=%d: %s\n", zmq_err, err, zmq_strerror(zmq_err));
+        exit(1);
+    }
+
+    /* Returned events will be stored in items[].revents */
+
+    if (! (items[0].revents & ZMQ_POLLIN))
+    {
+        snprintf (buff, len, "%s ", "null");
+        return;
+    }
+
+    zmq_msg_t msg;
+    zmq_msg_init (&msg);
+    int size = zmq_msg_recv (&msg, message.message_puller, 0);
+    if (size < 1)
+    {
+        snprintf (buff, len, "%s ", "nothing");
+    }
+    else
+    {
+        buff_ptr = zmq_msg_data(&msg);
+        buff_ptr[size] = 0;
+        switch (get_message_type(buff_ptr))
+        {
+        case STOP:
+            snprintf (buff, len, "%s ", "stop");
+            break;
+
+        case SIMU_STATUS:
+            snprintf (buff, len, "%s %d %d", "group_state", *((int*)buff_ptr + 1), *((int*)buff_ptr + 2));
+            break;
+
+        case SERVER:
+            snprintf (buff, len, "%s %d %s", "server", *((int*)buff_ptr + 1), buff_ptr + 2 * sizeof(int));
+            break;
+
+        case TIMEOUT:
+            snprintf (buff, len, "%s %d", "timeout", *((int*)buff_ptr + 1));
+            break;
+
+        case HELLO:
+        case ALIVE:
+            snprintf (buff, len, "%s", "alive");
+            break;
+
+        case CONFIDENCE_INTERVAL:
+            snprintf (buff, len, "%s %s %s %g", "interval"
+                     , buff_ptr + sizeof(int)
+                     , buff_ptr + sizeof(int) + strlen(buff_ptr + sizeof(int)) +1
+                     , *(double*)&buff_ptr[size - sizeof(double)]);
+            break;
+
+        default:
+            snprintf (buff, len, "%s", buff_ptr);
+            printf("ERROR! Unknown Message type with id: %d\n", get_message_type(buff_ptr));
+            exit(1);
+            break;
+        }
+    }
+    zmq_msg_close(&msg);  // TODO this does not happen in wait_message!?
 }
 
 void get_resp_message(char* msg)
