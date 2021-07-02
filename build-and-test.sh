@@ -53,25 +53,11 @@ pdaf_path="$(canonicalize_path "$raw_pdaf_path")"
 
 melissa_da_binary_dir="$cwd/build.melissa-da"
 melissa_da_prefix_dir="$cwd/prefix.melissa-da"
-melissa_sa_source_dir="$melissa_da_source_dir/melissa"
-melissa_sa_binary_dir="$cwd/build.melissa-sa"
-melissa_sa_prefix_dir="$cwd/prefix.melissa-sa"
 
 
 # this information may be buried somewhere in the logs when using continuous
 # integration so just print it here
 cmake --version
-
-
-echo 'building Melissa SA'
-mkdir -- "$melissa_sa_binary_dir"
-cd -- "$melissa_sa_binary_dir"
-cmake \
-	-DCMAKE_BUILD_TYPE="$build_type" \
-	-DCMAKE_INSTALL_PREFIX="$melissa_sa_prefix_dir" \
-	"$melissa_sa_source_dir"
-cmake --build . -- --jobs="$num_jobs"
-cmake --build . --target install
 
 
 echo 'building FTI'
@@ -104,7 +90,6 @@ cmake \
 	-DWITH_FTI=ON -DWITH_FTI_THREADS=ON -DINSTALL_FTI=OFF \
 	-DFTI_PATH="$fti_prefix_dir" \
 	-DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
-    -DMelissa_DIR="$melissa_sa_prefix_dir/share/cmake/Melissa" \
 	"$melissa_da_source_dir"
 cmake --build . -- --jobs="$num_jobs"
 cmake --build . --target install
