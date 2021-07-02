@@ -69,11 +69,6 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 find_package(NumPy REQUIRED)
 
-# Melissa submodule #
-find_package(Melissa REQUIRED HINTS "${CMAKE_SOURCE_DIR}/melissa/install/share/cmake/Melissa")
-
-
-
 # for compatibility with pdaf makefile....
 
 
@@ -169,16 +164,15 @@ install(FILES ${CMAKE_BINARY_DIR}/melissa_da_set_env.sh DESTINATION ${CMAKE_INST
 
 include(CMakePackageConfigHelpers)
 
-# TODO: rename the package to melissa-da see issue melissa-da#5 !
-set(MELISSA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaDAConfig.cmake")
+set(MELISSADA_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}" CACHE STRING "install path for MelissaDAConfig.cmake")
 configure_package_config_file(${PROJECT_NAME}Config.cmake.in
                               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-                              INSTALL_DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
+                              INSTALL_DESTINATION ${MELISSADA_CMAKECONFIG_INSTALL_DIR})
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
                                  VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
                                  COMPATIBILITY AnyNewerVersion)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-              DESTINATION ${MELISSA_CMAKECONFIG_INSTALL_DIR})
+              DESTINATION ${MELISSADA_CMAKECONFIG_INSTALL_DIR})
 
