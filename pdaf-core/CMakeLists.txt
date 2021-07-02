@@ -27,7 +27,7 @@ endif()
 # try to determine PDAF version
 file(
     STRINGS ${PDAF_PATH}/src/PDAF-D_print_version.F90 raw_pdaf_version
-    REGEX "Version [0-9]+[.][0-9]+[.][0-9]+"
+    REGEX "Version [0-9]+[.][0-9]+([.][0-9]+)*"
 )
 
 if(NOT raw_pdaf_version)
