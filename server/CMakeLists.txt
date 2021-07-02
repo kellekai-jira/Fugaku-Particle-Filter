@@ -13,7 +13,6 @@ add_executable(melissa_da_server
     PrintIndexMapAssimilator.cxx
     PythonAssimilator.cxx
     WrfAssimilator.cxx
-    melissa_messages.c
     server.cxx
     $<TARGET_OBJECTS:melissa_common>
 )

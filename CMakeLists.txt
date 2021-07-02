@@ -58,10 +58,7 @@ else()
 endif()
 
 # ZeroMQ #
-# TODO: uncomment the following 3 lines and remove the include(melissa/melissa-zmq.cmake
-#       to depend on the latest melissa version and its ZMQ version...
-#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/melissa/cmake/Modules)
-#include(BuildZeroMQ)
+include(BuildZeroMQ)
 find_package(ZeroMQ REQUIRED)
 include_directories(${ZeroMQ_INCLUDE_DIR})
 link_libraries(${ZeroMQ_LIBRARY})

@@ -47,7 +47,7 @@ apt install \
     cmake \
     gfortran \
     bc \
-    psmisc
+    psmisc \
     git \
     libhdf5-openmpi-dev \
     libopenblas-dev \
@@ -55,7 +55,6 @@ apt install \
     libpython3.7-dev \
     libssl-dev \
     libzmq5-dev \
-    make \
     pkg-config \
     python \
     python-numpy \

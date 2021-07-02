@@ -1,6 +1,3 @@
 [submodule "examples/parflow-pure/parflow-melissa-da"]
 	path = examples/parflow-pure/parflow-melissa-da
 	url = git@gitlab.inria.fr:sfriedem/parflow-melissa-da.git
-[submodule "melissa"]
-	path = melissa
-	url = ../melissa.git

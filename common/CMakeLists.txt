@@ -3,6 +3,7 @@ add_library(melissa_common OBJECT
     ZeroMQ.cxx
     melissa_utils.c
     utils.cxx
+    melissa_messages.c
 )
 
 
