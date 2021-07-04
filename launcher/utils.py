@@ -10,12 +10,12 @@ import threading
 from ctypes import cdll, create_string_buffer, c_char_p, c_wchar_p, c_int, c_double, POINTER
 
 
-melissa_da_path = os.getenv('MELISSA_DA_PATH')
-assert(melissa_da_path)
+comm4py_path = os.getenv('MELISSA_DA_COMM4PY_PATH')
+assert(comm4py_path)
 
 c_int_p = POINTER(c_int)
 c_double_p = POINTER(c_double)
-melissa_comm4py = cdll.LoadLibrary(melissa_da_path + '/lib/libmelissa_comm4py.so')
+melissa_comm4py = cdll.LoadLibrary(comm4py_path)
 
 melissa_comm4py.send_message.argtypes = [c_char_p]
 melissa_comm4py.send_job.argtypes = [c_int, c_char_p, c_int, c_double_p]

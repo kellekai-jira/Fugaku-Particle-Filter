@@ -68,6 +68,7 @@ function(add_python_test test_name test_script)
             PDAF_PATH=${PDAF_PATH}
             "LD_LIBRARY_PATH=${LD_LIBRARY_PATH_}"
             "PATH=${PATH_}"
+            "MELISSA_DA_COMM4PY_PATH=${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libmelissa_comm4py.so"
     )
 endfunction()
 
