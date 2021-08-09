@@ -297,13 +297,6 @@ Copies of the licenses can be found in the folder [`licenses`](licenses).
 ## More in depth documentation
 For more in depth documentation we refer to [doc/implementation.md](doc/implementation.md) and to [this](https://hal.archives-ouvertes.fr/hal-03017033v2).
 
-## TODO
-- Handle Timing for parflow...
-- better interface to zerocopy add structured data.
-- void pointer to add hidden state variables, state variables important to restart a timestep but which are not assimilated.
-- refactor global variables in server.cxx. Do we really need `ENSEMBLE_SIZE` for example?
-- in code todos
-
 ## Comparison with Melissa-SA: a distant branch of Melissa-SA...
 This is a rather distant branch of Melissa (https://melissa-sa.github.io/) for data assimilation:
 The biggest part is written in C++ as:
