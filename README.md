@@ -285,6 +285,42 @@ Alternative ways are inheriting [server/Assimilator.h](server/Assimilator.h) to 
 
 Another approach permitting [PDAF](http://pdaf.awi.de/) based DA is to use the `LD_PRELOAD` functionality to inject a bunch of  user defined functions for analysis, postprocessing, observation loading ... (see [http://pdaf.awi.de/trac/wiki/ImplementationGuide](http://pdaf.awi.de/trac/wiki/ImplementationGuide) and the [`pdaf-wrapper`](pdaf-wrapper) and [`examples/simulation2-pdaf`](examples/simulation2-pdaf) folders)
 
+## Using spack for development:
+Imagine you are on a fresh machine with only git and python installed. The easiest way to kick off
+Melissa-DA development might look like this:
+```bash
+git clone git@gitlab.inria.fr:melissa/spack.git
+cd spack
+git checkout add-melissa-da-build
+cd ..
+source spack/share/spack/setup-env.sh; spack external find;
+spack install melissa-da@particle-filter ^python@3.9.0
+mkdir ~/workspace
+cd ~/workspace
+wget 'http://pdaf.awi.de/download/index.php?id=4a9de0284bac6978a6a0b92606f92075&package=PDAF-D_V1.16.tar.gz' -O PDAF-D_V1.16.tar.gz
+tar -xvf PDAF-D_V1.16.tar.gz
+cd ~/workspace
+git clone https://gitlab.inria.fr/melissa/melissa-da
+cd melissa-da
+git checkout particle-filter
+spack build-env melissa-da@particle-filter ^python@3.9.0 -- bash
+
+# in the uppopping bash shell type
+mkdir build
+cd build
+cmake .. -DWITH_FTI=ON -DCMAKE_INSTALL_PREFIX=$PWD/install -DPDAF_PATH=$HOME/workspace/PDAF-D_V1.16
+make install -j24
+```
+
+How to run the test cases? Quit the build environment and load the installed environment.
+Now `PATH` and `LD_LIBRARY_PATH` is set correctly not only for compiling but also for running.
+```bash
+exit
+spack load melissa-da@particle-filter ^python@3.9.0   # maybe you need to load with /<hash>
+cd build
+ctest
+```
+
 ## License
 Melissa is published under the [3-clause BSD License](LICENSE)
 
