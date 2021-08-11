@@ -68,38 +68,38 @@ else()
 endif()
 
 
-# Boost headers only for udp
+## Boost headers only for udp
 
-option(INSTALL_BOOST "Download and install a good version of boost" OFF)
-if(INSTALL_BOOST)
-    message("installing boost")
-    ExternalProject_Add(BOOST
-        URL https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.zip
-        #PATCH_COMMAND ""
+#option(INSTALL_BOOST "Download and install a good version of boost" OFF)
+#if(INSTALL_BOOST)
+    #message("installing boost")
+    #ExternalProject_Add(BOOST
+        #URL https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.zip
+        ##PATCH_COMMAND ""
 
-        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/BOOST"
+        #PREFIX "${CMAKE_CURRENT_BINARY_DIR}/BOOST"
 
-        #SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/Boost-src
+        ##SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/Boost-src
 
-        DOWNLOAD_NO_EXTRACT TRUE
+        #DOWNLOAD_NO_EXTRACT TRUE
 
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND unzip "${CMAKE_CURRENT_BINARY_DIR}/BOOST/src/boost_1_64_0.zip"
-          "boost_1_64_0/boost/*" -d install
+        #CONFIGURE_COMMAND ""
+        #BUILD_COMMAND ""
+        #INSTALL_COMMAND unzip "${CMAKE_CURRENT_BINARY_DIR}/BOOST/src/boost_1_64_0.zip"
+          #"boost_1_64_0/boost/*" -d install
 
 
-        TEST_COMMAND ""
+        #TEST_COMMAND ""
 
-        LOG_DOWNLOAD 1
-        LOG_CONFIGURE 1
-        LOG_INSTALL 1
-        )
-    set(Boost_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/BOOST/src/BOOST-build/install/boost_1_64_0/")
-    message("Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
-else()
-    find_package(Boost COMPONENTS system)
-endif()
+        #LOG_DOWNLOAD 1
+        #LOG_CONFIGURE 1
+        #LOG_INSTALL 1
+        #)
+    #set(Boost_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/BOOST/src/BOOST-build/install/boost_1_64_0/")
+    #message("Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
+#else()
+    #find_package(Boost COMPONENTS system)
+#endif()
 
 
 

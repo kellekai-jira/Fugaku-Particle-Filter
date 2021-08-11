@@ -4,7 +4,7 @@
 #include "utils.h"
 #include "mpi_controller.hpp"
 #include "io_controller.hpp"
-#include "peer_controller.hpp"
+//#include "peer_controller.hpp"
 #include "fti_controller.hpp"
 #include <cstddef>
 #include <cassert>
@@ -90,7 +90,7 @@ class StorageController {
 //----------------------------------------------------------------------------------------
 
     IoController* m_io;
-    PeerController* m_peer;
+    //PeerController* m_peer;
     MpiController* m_mpi;
 
     void* m_zmq_context;
