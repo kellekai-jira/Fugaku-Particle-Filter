@@ -31,7 +31,7 @@ then
     cmake .. -DINSTALL_FTI=OFF -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
      -DWITH_FTI_THREADS=ON \
      -DREPORT_TIMING_ALL_RANKS=ON \
-    -DFTI_PATH=$HOME/tmp/FTI
+     -DFTI_PATH=$HOME/tmp/FTI
     #cmake .. -DWITH_FTI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
      #-DREPORT_TIMING_ALL_RANKS=ON
 else
@@ -97,7 +97,8 @@ else
     cmake .. -DINSTALL_FTI=ON -DWITH_FTI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install -DHDF5_ROOT=/home/kellekai/opt/HDF5/GCC/1.10.5 \
      -DWITH_FTI_THREADS=ON -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_C_COMPILER="$CC" -DCMAKE_Fortran_COMPILER="$F90"
 fi
-else
+elif [[ $HOSTNAME == *"juwels"* ]];
+then
     # juwels...
     if [ "$MELISSA_PROFILING" == "" ];
     then
@@ -143,6 +144,10 @@ else
 
     fi
 #cmake .. -DZeroMQ_DIR=$HOME/workspace/zmq/melissa-da/build/install/share/cmake/ZeroMQ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_COMPILER=$HOME/workspace/melissa-da/scalasca_cxx -DCMAKE_Fortran_COMPILER=$HOME/workspace/melissa-da/scalasca_f90
+else
+    cmake .. -DINSTALL_FTI=ON -DWITH_FTI=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=install \
+     -DWITH_FTI_THREADS=ON \
+     -DREPORT_TIMING_ALL_RANKS=ON
 fi
 
 make install -j48
