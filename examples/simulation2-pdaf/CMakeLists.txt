@@ -5,7 +5,7 @@ file(GLOB
      *.F90
      )
 
-   add_executable(simulation2-pdaf ${ALL_SIMULATION_2_PDAF})
+add_executable(simulation2-pdaf ${ALL_SIMULATION_2_PDAF})
 
 
 # PDAF:
@@ -19,7 +19,9 @@ target_link_libraries(simulation2-pdaf melissa_da_api)
 target_include_directories(simulation2-pdaf PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 
-set_target_properties(simulation2-pdaf PROPERTIES LINK_FLAGS "-nostartfiles")
+# seems to be sometimes needed on juwels?! on other systems this poses problems
+# since the program won't start at main
+#set_target_properties(simulation2-pdaf PROPERTIES LINK_FLAGS "-nostartfiles")
 
 INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
 #${CMAKE_CURRENT_SOURCE_DIR}/test.sh
