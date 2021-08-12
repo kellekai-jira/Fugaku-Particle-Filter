@@ -38,7 +38,7 @@ print('Melissa Server started with %d particles for %d cycles' %
 print("RUNNER_TIMEOUT:", RUNNER_TIMEOUT)
 
 # TODO: dirty! install properly
-sys.path.append('%s/melissa/utility/melissa4py' %
+sys.path.append('%s/server-p2p/melissa4py' %
                 os.getenv('MELISSA_DA_SOURCE_PATH'))
 import ctypes
 #from melissa4py import message
