@@ -57,7 +57,7 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
   REAL, ALLOCATABLE :: obs_field(:,:) ! Array for observation field read from file
   CHARACTER(len=2) :: stepstr         ! String for time step
   CHARACTER(len=256) :: dataset_path     ! pdaf path, load from environment variable
-
+  real :: randomval
 
 ! ****************************************
 ! *** Initialize observation dimension ***
@@ -139,8 +139,10 @@ SUBROUTINE init_dim_obs_pdaf(step, dim_obs_p)
      IF (ALLOCATED(obs_p)) DEALLOCATE(obs_p)
      ALLOCATE(obs_index_p(dim_obs_p))
      ALLOCATE(obs_p(dim_obs_p))
-    obs_p(1)= 0.9*rand()-0.45
-    obs_p(2)= 0.9*rand()-0.45
+    call random_number(randomval)
+    obs_p(1)= 0.9*randomval-0.45
+    call random_number(randomval)
+    obs_p(2)= 0.9*randomval-0.45
     obs_index_p(1) = 1
     obs_index_p(2) = 2
   end if

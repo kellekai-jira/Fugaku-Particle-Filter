@@ -57,6 +57,7 @@ SUBROUTINE init_dim_obs_f_pdaf(step, dim_obs_f)
   INTEGER :: cnt0, cnt_p, cnt0_p      ! Counters
   INTEGER :: status=0                 ! Status flag
   INTEGER :: off_p                    ! Process-local offset in state vector
+  REAL :: randomval
   REAL, ALLOCATABLE :: obs_field(:,:) ! Array for observation field read from file
   REAL, ALLOCATABLE :: obs_p(:)       ! Process-local observation vector
   REAL, ALLOCATABLE :: coords_obs_p(:,:) ! Coordinates of process-local observations
@@ -95,8 +96,10 @@ SUBROUTINE init_dim_obs_f_pdaf(step, dim_obs_f)
   else
     do j = 1, ny
       do i = 1, nx
-        if (rand() > 0.5) then
-          obs_field(j,i) = 0.9*rand()-0.45
+        call random_number(randomval)
+        if (randomval > 0.5) then
+          call random_number(randomval)
+          obs_field(j,i) = 0.9*randomval-0.45
         else
           obs_field(j,i) = -1000.0
         end if

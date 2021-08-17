@@ -48,6 +48,7 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
   ! It is not necessary to initialize the array 'state_p' for SEIK.
   ! It is available here only for convenience and can be used freely.
   REAL, INTENT(inout) :: Uinv(dim_ens-1,dim_ens-1) ! Array not referenced for SEIK
+  real :: randomval
   REAL, INTENT(out)   :: ens_p(dim_p, dim_ens)   ! PE-local state ensemble
   INTEGER, INTENT(inout) :: flag                 ! PDAF status flag
 
@@ -89,7 +90,8 @@ SUBROUTINE init_ens(filtertype, dim_p, dim_ens, state_p, Uinv, &
       DO member = 1, dim_ens
          ! Initialize process-local part of ensemble
          DO i = 1, dim_p
-             ens_p(i, member) = 0.9 * rand() - 0.45
+           call random_number(randomval)
+             ens_p(i, member) = 0.9 * randomval - 0.45
          END DO
       END DO
   else

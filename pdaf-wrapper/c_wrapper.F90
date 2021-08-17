@@ -92,7 +92,7 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   CALL init_pdaf()
 
   ! deterministic repeatable experiments
-  call srand(42)
+  call random_seed()
 
 END SUBROUTINE
 
