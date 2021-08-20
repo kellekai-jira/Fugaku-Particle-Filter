@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Copyright (c) 2020, Institut National de Recherche en Informatique et en Automatique (https://www.inria.fr/)
 # All rights reserved.

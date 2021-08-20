@@ -324,7 +324,7 @@ void melissa_get_node_name (char* node_name, size_t buf_len)
         {
             const struct sockaddr_in* sa = (struct sockaddr_in*)ifa->ifa_addr;
             const char* addr = inet_ntoa(sa->sin_addr);
-            if (strcmp (ifa->ifa_name, "ib0") == 0)
+            if (strcmp (ifa->ifa_name, "tofu1") == 0)
             {
                 strncpy(node_name, addr, buf_len);
                 ok = 1;
