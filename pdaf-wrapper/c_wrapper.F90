@@ -76,9 +76,11 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
 
   INTEGER(kind=C_INT), intent(in) :: param_total_steps     ! total steps
 
-
-
-
+  ! *** For random number generation ***
+  INTEGER, ALLOCATABLE  :: rnd_seed(:)
+  INTEGER               :: rnd_size
+  REAL                  :: rnd_real
+  
   total_steps = param_total_steps
 
 
@@ -92,8 +94,11 @@ SUBROUTINE cwrapper_init_user(param_total_steps) BIND(C,name='cwrapper_init_user
   CALL init_pdaf()
 
   ! deterministic repeatable experiments
-  call random_seed()
-
+  CALL RANDOM_SEED(size=rnd_size)
+  ALLOCATE(rnd_seed(rnd_size))
+  rnd_seed=42
+  CALL RANDOM_SEED(put=rnd_seed)
+  
 END SUBROUTINE
 
 SUBROUTINE cwrapper_init_ens_hidden(dim_p, dim_ens, member_id, hidden_state_p) &
