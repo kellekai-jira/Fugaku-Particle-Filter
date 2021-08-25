@@ -291,13 +291,8 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
 bool FtiController::is_local( io_state_id_t state_id ) {
   trigger(START_CHECK_LOCAL, state_id.t);
   FTIT_stat st;
-  int rank; MPI_Comm_rank( FTI_COMM_WORLD, &rank );
-  bool res;
-  if( rank == 0 ) {
-    FTI_Stat( to_ckpt_id(state_id), &st );
-    res = FTI_ST_IS_LOCAL(st.level);
-  }
-  MPI_Bcast( &res, 1, MPI_CXX_BOOL, 0, FTI_COMM_WORLD ); 
+  FTI_Stat( to_ckpt_id(state_id), &st );
+  bool res = FTI_ST_IS_LOCAL(st.level);
   trigger(STOP_CHECK_LOCAL, state_id.id);
   return res;
 }
