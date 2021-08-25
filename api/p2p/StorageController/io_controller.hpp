@@ -15,12 +15,6 @@ const size_t IO_TRANSFER_SIZE = 16*1024*1024; // 16 Mb
 
 typedef int io_id_t;
 
-struct io_var_t;
-
-struct io_ckpt_t;
-
-struct io_state_id_t;
-
 enum io_status_t {
   IO_STATE_BUSY,
   IO_STATE_IDLE,
@@ -61,6 +55,24 @@ enum io_tag_t {
   IO_TAG_POST,
   IO_TAG_DUMP,
   IO_TAG_FINI
+};
+
+struct io_state_id_t {
+  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
+  io_state_id_t() : t(0), id(0) {}
+	io_id_t t;
+  io_id_t id;
+};
+
+struct io_var_t {
+  void* data;
+  size_t size;
+  io_type_t type;
+};
+
+struct io_ckpt_t {
+  io_state_id_t state_id;
+  io_level_t level;
 };
 
 class IoController {

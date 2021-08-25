@@ -12,6 +12,7 @@ clean_old_stats()
 run_melissa_da_study(
     is_p2p=True,
     server_cmd='python3 -m cProfile -o server.cprof ' + os.getenv('MELISSA_DA_SOURCE_PATH') + '/server-p2p/server.py',  # to read the output try with pyprof2calltree -k -i server.cprof
+    cluster=FugakuCluster(),
     runner_cmd='simulation4-p2p',
     #runner_cmd='simulation4-p2p',
     total_steps=10,

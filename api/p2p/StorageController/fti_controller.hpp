@@ -8,13 +8,6 @@
 #include <map>
 #include <cassert>
 
-struct io_state_id_t {
-  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
-  io_state_id_t() : t(0), id(0) {}
-	io_id_t t;
-  io_id_t id;
-};
-
 inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return lhs.t == rhs.t && lhs.id == rhs.id;
 }
@@ -22,17 +15,6 @@ inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
 inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return !(lhs == rhs);
 }
-
-struct io_var_t {
-  void* data;
-  size_t size;
-  io_type_t type;
-};
-
-struct io_ckpt_t {
-  io_state_id_t state_id;
-  io_level_t level;
-};
 
 inline io_id_t to_ckpt_id(io_state_id_t state_id) {
   // this should work for up to 100000 members!

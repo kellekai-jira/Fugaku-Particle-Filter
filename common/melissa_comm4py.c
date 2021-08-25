@@ -84,7 +84,7 @@ void get_node_name (char *node_name)
         {
             sa = (struct sockaddr_in *) ifa->ifa_addr;
             addr = inet_ntoa(sa->sin_addr);
-            if (strcmp (ifa->ifa_name, "ib0") == 0)
+            if (strcmp (ifa->ifa_name, "tofu1") == 0)
             {
                 sprintf(node_name, "%s", addr);
                 ok = 1;

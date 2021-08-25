@@ -91,20 +91,25 @@ class FugakuCluster(cluster.Cluster):
         # CREATE VCOORD FILE
         vcoordfile = self.CreateVcoordFile( vcoords, int(n_procs/n_nodes) )
 
-        run_cmd = '%s --vcoordfile %s -n %d %s %s' % (
-                self.mpiexec,
-                vcoordfile,
-                n_procs,
-                additional_env_parameters,
-                cmd)
-
-        print("Launching %s" % run_cmd)
-
         if logfile == '':
+            run_cmd = '%s --vcoordfile %s -n %d %s %s' % (
+                    self.mpiexec,
+                    vcoordfile,
+                    n_procs,
+                    additional_env_parameters,
+                    cmd)
+            print("Launching %s" % run_cmd)
             job = subprocess.Popen(run_cmd.split())
         else:
-            with open(logfile, 'wb') as f:
-                job = subprocess.Popen(run_cmd.split(), stdout=f)
+            run_cmd = '%s --of %s --vcoordfile %s -n %d %s %s' % (
+                    self.mpiexec,
+                    logfile,
+                    vcoordfile,
+                    n_procs,
+                    additional_env_parameters,
+                    cmd)
+            print("Launching %s" % run_cmd)
+            job = subprocess.Popen(run_cmd.split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
         self.jobs[job.pid] = { 'job' : job, 'vcoordfile' : vcoordfile, 'vcoords' : vcoords }
 

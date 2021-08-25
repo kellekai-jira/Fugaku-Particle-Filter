@@ -21,7 +21,7 @@ target_include_directories(simulation2-pdaf PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 # seems to be sometimes needed on juwels?! on other systems this poses problems
 # since the program won't start at main
-#set_target_properties(simulation2-pdaf PROPERTIES LINK_FLAGS "-nostartfiles")
+set_target_properties(simulation2-pdaf PROPERTIES LINK_FLAGS "-nostartfiles")
 
 INSTALL(TARGETS simulation2-pdaf RUNTIME DESTINATION bin)
 #${CMAKE_CURRENT_SOURCE_DIR}/test.sh

@@ -8,9 +8,11 @@ os.system('killall gdb')
 from melissa_da_study import *
 clean_old_stats()
 
+local_dir = os.environ['PJM_LOCALTMP']
+print("local directory: " + local_dir)
 
 run_melissa_da_study(
-    cluster=SlurmMn4Cluster('bsc93'),
+    cluster=FugakuCluster(),
     walltime='02:00:00',
     is_p2p=True,
     precommand_server='',
@@ -20,6 +22,9 @@ run_melissa_da_study(
     procs_runner=48,
     nodes_runner=1,
     n_runners=1,
+    local_ckpt_dir=local_dir + '/melissa_cache',
+    global_ckpt_dir='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS/Global',
+    meta_ckpt_dir='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS/Meta',
     show_server_log=False,
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
@@ -28,11 +33,11 @@ run_melissa_da_study(
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/lorenz:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
         'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE': '4',
-        'MELISSA_LORENZ_ITER_MAX': '3',
+        'MELISSA_LORENZ_ITER_MAX': '10',
         'MELISSA_LORENZ_OBSERVATION_PERCENT': '20',
         'MELISSA_LORENZ_STATE_DIMENSION': '1048576',
-        'MELISSA_LORENZ_OBSERVATION_DIR': '/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/melissa-da/examples/lorenz',
-        'MELISSA_DA_TEST_FIFO': '/gpfs/projects/bsc93/bsc93655/melissaP2P/Melissa/melissa-da/examples/lorenz/timing.trace',
+        'MELISSA_LORENZ_OBSERVATION_DIR': '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz',
+        'MELISSA_DA_TEST_FIFO': '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/timing.trace',
         'MELISSA_DA_TIMING_REPORT': str(time.time() + 300),  # write timing events after 60 secons!
         # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         },

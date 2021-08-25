@@ -184,7 +184,7 @@ int main() {
   int zero = 0;
   int nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
-
+  
   std::vector<double> x_l(nlt);
   init_state( x_l );
 
@@ -192,6 +192,7 @@ int main() {
   int nsteps = 1;
   do
   {
+    if(comm_rank==0) printf("[DBG] --- START NEW ITERATION ---\n");
     for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
@@ -199,6 +200,7 @@ int main() {
     exchange(x_l);
 
     nsteps = melissa_expose_f("state1", &x_l[2]);
+    if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
     if (nsteps > 0 && is_first_timestep)

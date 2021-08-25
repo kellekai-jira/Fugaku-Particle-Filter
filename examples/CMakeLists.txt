@@ -4,7 +4,7 @@ function(python_test test_name)
 endfunction()
 
 add_subdirectory(simulation1)
-add_subdirectory(simulation2-pdaf)
+#add_subdirectory(simulation2-pdaf)
 add_subdirectory(simulation3-empty)
 add_subdirectory(simulation5-python)
 add_subdirectory(simulation4-p2p)
