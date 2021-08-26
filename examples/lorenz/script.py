@@ -19,9 +19,9 @@ run_melissa_da_study(
     runner_cmd='simulation-lorenz',
     total_steps=10,
     ensemble_size=20,
-    procs_runner=48,
+    procs_runner=5,
     nodes_runner=1,
-    n_runners=1,
+    n_runners=5,
     local_ckpt_dir=local_dir + '/melissa_cache',
     global_ckpt_dir='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS/Global',
     meta_ckpt_dir='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS/Meta',
@@ -38,7 +38,7 @@ run_melissa_da_study(
         'MELISSA_LORENZ_STATE_DIMENSION': '1048576',
         'MELISSA_LORENZ_OBSERVATION_DIR': '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz',
         'MELISSA_DA_TEST_FIFO': '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/timing.trace',
-        'MELISSA_DA_TIMING_REPORT': str(time.time() + 300),  # write timing events after 60 secons!
+        'MELISSA_DA_TIMING_REPORT': str(time.time() + 1800),  # write timing events after 60 secons!
         # 'SIMULATION_RANDOM_PROPAGATION_TIME': '1',
         },
 

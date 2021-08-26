@@ -621,7 +621,10 @@ def handle_job_requests(launcher, nsteps):
         trigger(START_HANDLE_JOB_REQ, 0)
         assert msg.WhichOneof('content') == 'job_request'
 
+        ts = time.time()
+
         runner_id = msg.runner_id
+        print("["+str(ts)+"] received job_request message from runner '" + str(runner_id) + "'")
 
         launcher.notify_runner_connect(runner_id)
 
@@ -643,6 +646,8 @@ def handle_job_requests(launcher, nsteps):
             parent_id = runners_last[runner_id]
         else:
             parent_id = select_good_new_parent(runner_id)
+
+        print("["+str(ts)+"] selected parent '"+str(parent_id)+"' for runner '" + str(runner_id) + "'")
 
         if parent_id:
             # bookkeeping
