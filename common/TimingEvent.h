@@ -35,8 +35,6 @@ enum TimingEventType
     //STOP_IDLE_RUNNER                  = 15, //(time in melissa expose)
     START_JOB_REQUEST                 = 16,
     STOP_JOB_REQUEST                  = 17, // parameter = next_state.id (=job.id)
-    START_LOAD                        = 18,  // parameter = parent_state.t
-    STOP_LOAD                         = 19,  // parameter = parent_state.id
     START_CHECK_LOCAL                 = 20, // parameter = parent_state.t
     STOP_CHECK_LOCAL                  = 21, // parameter = parent_state.id
     START_WAIT_HEAD                   = 22,// parameter = job.t
@@ -105,7 +103,12 @@ enum TimingEventType
     PFS_DELETE                        = 62,    //(global states deleted)
 
 
-    DIRTY_LOAD                        = 94     // happens if a race condition on state loads occurs (is local) and the state load needs to be redone, parameter state.id
+    DIRTY_LOAD                        = 94,     // happens if a race condition on state loads occurs (is local) and the state load needs to be redone, parameter state.id
+    
+    START_LOAD                = 18,  // parameter = parent_state.t
+    STOP_LOAD                 = 19,  // parameter = parent_state.id
+    START_FTI_LOAD          = 95,  // parameter = parent_state.t
+    STOP_FTI_LOAD           = 96  // parameter = parent_state.id
 
     //Server :  --> python!
     //(these are easily comparable with the old melissa-da measures)
