@@ -11,7 +11,7 @@
     throw IoException( (msg), __FILE__, __LINE__, __func__); \
   } while(0)
 
-const size_t IO_TRANSFER_SIZE = 16*1024*1024; // 16 Mb
+const size_t IO_TRANSFER_SIZE = 1*1024*1024; // 1 Mb
 
 typedef int io_id_t;
 
