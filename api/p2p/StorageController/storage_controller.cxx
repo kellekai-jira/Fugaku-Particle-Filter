@@ -268,7 +268,9 @@ void StorageController::m_load_head( io_state_id_t state ) {
 }
 
 void StorageController::m_load_user( io_state_id_t state ) {
-  if( m_io->is_local( state ) ) {
+  bool local_hit = m_io->is_local( state );
+  trigger(START_M_LOAD_USER, (local_hit)?1:0 );
+  if( local_hit ) {
     trigger(LOCAL_HIT, state.id);
   } else {
     trigger(LOCAL_MISS, state.id);
@@ -288,6 +290,7 @@ void StorageController::m_load_user( io_state_id_t state ) {
             trigger(DIRTY_LOAD, state.id);
         trigger(STOP_WAIT_HEAD, state.id);
     }
+  trigger(STOP_M_LOAD_USER, (local_hit)?1:0 );
 }
 
 void StorageController::m_store_head( io_state_id_t state_id ) {
