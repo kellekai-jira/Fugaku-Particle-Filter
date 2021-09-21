@@ -108,7 +108,7 @@ enum TimingEventType
     START_LOAD                = 18,  // parameter = parent_state.t
     STOP_LOAD                 = 19,  // parameter = parent_state.id
     START_FTI_LOAD          = 95,  // parameter = parent_state.t
-    STOP_FTI_LOAD           = 96  // parameter = parent_state.id
+    STOP_FTI_LOAD           = 96,  // parameter = parent_state.id
     START_M_LOAD_USER          = 97,  // parameter = parent_state.t
     STOP_M_LOAD_USER           = 98  // parameter = parent_state.id
 
