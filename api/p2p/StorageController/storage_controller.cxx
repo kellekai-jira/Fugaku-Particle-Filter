@@ -257,6 +257,7 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   assert( m_io->is_local( state_id ) && "state should be local now!" );
   state_pool++;
+  trigger(START_STATE_LOCAL, to_ckpt_id(state_id));
 }
 
 void StorageController::m_pull_user( io_state_id_t state_id ) {
@@ -355,7 +356,8 @@ void StorageController::m_request_post() {
 
   // ask if something to prefetch
   server.prefetch_request( this );
-  trigger(STOP_MODEL_MESSAGE,ckpt_id);
+  trigger(STOP_MODEL_MESSAGE, ckpt_id);
+  trigger(START_STATE_LOCAL, ckpt_id);
 }
 
 // (1) state request from user to worker
@@ -552,6 +554,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
   trigger(STOP_DELETE,to_ckpt_id(state_id));
+  trigger(STOP_STATE_LOCAL,to_ckpt_id(state_id));
 
 }
 
