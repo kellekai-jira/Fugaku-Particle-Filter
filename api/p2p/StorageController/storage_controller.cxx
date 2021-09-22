@@ -251,7 +251,7 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   //}
   if( !m_io->is_local( state_id ) ) {
     int id, t;
-    trigger(PFS_PULL, 0);
+    trigger(PFS_PULL, to_ckpt_id(state_id) );
     m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
@@ -271,13 +271,13 @@ void StorageController::m_load_user( io_state_id_t state ) {
   bool local_hit = m_io->is_local( state );
   trigger(START_M_LOAD_USER, (local_hit)?1:0 );
   if( local_hit ) {
-    trigger(LOCAL_HIT, state.id);
+    trigger(LOCAL_HIT, to_ckpt_id(state));
   } else {
-    trigger(LOCAL_MISS, state.id);
+    trigger(LOCAL_MISS, to_ckpt_id(state));
     int status;
-    trigger(START_WAIT_HEAD, state.t);
+    trigger(START_WAIT_HEAD, to_ckpt_id(state));
     m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
-    trigger(STOP_WAIT_HEAD, state.id);
+    trigger(STOP_WAIT_HEAD, to_ckpt_id(state));
     assert( m_io->is_local( state ) && "unable to load state to local storage" );
   }
   //try {
@@ -315,6 +315,7 @@ void StorageController::m_query_server() {
 //======================================================================
 
 void StorageController::m_request_post() {
+  trigger(START_MODEL_MESSAGE,0);
   if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
@@ -354,7 +355,7 @@ void StorageController::m_request_post() {
 
   // ask if something to prefetch
   server.prefetch_request( this );
-
+  trigger(STOP_MODEL_MESSAGE,ckpt_id);
 }
 
 // (1) state request from user to worker
@@ -550,7 +551,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
-  trigger(STOP_DELETE,0);
+  trigger(STOP_DELETE,to_ckpt_id(state_id));
 
 }
 

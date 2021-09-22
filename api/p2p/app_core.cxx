@@ -229,9 +229,9 @@ int melissa_p2p_expose(VEC_T *values,
     }
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
-    trigger(START_STORE, current_state.t);
+    trigger(START_STORE, to_ckpt_id(current_state));
     storage.store( current_state );
-    trigger(STOP_STORE, current_state.id);
+    trigger(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
     trigger(START_CALC_WEIGHT, current_state.t);
@@ -349,13 +349,15 @@ void ApiTiming::maybe_report() {
             }
             print_events(fname, comm_rank);
 
-            const std::array<EventTypeTranslation, 30> event_type_translations = {{
+            const std::array<EventTypeTranslation, 32> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                     {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                     {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
                     {START_INIT, STOP_INIT, "_INIT"},
                     {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
                     {START_LOAD, STOP_LOAD, "_LOAD"},
+                    {START_FTI_LOAD, STOP_FTI_LOAD, "_FTI_LOAD"},
+                    {START_MODEL_MESSAGE, STOP_MODEL_MESSAGE, "_MODEL_MESSAGE"},
                     {START_M_LOAD_USER, STOP_M_LOAD_USER, "_M_LOAD_USER"},
                     {START_CHECK_LOCAL, STOP_CHECK_LOCAL, "_CHECK_LOCAL"},
                     {START_WAIT_HEAD, STOP_WAIT_HEAD, "_WAIT_HEAD"},

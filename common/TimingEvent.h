@@ -110,7 +110,9 @@ enum TimingEventType
     START_FTI_LOAD          = 95,  // parameter = parent_state.t
     STOP_FTI_LOAD           = 96,  // parameter = parent_state.id
     START_M_LOAD_USER          = 97,  // parameter = parent_state.t
-    STOP_M_LOAD_USER           = 98  // parameter = parent_state.id
+    STOP_M_LOAD_USER           = 98,  // parameter = parent_state.id
+    START_MODEL_MESSAGE                = 99, //(time only for the request)
+    STOP_MODEL_MESSAGE                 = 100 //(time only for the request)
 
     //Server :  --> python!
     //(these are easily comparable with the old melissa-da measures)
