@@ -290,7 +290,7 @@ void StorageController::m_load_user( io_state_id_t state ) {
             trigger(DIRTY_LOAD, state.id);
         trigger(STOP_WAIT_HEAD, state.id);
     }
-  trigger(STOP_M_LOAD_USER, (local_hit)?1:0 );
+  trigger(STOP_M_LOAD_USER, to_ckpt_id(state) );
 }
 
 void StorageController::m_store_head( io_state_id_t state_id ) {

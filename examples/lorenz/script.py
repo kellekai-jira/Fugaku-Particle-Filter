@@ -9,7 +9,10 @@ os.system('killall gdb')
 from melissa_da_study import *
 clean_old_stats()
 
-local_dir = os.environ['PJM_LOCALTMP']
+if int(os.environ['PJM_LLIO_LOCALTMP_SIZE']) > 0:
+    local_dir = os.environ['PJM_LOCALTMP']
+else:
+    local_dir = '/dev/shm'
 
 if int(os.environ['PJM_LLIO_SHAREDTMP_SIZE']) > 0:
     global_dir = os.environ['PJM_SHAREDTMP']

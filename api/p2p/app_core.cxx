@@ -287,7 +287,7 @@ int melissa_p2p_expose(VEC_T *values,
 
 
     if (nsteps > 0) {
-        trigger(START_LOAD, parent_state.t);
+        trigger(START_LOAD, to_ckpt_id(parent_state));
         // called by every app core
         if ( current_state == parent_state ) {
             printf("Not performing a state load as good state already in memory");
@@ -300,7 +300,7 @@ int melissa_p2p_expose(VEC_T *values,
         field.current_step = next_state.t;
         field.current_state_id = next_state.id;
 
-        trigger(STOP_LOAD, parent_state.id);
+        trigger(STOP_LOAD, to_ckpt_id(parent_state));
     }
     else
     {
@@ -349,14 +349,14 @@ void ApiTiming::maybe_report() {
             }
             print_events(fname, comm_rank);
 
-            const std::array<EventTypeTranslation, 29> event_type_translations = {{
+            const std::array<EventTypeTranslation, 30> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                     {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                     {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
-
                     {START_INIT, STOP_INIT, "_INIT"},
                     {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
                     {START_LOAD, STOP_LOAD, "_LOAD"},
+                    {START_M_LOAD_USER, STOP_M_LOAD_USER, "_M_LOAD_USER"},
                     {START_CHECK_LOCAL, STOP_CHECK_LOCAL, "_CHECK_LOCAL"},
                     {START_WAIT_HEAD, STOP_WAIT_HEAD, "_WAIT_HEAD"},
                     {START_CALC_WEIGHT, STOP_CALC_WEIGHT, "_CALC_WEIGHT"},
