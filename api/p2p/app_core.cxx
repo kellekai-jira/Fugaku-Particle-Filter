@@ -352,7 +352,7 @@ void ApiTiming::maybe_report() {
             const std::array<EventTypeTranslation, 33> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                     {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
-                    {START_STATE_LOCAL, STOP_STATE_LOCAL, "_STATE_LOCAL"},
+                    {STATE_LOCAL_CREATE, STATE_LOCAL_DELETE, "_STATE_LOCAL"},
                     {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
                     {START_INIT, STOP_INIT, "_INIT"},
                     {START_JOB_REQUEST, STOP_JOB_REQUEST, "_JOB_REQUEST"},
