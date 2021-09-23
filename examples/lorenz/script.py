@@ -9,6 +9,17 @@ os.system('killall gdb')
 from melissa_da_study import *
 clean_old_stats()
 
+env = ['MELISSA_LORENZ_ITER_MAX',
+        'MELISSA_LORENZ_MEMBERS',
+        'MELISSA_LORENZ_PROCS_RUNNERS',
+        'MELISSA_LORENZ_NUM_RUNNERS',
+        'MELISSA_LORENZ_STATE_DIMENSION',
+        'MELISSA_LORENZ_OBSERVATION_DIR',
+        'MELISSA_LORENZ_EXPERIMENT_DIR',
+        'MELISSA_LORENZ_TIMING_TRACE']
+
+assert all(x in os.environ for x in env)
+
 if int(os.environ['PJM_LLIO_LOCALTMP_SIZE']) > 0:
     local_dir = os.environ['PJM_LOCALTMP']
 else:
@@ -17,20 +28,10 @@ else:
 if int(os.environ['PJM_LLIO_SHAREDTMP_SIZE']) > 0:
     global_dir = os.environ['PJM_SHAREDTMP']
 else:
-    global_dir = '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS'
+    global_dir = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR']
 
 print("local directory: " + local_dir)
 print("global directory: " + global_dir)
-
-env = ['MELISSA_LORENZ_ITER_MAX',
-        'MELISSA_LORENZ_MEMBERS',
-        'MELISSA_LORENZ_PROCS_RUNNERS',
-        'MELISSA_LORENZ_NUM_RUNNERS',
-        'MELISSA_LORENZ_STATE_DIMENSION',
-        'MELISSA_LORENZ_OBSERVATION_DIR',
-        'MELISSA_LORENZ_TIMING_TRACE']
-
-assert all(x in os.environ for x in env)
 
 __env_steps = int(os.environ['MELISSA_LORENZ_ITER_MAX'])
 __env_members = int(os.environ['MELISSA_LORENZ_MEMBERS'])
