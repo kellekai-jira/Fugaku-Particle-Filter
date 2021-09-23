@@ -273,7 +273,7 @@ public:
         for (auto it = events.begin(); it != events.end(); it++)
         {
             double t = to_millis(it->time);
-            outfile << std::setprecision( 11 ) << t << ',';
+            outfile << std::setprecision( 13 ) << t << ',';
             outfile << it->type << ',';
             outfile << it->parameter << std::endl;
         }
@@ -308,8 +308,8 @@ public:
                         {
                             //D("Popping event and writing region");
                             outfile << rank
-                                << ',' << std::setprecision( 11 ) << to_millis(oevt->time)
-                                << ',' << std::setprecision( 11 ) << to_millis(evt.time)
+                                << ',' << std::setprecision( 13 ) << to_millis(oevt->time)
+                                << ',' << std::setprecision( 13 ) << to_millis(evt.time)
                                 << ',' << ett.name
                                 << ',' << oevt->parameter
                                 << ',' << evt.parameter
