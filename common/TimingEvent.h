@@ -157,7 +157,7 @@ struct TimingEvent
     TimingEvent(TimingEventType type_, const int parameter_) :
         type(type_), parameter(parameter_)
     {
-        time = std::chrono::high_resolution_clock::now();
+        time = std::chrono::system_clock::now();
     }
 
     double operator-(const TimingEvent &rhs) const {
@@ -178,7 +178,7 @@ struct EventTypeTranslation
 class Timing
 {
 private:
-    std::chrono::high_resolution_clock::time_point null_time;
+    std::chrono::system_clock::time_point null_time;
     double to_millis(const TimePoint &lhs) {
 
         return std::chrono::duration<double, std::milli>(lhs - null_time).count();

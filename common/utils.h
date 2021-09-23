@@ -163,7 +163,7 @@ inline std::ostream& operator<<(std::ostream& os, const INDEX_MAP_T& rhs) {
 
 
 // timing:
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+typedef std::chrono::time_point<std::chrono::system_clock> TimePoint;
 inline double diff_to_millis(const TimePoint& lhs, const TimePoint& rhs) {
     return std::chrono::duration<double, std::milli>(lhs - rhs).count();
 }
