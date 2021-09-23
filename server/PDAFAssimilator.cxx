@@ -40,12 +40,12 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     }
 
 
-    TimePoint start = std::chrono::high_resolution_clock::now();
+    TimePoint start = std::chrono::system_clock::now();
     cwrapper_init_pdaf(&global_vect_size, &local_vect_size, &ensemble_size, &comm_world,
             &local_vect_size, index_map_transformed.data(),
             &local_vect_size_hidden, index_map_transformed_hidden.data());
     cwrapper_init_user(&total_steps);
-    TimePoint now = std::chrono::high_resolution_clock::now();
+    TimePoint now = std::chrono::system_clock::now();
     printf("[%d] PDAF init took: %f ms\n", comm_rank, diff_to_millis(now, start));;
     nsteps = -1;
 
@@ -58,7 +58,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
     getAllEnsembleMembers();
     printf("[%d] hidden state size: %d doubles\n", comm_rank, local_vect_size_hidden);
 
-    start = std::chrono::high_resolution_clock::now();
+    start = std::chrono::system_clock::now();
     if (local_vect_size_hidden > 0)
     {
         for (int member_id = 0; member_id <
@@ -76,7 +76,7 @@ PDAFAssimilator::PDAFAssimilator(Field &field_, const int total_steps, MpiManage
         }
     }
 
-    now = std::chrono::high_resolution_clock::now();
+    now = std::chrono::system_clock::now();
     printf("[%d] hidden state init took: %f ms\n", comm_rank, diff_to_millis(now, start));;
 }
 
