@@ -273,7 +273,7 @@ public:
         for (auto it = events.begin(); it != events.end(); it++)
         {
             double t = to_millis(it->time);
-            outfile << t << ',';
+            outfile << std::setprecision( 11 ) << t << ',';
             outfile << it->type << ',';
             outfile << it->parameter << std::endl;
         }
