@@ -90,7 +90,7 @@ void melissa_p2p_init(const char *field_name,
 
     // TODO move storage.init in constructor and use smartpointer instead
     assert(local_hidden_vect_size == 0 && "Melissa-P2P does not yet work if there is a hidden state");
-    storage.init( 20L*1024L*1024L*1024L, local_vect_size);  // 20GB storage for now
+    storage.init( 50L*1024L*1024L*1024L, local_vect_size);  // 50GB storage for now
     fti_protect_id = storage.protect( NULL, local_vect_size, IO_BYTE );
 
     // open sockets to server on rank 0:
