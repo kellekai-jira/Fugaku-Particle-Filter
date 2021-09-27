@@ -152,7 +152,7 @@ class FugakuCluster(cluster.Cluster):
         if job_poll_return is None:
             return cluster.STATE_RUNNING
         else:
-            logger.debug("job '%s' has terminated with exit code '%s%", job_pid, job_poll_return)
+            logger.debug("job '%s' has terminated with exit code '%s'", job_pid, job_poll_return)
             self.RemoveJob(job_pid)
             return cluster.STATE_STOP
 
