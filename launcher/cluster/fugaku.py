@@ -66,7 +66,7 @@ class FugakuCluster(cluster.Cluster):
         #proc_ips = proc.stdout.read().decode("utf-8").split()
         #node_ips = set(proc_ips)
         #nb_nodes = len(node_ips)
-        nb_nodes = os.environ['PJM_NODE']
+        nb_nodes = int(os.environ['PJM_NODE'])
         logger.debug('number of nodes: %s', nb_nodes)
         #logger.debug('node ips: %s', node_ips)
 
