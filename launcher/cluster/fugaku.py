@@ -49,7 +49,7 @@ class FugakuCluster(cluster.Cluster):
     def __init__(self):
         # additional logging info
         FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-        debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + 'fugaku_cluster.log'
+        debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + '/fugaku_cluster.log'
         logging.basicConfig(format=FORMAT, filename=debug_log)
         logger.setLevel(logging.DEBUG)
 
@@ -57,6 +57,7 @@ class FugakuCluster(cluster.Cluster):
         self.mpiexec = os.getenv('MPIEXEC')
 
         # parameters
+        self.NODE_BASE = -1 # launcher
         self.NODE_FREE = 0
         self.NODE_SERV = 1
         self.NODE_CLNT = 2
@@ -70,7 +71,8 @@ class FugakuCluster(cluster.Cluster):
         logger.debug('node ips: %s', node_ips)
 
         # exclude 1 node (launcher runs there)
-        self.nodes = [ self.NODE_FREE ] * (nb_nodes-1)
+        self.nodes = [ self.NODE_FREE ] * nb_nodes
+        self.nodes[0] = self.NODE_BASE
 
         self.jobs = {}
 
@@ -99,8 +101,7 @@ class FugakuCluster(cluster.Cluster):
             additional_env_parameters += self.env_variable_pattern % (key, value)
 
         # GET VCOORDS
-        available_nodes = np.asarray(np.array(self.nodes) == 0).nonzero()[0] + 1
-        # plus one to remove idx 0 (launcher node)
+        available_nodes = np.asarray(np.array(self.nodes) == 0).nonzero()[0]
         assert len(available_nodes) >= n_nodes
         #vcoords = available_nodes[len(available_nodes)-n_nodes:]
         vcoords = available_nodes[:n_nodes]
