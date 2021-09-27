@@ -62,13 +62,13 @@ class FugakuCluster(cluster.Cluster):
         self.NODE_SERV = 1
         self.NODE_CLNT = 2
 
-        proc = subprocess.Popen(['pjshowip'], stdout=subprocess.PIPE)
-        proc_ips = proc.stdout.read().decode("utf-8").split()
-        node_ips = set(proc_ips)
-        nb_nodes = len(node_ips)
-
+        #proc = subprocess.Popen(['pjshowip'], stdout=subprocess.PIPE)
+        #proc_ips = proc.stdout.read().decode("utf-8").split()
+        #node_ips = set(proc_ips)
+        #nb_nodes = len(node_ips)
+        nb_nodes = os.environ['PJM_NODE']
         logger.debug('number of nodes: %s', nb_nodes)
-        logger.debug('node ips: %s', node_ips)
+        #logger.debug('node ips: %s', node_ips)
 
         # exclude 1 node (launcher runs there)
         self.nodes = [ self.NODE_FREE ] * nb_nodes
