@@ -69,7 +69,8 @@ class FugakuCluster(cluster.Cluster):
         logger.debug('number of nodes: %s', nb_nodes)
         logger.debug('node ips: %s', node_ips)
 
-        self.nodes = [ self.NODE_FREE ] * nb_nodes
+        # exclude 1 node (launcher runs there)
+        self.nodes = [ self.NODE_FREE ] * (nb_nodes-1)
 
         self.jobs = {}
 
@@ -98,9 +99,11 @@ class FugakuCluster(cluster.Cluster):
             additional_env_parameters += self.env_variable_pattern % (key, value)
 
         # GET VCOORDS
-        available_nodes = np.asarray(np.array(self.nodes) == 0).nonzero()[0]
+        available_nodes = np.asarray(np.array(self.nodes) == 0).nonzero()[0] + 1
+        # plus one to remove idx 0 (launcher node)
         assert len(available_nodes) >= n_nodes
-        vcoords = available_nodes[len(available_nodes)-n_nodes:]
+        #vcoords = available_nodes[len(available_nodes)-n_nodes:]
+        vcoords = available_nodes[:n_nodes]
 
         # CREATE VCOORD FILE
         logger.debug('create vcoord file for job-name: %s', name)
