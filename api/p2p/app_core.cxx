@@ -243,13 +243,14 @@ int melissa_p2p_expose(VEC_T *values,
     io_state_id_t parent_state, next_state;
 
     // Rank 0:
+    uint64_t loop_counter = 0;
     if (mpi.rank() == 0) {
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
         trigger(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
         push_weight_to_head(weight);
         trigger(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
-        trigger(START_JOB_REQUEST, 0);
+        trigger(START_JOB_REQUEST, current_state.t);
         // 4. ask server for more work
         ::melissa_p2p::JobResponse job_response;
         bool entered_loop = false;
@@ -263,6 +264,7 @@ int melissa_p2p_expose(VEC_T *values,
 
                 }
                 usleep(500000); // retry after 500ms
+                loop_counter++;
             }
         } while (!job_response.has_parent());
         D("Now  I work on %s", job_response.DebugString().c_str());
@@ -274,7 +276,7 @@ int melissa_p2p_expose(VEC_T *values,
     }
     else
     {
-        trigger(START_JOB_REQUEST, 0);
+        trigger(START_JOB_REQUEST, current_state.t);
     }
 
     // Broadcast to all ranks:
@@ -283,7 +285,7 @@ int melissa_p2p_expose(VEC_T *values,
     MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
-    trigger(STOP_JOB_REQUEST, next_state.id);
+    trigger(STOP_JOB_REQUEST, loop_counter);
 
 
     if (nsteps > 0) {

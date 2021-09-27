@@ -39,11 +39,20 @@ import numpy as np
 import tempfile
 import signal, psutil
 
+import logging
+
 from cluster import cluster
 
+logger = logging.getLogger(__name__)
 
 class FugakuCluster(cluster.Cluster):
     def __init__(self):
+        # additional logging info
+        FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+        debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + 'fugaku_cluster.log'
+        logging.basicConfig(format=FORMAT, filename=debug_log)
+        logger.setLevel(logging.DEBUG)
+
         self.env_variable_pattern = ' -x %s=%s '
         self.mpiexec = os.getenv('MPIEXEC')
 
@@ -57,10 +66,15 @@ class FugakuCluster(cluster.Cluster):
         node_ips = set(proc_ips)
         nb_nodes = len(node_ips)
 
+        logger.debug('number of nodes: %s', nb_nodes)
+        logger.debug('node ips: %s', node_ips)
+
         self.nodes = [ self.NODE_FREE ] * nb_nodes
 
         self.jobs = {}
 
+        logger.debug('node status: %s', self.nodes)
+        logger.debug('jobs: %s', self.jobs)
 
     def __del__(self):
         if self.jobs == {}:
@@ -89,6 +103,7 @@ class FugakuCluster(cluster.Cluster):
         vcoords = available_nodes[len(available_nodes)-n_nodes:]
 
         # CREATE VCOORD FILE
+        logger.debug('create vcoord file for job-name: %s', name)
         vcoordfile = self.CreateVcoordFile( vcoords, int(n_procs/n_nodes) )
 
         if logfile == '':
@@ -115,6 +130,9 @@ class FugakuCluster(cluster.Cluster):
 
         for i in vcoords:
             self.nodes[i] = self.NODE_SERV if is_server else self.NODE_CLNT
+
+        logger.debug('node status: %s', self.nodes)
+        logger.debug('jobs: %s', self.jobs)
 
         print("Launched {:s} pid={:d}".format(name, job.pid))
         return job.pid
@@ -175,10 +193,12 @@ class FugakuCluster(cluster.Cluster):
 
     def CreateVcoordFile(self, vcoords, procs_per_vcoord ):
         tmpname = '/tmp/' + next(tempfile._get_candidate_names()) + '.vcoord'
+        logger.debug('vcoord file: %s', tmpname)
         with open( tmpname, "w" ) as vcoordfile:
             for coord in vcoords:
                 for i in range(procs_per_vcoord):
                     vcoordfile.write("(" + str(coord) + ")\n")
+                    logger.debug('  node coord: (%s)', coord)
         return tmpname
 
     def RemoveVcoordFile(self, name ):
