@@ -148,9 +148,11 @@ class FugakuCluster(cluster.Cluster):
 
         job = self.jobs[job_pid]['job']
 
-        if job.poll() is None:
+        job_poll_return = job.poll()
+        if job_poll_return is None:
             return cluster.STATE_RUNNING
         else:
+            logger.debug("job '%s' has terminated with exit code '%s%", job_poll_return)
             self.RemoveJob(job_pid)
             return cluster.STATE_STOP
 
