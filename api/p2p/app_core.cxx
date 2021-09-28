@@ -19,7 +19,7 @@
 
 #include <mpi.h>
 #include <mpi-ext.h>
-
+#include <sstream>
 void print_local_hostname ( const MPI_Comm & comm, const std::string & filename ) {
   const std::string delim(", ");
   std::string hostname;
