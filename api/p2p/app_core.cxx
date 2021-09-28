@@ -10,11 +10,71 @@
 #include "StorageController/helpers.h"
 
 #include <unistd.h>
+#include <limits.h>
 
 #include <cstdlib>
 #include <memory>
 
 #include "PythonInterface.h"
+
+#include <mpi.h>
+#include <mpi-ext.h>
+
+void print_local_hostname ( const MPI_Comm & comm, const std::string & filename ) {
+  const std::string delim(", ");
+  std::string hostname;
+  std::string ip;
+  struct ifaddrs *ifap;
+  int ndim, shape[3], coords[6] = {0,0,0,0,0,0};
+  
+  // hostname
+  try {
+    char temp[HOST_NAME_MAX];
+    if (gethostname(temp,HOST_NAME_MAX) == -1) {
+      hostname = "undefined"; 
+    } else {
+      temp[HOST_NAME_MAX-1] = '\0';
+      hostname = temp; 
+    }
+  } catch (...) {
+    hostname = "undefined"; 
+  }
+ 
+  // topology
+  FJMPI_Topology_get_dimension( &ndim );
+  FJMPI_Topology_get_shape( &shape[0], &shape[1], &shape[2] );
+  FJMPI_Topology_get_coords( comm, 0, FJMPI_LOGICAL, ndim, coords );
+  
+  if(getifaddrs (&ifap) < 0) {
+    ip = "undefined";
+  } else {
+    for (struct ifaddrs* ifa = ifap; ifa; ifa = ifa->ifa_next)
+    {
+      if (ifa->ifa_addr && ifa->ifa_addr->sa_family==AF_INET)
+      {
+        const struct sockaddr_in* sa = (struct sockaddr_in*)ifa->ifa_addr;
+        const char* addr = inet_ntoa(sa->sin_addr);
+        if (strcmp (ifa->ifa_name, "tofu1") == 0)
+        {
+          ip = addr;
+          break;
+        }
+      }
+    }
+    freeifaddrs(ifap);
+  }
+  
+  std::ofstream fs( filename );
+  fs << "hostname" << delim << "ip" << delim << "coord" << delim << "dims" << delim << "shape" << std::endl;
+  fs << hostname << delim;
+  fs << ip << delim;
+  fs << "(" << coords[0]; 
+  for (int i=1; i<ndim; i++) fs << "," << coords[i];
+  fs << ")" << delim;
+  fs << ndim << delim;
+  fs << "(" << shape[0] << "," << shape[1] << "," << shape[2] << ")" << std::endl;
+  fs.close();
+} 
 
 void* job_socket;
 
@@ -350,6 +410,9 @@ void ApiTiming::maybe_report() {
                 sprintf(fname, "runner-%03d-app", runner_id);
             }
             print_events(fname, comm_rank);
+            std::stringstream hostinfo_file;
+            hostinfo_file << "runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
+            print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
 
             const std::array<EventTypeTranslation, 32> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},

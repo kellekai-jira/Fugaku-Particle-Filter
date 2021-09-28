@@ -44,6 +44,8 @@
 #include <mpi.h>
 #include <zmq.h>
 
+
+
 int MELISSA_MESSAGE_LEN = 1024;
 
 static int verbose_lvl; /**< verbosity lvl requested by user */
@@ -493,3 +495,5 @@ int test_bit (uint32_t *vect, int pos)
         return 0;
     }
 }
+
+
