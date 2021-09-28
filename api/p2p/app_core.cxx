@@ -20,6 +20,7 @@
 #include <mpi.h>
 #include <mpi-ext.h>
 #include <sstream>
+
 void print_local_hostname ( const MPI_Comm & comm, const std::string & filename ) {
   const std::string delim(", ");
   std::string hostname;
@@ -64,6 +65,7 @@ void print_local_hostname ( const MPI_Comm & comm, const std::string & filename 
     freeifaddrs(ifap);
   }
   
+  std::cout << "[Writing host info into file: " << filename << "]" << std::endl;
   std::ofstream fs( filename );
   fs << "hostname" << delim << "ip" << delim << "coord" << delim << "dims" << delim << "shape" << std::endl;
   fs << hostname << delim;
