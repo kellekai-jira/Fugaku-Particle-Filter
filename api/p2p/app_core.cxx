@@ -75,6 +75,7 @@ void print_local_hostname ( const MPI_Comm & comm, const std::string & filename 
   fs << ")" << delim;
   fs << ndim << delim;
   fs << "(" << shape[0] << "," << shape[1] << "," << shape[2] << ")" << std::endl;
+  fs << std::flush();
   fs.close();
 } 
 
