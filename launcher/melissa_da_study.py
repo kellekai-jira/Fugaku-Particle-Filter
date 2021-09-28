@@ -38,12 +38,13 @@ assert melissa_da_datadir
 
 
 def cluster_selector():
-    hn = socket.gethostname()
-    print('hostname:', hn)
-    if 'juwels' in hn or 'jwlogin' in hn:
-        return SlurmJuwelsCluster(account='prcoe03')
-    else:
-        return LocalCluster()
+    return FugakuCluster()
+    #hn = socket.gethostname()
+    #print('hostname:', hn)
+    #if 'juwels' in hn or 'jwlogin' in hn:
+    #    return SlurmJuwelsCluster(account='prcoe03')
+    #else:
+    #    return LocalCluster()
 
 
 def run_melissa_da_study(
