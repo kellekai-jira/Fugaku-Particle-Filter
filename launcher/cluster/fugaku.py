@@ -116,7 +116,7 @@ class FugakuCluster(cluster.Cluster):
             mpi_dbg_flag = os.environ['MELISSA_MPI_DBG_FLAG']
             mpi_dbg_path = '-fjdbg-out-dir ' + \
                     os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + \
-                    + '/mpi_dbg/' + additional_env['MELISSA_DA_RUNNER_ID']
+                    '/mpi_dbg/' + additional_env['MELISSA_DA_RUNNER_ID']
             mpi_dbg = mpi_dbg_flag + ' ' + mpi_dbg_path
 
         if logfile == '':
