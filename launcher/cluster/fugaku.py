@@ -110,9 +110,19 @@ class FugakuCluster(cluster.Cluster):
         logger.debug('create vcoord file for job-name: %s', name)
         vcoordfile = self.CreateVcoordFile( vcoords, int(n_procs/n_nodes) )
 
+        # CHECK IF MPI DEBUGGING REQUESTED
+        mpi_dbg = ''
+        if 'MELISSA_MPI_DBG_FLAG' in os.environ:
+            mpi_dbg_flag = os.environ['MELISSA_MPI_DBG_FLAG']
+            mpi_dbg_path = '-fjdbg-out-dir ' + \
+                    os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + \
+                    + '/mpi_dbg/' + additional_env['MELISSA_DA_RUNNER_ID']
+            mpi_dbg = mpi_dbg_flag + ' ' + mpi_dbg_path
+
         if logfile == '':
-            run_cmd = '%s --vcoordfile %s -n %d %s %s' % (
+            run_cmd = '%s %s --vcoordfile %s -n %d %s %s' % (
                     self.mpiexec,
+                    mpi_dbg,
                     vcoordfile,
                     n_procs,
                     additional_env_parameters,
@@ -120,8 +130,9 @@ class FugakuCluster(cluster.Cluster):
             print("Launching %s" % run_cmd)
             job = subprocess.Popen(run_cmd.split())
         else:
-            run_cmd = '%s --of-proc %s --vcoordfile %s -n %d %s %s' % (
+            run_cmd = '%s %s --of-proc %s --vcoordfile %s -n %d %s %s' % (
                     self.mpiexec,
+                    mpi_dbg,
                     logfile,
                     vcoordfile,
                     n_procs,
