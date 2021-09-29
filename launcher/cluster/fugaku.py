@@ -112,7 +112,7 @@ class FugakuCluster(cluster.Cluster):
 
         # CHECK IF MPI DEBUGGING REQUESTED
         mpi_dbg = ''
-        if 'MELISSA_MPI_DBG_FLAG' in os.environ:
+        if 'MELISSA_MPI_DBG_FLAG' in os.environ and not is_server:
             mpi_dbg_flag = os.environ['MELISSA_MPI_DBG_FLAG']
             mpi_dbg_path = '-fjdbg-out-dir ' + \
                     os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + \
