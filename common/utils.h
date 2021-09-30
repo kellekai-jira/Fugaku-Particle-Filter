@@ -16,6 +16,7 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include <sstream>
 
 #include <arpa/inet.h>
 #include <execinfo.h>
@@ -57,8 +58,11 @@ enum Phase
 #define D(x ...) \
     do { \
         if(comm_rank == 0) { \
-            std::printf(x); \
-            std::printf(" (%s:%d)\n", __FILE__, __LINE__); \
+            char str[1024]; \
+            std::snprintf(str, 1024, x); \
+            std::stringstream ss; \
+            ss << str << "(" << __FILE__ << ":" <<  __LINE__ << ")"; \
+            std::cout << ss.str() << std::endl; \
         } \
     } while(false)
 #endif
