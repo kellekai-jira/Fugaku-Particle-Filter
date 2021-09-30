@@ -294,16 +294,16 @@ int melissa_p2p_expose(VEC_T *values,
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
     trigger(START_STORE, to_ckpt_id(current_state));
-    D("start storing state as L1 checkpoint")
+    D("start storing state as L1 checkpoint");
     storage.store( current_state );
-    D("finished storing state as L1 checkpoint")
+    D("finished storing state as L1 checkpoint");
     trigger(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
     trigger(START_CALC_WEIGHT, current_state.t);
-    D("start calculating weight for state")
+    D("start calculating weight for state");
     double weight = calculate_weight(values, hidden_values);
-    D("finished calculating weight for state")
+    D("finished calculating weight for state");
     trigger(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
@@ -315,9 +315,9 @@ int melissa_p2p_expose(VEC_T *values,
     if (mpi.rank() == 0) {
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
         trigger(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
-        D("start pushing weight to head")
+        D("start pushing weight to head");
         push_weight_to_head(weight);
-        D("finished pushing weight to head")
+        D("finished pushing weight to head");
         trigger(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
         trigger(START_JOB_REQUEST, current_state.t);
