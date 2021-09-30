@@ -57,6 +57,12 @@ from utils import get_node_name
 context = zmq.Context()
 context.setsockopt(zmq.LINGER, 0)
 
+def count_members(a):
+    res = 0
+    for _, val in a.items():
+        res += val
+    return res
+
 # Tuning melissa4py adding messages needed in Melissa-DA context
 class Alive:
     def encode(self):
@@ -572,13 +578,13 @@ def select_good_new_parent(runner_id):
         trigger_select(runner_id, parent_id.id, False)
         return parent_id
     else:
-        P = len(alpha)
-        if P == 0:
+        M = count_members(alpha)
+        if M == 0:
             return
         R = len(runners_last)
-        Q = P / R
+        Q = M / R
         for parent_id in StateCache.get_by_runner(runner_id):
-            if parent_id in alpha and needs_runner(parent_id, Q):
+            if parent_id in alpha:
                 state_loads_wo_cache += 1
                 trigger_select(runner_id, parent_id.id, True)
                 return parent_id
@@ -621,10 +627,7 @@ def handle_job_requests(launcher, nsteps):
         trigger(START_HANDLE_JOB_REQ, 0)
         assert msg.WhichOneof('content') == 'job_request'
 
-        ts = time.time()
-
         runner_id = msg.runner_id
-        print("["+str(ts)+"] received job_request message from runner '" + str(runner_id) + "'")
 
         launcher.notify_runner_connect(runner_id)
 
@@ -646,8 +649,6 @@ def handle_job_requests(launcher, nsteps):
             parent_id = runners_last[runner_id]
         else:
             parent_id = select_good_new_parent(runner_id)
-
-        print("["+str(ts)+"] selected parent '"+str(parent_id)+"' for runner '" + str(runner_id) + "'")
 
         if parent_id:
             # bookkeeping
