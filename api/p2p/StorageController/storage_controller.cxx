@@ -31,6 +31,8 @@ int last_assimilation_cycle = 1;
 
 
 void StorageController::io_init( MpiController* mpi, IoController* io ) {
+  
+  AddTimeStamp ats( std::cout );
 
   m_mpi = mpi;
   m_io = io;
