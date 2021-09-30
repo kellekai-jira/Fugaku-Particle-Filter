@@ -118,9 +118,11 @@ enum Phase
 #define L(x ...) \
     do { \
         if(comm_rank == 0) { \
-            std::printf("[%d] ", comm_rank); \
-            std::printf(x); \
-            std::printf("\n"); \
+            char str[1024]; \
+            std::snprintf(str, 1024, x); \
+            std::stringstream ss; \
+            ss << "[rank:" << comm_rank << "] " << str << std::endl; \
+            std::cout << ss.str() << std::endl; \
         } \
     } while(false)
 
