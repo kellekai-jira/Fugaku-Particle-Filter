@@ -90,6 +90,9 @@ int fti_protect_id;
 MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 {
     if (is_p2p()) {
+        // preceed all std::cout calls with a timestamp
+        AddTimeStamp ats( std::cout );
+        
         runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
         printf("Hello! I'm runner %d\n", runner_id);
 

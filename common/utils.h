@@ -28,6 +28,53 @@
 #include <mpi.h>
 #include <zmq.h>
 
+#include <streambuf>
+#include <cassert>
+
+class AddTimeStamp : public std::streambuf
+{
+public:
+    AddTimeStamp( std::basic_ios< char >& out )
+        : out_( out )
+        , sink_()
+        , newline_( true )
+    {
+        sink_ = out_.rdbuf( this );
+        assert( sink_ );
+    }
+    ~AddTimeStamp()
+    {
+        out_.rdbuf( sink_ );
+    }
+protected:
+    int_type overflow( int_type m = traits_type::eof() )
+    {
+        if( traits_type::eq_int_type( m, traits_type::eof() ) )
+            return sink_->pubsync() == -1 ? m: traits_type::not_eof(m);
+        if( newline_ )
+        {   // --   add timestamp here
+            std::ostream str( sink_ );
+            if( !(str << "[" << getTimestamp() << " ms] ") ) // add perhaps a seperator " "
+                return traits_type::eof(); // Error
+        }
+        newline_ = traits_type::to_char_type( m ) == '\n';
+        return sink_->sputc( m );
+    }
+private:
+    long getTimestamp() {
+    	auto now = std::chrono::system_clock::now();
+    	auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    	auto value = now_ms.time_since_epoch();
+    	long duration = value.count();
+    }
+    AddTimeStamp( const AddTimeStamp& );
+    AddTimeStamp& operator=( const AddTimeStamp& ); // not copyable
+    // --   Members
+    std::basic_ios< char >& out_;
+    std::streambuf* sink_;
+    bool newline_;
+};
+
 inline void print_stack_trace() {
     void* array[10];
     size_t size;
