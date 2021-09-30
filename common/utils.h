@@ -108,7 +108,7 @@ enum Phase
             char str[1024]; \
             std::snprintf(str, 1024, x); \
             std::stringstream ss; \
-            ss << str << "(" << __FILE__ << ":" <<  __LINE__ << ")"; \
+            ss << str << " (" << __FILE__ << ":" <<  __LINE__ << ")"; \
             std::cout << ss.str() << std::endl; \
         } \
     } while(false)
