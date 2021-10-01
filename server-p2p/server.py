@@ -151,7 +151,7 @@ class DueDates:
 
     @staticmethod
     def get_by_runner(runner_id):
-        res = [apr[1] for apr in DueDates.all_per_runner[runner_id]] + [apr[0] for apr in DueDates.all_per_runner[runner_id]]
+        res = [apr[1] for apr in DueDates.all_per_runner[runner_id]] + [apr[2] for apr in DueDates.all_per_runner[runner_id]]
         return res
 
     @staticmethod
