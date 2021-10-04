@@ -56,6 +56,7 @@ def run_melissa_da_study(
         procs_server=1,
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
+        runner_group_size=1,
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
         meta_ckpt_dir='../Meta',
@@ -244,9 +245,8 @@ def run_melissa_da_study(
     Server.starts = 0
 
     class Runner(Job):
-        def __init__(self, runner_id, server_node_name):
-            #self.runner_id = runner_id
-
+        def __init__(self, group_id, runner_ids, server_node_name):
+            self.runner_ids = runner_ids
             precommand = 'xterm_gdb'
             precommand = ''
 
@@ -260,7 +260,13 @@ def run_melissa_da_study(
 
             logfile = ''
             if not show_simulation_log:
-                logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
+                logfile = '%s/runner-group-%03d.log' % (WORKDIR, group_id)
+
+            print(logfile)
+            additional_runner_env = {}
+
+            for runner_id in runner_ids:
+
                 if create_runner_dir:
                     runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
                     os.mkdir(runner_dir)
@@ -288,17 +294,20 @@ def run_melissa_da_study(
                     else:
                         # support old api:
                         prepare_runner_dir()
-
-            additional_runner_env = {
-                    "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
-                    "MELISSA_SERVER_MASTER_GP_NODE":
-                        melissa_server_master_gp_node,
-                    "MELISSA_TIMING_NULL": str(start_time),
-                    "MELISSA_DA_RUNNER_ID": str(runner_id)
-                    }
-            lib_path = os.getenv('LD_LIBRARY_PATH')
-            if lib_path != '':
-                additional_runner_env['LD_LIBRARY_PATH'] = lib_path
+                if not additional_runner_env:
+                    additional_runner_env = {
+                        "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
+                        "MELISSA_SERVER_MASTER_GP_NODE":
+                            melissa_server_master_gp_node,
+                        "MELISSA_TIMING_NULL": str(start_time),
+                        "MELISSA_DA_RUNNER_ID": str(runner_id)
+                        }
+                    lib_path = os.getenv('LD_LIBRARY_PATH')
+                    if lib_path != '':
+                        additional_runner_env['LD_LIBRARY_PATH'] = lib_path
+                else:
+                    content = additional_runner_env["MELISSA_DA_RUNNER_ID"]
+                    additional_runner_env["MELISSA_DA_RUNNER_ID"] = content + "," + str(runner_id)
 
             envs = additional_env.copy()
             join_dicts(envs, additional_runner_env)
@@ -307,12 +316,10 @@ def run_melissa_da_study(
 
             os.chdir(WORKDIR)
 
-
             self.start_running_time = -1
             self.server_knows_it = False
 
             Job.__init__(self, job_id)
-
 
     init_sockets()
 
@@ -321,6 +328,7 @@ def run_melissa_da_study(
     runners = {}  # running runners
     server = None
     next_runner_id = 0
+    next_group_id = 0
     while running:
         time.sleep(0.1)  # chill down processor...
 
@@ -334,11 +342,16 @@ def run_melissa_da_study(
         if server.state == STATE_RUNNING:
             if server.node_name != '':
                 mr = max_runners()
-                if len(runners) < mr:  # TODO depend on check load here!
-                    runner_id = next_runner_id
-                    next_runner_id += 1
-                    debug('Starting runner %d' % runner_id)
-                    runners[runner_id] = Runner(runner_id, server.node_name)
+                active_runners = sum(list(map(lambda x: len(runners[x].runner_ids), runners))) if runners else 0
+                if active_runners < mr:  # TODO depend on check load here!
+                    slots = mr - active_runners
+                    group_size = runner_group_size if runner_group_size <= slots else slots
+                    runner_ids = list( range(next_runner_id, next_runner_id + group_size) )
+                    next_runner_id += group_size
+                    group_id = next_group_id
+                    next_group_id += 1
+                    runners[group_id] = Runner(group_id, runner_ids, server.node_name)
+                    debug('Starting runner(s) %s' % runner_ids)
                 else:
                     while len(runners) > mr:
                         to_remove = random.choice(list(runners))
