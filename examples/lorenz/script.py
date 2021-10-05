@@ -51,6 +51,7 @@ run_melissa_da_study(
     ensemble_size=__env_members,
     procs_runner=__env_procs_runners,
     nodes_runner=1,
+    runner_group_size = 2,
     n_runners=__env_num_runners,
     local_ckpt_dir=local_dir + '/melissa_cache',
     global_ckpt_dir=global_dir + '/Global',
