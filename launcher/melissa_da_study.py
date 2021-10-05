@@ -194,6 +194,17 @@ def run_melissa_da_study(
             time.sleep(.1)
     state_refresher = defer(refresh_states)
 
+    def num_launched_runners():
+        return sum(list(map(lambda x: len(runners[x].runner_ids), runners))) if runners else 0
+
+    def runner_group_of( runner_id ):
+        res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners)))[0]
+        if res.size == 0:
+            return None
+        else:
+            assert len(res) == 1
+            return res[0]
+
 
     MAX_SERVER_STARTS = 3
     class Server(Job):
@@ -347,7 +358,7 @@ def run_melissa_da_study(
         if server.state == STATE_RUNNING:
             if server.node_name != '':
                 mr = max_runners()
-                active_runners = sum(list(map(lambda x: len(runners[x].runner_ids), runners))) if runners else 0
+                active_runners = num_launched_runners()
                 if active_runners < mr:  # TODO depend on check load here!
                     slots = mr - active_runners
                     group_size = runner_group_size if runner_group_size <= slots else slots
@@ -358,9 +369,9 @@ def run_melissa_da_study(
                     runners[group_id] = Runner(group_id, runner_ids, server.node_name)
                     debug('Starting runner(s) %s' % runner_ids)
                 else:
-                    while len(runners) > mr:
+                    while num_launched_runners() > mr:
                         to_remove = random.choice(list(runners))
-                        log("killing a runner (with id=%d) as too many runners are up" % to_remove)
+                        log("killing a runner-group (with id=%d) as too many runners are up" % to_remove)
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
@@ -396,7 +407,7 @@ def run_melissa_da_study(
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
                         runner.state = STATE_RUNNING
-                        debug('Runner %d running now!' % runner_id)
+                        debug('Runner(s) %s running now!' % runners[runner_id].runner_ids)
                         runner.start_running_time = time.time()
                 if runner.state == STATE_RUNNING:
                     if not runner.server_knows_it and \
@@ -418,7 +429,7 @@ def run_melissa_da_study(
             if len(server_msgs) > 0:
                 server.last_msg_from = time.time()
             for msg in server_msgs:
-                if 'runner_id' in msg and not msg['runner_id'] in runners:
+                if 'runner_id' in msg and runner_group_of(msg['runner_id']) == None:
                     debug('omitting message concerning already dead runner %d' %
                             msg['runner_id'])
                     continue
@@ -426,11 +437,11 @@ def run_melissa_da_study(
                     log('Registering server')
                     server.node_name = msg['node_name']
                 elif msg['type'] == MSG_TIMEOUT:
-                    error('Server wants me to crash runner %d' % msg['runner_id'])
-                    runners[msg['runner_id']].remove()
-                    del runners[msg['runner_id']]
+                    error('Server wants me to crash runner-group %d' % runner_group_of(msg['runner_id']))
+                    runners[runner_group_of(msg['runner_id'])].remove()
+                    del runners[runner_group_of(msg['runner_id'])]
                 elif msg['type'] == MSG_REGISTERED:
-                    runners[msg['runner_id']].server_knows_it = True
+                    runners[runner_group_of(msg['runner_id'])].server_knows_it = True
                 elif msg['type'] == MSG_PING:
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
