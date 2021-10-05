@@ -418,13 +418,13 @@ def run_melissa_da_study(
                 if runner.state == STATE_RUNNING:
                     if not runner.server_knows_it[runner_id] and \
                             time.time() - runner.start_running_time[runner_id] > runner_timeout:
-                        error(('Runner %d is killed as it did not register at the server'
-                              + ' within %d seconds') % (runner_id, runner_timeout))
+                        error(('Runner group %d is killed as it did not register at the server'
+                              + ' within %d seconds') % (group_id, runner_timeout))
                         runners[group_id].remove()
                         del runners[group_id]
                     if runner.check_state() != STATE_RUNNING:
-                        error('Runner %d is killed as its job is not up anymore' %
-                                runner_id)
+                        error('Runner group %d is killed as its job is not up anymore' %
+                                group_id)
                         # TODO: notify server!
                         runners[group_id].remove()
                         del runners[group_id]
