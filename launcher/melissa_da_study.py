@@ -264,8 +264,13 @@ def run_melissa_da_study(
 
             print(logfile)
             additional_runner_env = {}
+            coll_procs_runner = 0
+            coll_nodes_runner = 0
 
             for runner_id in runner_ids:
+
+                coll_procs_runner += procs_runner
+                coll_nodes_runner += nodes_runner
 
                 if create_runner_dir:
                     runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
@@ -312,7 +317,7 @@ def run_melissa_da_study(
             envs = additional_env.copy()
             join_dicts(envs, additional_runner_env)
 
-            job_id = cluster.ScheduleJob(EXECUTABLE, walltime, procs_runner, nodes_runner, cmd, envs, logfile, is_server=False)
+            job_id = cluster.ScheduleJob(EXECUTABLE, walltime, coll_procs_runner, coll_nodes_runner, cmd, envs, logfile, is_server=False)
 
             os.chdir(WORKDIR)
 
