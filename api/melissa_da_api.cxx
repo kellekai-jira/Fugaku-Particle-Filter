@@ -80,7 +80,7 @@ struct ConfigurationConnection
         assert(std::getenv("MELISSA_DA_RUNNER_ID"));
 
         if( runner_id == -1 ) {
-          runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));#
+          runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
         }
         int header[] = {REGISTER_RUNNER_ID, runner_id};
 
