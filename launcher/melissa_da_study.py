@@ -197,6 +197,9 @@ def run_melissa_da_study(
     def num_launched_runners():
         return sum(list(map(lambda x: len(runners[x].runner_ids), runners))) if runners else 0
 
+    def launched_runners():
+        return [x for runner in runners for x in runners[runner].runner_ids]
+
     def runner_group_of( runner_id ):
         res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners)))[0]
         if res.size == 0:
@@ -258,6 +261,8 @@ def run_melissa_da_study(
     class Runner(Job):
         def __init__(self, group_id, runner_ids, server_node_name):
             self.runner_ids = runner_ids
+            self.__group_size = len(runner_ids)
+
             precommand = 'xterm_gdb'
             precommand = ''
 
@@ -332,8 +337,8 @@ def run_melissa_da_study(
 
             os.chdir(WORKDIR)
 
-            self.start_running_time = -1
-            self.server_knows_it = False
+            self.start_running_time = dict( zip( runner_ids, [-1] * self.__group_size ) )
+            self.server_knows_it = dict( zip( runner_ids, [False] * self.__group_size ) )
 
             Job.__init__(self, job_id)
 
@@ -402,26 +407,27 @@ def run_melissa_da_study(
 
             # Check if some runners are running now, timed out while registration or if
             # they were killed for some strange reasons...
-            for runner_id in list(runners):
-                runner = runners[runner_id]
+            for runner_id in launched_runners():
+                group_id = runner_group_of(runner_id)
+                runner = runners[group_id]
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
                         runner.state = STATE_RUNNING
                         debug('Runner(s) %s running now!' % runners[runner_id].runner_ids)
-                        runner.start_running_time = time.time()
+                        runner.start_running_time = dict.fromkeys(runner.start_running_time, time.time())
                 if runner.state == STATE_RUNNING:
-                    if not runner.server_knows_it and \
+                    if not runner.server_knows_it[runner_id] and \
                             time.time() - runner.start_running_time > runner_timeout:
                         error(('Runner %d is killed as it did not register at the server'
                               + ' within %d seconds') % (runner_id, runner_timeout))
-                        runners[runner_id].remove()
-                        del runners[runner_id]
+                        runners[group_id].remove()
+                        del runners[group_id]
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner %d is killed as its job is not up anymore' %
                                 runner_id)
                         # TODO: notify server!
-                        runners[runner_id].remove()
-                        del runners[runner_id]
+                        runners[group_id].remove()
+                        del runners[group_id]
 
 
             # Check messages from server
@@ -437,11 +443,13 @@ def run_melissa_da_study(
                     log('Registering server')
                     server.node_name = msg['node_name']
                 elif msg['type'] == MSG_TIMEOUT:
-                    error('Server wants me to crash runner-group %d' % runner_group_of(msg['runner_id']))
-                    runners[runner_group_of(msg['runner_id'])].remove()
-                    del runners[runner_group_of(msg['runner_id'])]
+                    group_id = runner_group_of(msg['runner_id'])
+                    error('Server wants me to crash runner-group %d' % group_id)
+                    runners[group_id].remove()
+                    del runners[group_id]
                 elif msg['type'] == MSG_REGISTERED:
-                    runners[runner_group_of(msg['runner_id'])].server_knows_it = True
+                    group_id = runner_group_of(msg['runner_id'])
+                    runners[group_id].server_knows_it[msg['runner_id']] = True
                 elif msg['type'] == MSG_PING:
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
