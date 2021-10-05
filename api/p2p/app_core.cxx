@@ -93,14 +93,14 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
     static AddTimeStamp ats( std::cout );
     if (is_p2p()) {
         
-        envstr = getenv("MELISSA_DA_RUNNER_ID");
+        char* envstr = getenv("MELISSA_DA_RUNNER_ID");
         assert( envstr != NULL );
         std::stringstream ss(envstr);
         std::vector<int> runner_ids;
         while( ss.good() ) {
           std::string substr;
           std::getline(ss, substr, ',');
-          assert( str.find_first_not_of("0123456789") == string::npos && "runner id is not an integer!" );
+          assert( substr.find_first_not_of("0123456789") == std::string::npos && "runner id is not an integer!" );
           runner_ids.push_back( std::stoi( substr ) );
         }
 
@@ -110,11 +110,11 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         int runner_group = 0;
         if( runner_group_size > 1 ) { 
           int comm_universe_size; MPI_Comm_size(comm_universe, &comm_universe_size);
-          int comm_universe_rank; MPIrank_rank(comm_universe, &comm_universe_rank);
+          int comm_universe_rank; MPI_Comm_rank(comm_universe, &comm_universe_rank);
           assert( comm_universe_size%runner_group_size == 0 && "comm-size not multiple of runner group-size!" );
           int comm_split_size = comm_universe_size / runner_group_size;
           runner_group = comm_universe_rank / comm_split_size;
-          MPI_Comm_split( comm_universe, runner_group, rank, &comm_split );
+          MPI_Comm_split( comm_universe, runner_group, comm_universe_rank, &comm_split );
         } else {
           comm_split = comm_universe;
         }
