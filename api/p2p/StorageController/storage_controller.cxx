@@ -30,15 +30,16 @@ int last_assimilation_cycle = 1;
 
 
 
-void StorageController::io_init( MpiController* mpi, IoController* io ) {
+void StorageController::io_init( MpiController* mpi, IoController* io, int runner_id ) {
   
   m_mpi = mpi;
   m_io = io;
   m_io->register_callback( StorageController::callback );
 
-  IO_TRY( std::getenv("MELISSA_DA_RUNNER_ID") != nullptr, true, "MELISSA_DA_RUNNER_ID variable is not set" );
-  m_runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
-  std::cout << "RUNNER_ID: " << m_runner_id << std::endl;
+//  IO_TRY( std::getenv("MELISSA_DA_RUNNER_ID") != nullptr, true, "MELISSA_DA_RUNNER_ID variable is not set" );
+//  m_runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+//  std::cout << "RUNNER_ID: " << m_runner_id << std::endl;
+  m_runner_id = runner_id; 
 
   // heads dont return from init_io !!!
   m_io->init_io(m_mpi);

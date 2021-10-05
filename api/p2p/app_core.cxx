@@ -124,7 +124,7 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 
         // TODO: only do this if is_p2p() !
         mpi.init( comm_split );
-        storage.io_init( &mpi, &io );
+        storage.io_init( &mpi, &io, runner_id );
         comm = mpi.comm();  // TODO: use mpi controller everywhere in api
 
         // To do good logging
