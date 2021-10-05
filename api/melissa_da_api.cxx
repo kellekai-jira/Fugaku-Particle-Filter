@@ -79,7 +79,9 @@ struct ConfigurationConnection
     bool register_runner_id(Server* out_server) {
         assert(std::getenv("MELISSA_DA_RUNNER_ID"));
 
-        runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+        if( runner_id == -1 ) {
+          runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));#
+        }
         int header[] = {REGISTER_RUNNER_ID, runner_id};
 
         zmq::send_n(socket, header, 2);
@@ -186,7 +188,9 @@ bool first_melissa_init(MPI_Comm comm_) {
     trigger(START_ITERATION, last_step);
 #endif
 
-    runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+    if( runner_id == -1 ) { 
+      runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+    }
     if (is_p2p())
     {
         return false;
