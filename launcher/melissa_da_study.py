@@ -413,7 +413,7 @@ def run_melissa_da_study(
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
                         runner.state = STATE_RUNNING
-                        debug('Runner(s) %s running now!' % runners[runner_id].runner_ids)
+                        debug('Runner(s) %s running now!' % runners[group_id].runner_ids)
                         runner.start_running_time = dict.fromkeys(runner.start_running_time, time.time())
                 if runner.state == STATE_RUNNING:
                     if not runner.server_knows_it[runner_id] and \
