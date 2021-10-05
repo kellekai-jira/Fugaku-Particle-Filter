@@ -417,7 +417,7 @@ def run_melissa_da_study(
                         runner.start_running_time = dict.fromkeys(runner.start_running_time, time.time())
                 if runner.state == STATE_RUNNING:
                     if not runner.server_knows_it[runner_id] and \
-                            time.time() - runner.start_running_time > runner_timeout:
+                            time.time() - runner.start_running_time[runner_id] > runner_timeout:
                         error(('Runner %d is killed as it did not register at the server'
                               + ' within %d seconds') % (runner_id, runner_timeout))
                         runners[group_id].remove()
