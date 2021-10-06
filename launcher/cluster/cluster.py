@@ -4,6 +4,10 @@ class Cluster:
     def __init__(self):
         self.procs_per_node = -1
 
+    def UpdateJob(self, job_id):
+        """
+        Updates job with id parent. For instance, add descendent PIDs to job dictionary ion cluster
+        """
 
     def ScheduleJob(self, name, walltime, n_procs, n_nodes, cmd,
             additional_env={}, logfile='', is_server=False):

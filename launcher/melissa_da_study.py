@@ -490,11 +490,7 @@ def run_melissa_da_study(
                 elif msg['type'] == MSG_REGISTERED:
                     group_id = runner_group_of(msg['runner_id'])
                     runners[group_id].server_knows_it[msg['runner_id']] = True
-                    parent = psutil.Process(runners[group_id].job_id)
-                    print("runner-group %s parent pid %s" % (group_id, parent.pid))
-                    children = parent.children(recursive=True)
-                    for process in children:
-                        print("  -> child pid %s" % (process.pid))
+                    cluster.UpdateJob(runners[group_id].job_id)
                 elif msg['type'] == MSG_PING:
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:

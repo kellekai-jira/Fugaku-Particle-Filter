@@ -141,11 +141,6 @@ class FugakuCluster(cluster.Cluster):
             print("Launching %s" % run_cmd)
             job = subprocess.Popen(run_cmd.split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
-        parent = psutil.Process(job.pid)
-        children = parent.children(recursive=True)
-        for process in children:
-                logger.debug(process.pid)
-
         self.jobs[job.pid] = { 'job' : job, 'vcoordfile' : vcoordfile, 'vcoords' : vcoords }
 
         for i in vcoords:
@@ -157,6 +152,15 @@ class FugakuCluster(cluster.Cluster):
         print("Launched {:s} pid={:d}".format(name, job.pid))
         return job.pid
 
+    def UpdateJob(self, job_id):
+        try:
+            parent = psutil.Process(job_id)
+        except psutil.NoSuchProcess:
+            logger.debug("parent PID '%s' was not found", pid)
+            return
+        children = parent.children(recursive=True)
+        self.jobs[parent].update( { 'childs' : list(map(lambda child: child.pid, children)) } )
+        logger.debug("added childs %s to job id %s (job: %s)", list(map(lambda child: child.pid, children)), parent, self.jobs[parent] )
 
     def CheckJobState(self, job_pid):
         if not job_pid in self.jobs:
