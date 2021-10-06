@@ -205,6 +205,8 @@ def run_melissa_da_study(
             debug('in runner_group_of')
             debug(' -> runner id: %s' % ( runner_id))
             debug(' -> runners: %s' % ( runners))
+            for key in runners.keys():
+                debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
         res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
         if res.size == 0:
             return None
@@ -421,6 +423,8 @@ def run_melissa_da_study(
                     debug(' -> group id: %s' % ( group_id))
                     debug(' -> runner id: %s' % ( runner_id))
                     debug(' -> runners: %s' % ( runners))
+                    for key in runners.keys():
+                        debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
                     removed_runner = False
                 # runner_group was removed
                 if group_id == None:
@@ -443,6 +447,8 @@ def run_melissa_da_study(
                         debug(' -> group id: %s' % (group_id))
                         debug(' -> runner id: %s' % (runner_id))
                         debug(' -> runners: %s' % (runners))
+                        for key in runners.keys():
+                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner group %d is killed as its job is not up anymore' %
                                 group_id)
@@ -451,9 +457,12 @@ def run_melissa_da_study(
                         del runners[group_id]
                         removed_runner = True
                         debug('Runner was removed!')
-                        debug(' -> group id: %s', group_id)
-                        debug(' -> runner id: %s', runner_id)
-                        debug(' -> runners: %s', runners)
+                        debug(' -> group id: %s' % (group_id))
+                        debug(' -> runner id: %s' % (runner_id))
+                        debug(' -> runners: %s' % (runners))
+                        for key in runners.keys():
+                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
+
 
 
             # Check messages from server
