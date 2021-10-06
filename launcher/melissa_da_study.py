@@ -195,13 +195,13 @@ def run_melissa_da_study(
     state_refresher = defer(refresh_states)
 
     def num_launched_runners():
-        return sum(list(map(lambda x: len(runners[x].runner_ids), runners))) if runners else 0
+        return sum(list(map(lambda x: len(runners[x].runner_ids), runners.keys()))) if runners else 0
 
     def launched_runners():
-        return [x for runner in runners for x in runners[runner].runner_ids]
+        return [x for runner in runners.keys() for x in runners[runner].runner_ids]
 
     def runner_group_of( runner_id ):
-        res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners)))[0]
+        res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
         if res.size == 0:
             return None
         else:
@@ -410,6 +410,9 @@ def run_melissa_da_study(
             # they were killed for some strange reasons...
             for runner_id in launched_runners():
                 group_id = runner_group_of(runner_id)
+                # runner_group was removed
+                if group_id == None:
+                    continue
                 runner = runners[group_id]
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:

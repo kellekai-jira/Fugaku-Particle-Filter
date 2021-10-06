@@ -196,8 +196,6 @@ int main() {
     for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
-    add_noise( x_l, dist, generator );
-    exchange(x_l);
 
     nsteps = melissa_expose_f("state1", &x_l[2]);
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
@@ -209,6 +207,8 @@ int main() {
           melissa_get_current_step());
       is_first_timestep = false;
     }
+    add_noise( x_l, dist, generator );
+    exchange(x_l);
 
     // TODO does not work if we remove this for reasons.... (it will schedule many many things as simulation ranks finish too independently!
     MPI_Barrier(comm);
