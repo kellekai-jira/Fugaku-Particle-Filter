@@ -153,14 +153,15 @@ class FugakuCluster(cluster.Cluster):
         return job.pid
 
     def UpdateJob(self, job_id):
+        # taken from https://stackoverflow.com/a/17112379/5073895
         try:
             parent = psutil.Process(job_id)
         except psutil.NoSuchProcess:
             logger.debug("parent PID '%s' was not found", job_id)
             return
         children = parent.children(recursive=True)
-        self.jobs[job_id].update( { 'childs' : list(map(lambda child: child.pid, children)) } )
-        logger.debug("added childs %s to job id %s (job: %s)", list(map(lambda child: child.pid, children)), job_id, self.jobs[job_id] )
+        self.jobs[job_id].update( { 'children' : list(map(lambda child: child.pid, children)) } )
+        logger.debug("added children %s to job id %s (job: %s)", list(map(lambda child: child.pid, children)), job_id, self.jobs[job_id] )
 
     def CheckJobState(self, job_pid):
         if not job_pid in self.jobs:
@@ -237,17 +238,10 @@ class FugakuCluster(cluster.Cluster):
         self.RemoveVcoordFile(self.jobs[job_pid]['vcoordfile'])
         del self.jobs[job_pid]
 
-    def KillRecursive(self, pid):
-        # taken from https://stackoverflow.com/a/17112379/5073895
-        try:
-            parent = psutil.Process(pid)
-        except psutil.NoSuchProcess:
-            logger.debug("pid '%s' was not found", pid)
-            return
-        children = parent.children(recursive=True)
-        for process in children:
-            logger.debug("killing child pid: %s", process.pid)
-            process.send_signal(signal.SIGKILL)
-        logger.debug("killing parent pid: %s", parent.pid)
-        parent.send_signal(signal.SIGKILL)
+    def KillRecursive(self, parent):
+        for child in reversed(self.jobs[parent]['children']):
+            logger.debug("killing child pid: %s", child)
+            os.kill(child, signal.SIGKILL)
+        logger.debug("killing parent pid: %s", parent)
+        os.kill(parent, signal.SIGKILL)
 
