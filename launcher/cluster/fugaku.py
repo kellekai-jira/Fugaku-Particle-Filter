@@ -156,11 +156,11 @@ class FugakuCluster(cluster.Cluster):
         try:
             parent = psutil.Process(job_id)
         except psutil.NoSuchProcess:
-            logger.debug("parent PID '%s' was not found", pid)
+            logger.debug("parent PID '%s' was not found", job_id)
             return
         children = parent.children(recursive=True)
-        self.jobs[parent].update( { 'childs' : list(map(lambda child: child.pid, children)) } )
-        logger.debug("added childs %s to job id %s (job: %s)", list(map(lambda child: child.pid, children)), parent, self.jobs[parent] )
+        self.jobs[job_id].update( { 'childs' : list(map(lambda child: child.pid, children)) } )
+        logger.debug("added childs %s to job id %s (job: %s)", list(map(lambda child: child.pid, children)), job_id, self.jobs[job_id] )
 
     def CheckJobState(self, job_pid):
         if not job_pid in self.jobs:
