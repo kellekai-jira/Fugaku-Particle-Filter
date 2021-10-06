@@ -293,15 +293,15 @@ def run_melissa_da_study(
             coll_procs_runner = 0
             coll_nodes_runner = 0
 
+            if create_runner_dir:
+                runner_dir = '%s/runner-group-%03d' % (WORKDIR, group_id)
+                os.mkdir(runner_dir)
+                os.chdir(runner_dir)
+
             for runner_id in runner_ids:
 
                 coll_procs_runner += procs_runner
                 coll_nodes_runner += nodes_runner
-
-                if create_runner_dir:
-                    runner_dir = '%s/runner-group-%03d' % (WORKDIR, group_id)
-                    os.mkdir(runner_dir)
-                    os.chdir(runner_dir)
 
                 if is_p2p:
                     # Setup FTI config for runner
