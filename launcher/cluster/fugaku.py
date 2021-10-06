@@ -233,8 +233,12 @@ class FugakuCluster(cluster.Cluster):
         try:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
+            logger.debug("pid '%s' was not found", pid)
             return
         children = parent.children(recursive=True)
         for process in children:
+            logger.debug("killing child pid: %s", process.pid)
             process.send_signal(signal.SIGKILL)
+        logger.debug("killing parent pid: %s", parent.pid)
+        parent.send_signal(signal.SIGKILL)
 
