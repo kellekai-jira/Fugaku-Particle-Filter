@@ -241,7 +241,13 @@ class FugakuCluster(cluster.Cluster):
     def KillRecursive(self, parent):
         for child in reversed(self.jobs[parent]['children']):
             logger.debug("killing child pid: %s", child)
-            os.kill(child, signal.SIGKILL)
+            try:
+                os.kill(child, signal.SIGKILL)
+            except OSError:
+                logger.debug("child %s already terminated", child)
         logger.debug("killing parent pid: %s", parent)
-        os.kill(parent, signal.SIGKILL)
+        try:
+            os.kill(parent, signal.SIGKILL)
+        except OSError:
+            logger.debug("parent %s already terminated", parent)
 
