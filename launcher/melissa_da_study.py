@@ -201,6 +201,10 @@ def run_melissa_da_study(
         return [x for runner in runners.keys() for x in runners[runner].runner_ids]
 
     def runner_group_of( runner_id ):
+        if removed_runner:
+            debug('in runner_group_of')
+            debug(' -> runner id: %s' % ( runner_id))
+            debug(' -> runners: %s' % ( runners))
         res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
         if res.size == 0:
             return None
@@ -346,6 +350,8 @@ def run_melissa_da_study(
     init_sockets()
 
 
+    removed_runner = False
+
 
     runners = {}  # running runners
     server = None
@@ -408,14 +414,14 @@ def run_melissa_da_study(
 
             # Check if some runners are running now, timed out while registration or if
             # they were killed for some strange reasons...
-            removed_runner = False
             for runner_id in launched_runners():
                 group_id = runner_group_of(runner_id)
                 if removed_runner:
                     debug('next iteration after runner was removed!')
-                    debug(' -> group id: %s', group_id)
-                    debug(' -> runner id: %s', runner_id)
-                    debug(' -> runners: %s', runners)
+                    debug(' -> group id: %s' % ( group_id))
+                    debug(' -> runner id: %s' % ( runner_id))
+                    debug(' -> runners: %s' % ( runners))
+                    removed_runner = False
                 # runner_group was removed
                 if group_id == None:
                     continue
@@ -434,9 +440,9 @@ def run_melissa_da_study(
                         del runners[group_id]
                         removed_runner = True
                         debug('Runner was removed!')
-                        debug(' -> group id: %s', group_id)
-                        debug(' -> runner id: %s', runner_id)
-                        debug(' -> runners: %s', runners)
+                        debug(' -> group id: %s' % (group_id))
+                        debug(' -> runner id: %s' % (runner_id))
+                        debug(' -> runners: %s' % (runners))
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner group %d is killed as its job is not up anymore' %
                                 group_id)
