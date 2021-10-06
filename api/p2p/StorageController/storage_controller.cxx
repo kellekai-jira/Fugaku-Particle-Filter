@@ -42,7 +42,7 @@ void StorageController::io_init( MpiController* mpi, IoController* io, int runne
   m_runner_id = runner_id; 
 
   // heads dont return from init_io !!!
-  m_io->init_io(m_mpi);
+  m_io->init_io(m_mpi, runner_id);
 
   m_io->init_core();
 

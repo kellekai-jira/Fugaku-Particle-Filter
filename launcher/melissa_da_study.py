@@ -289,15 +289,16 @@ def run_melissa_da_study(
                 coll_nodes_runner += nodes_runner
 
                 if create_runner_dir:
-                    runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
+                    runner_dir = '%s/runner-group-%03d' % (WORKDIR, group_id)
                     os.mkdir(runner_dir)
                     os.chdir(runner_dir)
 
                 if is_p2p:
                     # Setup FTI config for runner
-                    shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), './config.fti')
+                    runner_config = 'config-%03d.fti' % (runner_id)
+                    shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), runner_config)
                     config = configparser.ConfigParser()
-                    config.read('config.fti')
+                    config.read(runner_config)
                     if nodes_runner >= 1:
                         config['basic']['node_size'] = str(procs_runner//nodes_runner)
                     else:
@@ -306,7 +307,7 @@ def run_melissa_da_study(
                     config['basic']['glbl_dir'] = global_ckpt_dir
                     config['basic']['meta_dir'] = meta_ckpt_dir
                     config['advanced']['local_test'] = '1' if issubclass(type(cluster), LocalCluster) else '0'
-                    with open('config.fti', 'w') as f:
+                    with open(runner_config, 'w') as f:
                         config.write(f)
 
                 if prepare_runner_dir is not None:
