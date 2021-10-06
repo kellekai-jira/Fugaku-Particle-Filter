@@ -408,8 +408,14 @@ def run_melissa_da_study(
 
             # Check if some runners are running now, timed out while registration or if
             # they were killed for some strange reasons...
+            removed_runner = False
             for runner_id in launched_runners():
                 group_id = runner_group_of(runner_id)
+                if removed_runner:
+                    debug('next iteration after runner was removed!')
+                    debug(' -> group id: %s', group_id)
+                    debug(' -> runner id: %s', runner_id)
+                    debug(' -> runners: %s', runners)
                 # runner_group was removed
                 if group_id == None:
                     continue
@@ -426,12 +432,22 @@ def run_melissa_da_study(
                               + ' within %d seconds') % (group_id, runner_timeout))
                         runners[group_id].remove()
                         del runners[group_id]
+                        removed_runner = True
+                        debug('Runner was removed!')
+                        debug(' -> group id: %s', group_id)
+                        debug(' -> runner id: %s', runner_id)
+                        debug(' -> runners: %s', runners)
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner group %d is killed as its job is not up anymore' %
                                 group_id)
                         # TODO: notify server!
                         runners[group_id].remove()
                         del runners[group_id]
+                        removed_runner = True
+                        debug('Runner was removed!')
+                        debug(' -> group id: %s', group_id)
+                        debug(' -> runner id: %s', runner_id)
+                        debug(' -> runners: %s', runners)
 
 
             # Check messages from server
