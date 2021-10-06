@@ -201,18 +201,22 @@ def run_melissa_da_study(
         return [x for runner in runners.keys() for x in runners[runner].runner_ids]
 
     def runner_group_of( runner_id ):
-        if removed_runner:
-            debug('in runner_group_of')
-            debug(' -> runner id: %s' % ( runner_id))
-            debug(' -> runners: %s' % ( runners))
-            for key in runners.keys():
-                debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
-        res = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
-        if res.size == 0:
+        key_idx = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
+        if key_idx.size == 0:
             return None
         else:
-            assert len(res) == 1
-            return res[0]
+            keys = list(runners.keys())
+            group_id = keys[key_idx[0]]
+            if removed_runner:
+                debug('in runner_group_of')
+                debug(' -> key idx: %s' % ( key_idx[0] ))
+                debug(' -> group id: %s' % ( group_id ))
+                debug(' -> runner id: %s' % ( runner_id))
+                debug(' -> runners: %s' % ( runners))
+                for key in runners.keys():
+                    debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
+            assert len(key_idx) == 1
+            return group_id
 
 
     MAX_SERVER_STARTS = 3
