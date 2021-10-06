@@ -141,6 +141,11 @@ class FugakuCluster(cluster.Cluster):
             print("Launching %s" % run_cmd)
             job = subprocess.Popen(run_cmd.split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
+        parent = psutil.Process(job.pid)
+        children = parent.children(recursive=True)
+        for process in children:
+                logger.debug(process.pid)
+
         self.jobs[job.pid] = { 'job' : job, 'vcoordfile' : vcoordfile, 'vcoords' : vcoords }
 
         for i in vcoords:
