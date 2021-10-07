@@ -14,6 +14,7 @@ def parse(buf):
 
 def bind_socket(context, t, addr):
     socket = context.socket(t)
+    socket.setsockopt(zmq.LINGER, 1000)
     socket.bind(addr)
     port = socket.getsockopt(zmq.LAST_ENDPOINT)
     port = port.decode().split(':')[-1]
