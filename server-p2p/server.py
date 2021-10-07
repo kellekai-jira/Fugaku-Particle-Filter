@@ -382,7 +382,6 @@ Fromat:
 """
 runners = {}
 def accept_runner_request(msg):
-    print_open_fds('[begin] runners: %s' % (len(runners)) )
     trigger(START_ACCEPT_RUNNER_REQUEST, 0)
     # store request
     runner_id = msg.runner_id
@@ -418,10 +417,8 @@ def accept_runner_request(msg):
     send_message(gp_socket, reply)
     # print('scache was:', ) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
-    print_open_fds('[end] runners: %s' % (len(runners)) )
 
 def accept_delete(msg):
-    print_open_fds()
     """
     Deletes
     1. old stuff
@@ -496,10 +493,8 @@ def accept_delete(msg):
     send_message(gp_socket, reply)
 
     trigger(STOP_ACCEPT_DELETE, 0)
-    print_open_fds()
 
 def accept_prefetch(msg):
-    print_open_fds()
     trigger(START_ACCEPT_PREFETCH, 0)
 
     runner_id = msg.runner_id
@@ -535,10 +530,8 @@ def accept_prefetch(msg):
 
     send_message(gp_socket, reply)
     trigger(STOP_ACCEPT_PREFETCH, 0)
-    print_open_fds()
 
 def receive_message_nonblocking(socket):
-    print_open_fds()
     msg = None
     try:
         msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
@@ -548,17 +541,14 @@ def receive_message_nonblocking(socket):
             print("Ignoring faulty runner's message:", msg)
             socket.send(b'')
 
-            print_open_fds()
             return None
     except zmq.error.Again:
         # could not poll anything
         pass
 
-    print_open_fds()
     return msg
 
 def handle_general_purpose():
-    print_open_fds()
     msg = receive_message_nonblocking(gp_socket)
 
     if msg:
@@ -574,7 +564,6 @@ def handle_general_purpose():
         else:
             print("Wrong message type received!")
             assert False
-    print_open_fds()
 
 
 
@@ -591,7 +580,6 @@ trigger_select.evts = []
 
 
 def write_trigger_select_events():
-    print_open_fds('LOOP')
     with open('select_events.melissa_p2p_server.csv', 'w+') as f:
         f.write("time,runner_id,state_t,state_id,was_cached\n")
         for evt in trigger_select.evts:
@@ -600,7 +588,6 @@ def write_trigger_select_events():
             it[-1] = 1 if it[-1] else 0
             f.write(",".join([str(x) for x in it]))
             f.write("\n")
-    print_open_fds('LOOP')
 
 
 def needs_runner(parent_id, Q):
@@ -664,7 +651,6 @@ def generate_job_id():
     return job_id
 
 def handle_job_requests(launcher, nsteps):
-    print_open_fds()
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
     global stealable_jobs
@@ -720,12 +706,10 @@ def handle_job_requests(launcher, nsteps):
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
         trigger(STOP_HANDLE_JOB_REQ, 0)
-    print_open_fds()
 
 
 class LauncherConnection:
     def __init__(self, context, server_node_name, launcher_node_name):
-        print_open_fds()
         self.update_launcher_due_date()
         self.linger = 10000
         self.launcher_node_name = launcher_node_name
@@ -765,80 +749,62 @@ class LauncherConnection:
         print('Setup launcher connection, server node name:', server_node_name)
 
         self.known_runners = set()
-        print_open_fds()
 
     def update_next_message_due_date(self):
-        print_open_fds()
         self.next_message_date_to_launcher = time.time(
         ) + LAUNCHER_PING_INTERVAL
-        print_open_fds()
 
     def __del__(self):
-        print_open_fds()
         print("Sending Stop Message to Launcher")
         self.text_pusher.send(Stop().encode())
-        print_open_fds()
 
     def update_launcher_due_date(self):
-        print_open_fds()
         self.due_date_launcher = time.time() + LAUNCHER_TIMEOUT
-        print_open_fds()
 
     def check_launcher_due_date(self):
         return time.time() < self.due_date_launcher
 
     def receive_text(self):
-        print_open_fds()
         msg = None
         try:
             msg = self.text_puller.recv(flags=zmq.NOBLOCK)
         except zmq.error.Again:
             # could not poll anything
-            print_open_fds()
             return False
         if msg:
             print("Launcher message recieved %s" % msg)
             self.update_launcher_due_date()
-            print_open_fds()
             return True
             # ATM We do not care what the launcher sends us. We only check if it is still alive
-        print_open_fds()
 
     def update_launcher_next_message_date(self):
         self.next_message_date_to_launcher = time.time(
         ) + LAUNCHER_PING_INTERVAL
 
     def ping(self):
-        print_open_fds()
         if time.time() > self.next_message_date_to_launcher:
             msg = Alive()
             print('send alive')
             self.text_pusher.send(msg.encode())
             self.update_launcher_next_message_date()
-        print_open_fds()
 
     def notify(self, runner_id, status):
-        print_open_fds()
         msg = SimulationStatusMessage(runner_id, status)
         print("notify launcher about runner", runner_id, ":", status)
         self.text_pusher.send(msg.encode())
-        print_open_fds()
 
     def notify_runner_connect(self, runner_id):
-        print_open_fds()
         if not runner_id in self.known_runners:
             self.notify(runner_id,
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
             print("Server registering Runner ID %d" % runner_id)
             runners_last[runner_id] = None
-        print_open_fds()
 
 
 
 
 def do_update_step():
-    print_open_fds()
     global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
     print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
@@ -879,7 +845,6 @@ def do_update_step():
 
     print(f"we got P={last_P} different particles!")
 
-    print_open_fds()
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
 
@@ -924,32 +889,36 @@ if __name__ == '__main__':
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
-        print_open_fds('LOOP')
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         # REM: maybe_update is called only after a weight arrived in handle_general_purpose()
 
         if stealable_jobs > 0:
             handle_job_requests(launcher, nsteps)
+            print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():
                 raise Exception("Launcher did not ping me for too long!")
-        print_open_fds('LOOP')
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         launcher.ping()
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         if trigger.enabled:  # FIXME: hack to not crash runners that are about to write traces!
             DueDates.check_violations()
-        print_open_fds('LOOP')
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         # Slow down CPU:
         time.sleep(0.000001)
 
 
         if maybe_write():
+            print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
             # also write trigger select events
             write_trigger_select_events()
-        print_open_fds('LOOP')
+        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
