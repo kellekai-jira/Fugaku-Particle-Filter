@@ -208,14 +208,6 @@ def run_melissa_da_study(
         else:
             keys = list(runners.keys())
             group_id = keys[key_idx[0]]
-            if removed_runner:
-                debug('in runner_group_of')
-                debug(' -> key idx: %s' % ( key_idx[0] ))
-                debug(' -> group id: %s' % ( group_id ))
-                debug(' -> runner id: %s' % ( runner_id))
-                debug(' -> runners: %s' % ( runners))
-                for key in runners.keys():
-                    debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
             assert len(key_idx) == 1
             return group_id
 
@@ -356,10 +348,6 @@ def run_melissa_da_study(
 
     init_sockets()
 
-
-    removed_runner = False
-
-
     runners = {}  # running runners
     server = None
     next_runner_id = 0
@@ -424,14 +412,6 @@ def run_melissa_da_study(
             # they were killed for some strange reasons...
             for runner_id in launched_runners():
                 group_id = runner_group_of(runner_id)
-                if removed_runner:
-                    debug('next iteration after runner was removed!')
-                    debug(' -> group id: %s' % ( group_id))
-                    debug(' -> runner id: %s' % ( runner_id))
-                    debug(' -> runners: %s' % ( runners))
-                    for key in runners.keys():
-                        debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
-                    removed_runner = False
                 # runner_group was removed
                 if group_id == None:
                     continue
@@ -448,27 +428,12 @@ def run_melissa_da_study(
                               + ' within %d seconds') % (group_id, runner_timeout))
                         runners[group_id].remove()
                         del runners[group_id]
-                        removed_runner = True
-                        debug('Runner was removed!')
-                        debug(' -> group id: %s' % (group_id))
-                        debug(' -> runner id: %s' % (runner_id))
-                        debug(' -> runners: %s' % (runners))
-                        for key in runners.keys():
-                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
                     if runner.check_state() != STATE_RUNNING:
                         error('Runner group %d is killed as its job is not up anymore' %
                                 group_id)
                         # TODO: notify server!
                         runners[group_id].remove()
                         del runners[group_id]
-                        removed_runner = True
-                        debug('Runner was removed!')
-                        debug(' -> group id: %s' % (group_id))
-                        debug(' -> runner id: %s' % (runner_id))
-                        debug(' -> runners: %s' % (runners))
-                        for key in runners.keys():
-                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
-
 
 
             # Check messages from server
