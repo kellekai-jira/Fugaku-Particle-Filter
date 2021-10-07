@@ -18,6 +18,8 @@ debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + '/server-debug.log'
 logging.basicConfig(format=FORMAT, filename=debug_log)
 logger.setLevel(logging.DEBUG)
 
+import gc
+
 __line_number = []
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
@@ -32,13 +34,18 @@ def print_open_fds(msg='', print_all=False):
     closed_fds = descriptors - fds
     descriptors = fds
     prestr = "[%s:%s - %s]" % (filename, line_number, function_name)
+    open_sockets = [
+            obj
+            for obj in gc.get_referrers(zmq.Socket)
+            if isinstance(obj, zmq.Socket) and not obj.closed
+            ]
     if print_all:
-        logger.debug("%s ALL file descriptors: %s %s" % (prestr, fds, msg))
+        logger.debug("%s ALL file descriptors: %s %s (sockets: %s)" % (prestr, fds, msg, len(open_sockets)))
 
     if new_fds:
-        logger.debug("%s NEW file descriptors: %s %s" % (prestr, new_fds, msg))
+        logger.debug("%s NEW file descriptors: %s %s (sockets: %s)" % (prestr, new_fds, msg, len(open_sockets)))
     if closed_fds:
-        logger.debug("%s CLOSED file descriptors: %s %s" % (prestr, closed_fds, msg))
+        logger.debug("%s CLOSED file descriptors: %s %s (sockets: %s)" % (prestr, closed_fds, msg, len(open_sockets)))
 
 
 from collections import OrderedDict
