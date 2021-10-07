@@ -10,8 +10,35 @@ import math
 import pickle
 from enum import Enum
 
+import inspect
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + '/server-debug.log'
+logging.basicConfig(format=FORMAT, filename=debug_log)
+logger.setLevel(logging.DEBUG)
+
+descriptors = set()
+def print_open_fds(print_all=False):
+    global descriptors
+    (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+    fds = set(os.listdir('/proc/self/fd/'))
+    new_fds = fds - descriptors
+    closed_fds = descriptors - fds
+    descriptors = fds
+
+    if print_all:
+        logging.debug("{}:{} ALL file descriptors: {}".format(filename, line_number, fds))
+
+    if new_fds:
+        logging.debug("{}:{} new file descriptors: {}".format(filename, line_number, new_fds))
+    if closed_fds:
+        logging.debug("{}:{} closed file descriptors: {}".format(filename, line_number, closed_fds))
+
+
 from collections import OrderedDict
 
+print_open_fds(msg='init')
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -260,7 +287,10 @@ print('binding to', addr)
 job_socket, port_job_socket = \
         bind_socket(context, zmq.REP, addr)
 
+print_open_fds(msg='bind job_socket')
+
 # Socket for general purpose requests
+print(os.system(f'ls -la /proc/{os.getpid()}/fd'))
 gp_socket = None
 addr = "tcp://*:4001"
 print('binding to', addr)
@@ -268,13 +298,16 @@ gp_socket, port_gp_socket = \
         bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
+print_open_fds(msg='bind gp_socket')
+
 weights_this_cycle = 0
 
 print('Server up now')
 
 def send_message(socket, data):
-    print(os.system(f'ls -la /proc/{os.getpid()}/fd'))
+    print_open_fds(msg='before')
     socket.send(data.SerializeToString())
+    print_open_fds(msg='after')
 
 def maybe_update():
     """
@@ -330,7 +363,9 @@ def accept_weight(msg):
         weights_this_cycle += 1
         state_weights[state_id] = weight
 
+    print_open_fds(msg='before')
     gp_socket.send(b'')  # send an empty ack.
+    print_open_fds(msg='after')
 
     # Update knowledge on cached states:
     StateCache.add_runner(state_id, runner_id)
@@ -381,7 +416,9 @@ def accept_runner_request(msg):
     # if len(reply.runner_response.sockets) == 0:
         # print("Could not find any runner with this state in", StateCache.c)
 
+    print_open_fds(msg='before')
     send_message(gp_socket, reply)
+    print_open_fds(msg='after')
     # print('scache was:', ) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
 
@@ -457,7 +494,9 @@ def accept_delete(msg):
     StateCache.remove_runner(to_delete, runner_id)
 
 
+    print_open_fds(msg='before')
     send_message(gp_socket, reply)
+    print_open_fds(msg='after')
 
     trigger(STOP_ACCEPT_DELETE, 0)
 
@@ -495,10 +534,13 @@ def accept_prefetch(msg):
                 # This runner should prefetch this parent state
                 reply.prefetch_response.pull_states.append(scheduled_jobs[runner_id][1])
 
+    print_open_fds(msg='before')
     send_message(gp_socket, reply)
+    print_open_fds(msg='after')
     trigger(STOP_ACCEPT_PREFETCH, 0)
 
 def receive_message_nonblocking(socket):
+    print_open_fds(msg='before')
     msg = None
     try:
         msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
@@ -507,16 +549,20 @@ def receive_message_nonblocking(socket):
         if msg.runner_id in faulty_runners:
             print("Ignoring faulty runner's message:", msg)
             socket.send(b'')
+            print_open_fds(msg='after - if in faulty')
 
             return None
     except zmq.error.Again:
         # could not poll anything
         pass
 
+    print_open_fds(msg='after - not in faulty')
     return msg
 
 def handle_general_purpose():
+    print_open_fds(msg='before')
     msg = receive_message_nonblocking(gp_socket)
+    print_open_fds(msg='after')
 
     if msg:
         ty = msg.WhichOneof('content')
@@ -671,7 +717,9 @@ def handle_job_requests(launcher, nsteps):
             DueDates.add(runner_id, job_id, parent_id)
 
         reply.job_response.nsteps = nsteps
+        print_open_fds(msg='before')
         send_message(job_socket, reply)
+        print_open_fds(msg='after')
         trigger(STOP_HANDLE_JOB_REQ, 0)
 
 
