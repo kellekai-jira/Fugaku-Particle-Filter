@@ -20,6 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
+    time.sleep(0.000001)
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     fds = set(os.listdir('/proc/self/fd/'))
@@ -918,6 +919,7 @@ if __name__ == '__main__':
 
 
         if maybe_write():
+            logger.debug("maybe_write returns true")
             print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
             # also write trigger select events
             write_trigger_select_events()
