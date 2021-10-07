@@ -273,6 +273,7 @@ weights_this_cycle = 0
 print('Server up now')
 
 def send_message(socket, data):
+    print(os.system(f'ls -la /proc/{os.getpid()}/fd'))
     socket.send(data.SerializeToString())
 
 def maybe_update():
