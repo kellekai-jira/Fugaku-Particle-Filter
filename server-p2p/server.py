@@ -13,7 +13,7 @@ from enum import Enum
 import inspect
 import logging
 logger = logging.getLogger(__name__)
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+FORMAT = "%(message)s"
 debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + '/server-debug.log'
 logging.basicConfig(format=FORMAT, filename=debug_log)
 logger.setLevel(logging.DEBUG)
@@ -26,14 +26,14 @@ def print_open_fds(print_all=False, msg=''):
     new_fds = fds - descriptors
     closed_fds = descriptors - fds
     descriptors = fds
-
+    prestr = "[%s:%s - %s]" % (filename, line_number, function_name)
     if print_all:
-        logger.debug("ALL file descriptors: %s %s" % (fds, msg))
+        logger.debug("%s ALL file descriptors: %s %s" % (prestr, fds, msg))
 
     if new_fds:
-        logger.debug("NEW file descriptors: %s %s" % (new_fds, msg))
+        logger.debug("%s NEW file descriptors: %s %s" % (prestr, new_fds, msg))
     if closed_fds:
-        logger.debug("CLOSED file descriptors: %s %s" % (closed_fds, msg))
+        logger.debug("%s CLOSED file descriptors: %s %s" % (prestr, closed_fds, msg))
 
 
 from collections import OrderedDict
