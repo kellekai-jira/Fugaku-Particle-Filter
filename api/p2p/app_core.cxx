@@ -89,17 +89,42 @@ int fti_protect_id;
 
 MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 {
+    // preceed all std::cout calls with a timestamp
     static AddTimeStamp ats( std::cout );
     if (is_p2p()) {
-        // preceed all std::cout calls with a timestamp
         
-        runner_id = atoi(getenv("MELISSA_DA_RUNNER_ID"));
+        char* envstr = getenv("MELISSA_DA_RUNNER_ID");
+        assert( envstr != NULL );
+        std::stringstream ss(envstr);
+        std::vector<int> runner_ids;
+        while( ss.good() ) {
+          std::string substr;
+          std::getline(ss, substr, ',');
+          assert( substr.find_first_not_of("0123456789") == std::string::npos && "runner id is not an integer!" );
+          runner_ids.push_back( std::stoi( substr ) );
+        }
+
+        MPI_Comm comm_split;
+        MPI_Comm comm_universe = MPI_Comm_f2c(*old_comm_fortran);
+        int runner_group_size = runner_ids.size();
+        int runner_group = 0;
+        if( runner_group_size > 1 ) { 
+          int comm_universe_size; MPI_Comm_size(comm_universe, &comm_universe_size);
+          int comm_universe_rank; MPI_Comm_rank(comm_universe, &comm_universe_rank);
+          assert( comm_universe_size%runner_group_size == 0 && "comm-size not multiple of runner group-size!" );
+          int comm_split_size = comm_universe_size / runner_group_size;
+          runner_group = comm_universe_rank / comm_split_size;
+          MPI_Comm_split( comm_universe, runner_group, comm_universe_rank, &comm_split );
+        } else {
+          comm_split = comm_universe;
+        }
+        runner_id = runner_ids[runner_group];
+
         printf("Hello! I'm runner %d\n", runner_id);
 
         // TODO: only do this if is_p2p() !
-        MPI_Comm comm_c = MPI_Comm_f2c(*old_comm_fortran);
-        mpi.init( comm_c );
-        storage.io_init( &mpi, &io );
+        mpi.init( comm_split );
+        storage.io_init( &mpi, &io, runner_id );
         comm = mpi.comm();  // TODO: use mpi controller everywhere in api
 
         // To do good logging

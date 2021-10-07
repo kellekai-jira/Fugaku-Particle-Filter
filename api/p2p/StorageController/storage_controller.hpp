@@ -31,7 +31,7 @@ class StorageController {
       m_request_counter(1),
       m_request_interval(10000) {}
 
-    void io_init( MpiController* mpi, IoController* io );
+    void io_init( MpiController* mpi, IoController* io, int runner_id );
     void init( double capacity, double state_size );
     void fini();
 

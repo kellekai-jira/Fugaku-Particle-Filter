@@ -11,6 +11,7 @@ clean_old_stats()
 
 env = ['MELISSA_LORENZ_ITER_MAX',
         'MELISSA_LORENZ_MEMBERS',
+        'MELISSA_LORENZ_RUNNER_GROUP_SIZE',
         'MELISSA_LORENZ_PROCS_RUNNERS',
         'MELISSA_LORENZ_NUM_RUNNERS',
         'MELISSA_LORENZ_STATE_DIMENSION',
@@ -40,6 +41,7 @@ __env_num_runners = int(os.environ['MELISSA_LORENZ_NUM_RUNNERS'])
 __env_state_size_elem = os.environ['MELISSA_LORENZ_STATE_DIMENSION']
 __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
 __env_write_trace = float(os.environ['MELISSA_LORENZ_TIMING_TRACE'])
+__env_runner_group_size = int(os.environ['MELISSA_LORENZ_RUNNER_GROUP_SIZE'])
 
 run_melissa_da_study(
     cluster=FugakuCluster(),
@@ -51,6 +53,7 @@ run_melissa_da_study(
     ensemble_size=__env_members,
     procs_runner=__env_procs_runners,
     nodes_runner=1,
+    runner_group_size = __env_runner_group_size,
     n_runners=__env_num_runners,
     local_ckpt_dir=local_dir + '/melissa_cache',
     global_ckpt_dir=global_dir + '/Global',

@@ -77,7 +77,7 @@ struct io_ckpt_t {
 
 class IoController {
    public:
-      virtual void init_io( MpiController* mpi ) = 0;
+      virtual void init_io( MpiController* mpi, int runner_id ) = 0;
       virtual void init_core() = 0;
       virtual void fini() = 0;
       virtual io_id_t protect( void* buffer, size_t size, io_type_t type ) = 0;

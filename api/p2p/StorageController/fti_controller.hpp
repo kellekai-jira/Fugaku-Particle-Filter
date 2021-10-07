@@ -29,7 +29,7 @@ inline io_state_id_t to_state_id(const io_id_t ckpt_id) {
 
 class FtiController : public IoController {
   public:
-    void init_io( MpiController* mpi );
+    void init_io( MpiController* mpi, int runner_id );
     void init_core();
     void fini();
     io_id_t protect( void* buffer, size_t size, io_type_t type );
@@ -64,6 +64,7 @@ class FtiController : public IoController {
     io_id_t m_id_counter;
     FTI::Kernel m_kernel;
     MpiController* m_mpi;
+    int m_runner_id;
 };
 
 #endif // _FTI_CONTROLLER_H_

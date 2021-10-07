@@ -20,9 +20,12 @@ void FtiController::update( io_id_t id, void* buffer, size_t size ) {
   FTI_Protect(id, buffer, size, m_io_type_map[m_var_id_map[id].type]);
 }
 
-void FtiController::init_io( MpiController* mpi ) {
+void FtiController::init_io( MpiController* mpi, int runner_id ) {
   this->m_mpi = mpi;
-  FTI_Init("config.fti", m_mpi->comm() );
+  std::stringstream config_file;
+  config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
+  FTI_Init( config_file.str().c_str(), m_mpi->comm() );
+  m_runner_id = runner_id;
 }
 
 void FtiController::init_core() {

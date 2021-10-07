@@ -22,6 +22,7 @@ import sys
 import socket
 import inspect
 import configparser
+import psutil
 
 from cluster import *
 
@@ -56,6 +57,7 @@ def run_melissa_da_study(
         procs_server=1,
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
+        runner_group_size=1,
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
         meta_ckpt_dir='../Meta',
@@ -193,6 +195,30 @@ def run_melissa_da_study(
             time.sleep(.1)
     state_refresher = defer(refresh_states)
 
+    def num_launched_runners():
+        return sum(list(map(lambda x: len(runners[x].runner_ids), runners.keys()))) if runners else 0
+
+    def launched_runners():
+        return [x for runner in runners.keys() for x in runners[runner].runner_ids]
+
+    def runner_group_of( runner_id ):
+        key_idx = np.where(list(map(lambda x: runner_id in runners[x].runner_ids, runners.keys())))[0]
+        if key_idx.size == 0:
+            return None
+        else:
+            keys = list(runners.keys())
+            group_id = keys[key_idx[0]]
+            if removed_runner:
+                debug('in runner_group_of')
+                debug(' -> key idx: %s' % ( key_idx[0] ))
+                debug(' -> group id: %s' % ( group_id ))
+                debug(' -> runner id: %s' % ( runner_id))
+                debug(' -> runners: %s' % ( runners))
+                for key in runners.keys():
+                    debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
+            assert len(key_idx) == 1
+            return group_id
+
 
     MAX_SERVER_STARTS = 3
     class Server(Job):
@@ -244,8 +270,9 @@ def run_melissa_da_study(
     Server.starts = 0
 
     class Runner(Job):
-        def __init__(self, runner_id, server_node_name):
-            #self.runner_id = runner_id
+        def __init__(self, group_id, runner_ids, server_node_name):
+            self.runner_ids = runner_ids
+            self.__group_size = len(runner_ids)
 
             precommand = 'xterm_gdb'
             precommand = ''
@@ -260,17 +287,29 @@ def run_melissa_da_study(
 
             logfile = ''
             if not show_simulation_log:
-                logfile = '%s/runner-%03d.log' % (WORKDIR, runner_id)
-                if create_runner_dir:
-                    runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
-                    os.mkdir(runner_dir)
-                    os.chdir(runner_dir)
+                logfile = '%s/runner-group-%03d.log' % (WORKDIR, group_id)
+
+            print(logfile)
+            additional_runner_env = {}
+            coll_procs_runner = 0
+            coll_nodes_runner = 0
+
+            if create_runner_dir:
+                runner_dir = '%s/runner-group-%03d' % (WORKDIR, group_id)
+                os.mkdir(runner_dir)
+                os.chdir(runner_dir)
+
+            for runner_id in runner_ids:
+
+                coll_procs_runner += procs_runner
+                coll_nodes_runner += nodes_runner
 
                 if is_p2p:
                     # Setup FTI config for runner
-                    shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), './config.fti')
+                    runner_config = 'config-%03d.fti' % (runner_id)
+                    shutil.copy(os.path.join(melissa_da_datadir, 'config-p2p-runner.fti'), runner_config)
                     config = configparser.ConfigParser()
-                    config.read('config.fti')
+                    config.read(runner_config)
                     if nodes_runner >= 1:
                         config['basic']['node_size'] = str(procs_runner//nodes_runner)
                     else:
@@ -279,7 +318,7 @@ def run_melissa_da_study(
                     config['basic']['glbl_dir'] = global_ckpt_dir
                     config['basic']['meta_dir'] = meta_ckpt_dir
                     config['advanced']['local_test'] = '1' if issubclass(type(cluster), LocalCluster) else '0'
-                    with open('config.fti', 'w') as f:
+                    with open(runner_config, 'w') as f:
                         config.write(f)
 
                 if prepare_runner_dir is not None:
@@ -288,39 +327,43 @@ def run_melissa_da_study(
                     else:
                         # support old api:
                         prepare_runner_dir()
-
-            additional_runner_env = {
-                    "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
-                    "MELISSA_SERVER_MASTER_GP_NODE":
-                        melissa_server_master_gp_node,
-                    "MELISSA_TIMING_NULL": str(start_time),
-                    "MELISSA_DA_RUNNER_ID": str(runner_id)
-                    }
-            lib_path = os.getenv('LD_LIBRARY_PATH')
-            if lib_path != '':
-                additional_runner_env['LD_LIBRARY_PATH'] = lib_path
+                if not additional_runner_env:
+                    additional_runner_env = {
+                        "MELISSA_SERVER_MASTER_NODE": melissa_server_master_node,
+                        "MELISSA_SERVER_MASTER_GP_NODE":
+                            melissa_server_master_gp_node,
+                        "MELISSA_TIMING_NULL": str(start_time),
+                        "MELISSA_DA_RUNNER_ID": str(runner_id)
+                        }
+                    lib_path = os.getenv('LD_LIBRARY_PATH')
+                    if lib_path != '':
+                        additional_runner_env['LD_LIBRARY_PATH'] = lib_path
+                else:
+                    content = additional_runner_env["MELISSA_DA_RUNNER_ID"]
+                    additional_runner_env["MELISSA_DA_RUNNER_ID"] = content + "," + str(runner_id)
 
             envs = additional_env.copy()
             join_dicts(envs, additional_runner_env)
 
-            job_id = cluster.ScheduleJob(EXECUTABLE, walltime, procs_runner, nodes_runner, cmd, envs, logfile, is_server=False)
+            job_id = cluster.ScheduleJob(EXECUTABLE, walltime, coll_procs_runner, coll_nodes_runner, cmd, envs, logfile, is_server=False)
 
             os.chdir(WORKDIR)
 
-
-            self.start_running_time = -1
-            self.server_knows_it = False
+            self.start_running_time = dict( zip( runner_ids, [-1] * self.__group_size ) )
+            self.server_knows_it = dict( zip( runner_ids, [False] * self.__group_size ) )
 
             Job.__init__(self, job_id)
 
-
     init_sockets()
 
+
+    removed_runner = False
 
 
     runners = {}  # running runners
     server = None
     next_runner_id = 0
+    next_group_id = 0
     while running:
         time.sleep(0.1)  # chill down processor...
 
@@ -331,18 +374,24 @@ def run_melissa_da_study(
                 server.state = STATE_RUNNING
                 debug('Server running now!')
                 server.last_msg_from = time.time()
+                cluster.UpdateJob(server.job_id)
         if server.state == STATE_RUNNING:
             if server.node_name != '':
                 mr = max_runners()
-                if len(runners) < mr:  # TODO depend on check load here!
-                    runner_id = next_runner_id
-                    next_runner_id += 1
-                    debug('Starting runner %d' % runner_id)
-                    runners[runner_id] = Runner(runner_id, server.node_name)
+                active_runners = num_launched_runners()
+                if active_runners < mr:  # TODO depend on check load here!
+                    slots = mr - active_runners
+                    group_size = runner_group_size if runner_group_size <= slots else slots
+                    runner_ids = list( range(next_runner_id, next_runner_id + group_size) )
+                    next_runner_id += group_size
+                    group_id = next_group_id
+                    next_group_id += 1
+                    runners[group_id] = Runner(group_id, runner_ids, server.node_name)
+                    debug('Starting runner(s) %s' % runner_ids)
                 else:
-                    while len(runners) > mr:
+                    while num_launched_runners() > mr:
                         to_remove = random.choice(list(runners))
-                        log("killing a runner (with id=%d) as too many runners are up" % to_remove)
+                        log("killing a runner-group (with id=%d) as too many runners are up" % to_remove)
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
@@ -373,26 +422,53 @@ def run_melissa_da_study(
 
             # Check if some runners are running now, timed out while registration or if
             # they were killed for some strange reasons...
-            for runner_id in list(runners):
-                runner = runners[runner_id]
+            for runner_id in launched_runners():
+                group_id = runner_group_of(runner_id)
+                if removed_runner:
+                    debug('next iteration after runner was removed!')
+                    debug(' -> group id: %s' % ( group_id))
+                    debug(' -> runner id: %s' % ( runner_id))
+                    debug(' -> runners: %s' % ( runners))
+                    for key in runners.keys():
+                        debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
+                    removed_runner = False
+                # runner_group was removed
+                if group_id == None:
+                    continue
+                runner = runners[group_id]
                 if runner.state == STATE_WAITING:
                     if runner.check_state() == STATE_RUNNING:
                         runner.state = STATE_RUNNING
-                        debug('Runner %d running now!' % runner_id)
-                        runner.start_running_time = time.time()
+                        debug('Runner(s) %s running now!' % runners[group_id].runner_ids)
+                        runner.start_running_time = dict.fromkeys(runner.start_running_time, time.time())
                 if runner.state == STATE_RUNNING:
-                    if not runner.server_knows_it and \
-                            time.time() - runner.start_running_time > runner_timeout:
-                        error(('Runner %d is killed as it did not register at the server'
-                              + ' within %d seconds') % (runner_id, runner_timeout))
-                        runners[runner_id].remove()
-                        del runners[runner_id]
+                    if not runner.server_knows_it[runner_id] and \
+                            time.time() - runner.start_running_time[runner_id] > runner_timeout:
+                        error(('Runner group %d is killed as it did not register at the server'
+                              + ' within %d seconds') % (group_id, runner_timeout))
+                        runners[group_id].remove()
+                        del runners[group_id]
+                        removed_runner = True
+                        debug('Runner was removed!')
+                        debug(' -> group id: %s' % (group_id))
+                        debug(' -> runner id: %s' % (runner_id))
+                        debug(' -> runners: %s' % (runners))
+                        for key in runners.keys():
+                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
                     if runner.check_state() != STATE_RUNNING:
-                        error('Runner %d is killed as its job is not up anymore' %
-                                runner_id)
+                        error('Runner group %d is killed as its job is not up anymore' %
+                                group_id)
                         # TODO: notify server!
-                        runners[runner_id].remove()
-                        del runners[runner_id]
+                        runners[group_id].remove()
+                        del runners[group_id]
+                        removed_runner = True
+                        debug('Runner was removed!')
+                        debug(' -> group id: %s' % (group_id))
+                        debug(' -> runner id: %s' % (runner_id))
+                        debug(' -> runners: %s' % (runners))
+                        for key in runners.keys():
+                            debug('   [%s] runner_ids: %s' % (key, runners[key].runner_ids))
+
 
 
             # Check messages from server
@@ -400,7 +476,7 @@ def run_melissa_da_study(
             if len(server_msgs) > 0:
                 server.last_msg_from = time.time()
             for msg in server_msgs:
-                if 'runner_id' in msg and not msg['runner_id'] in runners:
+                if 'runner_id' in msg and runner_group_of(msg['runner_id']) == None:
                     debug('omitting message concerning already dead runner %d' %
                             msg['runner_id'])
                     continue
@@ -408,11 +484,14 @@ def run_melissa_da_study(
                     log('Registering server')
                     server.node_name = msg['node_name']
                 elif msg['type'] == MSG_TIMEOUT:
-                    error('Server wants me to crash runner %d' % msg['runner_id'])
-                    runners[msg['runner_id']].remove()
-                    del runners[msg['runner_id']]
+                    group_id = runner_group_of(msg['runner_id'])
+                    error('Server wants me to crash runner-group %d' % group_id)
+                    runners[group_id].remove()
+                    del runners[group_id]
                 elif msg['type'] == MSG_REGISTERED:
-                    runners[msg['runner_id']].server_knows_it = True
+                    group_id = runner_group_of(msg['runner_id'])
+                    runners[group_id].server_knows_it[msg['runner_id']] = True
+                    cluster.UpdateJob(runners[group_id].job_id)
                 elif msg['type'] == MSG_PING:
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
