@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
-    time.sleep(0.000001)
+    time.sleep(0.001)
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     fds = set(os.listdir('/proc/self/fd/'))
