@@ -18,11 +18,15 @@ debug_log = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + '/server-debug.log'
 logging.basicConfig(format=FORMAT, filename=debug_log)
 logger.setLevel(logging.DEBUG)
 
+__line_number = []
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
-    time.sleep(0.1)
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
+    if line_number in __line_number:
+        return
+    __line_number.append(line_number)
+    time.sleep(2)
     fds = set(os.listdir('/proc/self/fd/'))
     new_fds = fds - descriptors
     closed_fds = descriptors - fds
