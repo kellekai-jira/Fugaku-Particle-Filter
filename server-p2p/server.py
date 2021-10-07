@@ -919,12 +919,12 @@ if __name__ == '__main__':
     server_loops_last_second = 0
     last_second = 0
     while True:
-        print_open_fds('LOOP')
         server_loops_last_second += 1
         if int(time.time()) > last_second:
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
+        print_open_fds('LOOP')
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
@@ -934,15 +934,16 @@ if __name__ == '__main__':
         if stealable_jobs > 0:
             handle_job_requests(launcher, nsteps)
 
-        print_open_fds('LOOP')
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():
                 raise Exception("Launcher did not ping me for too long!")
+        print_open_fds('LOOP')
 
         launcher.ping()
 
         if trigger.enabled:  # FIXME: hack to not crash runners that are about to write traces!
             DueDates.check_violations()
+        print_open_fds('LOOP')
 
         # Slow down CPU:
         time.sleep(0.000001)
@@ -951,3 +952,4 @@ if __name__ == '__main__':
         if maybe_write():
             # also write trigger select events
             write_trigger_select_events()
+        print_open_fds('LOOP')
