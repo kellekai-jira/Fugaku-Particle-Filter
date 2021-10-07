@@ -591,6 +591,7 @@ trigger_select.evts = []
 
 
 def write_trigger_select_events():
+    print_open_fds('LOOP')
     with open('select_events.melissa_p2p_server.csv', 'w+') as f:
         f.write("time,runner_id,state_t,state_id,was_cached\n")
         for evt in trigger_select.evts:
@@ -599,6 +600,7 @@ def write_trigger_select_events():
             it[-1] = 1 if it[-1] else 0
             f.write(",".join([str(x) for x in it]))
             f.write("\n")
+    print_open_fds('LOOP')
 
 
 def needs_runner(parent_id, Q):
@@ -800,6 +802,7 @@ class LauncherConnection:
             print_open_fds()
             return True
             # ATM We do not care what the launcher sends us. We only check if it is still alive
+        print_open_fds()
 
     def update_launcher_next_message_date(self):
         self.next_message_date_to_launcher = time.time(
@@ -916,9 +919,9 @@ if __name__ == '__main__':
     server_loops_last_second = 0
     last_second = 0
     while True:
+        print_open_fds('LOOP')
         server_loops_last_second += 1
         if int(time.time()) > last_second:
-            print_open_fds('LOOP')
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
@@ -931,6 +934,7 @@ if __name__ == '__main__':
         if stealable_jobs > 0:
             handle_job_requests(launcher, nsteps)
 
+        print_open_fds('LOOP')
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():
                 raise Exception("Launcher did not ping me for too long!")
