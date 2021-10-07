@@ -19,7 +19,7 @@ logging.basicConfig(format=FORMAT, filename=debug_log)
 logger.setLevel(logging.DEBUG)
 
 descriptors = set()
-def print_open_fds(print_all=False, msg=''):
+def print_open_fds(msg='', print_all=False):
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     fds = set(os.listdir('/proc/self/fd/'))
@@ -38,7 +38,7 @@ def print_open_fds(print_all=False, msg=''):
 
 from collections import OrderedDict
 
-print_open_fds(msg='init')
+print_open_fds('init')
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -83,6 +83,8 @@ from utils import get_node_name
 
 context = zmq.Context()
 context.setsockopt(zmq.LINGER, 0)
+
+print_open_fds('zmq context')
 
 def count_members(a):
     res = 0
@@ -287,7 +289,7 @@ print('binding to', addr)
 job_socket, port_job_socket = \
         bind_socket(context, zmq.REP, addr)
 
-print_open_fds(msg='bind job_socket')
+print_open_fds('bind job_socket')
 
 # Socket for general purpose requests
 print(os.system(f'ls -la /proc/{os.getpid()}/fd'))
@@ -298,16 +300,14 @@ gp_socket, port_gp_socket = \
         bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
-print_open_fds(msg='bind gp_socket')
+print_open_fds('bind gp_socket')
 
 weights_this_cycle = 0
 
 print('Server up now')
 
 def send_message(socket, data):
-    print_open_fds(msg='before')
     socket.send(data.SerializeToString())
-    print_open_fds(msg='after')
 
 def maybe_update():
     """
@@ -333,7 +333,6 @@ def maybe_update():
             print('Gracefully ending server now.')
             exit(0)
         trigger(START_ITERATION, len(alpha))
-        print_open_fds()
         # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
         # not necessary since we only answer job requests if job is there... answer_open_job_requests()
@@ -364,9 +363,7 @@ def accept_weight(msg):
         weights_this_cycle += 1
         state_weights[state_id] = weight
 
-    print_open_fds(msg='before')
     gp_socket.send(b'')  # send an empty ack.
-    print_open_fds(msg='after')
 
     # Update knowledge on cached states:
     StateCache.add_runner(state_id, runner_id)
@@ -385,6 +382,7 @@ Fromat:
 """
 runners = {}
 def accept_runner_request(msg):
+    print_open_fds('[begin] runners: %s' % (len(runners)) )
     trigger(START_ACCEPT_RUNNER_REQUEST, 0)
     # store request
     runner_id = msg.runner_id
@@ -417,13 +415,13 @@ def accept_runner_request(msg):
     # if len(reply.runner_response.sockets) == 0:
         # print("Could not find any runner with this state in", StateCache.c)
 
-    print_open_fds(msg='before')
     send_message(gp_socket, reply)
-    print_open_fds(msg='after')
     # print('scache was:', ) REM: if this is the first runner request it ispossible that the requested state is on another runner but since there was not yet this runners runner req on the server, nothing is returned
     trigger(STOP_ACCEPT_RUNNER_REQUEST, 0)
+    print_open_fds('[end] runners: %s' % (len(runners)) )
 
 def accept_delete(msg):
+    print_open_fds()
     """
     Deletes
     1. old stuff
@@ -495,13 +493,13 @@ def accept_delete(msg):
     StateCache.remove_runner(to_delete, runner_id)
 
 
-    print_open_fds(msg='before')
     send_message(gp_socket, reply)
-    print_open_fds(msg='after')
 
     trigger(STOP_ACCEPT_DELETE, 0)
+    print_open_fds()
 
 def accept_prefetch(msg):
+    print_open_fds()
     trigger(START_ACCEPT_PREFETCH, 0)
 
     runner_id = msg.runner_id
@@ -535,13 +533,12 @@ def accept_prefetch(msg):
                 # This runner should prefetch this parent state
                 reply.prefetch_response.pull_states.append(scheduled_jobs[runner_id][1])
 
-    print_open_fds(msg='before')
     send_message(gp_socket, reply)
-    print_open_fds(msg='after')
     trigger(STOP_ACCEPT_PREFETCH, 0)
+    print_open_fds()
 
 def receive_message_nonblocking(socket):
-    print_open_fds(msg='before')
+    print_open_fds()
     msg = None
     try:
         msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
@@ -550,20 +547,19 @@ def receive_message_nonblocking(socket):
         if msg.runner_id in faulty_runners:
             print("Ignoring faulty runner's message:", msg)
             socket.send(b'')
-            print_open_fds(msg='after - if in faulty')
 
+            print_open_fds()
             return None
     except zmq.error.Again:
         # could not poll anything
         pass
 
-    print_open_fds(msg='after - not in faulty')
+    print_open_fds()
     return msg
 
 def handle_general_purpose():
-    print_open_fds(msg='before')
+    print_open_fds()
     msg = receive_message_nonblocking(gp_socket)
-    print_open_fds(msg='after')
 
     if msg:
         ty = msg.WhichOneof('content')
@@ -578,6 +574,7 @@ def handle_general_purpose():
         else:
             print("Wrong message type received!")
             assert False
+    print_open_fds()
 
 
 
@@ -665,6 +662,7 @@ def generate_job_id():
     return job_id
 
 def handle_job_requests(launcher, nsteps):
+    print_open_fds()
     """take a job from unscheduled jobs and send it back to the runner. take one that is
     maybe already cached."""
     global stealable_jobs
@@ -718,14 +716,14 @@ def handle_job_requests(launcher, nsteps):
             DueDates.add(runner_id, job_id, parent_id)
 
         reply.job_response.nsteps = nsteps
-        print_open_fds(msg='before')
         send_message(job_socket, reply)
-        print_open_fds(msg='after')
         trigger(STOP_HANDLE_JOB_REQ, 0)
+    print_open_fds()
 
 
 class LauncherConnection:
     def __init__(self, context, server_node_name, launcher_node_name):
+        print_open_fds()
         self.update_launcher_due_date()
         self.linger = 10000
         self.launcher_node_name = launcher_node_name
@@ -765,31 +763,41 @@ class LauncherConnection:
         print('Setup launcher connection, server node name:', server_node_name)
 
         self.known_runners = set()
+        print_open_fds()
 
     def update_next_message_due_date(self):
+        print_open_fds()
         self.next_message_date_to_launcher = time.time(
         ) + LAUNCHER_PING_INTERVAL
+        print_open_fds()
 
     def __del__(self):
+        print_open_fds()
         print("Sending Stop Message to Launcher")
         self.text_pusher.send(Stop().encode())
+        print_open_fds()
 
     def update_launcher_due_date(self):
+        print_open_fds()
         self.due_date_launcher = time.time() + LAUNCHER_TIMEOUT
+        print_open_fds()
 
     def check_launcher_due_date(self):
         return time.time() < self.due_date_launcher
 
     def receive_text(self):
+        print_open_fds()
         msg = None
         try:
             msg = self.text_puller.recv(flags=zmq.NOBLOCK)
         except zmq.error.Again:
             # could not poll anything
+            print_open_fds()
             return False
         if msg:
             print("Launcher message recieved %s" % msg)
             self.update_launcher_due_date()
+            print_open_fds()
             return True
             # ATM We do not care what the launcher sends us. We only check if it is still alive
 
@@ -798,29 +806,36 @@ class LauncherConnection:
         ) + LAUNCHER_PING_INTERVAL
 
     def ping(self):
+        print_open_fds()
         if time.time() > self.next_message_date_to_launcher:
             msg = Alive()
             print('send alive')
             self.text_pusher.send(msg.encode())
             self.update_launcher_next_message_date()
+        print_open_fds()
 
     def notify(self, runner_id, status):
+        print_open_fds()
         msg = SimulationStatusMessage(runner_id, status)
         print("notify launcher about runner", runner_id, ":", status)
         self.text_pusher.send(msg.encode())
+        print_open_fds()
 
     def notify_runner_connect(self, runner_id):
+        print_open_fds()
         if not runner_id in self.known_runners:
             self.notify(runner_id,
                         SimulationStatus.RUNNING)  # notify that running
             self.known_runners.add(runner_id)
             print("Server registering Runner ID %d" % runner_id)
             runners_last[runner_id] = None
+        print_open_fds()
 
 
 
 
 def do_update_step():
+    print_open_fds()
     global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
     print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
@@ -861,16 +876,16 @@ def do_update_step():
 
     print(f"we got P={last_P} different particles!")
 
+    print_open_fds()
     return NSTEPS if assimilation_cycle < CYCLES else 0
 
 
 
 if __name__ == '__main__':
+    print_open_fds()
     server_node_name = get_node_name()
     global launcher
-    print_open_fds()
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
-    print_open_fds()
 
     trigger(START_ITERATION, assimilation_cycle)
     # Timesteps for warmup:
@@ -903,6 +918,7 @@ if __name__ == '__main__':
     while True:
         server_loops_last_second += 1
         if int(time.time()) > last_second:
+            print_open_fds('LOOP')
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
