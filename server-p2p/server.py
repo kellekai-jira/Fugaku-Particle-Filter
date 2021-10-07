@@ -19,7 +19,7 @@ logging.basicConfig(format=FORMAT, filename=debug_log)
 logger.setLevel(logging.DEBUG)
 
 descriptors = set()
-def print_open_fds(print_all=False):
+def print_open_fds(print_all=False, msg=''):
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     fds = set(os.listdir('/proc/self/fd/'))
@@ -28,12 +28,12 @@ def print_open_fds(print_all=False):
     descriptors = fds
 
     if print_all:
-        logging.debug("{}:{} ALL file descriptors: {}".format(filename, line_number, fds))
+        logger.debug("ALL file descriptors: %s %s" % (fds, msg))
 
     if new_fds:
-        logging.debug("{}:{} new file descriptors: {}".format(filename, line_number, new_fds))
+        logger.debug("NEW file descriptors: %s %s" % (new_fds, msg))
     if closed_fds:
-        logging.debug("{}:{} closed file descriptors: {}".format(filename, line_number, closed_fds))
+        logger.debug("CLOSED file descriptors: %s %s" % (closed_fds, msg))
 
 
 from collections import OrderedDict
