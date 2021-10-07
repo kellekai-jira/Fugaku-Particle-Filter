@@ -24,6 +24,7 @@ __line_number = []
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
     global descriptors
+    global __line_number
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     if line_number in __line_number:
         return
