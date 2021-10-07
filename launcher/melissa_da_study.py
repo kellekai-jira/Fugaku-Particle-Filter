@@ -374,6 +374,7 @@ def run_melissa_da_study(
                 server.state = STATE_RUNNING
                 debug('Server running now!')
                 server.last_msg_from = time.time()
+                cluster.UpdateJob(server.job_id)
         if server.state == STATE_RUNNING:
             if server.node_name != '':
                 mr = max_runners()
