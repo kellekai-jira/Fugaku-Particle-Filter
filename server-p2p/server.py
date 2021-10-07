@@ -333,6 +333,7 @@ def maybe_update():
             print('Gracefully ending server now.')
             exit(0)
         trigger(START_ITERATION, len(alpha))
+        print_open_fds()
         # TODO: FTI_push_to_deeper_level(unscheduled_jobs)
 
         # not necessary since we only answer job requests if job is there... answer_open_job_requests()
@@ -867,7 +868,9 @@ def do_update_step():
 if __name__ == '__main__':
     server_node_name = get_node_name()
     global launcher
+    print_open_fds()
     launcher = LauncherConnection(context, server_node_name, LAUNCHER_NODE_NAME)
+    print_open_fds()
 
     trigger(START_ITERATION, assimilation_cycle)
     # Timesteps for warmup:
