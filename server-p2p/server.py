@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
-    time.sleep(0.001)
+    time.sleep(0.1)
     global descriptors
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
     fds = set(os.listdir('/proc/self/fd/'))
@@ -882,15 +882,16 @@ if __name__ == '__main__':
 
 
 
+    time.sleep(2)
     server_loops_last_second = 0
     last_second = 0
+    print_open_fds('before loop')
     while True:
         server_loops_last_second += 1
         if int(time.time()) > last_second:
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
-        print_open_fds('num runners: %s, cycle: %s, alpha: %s, weights: %s' % (len(runners), assimilation_cycle, len(alpha), weights_this_cycle))
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
