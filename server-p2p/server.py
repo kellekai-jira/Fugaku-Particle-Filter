@@ -20,16 +20,10 @@ logger.setLevel(logging.DEBUG)
 
 import gc
 
-__line_number = []
 descriptors = set()
 def print_open_fds(msg='', print_all=False):
     global descriptors
-    global __line_number
     (frame, filename, line_number, function_name, lines, index) = inspect.getouterframes(inspect.currentframe())[1]
-    if line_number in __line_number:
-        return
-    __line_number.append(line_number)
-    time.sleep(2)
     fds = set(os.listdir('/proc/self/fd/'))
     new_fds = fds - descriptors
     closed_fds = descriptors - fds
@@ -894,7 +888,7 @@ if __name__ == '__main__':
 
 
 
-    time.sleep(2)
+    time.sleep(5)
     server_loops_last_second = 0
     last_second = 0
     print_open_fds('before loop')
