@@ -20,10 +20,6 @@
 
 #include <cassert>
 #include <chrono>
-
-
-#define DISABLE_P2P
-
 using boost::asio::ip::udp;
 
 void PeerController::handle_avail_request()
@@ -154,10 +150,6 @@ void PeerController::handle_state_request()
 
 void PeerController::handle_requests()
 {
-#ifdef DISABLE_P2P
-    return;
-#endif
-    //assert(false);
     handle_avail_request();
     handle_state_request();
 }
@@ -375,9 +367,6 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
 
 bool PeerController::mirror( io_state_id_t state_id )
 {
-#ifdef DISABLE_P2P
-    return false;  // Deactivate p2p...
-#endif
     trigger(START_REQ_RUNNER, 0);
 
     bool found = false;

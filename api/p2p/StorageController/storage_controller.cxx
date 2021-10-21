@@ -64,7 +64,7 @@ void StorageController::init( double capacity_dp, double state_size_dp ) {
 
 void StorageController::fini() {
   printf("Finalizing storage controller\n");
-  //delete m_peer;
+  delete m_peer;
   int dummy[2];
   m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
   m_mpi->barrier("fti_comm_world");
@@ -133,7 +133,7 @@ void StorageController::callback() {
 
     storage.state_pool.init( prefetch_capacity );
 
-    //storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
+    storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
 
     if(storage.m_io->m_dict_bool["master_global"]) {
@@ -247,9 +247,9 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   while( state_pool.free() <= 1  ) {
     server.delete_request(this);
   }
-  //if( !m_io->is_local( state_id ) ) {
-    //m_peer->mirror( state_id );
-  //}
+  if( !m_io->is_local( state_id ) ) {
+    m_peer->mirror( state_id );
+  }
   if( !m_io->is_local( state_id ) ) {
     int id, t;
     trigger(PFS_PULL, to_ckpt_id(state_id) );
@@ -374,7 +374,7 @@ void StorageController::m_request_load() {
 
 // (2) state request from peer to worker
 void StorageController::m_request_peer() {
-  //m_peer->handle_requests();
+  m_peer->handle_requests();
 }
 
 void StorageController::m_request_pull() {
