@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <string>
 #include <queue>
@@ -28,7 +29,22 @@ int last_assimilation_cycle = 1;
 // init MPI
 // init IO
 
-
+StorageController::StorageController() :
+  m_worker_thread(true),
+  m_request_counter(1),
+  m_request_interval(10000),
+  m_state_pool(*this),
+  m_shared_state_pool(false)
+{
+  // TODO add environment variable to exp scripts
+  // enable/disable shared state cache
+  if( const char* shared_env = std::getenv("MELISSA_EXPERIMENT_SHARED_CACHE") ) {
+    if( atoi(shared_env) == 1 ) {
+      m_shared_state_pool = true;
+    }
+  }
+}
+  
 
 void StorageController::io_init( MpiController* mpi, IoController* io, int runner_id ) {
   
@@ -131,7 +147,7 @@ void StorageController::callback() {
 
     prefetch_capacity = (prefetch_capacity<STORAGE_MAX_PREFETCH) ? prefetch_capacity : STORAGE_MAX_PREFETCH;
 
-    storage.state_pool.init( prefetch_capacity );
+    storage.m_state_pool.init( prefetch_capacity );
 
     //storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
@@ -139,8 +155,8 @@ void StorageController::callback() {
     if(storage.m_io->m_dict_bool["master_global"]) {
       std::cout << "storage capacity [# slots]: " << capacity << std::endl;
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
-      std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
-      std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
+      std::cout << "prefetch capacity [# slots]: " << storage.m_state_pool.capacity() << std::endl;
+      std::cout << "free [# slots]: " << storage.m_state_pool.free() << std::endl;
     }
     trigger(STOP_INIT, 0);
   }
@@ -233,18 +249,18 @@ void StorageController::store( io_state_id_t state_id ) {
 }
 
 void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_t to) {
-  if( to == IO_STORAGE_L1 && state_pool.free() == 0 ) {
+  if( to == IO_STORAGE_L1 && m_state_pool.free() == 0 ) {
     server.delete_request(this);
   }
   m_io->copy(state_id, from, to);
   if( to == IO_STORAGE_L1 ) {
-    state_pool++;
+    m_state_pool++;
   }
 }
 
 void StorageController::m_pull_head( io_state_id_t state_id ) {
   if( m_io->is_local( state_id ) ) return;
-  while( state_pool.free() <= 1  ) {
+  while( m_state_pool.free() <= 1  ) {
     server.delete_request(this);
   }
   //if( !m_io->is_local( state_id ) ) {
@@ -257,7 +273,7 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   assert( m_io->is_local( state_id ) && "state should be local now!" );
-  state_pool++;
+  m_state_pool++;
   trigger(STATE_LOCAL_CREATE, to_ckpt_id(state_id));
 }
 
@@ -345,10 +361,10 @@ void StorageController::m_request_post() {
   m_push_weight_to_server( weight_message );
 
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-  state_pool++;
-  std::cout << "FREE SLOTS: " << state_pool.free() << std::endl;
+  m_state_pool++;
+  std::cout << "FREE SLOTS: " << m_state_pool.free() << std::endl;
   // if slot free, keep checkpoint. If not ask to delete a state
-  if( state_pool.free() == 0 ) {
+  if( m_state_pool.free() == 0 ) {
     server.delete_request(this);
   }
 
@@ -418,6 +434,23 @@ void StorageController::m_request_fini() {
 
 void StorageController::StatePool::init( size_t capacity ) {
   m_capacity = capacity;
+  if( m_storage_instance.m_shared_state_pool ) {
+    if( m_storage_instance.m_worker_thread ) {  
+      MPI_Aint size = m_capacity * sizeof(io_state_id_t);
+      MPI_Alloc_mem( size, MPI_INFO_NULL, &m_local_pool );
+      MPI_Win_create( m_local_pool, size, 1, m_win_info, m_storage_instance.m_mpi->comm(), &m_win ); 
+      MPI_Win_lock( MPI_LOCK_EXCLUSIVE, __m_master, 0, m_window );
+      MPI_Put( &m_container_size, __m_meta_size, MPI_CHAR, __m_master, 0,    
+          __m_meta_size, MPI_CHAR, m_window); 
+      MPI_Put( buffer.data(), m_container_size, 
+          MPI_CHAR, __m_master, __m_meta_size, m_container_size, 
+          MPI_CHAR, m_window); 
+      MPI_Win_unlock( __m_master, m_window );
+    } else {
+      MPI_Win_create( nullptr, 0, 1, m_info, m_comm, &m_window ); 
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
 }
 
 // prefix increment
@@ -487,8 +520,8 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     state->set_t(pair.second.t);
     state->set_id(pair.second.id);
   }
-  request.mutable_prefetch_request()->set_capacity(storage->state_pool.capacity());
-  request.mutable_prefetch_request()->set_free(storage->state_pool.free());
+  request.mutable_prefetch_request()->set_capacity(storage->m_state_pool.capacity());
+  request.mutable_prefetch_request()->set_free(storage->m_state_pool.free());
   request.set_runner_id(storage->m_runner_id);
 
   trigger(START_PREFETCH_REQ,0);
@@ -505,7 +538,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   auto dump_states = response.prefetch_response().dump_states();
   for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
     storage->m_io->remove( { it->t(), it->id() }, IO_STORAGE_L1 );
-    storage->state_pool--;
+    storage->m_state_pool--;
   }
 
   trigger(STOP_PREFETCH,0);
@@ -550,8 +583,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
 
   assert(!storage->m_io->is_local(state_id));
-  storage->state_pool--;
-  std::cout << "free: " << storage->state_pool.free() << std::endl;
+  storage->m_state_pool--;
+  std::cout << "free: " << storage->m_state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
   trigger(STOP_DELETE,to_ckpt_id(state_id));

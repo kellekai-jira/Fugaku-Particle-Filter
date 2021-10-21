@@ -5,6 +5,16 @@
 #include <string>
 #include <map>
 
+#define COMM_WORLD_KEY "comm_world"
+
+#define MPI_COMM_DUP_AND_INSERT(NAME, COMM) \
+  do { \
+    MPI_Comm dup;   MPI_Comm_dup( COMM, &dup ); \
+    int rank;       MPI_Comm_rank( dup, &rank ); \
+    int size;       MPI_Comm_size( dup, &size ); \
+    m_comms.insert( std::pair<std::string, mpi_comm_t>( NAME, { dup, size, rank } ) ); \
+  } while(0)
+
 struct mpi_request_t {
     MPI_Request mpi_request;
     char errstr[MPI_MAX_ERROR_STRING];
@@ -24,8 +34,7 @@ class MpiController
     public:
 
         MpiController();
-        void init( MPI_Comm & comm );
-        void register_comm( std::string, MPI_Comm & );
+        void register_comm( std::string, MPI_Comm );
         void set_comm( std::string key );
         const MPI_Comm & comm( std::string key = m_comm_set );
         const int & size( std::string key = m_comm_set );

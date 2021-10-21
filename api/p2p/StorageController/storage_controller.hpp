@@ -26,10 +26,7 @@ static MpiController mpi_controller_null;
 class StorageController {
 
   public:
-    StorageController() :
-      m_worker_thread(true),
-      m_request_counter(1),
-      m_request_interval(10000) {}
+    StorageController();
 
     void io_init( MpiController* mpi, IoController* io, int runner_id );
     void init( double capacity, double state_size );
@@ -109,8 +106,13 @@ class StorageController {
 
     class StatePool {
       public:
-        StatePool() : m_used_slots(0) {}
+        StatePool( StorageController& storage ) : 
+          m_used_slots(0), m_storage_instance(storage), m_win_info(MPI_INFO_NULL) {}
         void init( size_t capacity );
+        // only when shared, only from head procs
+        void put( io_state_id_t state, const double* const data );
+        // only when shared, only from model procs
+        bool get( io_state_id_t state, const double* data );
         size_t free() { return m_capacity - m_used_slots; }
         size_t size() { return m_used_slots; }
         size_t capacity() { return m_capacity; }
@@ -122,12 +124,17 @@ class StorageController {
         size_t m_capacity;
         ssize_t m_used_slots;
         friend class StorageController;
+        StorageController& m_storage_instance;
+        // for shared storage
+        void* m_local_pool;
+        MPI_Info m_win_info;
+        MPI_Win m_win;
+        int m_master_worker;
     };
 
-    friend class StatePool;
-
-    StatePool state_pool;
-
+    StatePool m_state_pool;
+    bool m_shared_state_pool;
+     
   public:  // public so peer_controller can access it. feel free to friend!
 //----------------------------------------------------------------------------------------
 //  SERVER CONNECTION
