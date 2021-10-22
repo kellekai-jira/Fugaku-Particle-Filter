@@ -202,9 +202,9 @@ public:
 
             if (report_time < time(NULL)) {
                 report_time = 0;
-                L("MELISSA_DA_TIMING_REPORT time was before. No report will be generated before the greaceful end of this runner");
+                MPRT("MELISSA_DA_TIMING_REPORT time was before. No report will be generated before the greaceful end of this runner");
             } else {
-                L("Will report timing information at %lu unix seconds (in %lu seconds)",
+                MPRT("Will report timing information at %lu unix seconds (in %lu seconds)",
                         report_time, report_time - time(NULL));
             }
         }
@@ -218,7 +218,7 @@ public:
                     fifo_file
                     );
 
-            D("connected to fifo %s", fifo_file);
+            MDBG("connected to fifo %s", fifo_file);
         }
 
         this->trigger_event(INIT, 0); // == trigger(INIT, 0)
@@ -227,9 +227,9 @@ public:
                 p1.time_since_epoch()).count();
 
 
-        L("Init timing at %llu ms since epoch", ms_since_epoch);
+        MPRT("Init timing at %llu ms since epoch", ms_since_epoch);
 
-        L("Null time   at %llu ms since epoch (timing-events csv are relative to this)", atoll(getenv("MELISSA_TIMING_NULL")));
+        MPRT("Null time   at %llu ms since epoch (timing-events csv are relative to this)", atoll(getenv("MELISSA_TIMING_NULL")));
 
     }
 
@@ -328,7 +328,7 @@ public:
                     }
                     else
                     {
-                        D("Did not find enter region event for %d %d at %f ms", evt.type,
+                        MDBG("Did not find enter region event for %d %d at %f ms", evt.type,
                                 evt.parameter, to_millis(evt.time));
                     }
                 }
@@ -338,7 +338,7 @@ public:
             }
             if (!found_anything)
             {
-                D("Event %d is no enter/leave region event", evt.type);
+                MDBG("Event %d is no enter/leave region event", evt.type);
             }
 
         }

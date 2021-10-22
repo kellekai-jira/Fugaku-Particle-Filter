@@ -14,7 +14,7 @@ void MpiManager::init()
     int provided;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
     if( provided < MPI_THREAD_MULTIPLE ) {
-        D( "thread level is not provided!" );
+        MDBG( "thread level is not provided!" );
         MPI_Abort( MPI_COMM_WORLD, -1 );
     }
 #else

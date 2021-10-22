@@ -23,31 +23,31 @@ std::shared_ptr<Assimilator> Assimilator::create(AssimilatorType
     switch (assimilator_type)
     {
     case ASSIMILATOR_DUMMY:
-        L("Chosing Dummy Assimilator");
+        MPRT("Chosing Dummy Assimilator");
         return std::make_shared<DummyAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_PDAF:
-        L("Chosing PDAF Assimilator");
+        MPRT("Chosing PDAF Assimilator");
         return std::make_shared<PDAFAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_EMPTY:
-        L("Chosing Empty Assimilator");
+        MPRT("Chosing Empty Assimilator");
         return std::make_shared<EmptyAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_CHECK_STATELESS:
-        L("Chosing Assimilator used to check if stateless");
+        MPRT("Chosing Assimilator used to check if stateless");
         return std::make_shared<CheckStatelessAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_PRINT_INDEX_MAP:
-        L("Chosing Assimilator that only prints out the index map");
+        MPRT("Chosing Assimilator that only prints out the index map");
         return std::make_shared<PrintIndexMapAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_WRF:
-        L("Chosing Wrf Assimilator");
+        MPRT("Chosing Wrf Assimilator");
         return std::make_shared<WrfAssimilator>(field, total_steps, mpi);
         break;
     case ASSIMILATOR_PYTHON:
-        L("Chosing Python Assimilator");
+        MPRT("Chosing Python Assimilator");
         return std::make_shared<PythonAssimilator>(field, total_steps, mpi);
         break;
     default:

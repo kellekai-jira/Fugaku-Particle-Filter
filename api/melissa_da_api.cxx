@@ -66,12 +66,12 @@ struct ConfigurationConnection
         char* melissa_server_master_node = getenv("MELISSA_SERVER_MASTER_NODE");
         if(melissa_server_master_node == nullptr)
         {
-            L("you must set the MELISSA_SERVER_MASTER_NODE environment "
+            MPRT("you must set the MELISSA_SERVER_MASTER_NODE environment "
               "variable before running!");
             assert(false);
         }
         std::string port_name = fix_port_name(melissa_server_master_node);
-        D("Configuration Connection to %s", port_name.c_str());
+        MDBG("Configuration Connection to %s", port_name.c_str());
         zmq_connect(socket, port_name.c_str());
     }
 
@@ -86,7 +86,7 @@ struct ConfigurationConnection
 
         zmq::send_n(socket, header, 2);
 
-        L("registering runner_id %d at server", runner_id);
+        MPRT("registering runner_id %d at server", runner_id);
 
         auto msg_reply = zmq::recv(socket);
 
@@ -98,7 +98,7 @@ struct ConfigurationConnection
 
         bool request_register_field = reply[0] != 0;
 
-        L("Registering field? %d", reply[0]);
+        MPRT("Registering field? %d", reply[0]);
 
         out_server->comm_size = reply[1];
 
@@ -210,12 +210,12 @@ bool first_melissa_init(MPI_Comm comm_) {
     {
         server.port_names.resize(server.comm_size * MPI_MAX_PROCESSOR_NAME);
     }
-    D("port_names_size= %lu", server.port_names.size());
+    MDBG("port_names_size= %lu", server.port_names.size());
     MPI_Bcast(
         server.port_names.data(), server.comm_size * MPI_MAX_PROCESSOR_NAME,
         MPI_CHAR, 0, comm);
 
-    // D("Portnames %s , %s ", server.port_names.data(),
+    // MDBG("Portnames %s , %s ", server.port_names.data(),
     // server.port_names.data() + MPI_MAX_PROCESSOR_NAME);
     return register_field;
 }
@@ -336,7 +336,7 @@ void melissa_init_with_index_map(
 
     if(local_hidden_vect_sizes.size() >= 2)
     {
-        D("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
+        MDBG("vect sizes: %lu %lu", local_vect_sizes[0], local_vect_sizes[1]);
     }
 
 
@@ -367,7 +367,7 @@ void melissa_init_with_index_map(
 
     // if (comm_rank == 0)
     // {
-    // D("Global index map:");
+    // MDBG("Global index map:");
     // print_vector(global_index_map);
     // }
 
@@ -458,7 +458,7 @@ int melissa_expose(
     }
 
     // TODO: this will block other fields!
-    D("nsteps %d", nsteps);
+    MDBG("nsteps %d", nsteps);
 
     return nsteps;
 }
@@ -471,8 +471,8 @@ void melissa_finalize() // TODO: when using more serverranks, wait until an end
     // sleep(3);
     MPI_Barrier(comm);
     // sleep(3);
-    D("End Runner.");
-    D("server ranks: %lu", ServerRanks::ranks.size());
+    MDBG("End Runner.");
+    MDBG("server ranks: %lu", ServerRanks::ranks.size());
 
     phase = PHASE_FINAL;
     // TODO: free all pointers?
@@ -488,7 +488,7 @@ void melissa_finalize() // TODO: when using more serverranks, wait until an end
     ServerRanks::ranks.clear();
 
     // sleep(3);
-    D("Destroying zmq context");
+    MDBG("Destroying zmq context");
     zmq_ctx_destroy(context);
 
 #ifdef REPORT_TIMING
@@ -565,6 +565,6 @@ int melissa_is_runner() {
 int melissa_get_comm_f() {
     assert(0 && "Deprecated!");
     int res =  MPI_Comm_c2f(comm);
-    D("melissa_get_comm in c: %d", res);
+    MDBG("melissa_get_comm in c: %d", res);
     return res;
 }

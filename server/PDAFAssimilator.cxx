@@ -102,8 +102,8 @@ void PDAFAssimilator::getAllEnsembleMembers()
         if (doexit == 1 || status != 0)
         {
             // Something went wrong!
-            D("PDAF get state wants us to exit? 1==%d", doexit);
-            D("PDAF get state status=%d", status);
+            MDBG("PDAF get state wants us to exit? 1==%d", doexit);
+            MDBG("PDAF get state status=%d", status);
 
             nsteps = -1;
             break;
@@ -118,7 +118,7 @@ int PDAFAssimilator::do_update_step(const int current_step)
     int status;      //    ! Status flag for filter routines
 
     MPI_Barrier(mpi.comm());      // TODO: remove this line!
-    L("Doing update step...\n");
+    MPRT("Doing update step...\n");
 
     const int local_vect_size = field.local_vect_size / sizeof(double);  // transform to int
 
@@ -139,7 +139,7 @@ int PDAFAssimilator::do_update_step(const int current_step)
         if (status != 0)
         {
             // Something went wrong!
-            D("PDAF put state status=%d", status);
+            MDBG("PDAF put state status=%d", status);
             // TODO: finish clean!
             std::raise(SIGINT);
             exit(1);

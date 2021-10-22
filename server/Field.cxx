@@ -61,7 +61,7 @@ void Field::calculate_parts(int server_comm_size)
     local_index_map.resize(local_vect_size / bytes_per_element);
     local_index_map_hidden.resize(local_vect_size_hidden / bytes_per_element_hidden);
 
-    D("Calculated parts");
+    MDBG("Calculated parts");
 }
 
 /// Finds the part of the field with the specified simu_rank.

@@ -98,11 +98,11 @@ enum Phase
 // debug logs:
 #ifdef NDEBUG
 // release mode
-#define D(...) \
+#define MDBG(...) \
     do { \
     } while(false)
 #else
-#define D(x ...) \
+#define MDBG(x ...) \
     do { \
         if(comm_rank == 0) { \
             char str[1024]; \
@@ -116,7 +116,7 @@ enum Phase
 #endif
 
 // normal logging:
-#define L(x ...) \
+#define MPRT(x ...) \
     do { \
         if(comm_rank == 0) { \
             char str[1024]; \
@@ -128,7 +128,7 @@ enum Phase
         } \
     } while(false)
 
-#define E(x ...) \
+#define MERR(x ...) \
     do { \
         if(comm_rank == 0) { \
             std::printf("[%d] ", comm_rank); \
@@ -148,7 +148,7 @@ enum Phase
         if((x) == -1) { \
             int err2 = errno; \
             int err = zmq_errno(); \
-            E("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); \
+            MERR("zmq error(%d, errno=%d): %s", err, err2, zmq_strerror(err)); \
             std::raise(SIGINT); \
         } \
     } while(false)

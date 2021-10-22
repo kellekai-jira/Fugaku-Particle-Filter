@@ -51,16 +51,16 @@ ServerRankConnection::ServerRankConnection(const char* addr_request) {
     data_request_socket = zmq_socket(context, ZMQ_REQ);
     assert(data_request_socket);
     std::string cleaned_addr = fix_port_name(addr_request);
-    D("Data Request Connection to %s", cleaned_addr.c_str());
+    MDBG("Data Request Connection to %s", cleaned_addr.c_str());
     // ZMQ_CHECK();
     int ret = zmq_connect(data_request_socket, cleaned_addr.c_str());
     assert(ret == 0);
 
-    D("connect socket %p", data_request_socket);
+    MDBG("connect socket %p", data_request_socket);
 }
 
 ServerRankConnection::~ServerRankConnection() {
-    D("closing socket %p", data_request_socket);
+    MDBG("closing socket %p", data_request_socket);
     zmq_close(data_request_socket);
 }
 
@@ -83,21 +83,21 @@ void ServerRankConnection::send(
             zmq::data(*msg_header) + sizeof(header),
             field_name, MPI_MAX_PROCESSOR_NAME);
 
-    D("sending on socket %p", data_request_socket);
+    MDBG("sending on socket %p", data_request_socket);
 
     zmq::send(*msg_header, data_request_socket, ZMQ_SNDMORE);
 
-    D("-> Simulation runnerid %d, rank %d sending stateid %d "
+    MDBG("-> Simulation runnerid %d, rank %d sending stateid %d "
             "current_step=%d fieldname=%s, %lu+%lu hidden bytes",
             getRunnerId(), getCommRank(), current_state_id, current_step,
             field_name, bytes_to_send, bytes_to_send_hidden);
-    // D("values[0]  = %.3f", values[0]);
-    // D("values[1]  = %.3f", values[1]);
-    // D("values[2]  = %.3f", values[2]);
-    // D("hidden values[0]  = %.3f", values_hidden[0]);
-    // D("hidden values[1]  = %.3f", values_hidden[1]);
-    // D("hidden values[2]  = %.3f", values_hidden[2]);
-    // D("values[35] = %.3f", values[35]);
+    // MDBG("values[0]  = %.3f", values[0]);
+    // MDBG("values[1]  = %.3f", values[1]);
+    // MDBG("values[2]  = %.3f", values[2]);
+    // MDBG("hidden values[0]  = %.3f", values_hidden[0]);
+    // MDBG("hidden values[1]  = %.3f", values_hidden[1]);
+    // MDBG("hidden values[2]  = %.3f", values_hidden[2]);
+    // MDBG("values[35] = %.3f", values[35]);
     int flag = (bytes_to_send_hidden > 0) ? ZMQ_SNDMORE : 0;
 
     // required for zmq::send_n in combination with a number of bytes
@@ -123,7 +123,7 @@ int ServerRankConnection::receive(
     // consists of bytes that will be put into out_values
 
     auto msg = zmq::recv(data_request_socket);
-    D("Received message size = %lu", zmq::size(*msg));
+    MDBG("Received message size = %lu", zmq::size(*msg));
     assert(zmq::size(*msg) == 4 * sizeof(int));
 
     int state[4] = {0};
@@ -142,7 +142,7 @@ int ServerRankConnection::receive(
         // zero copy is for sending only!
         msg = zmq::recv(data_request_socket);
 
-        D("<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... "
+        MDBG("<- Simulation got %lu bytes, expected %lu + %lu hidden bytes... "
                 "for state %d, current_step=%d, nsteps=%d (socket=%p)",
                 zmq::size(*msg), bytes_expected, bytes_expected_hidden,
                 *out_current_state_id, *out_current_step, nsteps,
@@ -253,7 +253,7 @@ void Field::putState(VEC_T* values, VEC_T* hidden_values, const char* field_name
     for(auto csr = connected_server_ranks.begin();
             csr != connected_server_ranks.end(); ++csr)
     {
-        D("put state, local offset: %lu, send count: %lu",
+        MDBG("put state, local offset: %lu, send count: %lu",
                 csr->local_vector_offset, csr->send_count);
         csr->server_rank.send(
                 &values[csr->local_vector_offset], csr->send_count,
@@ -274,7 +274,7 @@ int Field::getState(VEC_T* values, VEC_T* values_hidden) {
             csr != connected_server_ranks.end(); ++csr)
     {
         // receive state parts from every serverrank.
-        D("get state, local offset: %lu, send count: %lu",
+        MDBG("get state, local offset: %lu, send count: %lu",
                 csr->local_vector_offset, csr->send_count);
 
         // do not try to receive if we are finalizeing already. Even check

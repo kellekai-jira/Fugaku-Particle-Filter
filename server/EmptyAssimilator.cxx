@@ -25,7 +25,7 @@ EmptyAssimilator::EmptyAssimilator(Field & field_, const int total_steps_, MpiMa
 }
 
 int EmptyAssimilator::do_update_step(const int current_step) {
-    L("Doing empty update step...\n");
+    MPRT("Doing empty update step...\n");
     MPI_Barrier(mpi.comm());
 
     if (current_step >= total_steps)

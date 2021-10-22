@@ -190,7 +190,7 @@ void melissa_p2p_init(const char *field_name,
             "MELISSA_SERVER_MASTER_NODE");
 
         if (! melissa_server_master_node) {
-            L(
+            MPRT(
                 "you must set the MELISSA_SERVER_MASTER_NODE environment variable before running!");
             assert(false);
         }
@@ -198,7 +198,7 @@ void melissa_p2p_init(const char *field_name,
         // Refactor: put all sockets in a class
         job_socket = zmq_socket(context, ZMQ_REQ);
         std::string port_name = fix_port_name(melissa_server_master_node);
-        D("connect to job request server at %s", port_name.c_str());
+        MDBG("connect to job request server at %s", port_name.c_str());
         int req = zmq_connect(job_socket, port_name.c_str());
         assert(req == 0);
     }
@@ -237,9 +237,9 @@ void push_weight_to_head(double weight)
 
     static bool wait = false;
     if( wait ) {
-        D("start waiting for Head rank!");
+        MDBG("start waiting for Head rank!");
         req.wait();  // be sure that there is nothing else in the mpi send queue
-        D("finished waiting for Head rank!");
+        MDBG("finished waiting for Head rank!");
         //if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
         //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ONE );
     }
@@ -251,7 +251,7 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
 
-    D("start Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
+    MDBG("start Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
     size_t bs = m.ByteSize();  // TODO: change bytesize to bytesize long
 
     if (bs > buf.size())
@@ -263,7 +263,7 @@ void push_weight_to_head(double weight)
     io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
     //io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_ONE);  // even faster than isend on juwels!
     req.wait();  // be synchronous on juwels with wrf for now
-    D("finished Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
+    MDBG("finished Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
     wait = true;
 }
 
@@ -322,16 +322,16 @@ int melissa_p2p_expose(VEC_T *values,
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
     trigger(START_STORE, to_ckpt_id(current_state));
-    D("start storing state as L1 checkpoint");
+    MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
-    D("finished storing state as L1 checkpoint");
+    MDBG("finished storing state as L1 checkpoint");
     trigger(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
     trigger(START_CALC_WEIGHT, current_state.t);
-    D("start calculating weight for state");
+    MDBG("start calculating weight for state");
     double weight = calculate_weight(values, hidden_values);
-    D("finished calculating weight for state");
+    MDBG("finished calculating weight for state");
     trigger(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
@@ -343,9 +343,9 @@ int melissa_p2p_expose(VEC_T *values,
     if (mpi.rank() == 0) {
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
         trigger(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
-        D("start pushing weight to head");
+        MDBG("start pushing weight to head");
         push_weight_to_head(weight);
-        D("finished pushing weight to head");
+        MDBG("finished pushing weight to head");
         trigger(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
         trigger(START_JOB_REQUEST, current_state.t);
@@ -358,14 +358,14 @@ int melissa_p2p_expose(VEC_T *values,
                 if (!entered_loop)
                 {
                     entered_loop = true;
-                    D("Server does not have any good jobs for me. Retrying in 500 ms intervals");
+                    MDBG("Server does not have any good jobs for me. Retrying in 500 ms intervals");
 
                 }
                 usleep(500000); // retry after 500ms
                 loop_counter++;
             }
         } while (!job_response.has_parent());
-        D("Now  I work on %s", job_response.DebugString().c_str());
+        MDBG("Now  I work on %s", job_response.DebugString().c_str());
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
         next_state.t = job_response.job().t();

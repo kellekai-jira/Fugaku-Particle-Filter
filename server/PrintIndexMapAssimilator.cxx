@@ -15,7 +15,7 @@
 
 void PrintIndexMapAssimilator::index_map_to_file()
 {
-    D("Gathered file");
+    MDBG("Gathered file");
 
     std::ofstream myfile;
 
@@ -23,7 +23,7 @@ void PrintIndexMapAssimilator::index_map_to_file()
 
     if (print_it)
     {
-        D("Writing file");
+        MDBG("Writing file");
         // Rewrite file every update step...
         myfile.open ("index-map.csv", std::ios::trunc);
 
@@ -98,7 +98,7 @@ void PrintIndexMapAssimilator::gather_and_print(std::ofstream &os,
 
 int PrintIndexMapAssimilator::do_update_step(const int current_step) {
 
-    L("Doing Printing Index Map...\n");
+    MPRT("Doing Printing Index Map...\n");
     MPI_Barrier(mpi.comm());
 
 
