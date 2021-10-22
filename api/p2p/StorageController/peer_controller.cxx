@@ -344,6 +344,8 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
                 if( m_io->m_dict_bool["master_global"]) {
                     m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
+                
+                MDBG("Received state from peer");
 
                 trigger(PEER_HIT, peer_runner_id);
                 trigger(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
