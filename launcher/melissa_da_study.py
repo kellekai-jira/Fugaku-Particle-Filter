@@ -309,6 +309,7 @@ def run_melissa_da_study(
                     config['basic']['ckpt_dir'] = local_ckpt_dir
                     config['basic']['glbl_dir'] = global_ckpt_dir
                     config['basic']['meta_dir'] = meta_ckpt_dir
+                    config['basic']['ckpt_io'] = str(3)
                     config['advanced']['local_test'] = '1' if issubclass(type(cluster), LocalCluster) else '0'
                     with open(runner_config, 'w') as f:
                         config.write(f)
