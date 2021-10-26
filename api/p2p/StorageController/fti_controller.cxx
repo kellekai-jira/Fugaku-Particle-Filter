@@ -231,24 +231,70 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   }
 
   m_mpi->barrier();
+    
+  std::stringstream filename_global;
+  filename_global << "Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+  
+  std::stringstream global_fn;
+  global_fn << global.str();
+  global_fn << "/";
+  global_fn << filename_global.str();
+  
+  MPI_File mpifd;
+  MPI_File_open(m_mpi->comm(), global_fn.str().c_str(), MPI_MODE_WRONLY|MPI_MODE_CREATE, MPI_INFO_NULL, &mpifd);
+  
+  MPI_Offset global_file_offset = 0;
 
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
-    std::stringstream filename;
-    filename << "Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
-
-    std::stringstream global_fn;
-    global_fn << global.str();
-    global_fn << "/";
-    global_fn << filename.str();
+    std::stringstream filename_local;
+    filename_local << "Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
 
     std::stringstream local_tmp_fn;
     local_tmp_fn << local_tmp_dir.str();
     local_tmp_fn << "/";
-    local_tmp_fn << filename.str();
+    local_tmp_fn << filename_local.str();
+    
+    struct stat stat_buf;
+    int rc = stat(local_tmp_fn.str().c_str(), &stat_buf);
+    assert( rc == 0 && "failed to get file stats!" );
+    int64_t local_file_size = stat_buf.st_size;
+    
+    std::ifstream localfd( local_tmp_fn.str(), std::ios::binary );
+    std::vector<char> local_file_buffer (IO_TRANSFER_SIZE, 0);
 
-    m_kernel.file_copy( global_fn.str(), local_tmp_fn.str() );
+		size_t pos = 0;
+    while (pos < local_file_size) {
+        size_t bSize = IO_TRANSFER_SIZE;
+        if ((local_file_size - pos) < IO_TRANSFER_SIZE) {
+            bSize = local_file_size - pos;
+        }
+
+        localfd.read(local_file_buffer.data(), bSize);
+
+        MPI_Datatype dType;
+        MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
+        MPI_Type_commit( &dType );
+
+        int err = MPI_File_write_at( mpifd, global_file_offset, local_file_buffer.data(), 1, dType,MPI_STATUS_IGNORE );
+        // check if successful
+        if (err != 0) {
+            errno = 0;
+            int reslen;
+            char str[FTI_BUFS], mpi_err[FTI_BUFS];
+            MPI_Error_string(err, mpi_err, &reslen);
+            snprintf(str, FTI_BUFS,
+             "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
+            D(str);
+            return;
+        }
+        MPI_Type_free(&dType);
+        global_file_offset += bSize;
+        pos = pos + bSize;
+    }
+    
+    localfd.close();
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
@@ -265,6 +311,8 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
 
   }
 
+  MPI_File_close(&mpifd);
+  
   m_mpi->barrier();
 
   std::stringstream local;
