@@ -39,9 +39,6 @@ class FtiController : public IoController {
     void remove( io_state_id_t state_id, io_level_t level );
     void copy( io_state_id_t state, io_level_t from, io_level_t to );
     void copy_extern( io_state_id_t state, io_level_t from, io_level_t to );
-    void copy_extern_posix( io_state_id_t state, io_level_t from, io_level_t to );
-    void copy_extern_mpiio( io_state_id_t state, io_level_t from, io_level_t to );
-    void copy_extern_ftiff( io_state_id_t state, io_level_t from, io_level_t to );
     void filelist_local( io_state_id_t ckpt_id, std::vector<std::string> & ckptfiles );
     void update_metadata( io_state_id_t ckpt_id, io_level_t level );
 
