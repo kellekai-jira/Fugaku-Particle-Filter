@@ -347,7 +347,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
                 
                 MDBG("Received state from peer");
 
-                trigger(PEER_HIT, peer_runner_id);
+                trigger(PEER_HIT, to_ckpt_id(state_id));
                 trigger(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
             }
             else
