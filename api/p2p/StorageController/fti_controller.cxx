@@ -184,6 +184,230 @@ void FtiController::copy( io_state_id_t state_id, io_level_t from, io_level_t to
 }
 
 void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_level_t to ) {
+  copy_extern_ftiff( state_id, from, to );
+}
+
+void FtiController::copy_extern_ftiff( io_state_id_t state_id, io_level_t from, io_level_t to ) {
+
+  assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
+  assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 1 to level 2 not implemented for extern" );
+
+  std::stringstream global;
+  global << m_dict_string["global_dir"];
+  global << "/";
+  global << std::to_string(to_ckpt_id(state_id));
+
+  //std::stringstream extern_meta;
+  //extern_meta << m_dict_string["meta_dir"];
+  //extern_meta << "/";
+  //extern_meta << std::to_string(to_ckpt_id(state_id));
+
+  //std::stringstream meta;
+  //meta << m_dict_string["meta_dir"];
+  //meta << "/";
+  //meta << m_dict_string["exec_id"];
+  //meta << "/l1/";
+  //meta << std::to_string(to_ckpt_id(state_id));
+
+  //std::stringstream meta_tmp_dir;
+  //meta_tmp_dir << m_dict_string["meta_dir"];
+  //meta_tmp_dir << "/";
+  //meta_tmp_dir << m_dict_string["exec_id"];
+  //meta_tmp_dir << "/";
+  //meta_tmp_dir << "/tmp.head";
+
+  std::stringstream local_tmp_dir;
+  local_tmp_dir << m_dict_string["local_dir"];
+  local_tmp_dir << "/";
+  local_tmp_dir << m_dict_string["exec_id"];
+  local_tmp_dir << "/";
+  local_tmp_dir << "/tmp.head";
+
+  std::stringstream local_tmp;
+  local_tmp << local_tmp_dir.str();
+
+  if( m_dict_bool["master_local"] ) {
+    IO_TRY( mkdir( local_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  }
+
+  //if( m_dict_bool["master_global"] ) {
+  //  IO_TRY( mkdir( meta_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  //}
+
+  m_mpi->barrier();
+
+  for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
+    int proc = m_kernel.topo->body[i];
+
+    std::stringstream filename;
+    filename << "Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+
+    std::stringstream global_fn;
+    global_fn << global.str();
+    global_fn << "/";
+    global_fn << filename.str();
+
+    std::stringstream local_tmp_fn;
+    local_tmp_fn << local_tmp_dir.str();
+    local_tmp_fn << "/";
+    local_tmp_fn << filename.str();
+
+    m_kernel.file_copy( global_fn.str(), local_tmp_fn.str() );
+
+    //if (m_kernel.topo->groupRank == 0) {
+    //  int groupId = i+1;
+    //  std::stringstream metafilename_extern;
+    //  metafilename_extern << extern_meta.str();
+    //  metafilename_extern << "/";
+    //  metafilename_extern << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+    //  std::stringstream metafilename_tmp;
+    //  metafilename_tmp << meta_tmp_dir.str();
+    //  metafilename_tmp << "/";
+    //  metafilename_tmp << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+    //  m_kernel.file_copy( metafilename_extern.str(), metafilename_tmp.str() );
+    //}
+
+  }
+
+  m_mpi->barrier();
+
+  std::stringstream local;
+  local << m_dict_string["local_dir"];
+  local << "/";
+  local << m_dict_string["exec_id"];
+  local << "/l1/";
+  local << std::to_string(to_ckpt_id(state_id));
+
+  struct stat info;
+  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+
+  if( m_dict_bool["master_local"] ) {
+    IO_TRY( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ), 0, "unable to rename local directory" );
+  }
+  //if( m_dict_bool["master_global"] ) {
+  //  IO_TRY( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ), 0, "unable to rename meta directory" );
+  //  update_metadata( state_id, IO_STORAGE_L1 );
+  //}
+
+  std::stringstream msg;
+  msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
+  m_kernel.print(msg.str(), FTI_INFO);
+
+  m_mpi->barrier();
+
+}
+
+void FtiController::copy_extern_mpiio( io_state_id_t state_id, io_level_t from, io_level_t to ) {
+
+  assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
+  assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 1 to level 2 not implemented for extern" );
+
+  std::stringstream global;
+  global << m_dict_string["global_dir"];
+  global << "/";
+  global << std::to_string(to_ckpt_id(state_id));
+
+  std::stringstream extern_meta;
+  extern_meta << m_dict_string["meta_dir"];
+  extern_meta << "/";
+  extern_meta << std::to_string(to_ckpt_id(state_id));
+
+  std::stringstream meta;
+  meta << m_dict_string["meta_dir"];
+  meta << "/";
+  meta << m_dict_string["exec_id"];
+  meta << "/l1/";
+  meta << std::to_string(to_ckpt_id(state_id));
+
+  std::stringstream meta_tmp_dir;
+  meta_tmp_dir << m_dict_string["meta_dir"];
+  meta_tmp_dir << "/";
+  meta_tmp_dir << m_dict_string["exec_id"];
+  meta_tmp_dir << "/";
+  meta_tmp_dir << "/tmp.head";
+
+  std::stringstream local_tmp_dir;
+  local_tmp_dir << m_dict_string["local_dir"];
+  local_tmp_dir << "/";
+  local_tmp_dir << m_dict_string["exec_id"];
+  local_tmp_dir << "/";
+  local_tmp_dir << "/tmp.head";
+
+  std::stringstream local_tmp;
+  local_tmp << local_tmp_dir.str();
+
+  if( m_dict_bool["master_local"] ) {
+    IO_TRY( mkdir( local_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  }
+
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( mkdir( meta_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  }
+
+  m_mpi->barrier();
+
+  for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
+    int proc = m_kernel.topo->body[i];
+
+    std::stringstream filename;
+    filename << "Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+
+    std::stringstream global_fn;
+    global_fn << global.str();
+    global_fn << "/";
+    global_fn << filename.str();
+
+    std::stringstream local_tmp_fn;
+    local_tmp_fn << local_tmp_dir.str();
+    local_tmp_fn << "/";
+    local_tmp_fn << filename.str();
+
+    m_kernel.file_copy( global_fn.str(), local_tmp_fn.str() );
+
+    if (m_kernel.topo->groupRank == 0) {
+      int groupId = i+1;
+      std::stringstream metafilename_extern;
+      metafilename_extern << extern_meta.str();
+      metafilename_extern << "/";
+      metafilename_extern << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      std::stringstream metafilename_tmp;
+      metafilename_tmp << meta_tmp_dir.str();
+      metafilename_tmp << "/";
+      metafilename_tmp << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      m_kernel.file_copy( metafilename_extern.str(), metafilename_tmp.str() );
+    }
+
+  }
+
+  m_mpi->barrier();
+
+  std::stringstream local;
+  local << m_dict_string["local_dir"];
+  local << "/";
+  local << m_dict_string["exec_id"];
+  local << "/l1/";
+  local << std::to_string(to_ckpt_id(state_id));
+
+  struct stat info;
+  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+
+  if( m_dict_bool["master_local"] ) {
+    IO_TRY( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ), 0, "unable to rename local directory" );
+  }
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ), 0, "unable to rename meta directory" );
+    update_metadata( state_id, IO_STORAGE_L1 );
+  }
+
+  std::stringstream msg;
+  msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
+  m_kernel.print(msg.str(), FTI_INFO);
+
+  m_mpi->barrier();
+
+}
+
+void FtiController::copy_extern_posix( io_state_id_t state_id, io_level_t from, io_level_t to ) {
 
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
   assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 1 to level 2 not implemented for extern" );
@@ -328,7 +552,7 @@ void FtiController::filelist_local( io_state_id_t state_id, std::vector<std::str
 }
 
 void FtiController::update_metadata( io_state_id_t state_id, io_level_t level ) {
-  m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), m_io_level_map[level] );
+  //m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), m_io_level_map[level] );
 }
 
 
