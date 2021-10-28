@@ -56,13 +56,13 @@ void PeerController::handle_avail_request()
         int res = 0;
         if (req.has_state_avail_request()) {
 
-            D("got state avail req: %s", req.state_avail_request().DebugString().c_str());
+            MDBG("got state avail req: %s", req.state_avail_request().DebugString().c_str());
 
             // respond to state avail request
             auto io_state_id = io_state_id_t(req.state_avail_request().state_id().t(), req.state_avail_request().state_id().id());
 
             if (m_io->is_local(io_state_id)) {
-                D("We do have the requested state!");
+                MDBG("We do have the requested state!");
                 reply.mutable_state_avail_response()->mutable_state_id()->CopyFrom(req.state_avail_request().state_id());
                 reply.mutable_state_avail_response()->mutable_socket()->set_node_name(hostname);
                 reply.mutable_state_avail_response()->mutable_socket()->set_port(port);
@@ -94,21 +94,21 @@ void PeerController::handle_state_request()
         auto req = receive_message(state_server_socket);
         // respond to state request
 
-        D("got state req: %s", req.state_request().DebugString().c_str());
+        MDBG("got state req: %s", req.state_request().DebugString().c_str());
 
         auto io_state_id = io_state_id_t(req.state_request().state_id().t(), req.state_request().state_id().id());
 
         ::melissa_p2p::Message reply;
         reply.mutable_state_response();
         if (!m_io->is_local(io_state_id)) {
-            D("but this state is not available locally");
+            MDBG("but this state is not available locally");
             send_message(state_server_socket, reply);
 
             trigger(STOP_HANDLE_STATE_REQ, 0);
             return;
         }
 
-        D("sending state...");
+        MDBG("sending state...");
         trigger(START_COPY_STATE_TO_RUNNER, req.runner_id());
 
         reply.mutable_state_response()->mutable_state_id()->CopyFrom(req.state_request().state_id());
@@ -144,9 +144,9 @@ void PeerController::handle_state_request()
             infile.read (zmq::data(*data_msg), size);
 
             zmq::send(*data_msg, state_server_socket, flags);
-            D("send part with flags: %d", flags);
+            MDBG("send part with flags: %d", flags);
         }
-        D("sent full state message");
+        MDBG("sent full state message");
         trigger(STOP_COPY_STATE_TO_RUNNER, req.runner_id());
         trigger(STOP_HANDLE_STATE_REQ, 1);
     }
@@ -195,7 +195,7 @@ PeerController::PeerController( IoController* io, void* zmq_context, MpiControll
     port_udp = m_udp_socket.local_endpoint().port();
     m_udp_socket.non_blocking(true);
 
-    D("Bound my state server to %s, publishing %s:%d, udp :%d", port_name,
+    MDBG("Bound my state server to %s, publishing %s:%d, udp :%d", port_name,
             hostname.c_str(), port, port_udp);
 
     // do a dummy dns req to tell the server my ports
@@ -251,7 +251,7 @@ bool PeerController::flush_out_state_avail_reqs(udp::socket & socket,
 
     auto dns_reply = dns_req(state_id);
     int peer_count = dns_reply.runner_response().sockets_size();
-    D("retrieved %d peers having %d,%d", peer_count, state_id.t, state_id.id);
+    MDBG("retrieved %d peers having %d,%d", peer_count, state_id.t, state_id.id);
 
 
     if (peer_count == 0) {
@@ -264,7 +264,7 @@ bool PeerController::flush_out_state_avail_reqs(udp::socket & socket,
         int peer_runner_id = dns_reply.runner_response().sockets(i).runner_id();
 
         std::string fixed_host_name = fix_port_name(addr.c_str());
-        D("state avail req to runner %d (%s:%d)", peer_runner_id,
+        MDBG("state avail req to runner %d (%s:%d)", peer_runner_id,
                 fixed_host_name.c_str(), port);
 
         udp::resolver resolver(m_io_service);
@@ -273,7 +273,7 @@ bool PeerController::flush_out_state_avail_reqs(udp::socket & socket,
         auto res = resolver.resolve(query, error);
         if (error) {
             if (error == boost::asio::error::host_not_found) {
-                D("host not found: %s:", fixed_host_name.c_str());
+                MDBG("host not found: %s:", fixed_host_name.c_str());
                 continue;
             } else {
                 throw boost::system::system_error(error);
@@ -308,7 +308,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     srand(time(NULL) + runner_id);
     int poll_ms = 1000 + rand() % 3000;
     long long stop_poll_ms = now_ms() + poll_ms;
-    D("%s has %d ms to send me state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
+    MDBG("%s has %d ms to send me state %d,%d", port_name.c_str(), poll_ms, state_id.t, state_id.id);
     while (found == false && now_ms() < stop_poll_ms) {
     //while (found == false) {
         handle_requests();  // don't block out other guys that ask for attention ;)  -- this somehow destroys our measurements at the same time!
@@ -318,7 +318,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
             {
                 trigger(STOP_REQ_STATE_FROM_RUNNER, 1);
                 trigger(START_COPY_STATE_FROM_RUNNER, peer_runner_id );
-                D("Got a positive state message response, start receiving state from peer...");
+                MDBG("Got a positive state message response, start receiving state from peer...");
 
                 found = true;
                 // FIXME: assert that stateid is the one requested!
@@ -358,7 +358,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
             }
             else
             {
-                D("Got a negative state message response...");
+                MDBG("Got a negative state message response...");
                 break;  // break out to send a new request...
             }
         }
@@ -425,7 +425,7 @@ bool PeerController::mirror( io_state_id_t state_id )
         m_a.ParseFromArray(recv_buf.data(), len);
         if (!(m_a.state_avail_response().available() && m_a.state_avail_response().state_id().t() == state_id.t
                     && m_a.state_avail_response().state_id().id() == state_id.id)) {
-            D("Got a state_avail_response but of the wrong state");
+            MDBG("Got a state_avail_response but of the wrong state");
             continue;
         }
 

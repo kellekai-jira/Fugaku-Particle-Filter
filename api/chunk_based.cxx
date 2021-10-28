@@ -34,7 +34,7 @@ void melissa_add_chunk(const int varid, const int * index_map, T * values,
         const size_t count, const bool is_assimilated)
 {
     assert(may_add_chunks);
-    D("Adding Chunk(varid=%d) with count %lu", varid, count);
+    MDBG("Adding Chunk(varid=%d) with count %lu", varid, count);
     chunks.push_back(Chunk(varid, index_map, reinterpret_cast<VEC_T *>(values), sizeof(T),
                 count, is_assimilated));
     //D("Location index_map in melissa_api: %p", index_map);

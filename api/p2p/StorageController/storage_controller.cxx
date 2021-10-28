@@ -189,7 +189,7 @@ void StorageController::callback() {
           auto to_remove = del_q.front();
           FTI_Remove(to_ckpt_id(to_remove), 4);
           storage.m_remove_symlink(to_ckpt_id(to_remove));
-          D("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+          MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
           del_q.pop();
       }
   }
@@ -284,7 +284,7 @@ void StorageController::m_load_user( io_state_id_t state ) {
   }
   //try {
     while (!m_io->load( state )){
-        D("try again...");
+        MDBG("try again...");
         int status;
         // FIXME: remove this and let server send to app cores where they need to find the state from!
         trigger(START_WAIT_HEAD, to_ckpt_id(state));
@@ -460,7 +460,7 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
       "MELISSA_SERVER_MASTER_GP_NODE");
   if (melissa_server_master_gp_node == nullptr)
   {
-    L(
+    MPRT(
         "you must set the MELISSA_SERVER_MASTER_GP_NODE environment variable before running!");
     assert(false);
   }
@@ -567,7 +567,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 void StorageController::m_push_weight_to_server(const Message & m ) {
   trigger(START_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().t());
   send_message(server.m_socket, m);
-  D("Pushing weight message to weight server: %s", m.DebugString().c_str());
+  MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
 
   int t = m.weight().state_id().t();
@@ -605,14 +605,14 @@ void StorageController::m_remove_symlink( const io_id_t io_id ) {
 
   if (remove(link_global.str().c_str()) == -1) {
       if (errno != ENOENT) {
-          E("Error removing target directory.");
+          MERR("Error removing target directory.");
       }
   }
 
   link_meta << m_io->m_dict_string["meta_dir"] <<  "/" << io_id;
   if (remove(link_meta.str().c_str()) == -1) {
       if (errno != ENOENT) {
-          E("Error removing target directory.");
+          MERR("Error removing target directory.");
       }
   }
 

@@ -16,7 +16,7 @@
 void check_data_types() {
     // check that the size_t datatype is the same on the server and on the client side! otherwise the communication might fail.
     // for sure this could be done more intelligently in future!
-    D("sizeof(size_t)=%lu", sizeof(size_t));
+    MDBG("sizeof(size_t)=%lu", sizeof(size_t));
     assert(sizeof(size_t) == 8);
 }
 
@@ -75,7 +75,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
     char t[] = SLOW_MPI_DIR "/melissa_da_serverXXXXXX";
-    D("Using SLOW_MPI, saving to %s", t);
+    MDBG("Using SLOW_MPI, saving to %s", t);
     if (rank == root) {
         mkdtemp(t);
     }
@@ -106,7 +106,7 @@ void slow_MPI_Scatterv(const void *sendbuf, const size_t *sendcounts, const size
     std::streamsize read_size = is.tellg();
     is.seekg(0, std::ios::beg);
 
-    D("readsize %lu, recvcount %lu", read_size, recvcount);
+    MDBG("readsize %lu, recvcount %lu", read_size, recvcount);
     assert(static_cast<size_t>(read_size) == recvcount * type_size);
     is.read(reinterpret_cast<char*>(recvbuf), read_size * type_size);
 }
@@ -137,7 +137,7 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype sendty
     assert(root == 0);  // not messing with modulo here so other stuff is not implemented
 
     char t[] = SLOW_MPI_DIR "/melissa_serverXXXXXX";
-    D("Using SLOW_MPI, saving to %s", t);
+    MDBG("Using SLOW_MPI, saving to %s", t);
     if (rank == root) {
         mkdtemp(t);
     }

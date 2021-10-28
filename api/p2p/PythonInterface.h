@@ -38,20 +38,20 @@ public:
 
         if (!Py_IsInitialized())
         {
-            D("Initing Python");
+            MDBG("Initing Python");
 
             program = Py_DecodeLocale("melissa_da_api", NULL);
             Py_SetProgramName(program);
             Py_Initialize();
             _import_array();  // init numpy
         } else {
-            D("Not initing python as runner probably a python program");
+            MDBG("Not initing python as runner probably a python program");
         }
 
 
         if (NPY_VERSION != PyArray_GetNDArrayCVersion())
         {
-            E(
+            MERR(
                     "Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
         }
 
@@ -63,7 +63,7 @@ public:
         char *module_name = getenv("MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE");
         if (!module_name)
         {
-            L("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE not set! exiting now");
+            MPRT("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE not set! exiting now");
             exit(EXIT_FAILURE);
         }
 
@@ -73,7 +73,7 @@ public:
         pModule = PyImport_Import(pName);
         Py_DECREF(pName);
 
-        D("looking for module %s...",module_name);
+        MDBG("looking for module %s...",module_name);
 
         err(pModule != NULL,
                 "Cannot find the module file. Is its path in PYTHONPATH?");                   // Could not find module
@@ -84,7 +84,7 @@ public:
 
         if (field.local_vect_size >= LONG_MAX)
         {
-            E("too large vectsize for python assimilator");
+            MERR("too large vectsize for python assimilator");
         }
 
 
@@ -120,13 +120,13 @@ public:
         PyMem_RawFree(program);
 
         Py_Finalize();
-        D("Freed python context.");
+        MDBG("Freed python context.");
     }
 
     void err(bool no_fail, const char * error_str) {
         if (!no_fail || PyErr_Occurred())
         {
-            L("Error! %s", error_str);
+            MPRT("Error! %s", error_str);
             PyErr_Print();
             std::raise(SIGINT);
             exit(1);
@@ -146,7 +146,7 @@ public:
             npy_intp dims[1] = { static_cast<npy_intp>(field.local_vect_size) };
             npy_intp dims_hidden[1] =
             { static_cast<npy_intp>(field.local_hidden_vect_size) };
-            L("Creating Python object for background state");
+            MPRT("Creating Python object for background state");
 
             pBackground = PyArray_SimpleNewFromData(1, dims, NPY_UINT8,
                     values);
@@ -164,7 +164,7 @@ public:
         err(pTime != NULL, "Cannot create argument");
         err(pId != NULL, "Cannot create argument");
 
-        D("calculate_weight input parameter:");
+        MDBG("calculate_weight input parameter:");
 
         // Py_INCREF(pValue);
         MPI_Fint fcomm = MPI_Comm_c2f(comm);
@@ -182,7 +182,7 @@ public:
 
         double weight = PyFloat_AsDouble(pReturn);
 
-        D("Back from calculate_weight: %f", weight);
+        MDBG("Back from calculate_weight: %f", weight);
 
         Py_DECREF(pReturn);
 

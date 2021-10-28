@@ -203,7 +203,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   std::stringstream L2_META_CKPT;
   L2_META_CKPT << L2_META_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
   
-  D("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L2_TEMP.str(), L2_CKPT.str(), L2_META_TEMP.str(), L2_META_CKPT.str());
+  MDBG("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L2_TEMP.str().c_str(), L2_CKPT.str().c_str(), L2_META_TEMP.str().c_str(), L2_META_CKPT.str().c_str());
   
   // LEVEL 1 DIRECTORIES
   
@@ -223,7 +223,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   std::stringstream L1_META_CKPT;
   L1_META_CKPT << L1_META_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
   
-  D("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L1_TEMP.str(), L1_CKPT.str(), L1_META_TEMP.str(), L1_META_CKPT.str());
+  MDBG("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L1_TEMP.str().c_str(), L1_CKPT.str().c_str(), L1_META_TEMP.str().c_str(), L1_META_CKPT.str().c_str());
  
   m_mpi->barrier();
   
@@ -270,7 +270,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     std::string lfn = L1_CKPT_FN.str();
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
-    D("stage 0 -> 1 | STATE SIZE [%d] | %ld", i, local_file_size);
+    MDBG("stage 0 -> 1 | STATE SIZE [%d] | %ld", i, local_file_size);
 
     std::ifstream localfd( lfn, std::ios::binary );
 
@@ -297,7 +297,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
         MPI_Error_string(err, mpi_err, &reslen);
         snprintf(str, FTI_BUFS,
             "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
-        D(str);
+        MDBG(str);
         return;
       }
 
@@ -360,7 +360,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
     std::string lfn = L1_CKPT_FN.str();
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
-    D("stage 1 -> 0 | STATE SIZE [%d] | %ld", i, local_file_size);
+    MDBG("stage 1 -> 0 | STATE SIZE [%d] | %ld", i, local_file_size);
 
     std::ofstream localfd( lfn, std::ios::binary );
 
@@ -386,7 +386,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
         MPI_Error_string(err, mpi_err, &reslen);
         snprintf(str, FTI_BUFS,
             "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
-        D(str);
+        MDBG(str);
         return;
       }
       

@@ -26,7 +26,7 @@ DummyAssimilator::DummyAssimilator(Field & field_, const int total_steps_, MpiMa
 }
 
 int DummyAssimilator::do_update_step(const int current_step) {
-    L("Doing dummy update step...\n");
+    MPRT("Doing dummy update step...\n");
     MPI_Barrier(mpi.comm());
     int state_id = 0;
     for (auto ens_it = field.ensemble_members.begin(); ens_it !=

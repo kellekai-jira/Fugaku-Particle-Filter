@@ -26,7 +26,7 @@ LauncherConnection::LauncherConnection(void * context, std::string launcher_host
         launcher_host = "127.0.0.1";
     }
 
-    L("Establishing connection to launcher on %s:3000-3002", launcher_host.c_str());
+    MPRT("Establishing connection to launcher on %s:3000-3002", launcher_host.c_str());
 
     text_puller = zmq_socket (context, ZMQ_SUB);
     text_pusher = zmq_socket (context, ZMQ_PUSH);
@@ -53,7 +53,7 @@ LauncherConnection::LauncherConnection(void * context, std::string launcher_host
     // Send the first message
     send_message_server_name(hostname, comm_rank, text_pusher, 0);
     updateLauncherNextMessageDate();
-    D("Successful connected to launcher");
+    MDBG("Successful connected to launcher");
 }
 
 LauncherConnection::~LauncherConnection()
@@ -80,7 +80,7 @@ void LauncherConnection::receiveText()
     zmq_msg_t msg;
     zmq_msg_init (&msg);
     zmq_msg_recv (&msg, text_puller, 0);
-    D("Launcher message recieved %s", static_cast<char *>(zmq_msg_data (&msg)));
+    MDBG("Launcher message recieved %s", static_cast<char *>(zmq_msg_data (&msg)));
     updateLauncherDueDate();
     // ATM We do not care what the launcher sends us. We only check if it is still alive
     //process_launcher_message(zmq_msg_data (&msg), server_ptr);

@@ -73,7 +73,7 @@ void PythonAssimilator::on_init_state(const int runner_id, const
 }
 
 int PythonAssimilator::do_update_step(const int current_step) {
-    L("Doing python update step...\n");
+    MPRT("Doing python update step...\n");
     MPI_Barrier(mpi.comm());
 
     int nsteps = py::callback(current_step);
@@ -117,7 +117,7 @@ void py::init(Field & field) {
 
     if (NPY_VERSION != PyArray_GetNDArrayCVersion())
     {
-        E(
+        MERR(
             "Error! Numpy version conflict that might lead to undefined behavior. Recompile numpy!");
     }
 
@@ -129,7 +129,7 @@ void py::init(Field & field) {
     char *module_name = getenv("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE");
     if (!module_name)
     {
-        L("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE not set! exiting now");
+        MPRT("MELISSA_DA_PYTHON_ASSIMILATOR_MODULE not set! exiting now");
         exit(EXIT_FAILURE);
     }
 
@@ -148,11 +148,11 @@ void py::init(Field & field) {
 
     if (field.local_vect_size >= LONG_MAX)
     {
-        E("too large vectsize for python assimilator");
+        MERR("too large vectsize for python assimilator");
     }
 
     // init list:
-    L("Creating Python object for background states");
+    MPRT("Creating Python object for background states");
 
     pEnsemble_list_background = PyList_New(field.ensemble_members.size());
     err(pEnsemble_list_background != NULL,
@@ -218,7 +218,7 @@ int py::callback(const int current_step) {
 
     err(pTime != NULL, "Cannot create argument");
 
-    D("callback input parameter:");
+    MDBG("callback input parameter:");
 
     // Py_INCREF(pValue);
     PyObject * pReturn = PyObject_CallFunctionObjArgs(pFunc, pTime,
@@ -230,7 +230,7 @@ int py::callback(const int current_step) {
                                                       NULL);
     err(pReturn != NULL, "No return value");
 
-    D("Back from callback:");
+    MDBG("Back from callback:");
 
     int nsteps = static_cast<int>(PyLong_AsLong(pReturn));
 
@@ -252,13 +252,13 @@ void py::finalize() {
     PyMem_RawFree(program);
 
     Py_Finalize();
-    D("Freed python context.");
+    MDBG("Freed python context.");
 }
 
 void py::err(bool no_fail, const char * error_str) { // FIXME change condition from no_fail to fail... seems to read better
     if (!no_fail || PyErr_Occurred())
     {
-        L("Error! %s", error_str);
+        MPRT("Error! %s", error_str);
         PyErr_Print();
         std::raise(SIGINT);
         exit(1);

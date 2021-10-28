@@ -26,7 +26,7 @@ void EnsembleMember::store_background_state_part(const Part & part, const
                                                  Part & hidden_part, const
                                                  VEC_T * values_hidden)
 {
-    D("before_assert %lu %lu %lu", part.send_count,
+    MDBG("before_assert %lu %lu %lu", part.send_count,
       part.local_offset_server, state_background.size());
 	assert(values || part.send_count == 0);
     assert(part.send_count + part.local_offset_server <=

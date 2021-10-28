@@ -13,7 +13,7 @@ CheckStatelessAssimilator::CheckStatelessAssimilator(Field & field_, const int
                                                      total_steps, MpiManager & mpi_) :
     field(field_)
 {
-    L("**** Performing the stateless checking instead of assimilation...");
+    MPRT("**** Performing the stateless checking instead of assimilation...");
     nsteps = 1;
 
     // otherwise release mode will make problems!
@@ -45,15 +45,15 @@ void CheckStatelessAssimilator::print_result(const bool good)
 
     if (good)
     {
-        L("**** Check Successful! Simulation seems stateless!");
+        MPRT("**** Check Successful! Simulation seems stateless!");
     }
     else
     {
-        L("**** Check NOT Successful! Simulation seems stateful!");
+        MPRT("**** Check NOT Successful! Simulation seems stateful!");
     }
-    L("**** (at least over one timestep on %lu ensemble members",
+    MPRT("**** (at least over one timestep on %lu ensemble members",
       field.ensemble_members.size());
-    L("**** and inited due to the first received state!)");
+    MPRT("**** and inited due to the first received state!)");
 }
 
 int CheckStatelessAssimilator::do_update_step(const int current_step)
@@ -93,9 +93,9 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
         int index = 0;
 #define BINARY_MODE
 #ifdef BINARY_MODE
-        D("Comparing while assuming all state variables are binary data...");
+        MDBG("Comparing while assuming all state variables are binary data...");
 #else
-        D("Comparing while casting all state variables into doubles all state variables as doubles...");
+        MDBG("Comparing while casting all state variables into doubles all state variables as doubles...");
 #endif
         for (auto &ens_it : field.ensemble_members)
         {
@@ -108,7 +108,7 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
                 int diff = std::abs(a-b);
 
                 if (diff != 0) {
-                    L("Binary data differs");
+                    MPRT("Binary data differs");
                     print_result(false);
                     return -1;
                 }
@@ -189,16 +189,16 @@ int CheckStatelessAssimilator::do_update_step(const int current_step)
 
 
             const double eps = 0.00001;
-            L("Max diff: %f, value range: %f .. %f", max_diff, min_value,
+            MPRT("Max diff: %f, value range: %f .. %f", max_diff, min_value,
               max_value);
 
             if (max_diff > eps)
             {
-                L(
+                MPRT(
                     "Error: Vectors are not equal (max diff >%f). Is there some hidden state?",
                     eps);
                 //print_vector(bstate);
-                L("!=");
+                MPRT("!=");
                 //print_vector(cstate);
                 print_result(false);
                 return -1;      // stop assimilation
