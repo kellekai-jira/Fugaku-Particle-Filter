@@ -248,6 +248,8 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
 
   struct stat info;
   IO_TRY( stat( L2_CKPT.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
+  IO_TRY( stat( L2_META_TEMP.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
+  IO_TRY( stat( L2_TEMP.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
   
   if( m_dict_bool["master_global"] ) {
     IO_TRY( mkdir( L2_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
@@ -340,6 +342,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
 
   struct stat info;
   IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+  IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+  IO_TRY( stat( L1_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   
   if( m_dict_bool["master_global"] ) {
     IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
