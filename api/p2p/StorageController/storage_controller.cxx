@@ -90,7 +90,7 @@ void StorageController::callback() {
 #endif
     {
     try_init_timing();  // TODO actually we might call this even earlier for the heads just after initing the mpi
-    trigger(START_INIT, 0);
+    M_TRIGGER(START_INIT, 0);
     }
 #endif
 
@@ -142,7 +142,7 @@ void StorageController::callback() {
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
     }
-    trigger(STOP_INIT, 0);
+    M_TRIGGER(STOP_INIT, 0);
   }
 
 #ifdef REPORT_TIMING
@@ -252,13 +252,13 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   //}
   if( !m_io->is_local( state_id ) ) {
     int id, t;
-    trigger(PFS_PULL, to_ckpt_id(state_id) );
+    M_TRIGGER(PFS_PULL, to_ckpt_id(state_id) );
     m_io->stage( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   assert( m_io->is_local( state_id ) && "state should be local now!" );
   state_pool++;
-  trigger(STATE_LOCAL_CREATE, to_ckpt_id(state_id));
+  M_TRIGGER(STATE_LOCAL_CREATE, to_ckpt_id(state_id));
 }
 
 void StorageController::m_pull_user( io_state_id_t state_id ) {
@@ -271,15 +271,15 @@ void StorageController::m_load_head( io_state_id_t state ) {
 
 void StorageController::m_load_user( io_state_id_t state ) {
   bool local_hit = m_io->is_local( state );
-  trigger(START_M_LOAD_USER, (local_hit)?1:0 );
+  M_TRIGGER(START_M_LOAD_USER, (local_hit)?1:0 );
   if( local_hit ) {
-    trigger(LOCAL_HIT, to_ckpt_id(state));
+    M_TRIGGER(LOCAL_HIT, to_ckpt_id(state));
   } else {
-    trigger(LOCAL_MISS, to_ckpt_id(state));
+    M_TRIGGER(LOCAL_MISS, to_ckpt_id(state));
     int status;
-    trigger(START_WAIT_HEAD, to_ckpt_id(state));
+    M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));
     m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
-    trigger(STOP_WAIT_HEAD, to_ckpt_id(state));
+    M_TRIGGER(STOP_WAIT_HEAD, to_ckpt_id(state));
     assert( m_io->is_local( state ) && "unable to load state to local storage" );
   }
   //try {
@@ -287,12 +287,12 @@ void StorageController::m_load_user( io_state_id_t state ) {
         MDBG("try again...");
         int status;
         // FIXME: remove this and let server send to app cores where they need to find the state from!
-        trigger(START_WAIT_HEAD, to_ckpt_id(state));
+        M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));
             m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
-            trigger(DIRTY_LOAD, to_ckpt_id(state));
-        trigger(STOP_WAIT_HEAD, to_ckpt_id(state));
+            M_TRIGGER(DIRTY_LOAD, to_ckpt_id(state));
+        M_TRIGGER(STOP_WAIT_HEAD, to_ckpt_id(state));
     }
-  trigger(STOP_M_LOAD_USER, to_ckpt_id(state) );
+  M_TRIGGER(STOP_M_LOAD_USER, to_ckpt_id(state) );
 }
 
 void StorageController::m_store_head( io_state_id_t state_id ) {
@@ -317,7 +317,7 @@ void StorageController::m_query_server() {
 //======================================================================
 
 void StorageController::m_request_post() {
-  trigger(START_MODEL_MESSAGE,0);
+  M_TRIGGER(START_MODEL_MESSAGE,0);
   if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
@@ -357,8 +357,8 @@ void StorageController::m_request_post() {
 
   // ask if something to prefetch
   server.prefetch_request( this );
-  trigger(STOP_MODEL_MESSAGE, ckpt_id);
-  trigger(STATE_LOCAL_CREATE, ckpt_id);
+  M_TRIGGER(STOP_MODEL_MESSAGE, ckpt_id);
+  M_TRIGGER(STATE_LOCAL_CREATE, ckpt_id);
 }
 
 // (1) state request from user to worker
@@ -476,7 +476,7 @@ void StorageController::Server::fini() {
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {
 
-  trigger(START_PREFETCH,0);
+  M_TRIGGER(START_PREFETCH,0);
 
   // TODO server needs to assure that the minimum storage requirements
   // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
@@ -491,10 +491,10 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   request.mutable_prefetch_request()->set_free(storage->state_pool.free());
   request.set_runner_id(storage->m_runner_id);
 
-  trigger(START_PREFETCH_REQ,0);
+  M_TRIGGER(START_PREFETCH_REQ,0);
   send_message(m_socket, request);
   auto response = receive_message(m_socket);
-  trigger(STOP_PREFETCH_REQ,0);
+  M_TRIGGER(STOP_PREFETCH_REQ,0);
 
   auto pull_states = response.prefetch_response().pull_states();
   for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
@@ -508,13 +508,13 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     storage->state_pool--;
   }
 
-  trigger(STOP_PREFETCH,0);
+  M_TRIGGER(STOP_PREFETCH,0);
 
 }
 
 void StorageController::Server::delete_request( StorageController* storage ) {
 
-  trigger(START_DELETE,0);
+  M_TRIGGER(START_DELETE,0);
 
   Message request;
 
@@ -526,10 +526,10 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   request.set_runner_id(storage->m_runner_id);
 
   // measure delete request
-  trigger(START_DELETE_REQ,0);
+  M_TRIGGER(START_DELETE_REQ,0);
   send_message(m_socket, request);
   Message response = receive_message(m_socket);
-  trigger(STOP_DELETE_REQ,0);
+  M_TRIGGER(STOP_DELETE_REQ,0);
 
   auto pull_state = response.delete_response().to_delete();
   io_state_id_t state_id( pull_state.t(), pull_state.id() );
@@ -554,8 +554,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
 
-  trigger(STOP_DELETE,to_ckpt_id(state_id));
-  trigger(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
+  M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
+  M_TRIGGER(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
 
 }
 
@@ -565,7 +565,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 //======================================================================
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
-  trigger(START_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().t());
+  M_TRIGGER(START_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().t());
   send_message(server.m_socket, m);
   MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
@@ -577,7 +577,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
 
   // its good, we can give it free for delete...
   del_q.push(io_state_id_t(t, m.weight().state_id().id()));
-  trigger(STOP_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().id());
+  M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().id());
 }
 
 void StorageController::m_create_symlink( io_state_id_t state_id ) {

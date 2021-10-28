@@ -45,7 +45,7 @@ void PeerController::handle_avail_request()
     } else {
         // received something
 
-        trigger(START_HANDLE_AVAIL_REQ, 0);
+        M_TRIGGER(START_HANDLE_AVAIL_REQ, 0);
         ::melissa_p2p::Message req;
         req.ParseFromArray(buf.data(), numbytes);
 
@@ -79,7 +79,7 @@ void PeerController::handle_avail_request()
                     remote_endpoint, 0, ignored_error);
         }
 
-        trigger(STOP_HANDLE_AVAIL_REQ, res);
+        M_TRIGGER(STOP_HANDLE_AVAIL_REQ, res);
     }
 }
 
@@ -89,7 +89,7 @@ void PeerController::handle_avail_request()
 void PeerController::handle_state_request()
 {
     if (has_msg(state_server_socket, 0)) {
-        trigger(START_HANDLE_STATE_REQ, 0);
+        M_TRIGGER(START_HANDLE_STATE_REQ, 0);
 
         auto req = receive_message(state_server_socket);
         // respond to state request
@@ -104,12 +104,12 @@ void PeerController::handle_state_request()
             MDBG("but this state is not available locally");
             send_message(state_server_socket, reply);
 
-            trigger(STOP_HANDLE_STATE_REQ, 0);
+            M_TRIGGER(STOP_HANDLE_STATE_REQ, 0);
             return;
         }
 
         MDBG("sending state...");
-        trigger(START_COPY_STATE_TO_RUNNER, req.runner_id());
+        M_TRIGGER(START_COPY_STATE_TO_RUNNER, req.runner_id());
 
         reply.mutable_state_response()->mutable_state_id()->CopyFrom(req.state_request().state_id());
 
@@ -147,8 +147,8 @@ void PeerController::handle_state_request()
             MDBG("send part with flags: %d", flags);
         }
         MDBG("sent full state message");
-        trigger(STOP_COPY_STATE_TO_RUNNER, req.runner_id());
-        trigger(STOP_HANDLE_STATE_REQ, 1);
+        M_TRIGGER(STOP_COPY_STATE_TO_RUNNER, req.runner_id());
+        M_TRIGGER(STOP_HANDLE_STATE_REQ, 1);
     }
 }
 
@@ -218,7 +218,7 @@ long long now_ms()
 
 ::melissa_p2p::Message PeerController::dns_req(const io_state_id_t & state_id )
 {
-    trigger(START_REQ_RUNNER_LIST, runner_id);
+    M_TRIGGER(START_REQ_RUNNER_LIST, runner_id);
 
     ::melissa_p2p::Message req;
     // get friendly head rank of the same rank...
@@ -234,7 +234,7 @@ long long now_ms()
     send_message(storage.server.m_socket, req);
 
     auto res = receive_message(storage.server.m_socket);
-    trigger(STOP_REQ_RUNNER_LIST, runner_id);
+    M_TRIGGER(STOP_REQ_RUNNER_LIST, runner_id);
     return res;
 }
 
@@ -302,7 +302,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     void * state_request_socket = zmq_socket(m_zmq_context, ZMQ_REQ);
     zmq_setsockopt(state_request_socket, ZMQ_LINGER, &linger, sizeof(int));
     IO_TRY( zmq_connect(state_request_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
-    trigger(START_REQ_STATE_FROM_RUNNER, 0);
+    M_TRIGGER(START_REQ_STATE_FROM_RUNNER, 0);
     send_message(state_request_socket, state_request);
 
     srand(time(NULL) + runner_id);
@@ -316,8 +316,8 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
             auto m = receive_message(state_request_socket);
             if (m.state_response().has_state_id())
             {
-                trigger(STOP_REQ_STATE_FROM_RUNNER, 1);
-                trigger(START_COPY_STATE_FROM_RUNNER, peer_runner_id );
+                M_TRIGGER(STOP_REQ_STATE_FROM_RUNNER, 1);
+                M_TRIGGER(START_COPY_STATE_FROM_RUNNER, peer_runner_id );
                 MDBG("Got a positive state message response, start receiving state from peer...");
 
                 found = true;
@@ -353,8 +353,8 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
                     m_io->update_metadata( state_id, IO_STORAGE_L1 );
                 }
 
-                trigger(PEER_HIT, peer_runner_id);
-                trigger(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
+                M_TRIGGER(PEER_HIT, peer_runner_id);
+                M_TRIGGER(STOP_COPY_STATE_FROM_RUNNER, peer_runner_id);
             }
             else
             {
@@ -366,7 +366,7 @@ bool PeerController::get_state_from_peer(const io_state_id_t & state_id,
     zmq_close(state_request_socket);  // abandon the request of the state.
 
     if (!found) {
-        trigger(STOP_REQ_STATE_FROM_RUNNER, found ? 1 : 0);
+        M_TRIGGER(STOP_REQ_STATE_FROM_RUNNER, found ? 1 : 0);
     }
 
     return found;
@@ -378,7 +378,7 @@ bool PeerController::mirror( io_state_id_t state_id )
 #ifdef DISABLE_P2P
     return false;  // Deactivate p2p...
 #endif
-    trigger(START_REQ_RUNNER, 0);
+    M_TRIGGER(START_REQ_RUNNER, 0);
 
     bool found = false;
     auto start = now_ms();
@@ -401,7 +401,7 @@ bool PeerController::mirror( io_state_id_t state_id )
             // repeat this every 5 seconds:
             next_flush_ms = now_ms() + 5000l;
             if (!flush_out_state_avail_reqs(socket, state_id)) {
-                trigger(STOP_REQ_RUNNER, 0);
+                M_TRIGGER(STOP_REQ_RUNNER, 0);
             }
             // FIXME: only wait really short for avail reqs to arrive
         }
@@ -436,9 +436,9 @@ bool PeerController::mirror( io_state_id_t state_id )
         found = get_state_from_peer(state_id, port_name, m_a.runner_id());
     }
 
-    trigger(STOP_REQ_RUNNER, found ? 1 : 0);
+    M_TRIGGER(STOP_REQ_RUNNER, found ? 1 : 0);
     if (!found) {
-        trigger(PEER_MISS, 0);
+        M_TRIGGER(PEER_MISS, 0);
     }
     return found;
 }

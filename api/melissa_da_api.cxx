@@ -185,7 +185,7 @@ bool first_melissa_init(MPI_Comm comm_) {
 #ifdef REPORT_TIMING
     // Start Timing:
     try_init_timing();
-    trigger(START_ITERATION, last_step);
+    M_TRIGGER(START_ITERATION, last_step);
 #endif
 
     if( runner_id == -1 ) { 
@@ -317,7 +317,7 @@ void melissa_init_with_index_map(
                   local_index_map_hidden
                   );
 
-        trigger(START_PROPAGATE_STATE, field.current_state_id);
+        M_TRIGGER(START_PROPAGATE_STATE, field.current_state_id);
         return;
     }
 
@@ -386,7 +386,7 @@ void melissa_init_with_index_map(
         local_vect_sizes, local_hidden_vect_sizes, bytes_per_element,
         bytes_per_element_hidden);
 
-    trigger(START_PROPAGATE_STATE, field.current_state_id);
+    M_TRIGGER(START_PROPAGATE_STATE, field.current_state_id);
 }
 bool no_mpi = false;
 // can be called from fortran or if no mpi is used (set NULL as the mpi
@@ -408,8 +408,8 @@ void melissa_init_no_mpi(
 
 int melissa_expose(
     const char* field_name, VEC_T* values, VEC_T* hidden_values) {
-    trigger(STOP_PROPAGATE_STATE, field.current_state_id);
-    trigger(START_IDLE_RUNNER, getRunnerId());
+    M_TRIGGER(STOP_PROPAGATE_STATE, field.current_state_id);
+    M_TRIGGER(START_IDLE_RUNNER, getRunnerId());
     assert(phase != PHASE_FINAL);
     if(phase == PHASE_INIT)
     {
@@ -439,18 +439,18 @@ int melissa_expose(
         nsteps = field.getState(values, hidden_values);
     }
 
-    trigger(STOP_IDLE_RUNNER, getRunnerId());
+    M_TRIGGER(STOP_IDLE_RUNNER, getRunnerId());
 
     if(nsteps > 0)
     {
         if(last_step != field.current_step)
         {
-            trigger(STOP_ITERATION, last_step);
+            M_TRIGGER(STOP_ITERATION, last_step);
             last_step = field.current_step;
-            trigger(START_ITERATION, field.current_step);
+            M_TRIGGER(START_ITERATION, field.current_step);
         }
-        trigger(START_PROPAGATE_STATE, field.current_state_id);
-        trigger(NSTEPS, nsteps);
+        M_TRIGGER(START_PROPAGATE_STATE, field.current_state_id);
+        M_TRIGGER(NSTEPS, nsteps);
     }
     else if (nsteps == 0)
     {

@@ -147,9 +147,9 @@ void FtiController::fini() {
 
 bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
-  trigger(START_FTI_LOAD, state_id.t);
+  M_TRIGGER(START_FTI_LOAD, state_id.t);
   bool res = FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] ) == FTI_SCES;
-  trigger(STOP_FTI_LOAD, state_id.id);
+  M_TRIGGER(STOP_FTI_LOAD, state_id.id);
   return res; 
 }
 
@@ -161,16 +161,16 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   if( level == IO_STORAGE_L1 ) {
-    trigger(START_DELETE_LOCAL,0);
+    M_TRIGGER(START_DELETE_LOCAL,0);
   } else if ( level == IO_STORAGE_L2 ) {
-    trigger(START_DELETE_PFS,0);
+    M_TRIGGER(START_DELETE_PFS,0);
   }
   IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ),
       FTI_SCES, "failed to remove file" );
   if( level == IO_STORAGE_L1 ) {
-    trigger(STOP_DELETE_LOCAL,0);
+    M_TRIGGER(STOP_DELETE_LOCAL,0);
   } else if ( level == IO_STORAGE_L2 ) {
-    trigger(STOP_DELETE_PFS,0);
+    M_TRIGGER(STOP_DELETE_PFS,0);
   }
 }
 
@@ -182,8 +182,8 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
   //assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 2 to level 1 not implemented for extern" );
   
-  if( from == IO_STORAGE_L1 ) trigger(START_PUSH_STATE_TO_PFS,0);
-  else trigger(START_COPY_STATE_FROM_PFS,0);
+  if( from == IO_STORAGE_L1 ) M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
+  else M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
 
   // LEVEL 2 DIRECTORIES
   
@@ -238,8 +238,8 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
 
   m_mpi->barrier();
   
-  if( from == IO_STORAGE_L1 ) trigger(START_PUSH_STATE_TO_PFS,0);
-  else trigger(STOP_COPY_STATE_FROM_PFS,0);
+  if( from == IO_STORAGE_L1 ) M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
+  else M_TRIGGER(STOP_COPY_STATE_FROM_PFS,0);
 
 }
 
@@ -425,11 +425,11 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
 }
 
 bool FtiController::is_local( io_state_id_t state_id ) {
-  trigger(START_CHECK_LOCAL, state_id.t);
+  M_TRIGGER(START_CHECK_LOCAL, state_id.t);
   FTIT_stat st;
   FTI_Stat( to_ckpt_id(state_id), &st );
   bool res = FTI_ST_IS_LOCAL(st.level);
-  trigger(STOP_CHECK_LOCAL, state_id.id);
+  M_TRIGGER(STOP_CHECK_LOCAL, state_id.id);
   return res;
 }
 

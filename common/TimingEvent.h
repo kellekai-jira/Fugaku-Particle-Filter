@@ -139,10 +139,10 @@ enum TimingEventType
 #define TIMED_RANK 0
 #endif
 
-#define trigger(type, param) if (comm_rank == TIMED_RANK) timing->trigger_event(type, \
+#define M_TRIGGER(type, param) if (comm_rank == TIMED_RANK) timing->trigger_event(type, \
                                                                        param)
 #else
-#define trigger(type, param)
+#define M_TRIGGER(type, param)
 #endif
 
 
@@ -221,7 +221,7 @@ public:
             MDBG("connected to fifo %s", fifo_file);
         }
 
-        this->trigger_event(INIT, 0); // == trigger(INIT, 0)
+        this->trigger_event(INIT, 0); // == M_TRIGGER(INIT, 0)
         const auto p1 = std::chrono::system_clock::now();
         const unsigned long long ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(
                 p1.time_since_epoch()).count();

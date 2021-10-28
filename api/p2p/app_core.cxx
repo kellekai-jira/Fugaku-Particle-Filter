@@ -136,7 +136,7 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 #endif
     {
         try_init_timing();
-        trigger(START_INIT, 0);
+        M_TRIGGER(START_INIT, 0);
     }
 #endif
 
@@ -296,7 +296,7 @@ int melissa_p2p_expose(VEC_T *values,
 {
     static bool is_first = true;
     if (is_first) {
-        trigger(STOP_INIT, 0);
+        M_TRIGGER(STOP_INIT, 0);
         is_first = false;
     }
 
@@ -321,18 +321,18 @@ int melissa_p2p_expose(VEC_T *values,
     }
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
-    trigger(START_STORE, to_ckpt_id(current_state));
+    M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
     MDBG("finished storing state as L1 checkpoint");
-    trigger(STOP_STORE, to_ckpt_id(current_state));
+    M_TRIGGER(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
-    trigger(START_CALC_WEIGHT, current_state.t);
+    M_TRIGGER(START_CALC_WEIGHT, current_state.t);
     MDBG("start calculating weight for state");
     double weight = calculate_weight(values, hidden_values);
     MDBG("finished calculating weight for state");
-    trigger(STOP_CALC_WEIGHT, current_state.id);
+    M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
 
@@ -342,13 +342,13 @@ int melissa_p2p_expose(VEC_T *values,
     uint64_t loop_counter = 0;
     if (mpi.rank() == 0) {
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
-        trigger(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
+        M_TRIGGER(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
         MDBG("start pushing weight to head");
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
-        trigger(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
+        M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
-        trigger(START_JOB_REQUEST, current_state.t);
+        M_TRIGGER(START_JOB_REQUEST, current_state.t);
         // 4. ask server for more work
         ::melissa_p2p::JobResponse job_response;
         bool entered_loop = false;
@@ -374,7 +374,7 @@ int melissa_p2p_expose(VEC_T *values,
     }
     else
     {
-        trigger(START_JOB_REQUEST, current_state.t);
+        M_TRIGGER(START_JOB_REQUEST, current_state.t);
     }
 
     // Broadcast to all ranks:
@@ -383,15 +383,15 @@ int melissa_p2p_expose(VEC_T *values,
     MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
-    trigger(STOP_JOB_REQUEST, loop_counter);
+    M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
 
 
     if (nsteps > 0) {
-        trigger(START_LOAD, to_ckpt_id(parent_state));
+        M_TRIGGER(START_LOAD, to_ckpt_id(parent_state));
         // called by every app core
         if ( current_state == parent_state ) {
             printf("Not performing a state load as good state already in memory");
-            trigger(LOCAL_HIT, parent_state.id);
+            M_TRIGGER(LOCAL_HIT, parent_state.id);
         } else {
             storage.load( parent_state );
         }
@@ -400,7 +400,7 @@ int melissa_p2p_expose(VEC_T *values,
         field.current_step = next_state.t;
         field.current_state_id = next_state.id;
 
-        trigger(STOP_LOAD, to_ckpt_id(parent_state));
+        M_TRIGGER(STOP_LOAD, to_ckpt_id(parent_state));
     }
     else
     {

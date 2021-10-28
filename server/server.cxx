@@ -193,7 +193,7 @@ struct RunnerRankConnection
 
         if (runner_rank == 0)
         {
-            trigger(START_PROPAGATE_STATE, state_id);
+            M_TRIGGER(START_PROPAGATE_STATE, state_id);
         }
 
         const Part& hidden_part = field->getPartHidden(runner_rank);
@@ -670,7 +670,7 @@ bool try_launch_subtask(std::shared_ptr<SubTask>& sub_task) {
 
     if (sub_task->runner_rank == 0)
     {
-        trigger(STOP_IDLE_RUNNER, sub_task->runner_id);
+        M_TRIGGER(STOP_IDLE_RUNNER, sub_task->runner_id);
     }
 
     return true;
@@ -853,10 +853,10 @@ void init_new_timestep() {
 
     current_step += current_nsteps;
 
-    trigger(START_ITERATION, current_step);
+    M_TRIGGER(START_ITERATION, current_step);
     for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
     {
-        trigger(START_IDLE_RUNNER, it->first);
+        M_TRIGGER(START_IDLE_RUNNER, it->first);
     }
 
     assert(unscheduled_tasks.size() == 0);
@@ -928,7 +928,7 @@ void check_due_dates() {
 
         if (comm_rank == 0)
         {
-            trigger(REMOVE_RUNNER, it->runner_id);
+            M_TRIGGER(REMOVE_RUNNER, it->runner_id);
             launcher->notify(it->runner_id, TIMEOUT);
 
             fail_state(it->state_id);
@@ -991,7 +991,7 @@ void check_kill_requests() {
         });
         if (found == killed.end())
         {
-            trigger(REMOVE_RUNNER, t.runner_id);
+            M_TRIGGER(REMOVE_RUNNER, t.runner_id);
             launcher->notify(t.runner_id, TIMEOUT);
         }
 #endif
@@ -1090,7 +1090,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
             // ready (and only now it can also recognized failing from the
             // server. Runner crashes before are only recognized by the
             // launcher)
-            trigger(ADD_RUNNER, runner_id);
+            M_TRIGGER(ADD_RUNNER, runner_id);
         }
     }
 
@@ -1169,7 +1169,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
         {
             if (runner_rank == 0)
             {
-                trigger(STOP_PROPAGATE_STATE, runner_state_id); // will trigger
+                M_TRIGGER(STOP_PROPAGATE_STATE, runner_state_id); // will trigger
                                                                 // for
                                                                 // runnerrank
                                                                 // 0...
@@ -1235,7 +1235,7 @@ void handle_data_response(std::shared_ptr<Assimilator>& assimilator) {
 
             if (runner_rank == 0)
             {
-                trigger(START_IDLE_RUNNER, runner_id);
+                M_TRIGGER(START_IDLE_RUNNER, runner_id);
             }
 
             runner->connected_runner_ranks.emplace(runner_rank, std::move(csr));
@@ -1377,7 +1377,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
         }
         // get new analysis states from update step
         MPRT("====> Update step %d", current_step);
-        trigger(START_FILTER_UPDATE, current_step);
+        M_TRIGGER(START_FILTER_UPDATE, current_step);
         // TODO: don't allow writing to background state for checkpointing and
         // assimilator!
         current_nsteps =
@@ -1385,7 +1385,7 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
                                                        // dependent update
                                                        // step!!, completely
                                                        // integrated?
-        trigger(STOP_FILTER_UPDATE, current_step);
+        M_TRIGGER(STOP_FILTER_UPDATE, current_step);
 
 #if defined(WITH_FTI) && defined(WITH_FTI_CHECKOINT_DA_SERVER)
         // REM: we do not profile the time for checkpointing for now
@@ -1409,9 +1409,9 @@ bool check_finished(std::shared_ptr<Assimilator> assimilator) {
 
         for (auto it = idle_runners.begin(); it != idle_runners.end(); it++)
         {
-            trigger(STOP_IDLE_RUNNER, it->first);
+            M_TRIGGER(STOP_IDLE_RUNNER, it->first);
         }
-        trigger(STOP_ITERATION, current_step);
+        M_TRIGGER(STOP_ITERATION, current_step);
 
         if (current_nsteps == -1)
         {
