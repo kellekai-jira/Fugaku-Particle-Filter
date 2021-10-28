@@ -38,7 +38,6 @@ class FtiController : public IoController {
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
-    void copy( io_state_id_t state, io_level_t from, io_level_t to );
     void stage( io_state_id_t state, io_level_t from, io_level_t to );
     void filelist_local( io_state_id_t ckpt_id, std::vector<std::string> & ckptfiles );
     void update_metadata( io_state_id_t ckpt_id, io_level_t level );

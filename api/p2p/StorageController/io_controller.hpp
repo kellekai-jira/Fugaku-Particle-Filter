@@ -87,7 +87,6 @@ class IoController {
       virtual bool is_global( io_state_id_t state_id ) = 0;
       virtual void remove( io_state_id_t state_id, io_level_t level ) = 0;
       virtual void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
-      virtual void copy( io_state_id_t state, io_level_t from, io_level_t to ) = 0;
       virtual void stage( io_state_id_t state, io_level_t from, io_level_t to ) = 0;
       virtual bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;
       virtual void request( io_state_id_t state_id ) = 0;
