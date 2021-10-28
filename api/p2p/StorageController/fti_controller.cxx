@@ -232,8 +232,8 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
         L2_CKPT.str(), L2_META_CKPT.str(), state_id  );
   }
   else {
-    stage_l2l1( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_META_TEMP.str(), 
-        L2_CKPT.str(), L2_META_CKPT.str(), state_id  );
+    stage_l2l1( L2_CKPT.str(), L2_META_CKPT.str(), L1_TEMP.str(), L1_META_TEMP.str(), 
+        L1_CKPT.str(), L1_META_CKPT.str(), state_id  );
   }
 
   m_mpi->barrier();
