@@ -188,7 +188,7 @@ void StorageController::callback() {
       while (del_q.size() > 0 && del_q.front().t < last_assimilation_cycle-1) {
           auto to_remove = del_q.front();
           FTI_Remove(to_ckpt_id(to_remove), 4);
-          storage.m_remove_symlink(to_ckpt_id(to_remove));
+          //storage.m_remove_symlink(to_ckpt_id(to_remove));
           MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
           del_q.pop();
       }
@@ -341,7 +341,7 @@ void StorageController::m_request_post() {
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
 
   // create symbolic link
-  if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
+  //if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
 
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
