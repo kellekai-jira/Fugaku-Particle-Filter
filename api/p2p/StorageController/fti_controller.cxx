@@ -223,7 +223,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   std::stringstream L1_META_CKPT;
   L1_META_CKPT << L1_META_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
   
-  MDBG("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L1_TEMP.str().c_str(), L1_CKPT.str().c_str(), L1_META_TEMP.str().c_str(), L1_META_CKPT.str().c_str());
+  MDBG("stage %d -> %d | L1 | %s, %s, %s, %s", from, to, L1_TEMP.str().c_str(), L1_CKPT.str().c_str(), L1_META_TEMP.str().c_str(), L1_META_CKPT.str().c_str());
  
   m_mpi->barrier();
   

@@ -363,10 +363,10 @@ void StorageController::m_request_post() {
 
 // (1) state request from user to worker
 void StorageController::m_request_load() {
-  if(m_io->m_dict_bool["master_global"]) std::cout << "head received LOAD request" << std::endl;
   io_state_id_t *state_id = new io_state_id_t[m_io->m_dict_int["app_procs_node"]];
   int result=(int)IO_SUCCESS;
   m_io->recv( state_id, sizeof(io_state_id_t), IO_TAG_LOAD, IO_MSG_ALL );
+  if(m_io->m_dict_bool["master_global"]) std::cout << "head received LOAD request (ckpt_id: "<<to_ckpt_id(state_id[0])<<")" << std::endl;
   pull( state_id[0] );
   m_io->send( &result, sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
   delete[] state_id;
