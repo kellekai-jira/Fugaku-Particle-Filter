@@ -311,9 +311,11 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      std::stringstream L1_META_CKPT_FN(L1_META_CKPT);
+      std::stringstream L1_META_CKPT_FN;
+      L1_META_CKPT_FN << L1_META_CKPT;
       L1_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::stringstream L2_META_TEMP_FN(L2_META_TEMP);
+      std::stringstream L2_META_TEMP_FN;
+      L2_META_TEMP_FN << L2_META_TEMP;
       L2_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       m_kernel.file_copy( L1_META_CKPT_FN.str(), L2_META_TEMP_FN.str() );
     }
@@ -401,9 +403,11 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      std::stringstream L2_META_CKPT_FN(L2_META_CKPT);
+      std::stringstream L2_META_CKPT_FN;
+      L2_META_CKPT_FN << L2_META_CKPT;
       L2_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::stringstream L1_META_TEMP_FN(L1_META_TEMP);
+      std::stringstream L1_META_TEMP_FN;
+      L1_META_TEMP_FN << L1_META_TEMP;
       L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       m_kernel.file_copy( L2_META_CKPT_FN.str(), L1_META_TEMP_FN.str() );
     }
