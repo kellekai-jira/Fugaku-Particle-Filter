@@ -32,13 +32,14 @@ class FtiController : public IoController {
     void init_io( MpiController* mpi, int runner_id );
     void init_core();
     void fini();
+    void set_state_size_per_proc( std::vector<uint64_t> vec );
     io_id_t protect( void* buffer, size_t size, io_type_t type );
     void update( io_id_t varid, void* buffer, size_t size );
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
     void copy( io_state_id_t state, io_level_t from, io_level_t to );
-    void copy_extern( io_state_id_t state, io_level_t from, io_level_t to );
+    void stage( io_state_id_t state, io_level_t from, io_level_t to );
     void filelist_local( io_state_id_t ckpt_id, std::vector<std::string> & ckptfiles );
     void update_metadata( io_state_id_t ckpt_id, io_level_t level );
 
@@ -56,6 +57,12 @@ class FtiController : public IoController {
 
     void register_callback( void (*f)(void) );
   private:
+    
+    void stage_l1l2( std::string L1_CKPT, std::string L1_META, std::string L2_TEMP, std::string L2_META_TEMP,
+      std::string L2_CKPT, std::string L2_META_CKPT, io_state_id_t state_id );
+    void stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
+      std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id );
+    
     std::map<io_level_t,FTIT_level> m_io_level_map;
     std::map<io_type_t,fti_id_t> m_io_type_map;
     std::map<io_msg_t,int> m_io_msg_map;
@@ -65,6 +72,7 @@ class FtiController : public IoController {
     FTI::Kernel m_kernel;
     MpiController* m_mpi;
     int m_runner_id;
+    std::vector<uint64_t> m_state_sizes_per_rank;
 };
 
 #endif // _FTI_CONTROLLER_H_

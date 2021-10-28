@@ -48,10 +48,8 @@ void StorageController::io_init( MpiController* mpi, IoController* io, int runne
 
 }
 
-void StorageController::init( double capacity_dp, double state_size_dp ) {
+void StorageController::init( size_t capacity, size_t state_size_proc ) {
   // this is only called by app cores
-  size_t capacity = std::floor(capacity_dp);
-  size_t state_size_proc = std::ceil(state_size_dp);
 
   // propagate state size to head
   m_io->send( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
@@ -104,13 +102,15 @@ void StorageController::callback() {
 
     size_t capacity;
     storage.m_io->recv( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
-    size_t size_proc[storage.m_io->m_dict_int["app_procs_node"]], size_node;
-    storage.m_io->recv( size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
+    std::vector<uint64_t> size_proc(storage.m_io->m_dict_int["app_procs_node"]), size_node;
+    storage.m_io->recv( size_proc.data(), sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
 
     size_t state_size_node = 0;
     for(int i=0; i<storage.m_io->m_dict_int["app_procs_node"]; i++) {
       state_size_node += size_proc[i];
     }
+
+    storage.m_io->set_state_size_per_proc(size_proc);
 
     // in slots
     capacity = capacity / state_size_node;
@@ -236,7 +236,7 @@ void StorageController::copy( io_state_id_t state_id, io_level_t from, io_level_
   if( to == IO_STORAGE_L1 && state_pool.free() == 0 ) {
     server.delete_request(this);
   }
-  m_io->copy(state_id, from, to);
+  m_io->stage(state_id, from, to);
   if( to == IO_STORAGE_L1 ) {
     state_pool++;
   }
@@ -253,7 +253,7 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   if( !m_io->is_local( state_id ) ) {
     int id, t;
     trigger(PFS_PULL, to_ckpt_id(state_id) );
-    m_io->copy( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
+    m_io->stage( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   assert( m_io->is_local( state_id ) && "state should be local now!" );
@@ -336,7 +336,7 @@ void StorageController::m_request_post() {
 
   m_io->update_metadata( state_id, IO_STORAGE_L1 );
   assert( m_io->is_local(state_id) && "state should be local");
-  m_io->copy( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
+  m_io->stage( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
 
@@ -400,7 +400,7 @@ void StorageController::m_request_fini() {
   //m_request_post();
   //while( m_io->probe( IO_TAG_PUSH ) ) {
   //  if(m_io->m_dict_bool["master_global"]) std::cout << "head received PUSH request: " << std::endl;
-  //  m_io->copy( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
+  //  m_io->stage( m_io->m_state_push_requests.front(), IO_STORAGE_L1, IO_STORAGE_L2 );
   //  m_io->m_state_push_requests.pop();
   //}
   //while( m_io->probe( IO_TAG_PULL ) ) {

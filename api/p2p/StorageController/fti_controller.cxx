@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 #include "api_common.h"  // for timing
+#include "helpers.hpp"
 
 int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
@@ -26,6 +27,10 @@ void FtiController::init_io( MpiController* mpi, int runner_id ) {
   config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
   FTI_Init( config_file.str().c_str(), m_mpi->comm() );
   m_runner_id = runner_id;
+}
+
+void FtiController::set_state_size_per_proc( std::vector<uint64_t> vec ) {
+  m_state_sizes_per_rank = vec;
 }
 
 void FtiController::init_core() {
@@ -169,167 +174,246 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   }
 }
 
-void FtiController::copy( io_state_id_t state_id, io_level_t from, io_level_t to ) {
+void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t to ) {
+  
   assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
   assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
-  if( from == IO_STORAGE_L1 ) {
-    trigger(START_PUSH_STATE_TO_PFS,0);
-    FTI_Copy( to_ckpt_id(state_id), m_io_level_map[from], m_io_level_map[to] );
-    trigger(STOP_PUSH_STATE_TO_PFS,0);
-  } else {
-    trigger(START_COPY_STATE_FROM_PFS,0);
-    copy_extern( state_id, from, to );
-    trigger(STOP_COPY_STATE_FROM_PFS,0);
-  }
-}
-
-void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_level_t to ) {
 
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
-  assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 1 to level 2 not implemented for extern" );
+  //assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 2 to level 1 not implemented for extern" );
+  
+  if( from == IO_STORAGE_L1 ) trigger(START_PUSH_STATE_TO_PFS,0);
+  else trigger(START_COPY_STATE_FROM_PFS,0);
 
-  std::stringstream global;
-  global << m_dict_string["global_dir"];
-  global << "/";
-  global << std::to_string(to_ckpt_id(state_id));
-
-  std::stringstream extern_meta;
-  extern_meta << m_dict_string["meta_dir"];
-  extern_meta << "/";
-  extern_meta << std::to_string(to_ckpt_id(state_id));
-
-  std::stringstream meta;
-  meta << m_dict_string["meta_dir"];
-  meta << "/";
-  meta << m_dict_string["exec_id"];
-  meta << "/l1/";
-  meta << std::to_string(to_ckpt_id(state_id));
-
-  std::stringstream meta_tmp_dir;
-  meta_tmp_dir << m_dict_string["meta_dir"];
-  meta_tmp_dir << "/";
-  meta_tmp_dir << m_dict_string["exec_id"];
-  meta_tmp_dir << "/";
-  meta_tmp_dir << "/tmp.head";
-
-  std::stringstream local_tmp_dir;
-  local_tmp_dir << m_dict_string["local_dir"];
-  local_tmp_dir << "/";
-  local_tmp_dir << m_dict_string["exec_id"];
-  local_tmp_dir << "/";
-  local_tmp_dir << "/tmp.head";
-
-  std::stringstream local_tmp;
-  local_tmp << local_tmp_dir.str();
-
-  if( m_dict_bool["master_local"] ) {
-    IO_TRY( mkdir( local_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  // LEVEL 2 DIRECTORIES
+  
+  // Checkpoint
+  std::stringstream L2_BASE;
+  L2_BASE << m_dict_string["global_dir"];
+  std::stringstream L2_TEMP;
+  L2_TEMP << L2_BASE.str() << "/" << melissa::helpers::make_uuid();
+  std::stringstream L2_CKPT;
+  L2_CKPT << L2_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
+  
+  // Metadata
+  std::stringstream L2_META_BASE;
+  L2_META_BASE << m_dict_string["meta_dir"];
+  std::stringstream L2_META_TEMP;
+  L2_META_TEMP << L2_META_BASE.str() << "/" << melissa::helpers::make_uuid();
+  std::stringstream L2_META_CKPT;
+  L2_META_CKPT << L2_META_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
+  
+  D("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L2_TEMP.str(), L2_CKPT.str(), L2_META_TEMP.str(), L2_META_CKPT.str());
+  
+  // LEVEL 1 DIRECTORIES
+  
+  // Checkpoint
+  std::stringstream L1_BASE;
+  L1_BASE << m_dict_string["local_dir"] << "/" << m_dict_string["exec_id"];
+  std::stringstream L1_TEMP;
+  L1_TEMP << L1_BASE.str() << "/" << melissa::helpers::make_uuid();
+  std::stringstream L1_CKPT;
+  L1_CKPT << L1_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
+  
+  // Metadata
+  std::stringstream L1_META_BASE;
+  L1_META_BASE << m_dict_string["meta_dir"] << "/" << m_dict_string["exec_id"];
+  std::stringstream L1_META_TEMP;
+  L1_META_TEMP << L1_META_BASE.str() << "/" << melissa::helpers::make_uuid();
+  std::stringstream L1_META_CKPT;
+  L1_META_CKPT << L1_META_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
+  
+  D("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L1_TEMP.str(), L1_CKPT.str(), L1_META_TEMP.str(), L1_META_CKPT.str());
+ 
+  m_mpi->barrier();
+  
+  if( from == IO_STORAGE_L1 ) {
+    stage_l1l2( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_META_TEMP.str(), 
+        L2_CKPT.str(), L2_META_CKPT.str(), state_id  );
   }
-
-  if( m_dict_bool["master_global"] ) {
-    IO_TRY( mkdir( meta_tmp_dir.str().c_str(), 0777 ), 0, "unable to create directory" );
+  else {
+    stage_l2l1( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_META_TEMP.str(), 
+        L2_CKPT.str(), L2_META_CKPT.str(), state_id  );
   }
 
   m_mpi->barrier();
-    
-  std::stringstream filename_global;
-  filename_global << "Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
   
-  std::stringstream global_fn;
-  global_fn << global.str();
-  global_fn << "/";
-  global_fn << filename_global.str();
+  if( from == IO_STORAGE_L1 ) trigger(START_PUSH_STATE_TO_PFS,0);
+  else trigger(STOP_COPY_STATE_FROM_PFS,0);
+
+}
+
+void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, std::string L2_TEMP, std::string L2_META_TEMP,
+    std::string L2_CKPT, std::string L2_META_CKPT, io_state_id_t state_id  ) {
+
+  struct stat info;
+  IO_TRY( stat( L2_CKPT.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
+  
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( mkdir( L2_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+    IO_TRY( mkdir( L2_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+  }
+
+  std::stringstream L2_CKPT_FN;
+  L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+  std::string gfn = L2_CKPT_FN.str();
   
   MPI_File mpifd;
-  MPI_File_open(m_mpi->comm(), global_fn.str().c_str(), MPI_MODE_WRONLY|MPI_MODE_CREATE, MPI_INFO_NULL, &mpifd);
+  MPI_File_open(m_mpi->comm(), gfn.c_str(), MPI_MODE_WRONLY|MPI_MODE_CREATE, MPI_INFO_NULL, &mpifd);
   
   MPI_Offset global_file_offset = 0;
-
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
-    std::stringstream filename_local;
-    filename_local << "Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
-
-    std::stringstream local_tmp_fn;
-    local_tmp_fn << local_tmp_dir.str();
-    local_tmp_fn << "/";
-    local_tmp_fn << filename_local.str();
+    std::stringstream L1_CKPT_FN;
+    L1_CKPT_FN << L1_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
+    std::string lfn = L1_CKPT_FN.str();
     
-    struct stat stat_buf;
-    int rc = stat(local_tmp_fn.str().c_str(), &stat_buf);
-    assert( rc == 0 && "failed to get file stats!" );
-    int64_t local_file_size = stat_buf.st_size;
-    
-    std::ifstream localfd( local_tmp_fn.str(), std::ios::binary );
-    std::vector<char> local_file_buffer (IO_TRANSFER_SIZE, 0);
+    int64_t local_file_size = m_state_sizes_per_rank[i];
+    D("stage 0 -> 1 | STATE SIZE [%d] | %ld", i, local_file_size);
 
-		size_t pos = 0;
+    std::ifstream localfd( lfn, std::ios::binary );
+
+    size_t pos = 0;
     while (pos < local_file_size) {
-        size_t bSize = IO_TRANSFER_SIZE;
-        if ((local_file_size - pos) < IO_TRANSFER_SIZE) {
-            bSize = local_file_size - pos;
-        }
+      size_t bSize = IO_TRANSFER_SIZE;
+      if ((local_file_size - pos) < IO_TRANSFER_SIZE) {
+        bSize = local_file_size - pos;
+      }
 
-        localfd.read(local_file_buffer.data(), bSize);
+      std::vector<char> buffer(bSize, 0);
+      localfd.read(buffer.data(), buffer.size());
 
-        MPI_Datatype dType;
-        MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
-        MPI_Type_commit( &dType );
+      MPI_Datatype dType;
+      MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
+      MPI_Type_commit( &dType );
 
-        int err = MPI_File_write_at( mpifd, global_file_offset, local_file_buffer.data(), 1, dType,MPI_STATUS_IGNORE );
-        // check if successful
-        if (err != 0) {
-            errno = 0;
-            int reslen;
-            char str[FTI_BUFS], mpi_err[FTI_BUFS];
-            MPI_Error_string(err, mpi_err, &reslen);
-            snprintf(str, FTI_BUFS,
-             "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
-            D(str);
-            return;
-        }
-        MPI_Type_free(&dType);
-        global_file_offset += bSize;
-        pos = pos + bSize;
+      int err = MPI_File_write_at( mpifd, global_file_offset, buffer.data(), 1, dType, MPI_STATUS_IGNORE );
+      // check if successful
+      if (err != 0) {
+        errno = 0;
+        int reslen;
+        char str[FTI_BUFS], mpi_err[FTI_BUFS];
+        MPI_Error_string(err, mpi_err, &reslen);
+        snprintf(str, FTI_BUFS,
+            "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
+        D(str);
+        return;
+      }
+
+
+      MPI_Type_free(&dType);
+      global_file_offset += bSize;
+      pos = pos + bSize;
     }
-    
+
     localfd.close();
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      std::stringstream metafilename_extern;
-      metafilename_extern << extern_meta.str();
-      metafilename_extern << "/";
-      metafilename_extern << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::stringstream metafilename_tmp;
-      metafilename_tmp << meta_tmp_dir.str();
-      metafilename_tmp << "/";
-      metafilename_tmp << "sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      m_kernel.file_copy( metafilename_extern.str(), metafilename_tmp.str() );
+      std::stringstream L1_META_CKPT_FN(L1_META_CKPT);
+      L1_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      std::stringstream L2_META_TEMP_FN(L2_META_TEMP);
+      L2_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      m_kernel.file_copy( L1_META_CKPT_FN.str(), L2_META_TEMP_FN.str() );
     }
-
   }
 
   MPI_File_close(&mpifd);
-  
-  m_mpi->barrier();
 
-  std::stringstream local;
-  local << m_dict_string["local_dir"];
-  local << "/";
-  local << m_dict_string["exec_id"];
-  local << "/l1/";
-  local << std::to_string(to_ckpt_id(state_id));
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( std::rename( L2_META_TEMP.c_str(), L2_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+    IO_TRY( std::rename( L2_TEMP.c_str(), L2_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
+    update_metadata( state_id, IO_STORAGE_L2 );
+  }
+
+  std::stringstream msg;
+  msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
+  m_kernel.print(msg.str(), FTI_INFO);
+
+}
+
+void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
+    std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id ) {
 
   struct stat info;
-  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory already exists!" );
-
-  if( m_dict_bool["master_local"] ) {
-    IO_TRY( std::rename( local_tmp_dir.str().c_str(), local.str().c_str() ), 0, "unable to rename local directory" );
-  }
+  IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+  
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( std::rename( meta_tmp_dir.str().c_str(), meta.str().c_str() ), 0, "unable to rename meta directory" );
+    IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+    IO_TRY( mkdir( L1_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+  }
+  
+  std::stringstream L2_CKPT_FN;
+  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+  std::string gfn = L2_CKPT_FN.str();
+
+  MPI_File mpifd;
+  MPI_File_open(m_mpi->comm(), gfn.c_str(), MPI_MODE_RDWR, MPI_INFO_NULL, &mpifd);
+  
+  MPI_Offset global_file_offset = 0;
+  for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
+    int proc = m_kernel.topo->body[i];
+
+    std::stringstream L1_CKPT_FN;
+    L1_CKPT_FN << L1_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
+    std::string lfn = L1_CKPT_FN.str();
+    
+    int64_t local_file_size = m_state_sizes_per_rank[i];
+    D("stage 1 -> 0 | STATE SIZE [%d] | %ld", i, local_file_size);
+
+    std::ofstream localfd( lfn, std::ios::binary );
+
+    size_t pos = 0;
+    while (pos < local_file_size) {
+      size_t bSize = IO_TRANSFER_SIZE;
+      if ((local_file_size - pos) < IO_TRANSFER_SIZE) {
+        bSize = local_file_size - pos;
+      }
+
+      std::vector<char> buffer(bSize, 0);
+
+      MPI_Datatype dType;
+      MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
+      MPI_Type_commit( &dType );
+
+      int err = MPI_File_read_at( mpifd, global_file_offset, buffer.data(), 1, dType, MPI_STATUS_IGNORE );
+      // check if successful
+      if (err != 0) {
+        errno = 0;
+        int reslen;
+        char str[FTI_BUFS], mpi_err[FTI_BUFS];
+        MPI_Error_string(err, mpi_err, &reslen);
+        snprintf(str, FTI_BUFS,
+            "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
+        D(str);
+        return;
+      }
+      
+      localfd.write(buffer.data(), buffer.size());
+
+      MPI_Type_free(&dType);
+      global_file_offset += bSize;
+      pos = pos + bSize;
+    }
+
+    localfd.close();
+
+    if (m_kernel.topo->groupRank == 0) {
+      int groupId = i+1;
+      std::stringstream L2_META_CKPT_FN(L2_META_CKPT);
+      L2_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      std::stringstream L1_META_TEMP_FN(L1_META_TEMP);
+      L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
+      m_kernel.file_copy( L2_META_CKPT_FN.str(), L1_META_TEMP_FN.str() );
+    }
+  }
+
+  MPI_File_close(&mpifd);
+
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+    IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
     update_metadata( state_id, IO_STORAGE_L1 );
   }
 
@@ -337,7 +421,6 @@ void FtiController::copy_extern( io_state_id_t state_id, io_level_t from, io_lev
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
 
-  m_mpi->barrier();
 
 }
 

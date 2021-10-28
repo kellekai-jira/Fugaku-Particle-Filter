@@ -32,7 +32,7 @@ class StorageController {
       m_request_interval(10000) {}
 
     void io_init( MpiController* mpi, IoController* io, int runner_id );
-    void init( double capacity, double state_size );
+    void init( size_t capacity, size_t state_size );
     void fini();
 
     // API
@@ -92,13 +92,15 @@ class StorageController {
     IoController* m_io;
     //PeerController* m_peer;
     MpiController* m_mpi;
-
+    
     void* m_zmq_context;
     int m_runner_id;
     int m_cycle;
 
     std::map<io_id_t,io_state_id_t> m_ckpted_states;
     std::map<io_id_t,io_state_id_t> m_cached_states;
+    
+    std::vector<uint64_t> m_state_sizes_per_rank;
 
     bool m_worker_thread;
     size_t m_request_counter;
