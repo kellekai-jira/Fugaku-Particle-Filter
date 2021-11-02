@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
 
@@ -171,9 +171,7 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
     if( m_dict_bool["master_global"] ) { 
       std::stringstream gdir;
       gdir << m_dict_string["global_dir"] << "/" << to_ckpt_id( state_id );
-      if( !std::filesystem::remove_all( gdir.str() ) ) {
-        MERR("could not delete global checkpoint directory '%s'", gdir.str().c_str());
-      }
+      boost::filesystem::remove_all( gdir.str() );
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
