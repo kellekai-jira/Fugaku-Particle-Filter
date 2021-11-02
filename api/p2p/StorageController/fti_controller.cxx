@@ -4,6 +4,7 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
@@ -260,10 +261,8 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
   std::string gfn = L2_CKPT_FN.str();
   
-  MPI_File mpifd;
-  MPI_File_open(m_mpi->comm(), gfn.c_str(), MPI_MODE_WRONLY|MPI_MODE_CREATE, MPI_INFO_NULL, &mpifd);
-  
-  MPI_Offset global_file_offset = 0;
+  int fd = open( gfn.c_str(), O_WRONLY | O_CREAT );
+
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
@@ -286,26 +285,18 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       std::vector<char> buffer(bSize, 0);
       localfd.read(buffer.data(), buffer.size());
 
-      MPI_Datatype dType;
-      MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
-      MPI_Type_commit( &dType );
-
-      int err = MPI_File_write_at( mpifd, global_file_offset, buffer.data(), 1, dType, MPI_STATUS_IGNORE );
+      ssize_t check = write( fd, buffer.data(), buffer.size() );
       // check if successful
-      if (err != 0) {
+      if (check != buffer.size()) {
         errno = 0;
         int reslen;
         char str[FTI_BUFS], mpi_err[FTI_BUFS];
-        MPI_Error_string(err, mpi_err, &reslen);
         snprintf(str, FTI_BUFS,
-            "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
+            "unable to write '%lu' bytes into file '%s'", buffer.size(), gfn.c_str());
         MDBG(str);
         return;
       }
 
-
-      MPI_Type_free(&dType);
-      global_file_offset += bSize;
       pos = pos + bSize;
     }
 
@@ -323,7 +314,8 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     }
   }
 
-  MPI_File_close(&mpifd);
+  fsync(fd);
+  close(fd);
 
   if( m_dict_bool["master_global"] ) {
     IO_TRY( std::rename( L2_META_TEMP.c_str(), L2_META_CKPT.c_str() ), 0, "unable to rename local directory" );
@@ -354,10 +346,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
   L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
   std::string gfn = L2_CKPT_FN.str();
 
-  MPI_File mpifd;
-  MPI_File_open(m_mpi->comm(), gfn.c_str(), MPI_MODE_RDWR, MPI_INFO_NULL, &mpifd);
+  int fd = open( gfn.c_str(), O_RDWR );
   
-  MPI_Offset global_file_offset = 0;
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
@@ -379,27 +369,20 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
 
       std::vector<char> buffer(bSize, 0);
 
-      MPI_Datatype dType;
-      MPI_Type_contiguous( bSize, MPI_BYTE, &dType );
-      MPI_Type_commit( &dType );
-
-      int err = MPI_File_read_at( mpifd, global_file_offset, buffer.data(), 1, dType, MPI_STATUS_IGNORE );
+      ssize_t check = read( fd, buffer.data(), buffer.size() );
       // check if successful
-      if (err != 0) {
+      if (check != buffer.size()) {
         errno = 0;
         int reslen;
         char str[FTI_BUFS], mpi_err[FTI_BUFS];
-        MPI_Error_string(err, mpi_err, &reslen);
         snprintf(str, FTI_BUFS,
-            "unable to create file [MPI ERROR - %i] %s", err, mpi_err);
+            "unable to read '%lu' from file '%s'", buffer.size(), gfn.c_str());
         MDBG(str);
         return;
       }
       
       localfd.write(buffer.data(), buffer.size());
 
-      MPI_Type_free(&dType);
-      global_file_offset += bSize;
       pos = pos + bSize;
     }
 
@@ -417,7 +400,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
     }
   }
 
-  MPI_File_close(&mpifd);
+  close(fd);
 
   if( m_dict_bool["master_global"] ) {
     IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
