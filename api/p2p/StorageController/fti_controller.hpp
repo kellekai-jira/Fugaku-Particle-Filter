@@ -57,9 +57,8 @@ class FtiController : public IoController {
     void register_callback( void (*f)(void) );
   private:
     
-    void stage_l1l2( std::string L1_CKPT, std::string L1_META, std::string L2_TEMP, std::string L2_META_TEMP,
-      std::string L2_CKPT, std::string L2_META_CKPT, io_state_id_t state_id );
-    void stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
+    void stage_l1l2( std::string L1_CKPT, std::string L1_META, std::string L2_TEMP, std::string L2_CKPT, io_state_id_t state_id );
+    void stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
       std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id );
     
     std::map<io_level_t,FTIT_level> m_io_level_map;

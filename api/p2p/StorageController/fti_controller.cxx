@@ -6,6 +6,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <fstream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
 #include <boost/filesystem.hpp>
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
@@ -191,7 +195,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
 
   // LEVEL 2 DIRECTORIES
   
-  // Checkpoint
+  // Checkpoint + Metadata
   std::stringstream L2_BASE;
   L2_BASE << m_dict_string["global_dir"];
   std::stringstream L2_TEMP;
@@ -199,15 +203,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   std::stringstream L2_CKPT;
   L2_CKPT << L2_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
   
-  // Metadata
-  std::stringstream L2_META_BASE;
-  L2_META_BASE << m_dict_string["meta_dir"];
-  std::stringstream L2_META_TEMP;
-  L2_META_TEMP << L2_META_BASE.str() << "/" << melissa::helpers::make_uuid();
-  std::stringstream L2_META_CKPT;
-  L2_META_CKPT << L2_META_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
-  
-  MDBG("stage %d -> %d | L2 | %s, %s, %s, %s", from, to, L2_TEMP.str().c_str(), L2_CKPT.str().c_str(), L2_META_TEMP.str().c_str(), L2_META_CKPT.str().c_str());
+  MDBG("stage %d -> %d | L2 | %s, %s", from, to, L2_TEMP.str().c_str(), L2_CKPT.str().c_str());
   
   // LEVEL 1 DIRECTORIES
   
@@ -232,12 +228,10 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   m_mpi->barrier();
   
   if( from == IO_STORAGE_L1 ) {
-    stage_l1l2( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_META_TEMP.str(), 
-        L2_CKPT.str(), L2_META_CKPT.str(), state_id  );
+    stage_l1l2( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_CKPT.str(), state_id  );
   }
   else {
-    stage_l2l1( L2_CKPT.str(), L2_META_CKPT.str(), L1_TEMP.str(), L1_META_TEMP.str(), 
-        L1_CKPT.str(), L1_META_CKPT.str(), state_id  );
+    stage_l2l1( L2_CKPT.str(), L1_TEMP.str(), L1_META_TEMP.str(), L1_CKPT.str(), L1_META_CKPT.str(), state_id  );
   }
 
   m_mpi->barrier();
@@ -247,24 +241,29 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
 
 }
 
-void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, std::string L2_TEMP, std::string L2_META_TEMP,
-    std::string L2_CKPT, std::string L2_META_CKPT, io_state_id_t state_id  ) {
+void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, std::string L2_TEMP,
+    std::string L2_CKPT, io_state_id_t state_id  ) {
 
   struct stat info;
   IO_TRY( stat( L2_CKPT.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
-  IO_TRY( stat( L2_META_TEMP.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
   IO_TRY( stat( L2_TEMP.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
   
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( mkdir( L2_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
     IO_TRY( mkdir( L2_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
   }
 
   std::stringstream L2_CKPT_FN;
-  L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+  L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-serialized.fti";
   std::string gfn = L2_CKPT_FN.str();
   
+  std::stringstream L2_META_FN;
+  L2_META_FN << L2_TEMP << "/Meta" << to_ckpt_id(state_id) << "-serialized.fti";
+  std::string mfn = L2_META_FN.str();
+  
   int fd = open( gfn.c_str(), O_WRONLY | O_CREAT );
+  
+  std::ofstream metafs(mfn);
+  boost::archive::text_oarchive oa( metafs );
 
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -310,18 +309,19 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       std::stringstream L1_META_CKPT_FN;
       L1_META_CKPT_FN << L1_META_CKPT;
       L1_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::stringstream L2_META_TEMP_FN;
-      L2_META_TEMP_FN << L2_META_TEMP;
-      L2_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      m_kernel.file_copy( L1_META_CKPT_FN.str(), L2_META_TEMP_FN.str() );
+      std::ifstream tmp_metafs(L1_META_CKPT_FN.str());
+      std::string str(std::istreambuf_iterator<char>{tmp_metafs}, {});
+      oa << str;
+      tmp_metafs.close();
     }
   }
 
   fsync(fd);
   close(fd);
+  metafs.flush();
+  metafs.close();
 
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( std::rename( L2_META_TEMP.c_str(), L2_META_CKPT.c_str() ), 0, "unable to rename local directory" );
     IO_TRY( std::rename( L2_TEMP.c_str(), L2_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
     update_metadata( state_id, IO_STORAGE_L2 );
   }
@@ -332,7 +332,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
 
 }
 
-void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
+void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
     std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id ) {
 
   struct stat info;
@@ -346,10 +346,16 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
   }
   
   std::stringstream L2_CKPT_FN;
-  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-mpiio.fti";
+  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-serialized.fti";
   std::string gfn = L2_CKPT_FN.str();
+  
+  std::stringstream L2_META_FN;
+  L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-serialized.fti";
+  std::string mfn = L2_META_FN.str();
 
   int fd = open( gfn.c_str(), O_RDWR );
+  std::ifstream metafs( mfn );
+  boost::archive::text_iarchive ia( metafs );
   
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -393,16 +399,18 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L2_META_CKPT, s
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      std::stringstream L2_META_CKPT_FN;
-      L2_META_CKPT_FN << L2_META_CKPT;
-      L2_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       std::stringstream L1_META_TEMP_FN;
       L1_META_TEMP_FN << L1_META_TEMP;
       L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      m_kernel.file_copy( L2_META_CKPT_FN.str(), L1_META_TEMP_FN.str() );
+      std::ofstream tmp_metafs(L1_META_TEMP_FN.str());
+      std::string str;
+      ia >> str;
+      tmp_metafs << str;
+      tmp_metafs.close();
     }
   }
 
+  metafs.close();
   close(fd);
 
   if( m_dict_bool["master_global"] ) {
