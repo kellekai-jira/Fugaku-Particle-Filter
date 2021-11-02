@@ -15,6 +15,7 @@ namespace FTI {
     private:
 
       // API
+      void remove_ckpt_metadata( int ckptId, int level );
       void update_ckpt_metadata( int ckptId, int level );
       void file_copy( std::string from,  std::string to );
       void print( std::string msg, int priority );
@@ -38,6 +39,8 @@ int FTI_UpdateCkptMetaData(FTIT_configuration* FTI_Conf,
 
 int FTI_FileCopy(const char* from, const char *to, size_t buffersize, 
     size_t* offset, size_t count, bool overwrite);
+
+int FTI_RemoveCkptMetaData(FTIT_configuration* FTI_Conf, int ckptId, int level );
 
 }
 

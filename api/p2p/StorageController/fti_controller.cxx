@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <filesystem>
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
 
@@ -163,14 +164,18 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   if( level == IO_STORAGE_L1 ) {
     M_TRIGGER(START_DELETE_LOCAL,0);
-  } else if ( level == IO_STORAGE_L2 ) {
-    M_TRIGGER(START_DELETE_PFS,0);
-  }
-  IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ),
-      FTI_SCES, "failed to remove file" );
-  if( level == IO_STORAGE_L1 ) {
+    IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ), FTI_SCES, "failed to remove file" );
     M_TRIGGER(STOP_DELETE_LOCAL,0);
   } else if ( level == IO_STORAGE_L2 ) {
+    M_TRIGGER(START_DELETE_PFS,0);
+    if( m_dict_bool["master_global"] ) { 
+      std::stringstream gdir;
+      gdir << m_dict_string["global_dir"] << "/" << to_ckpt_id( state_id );
+      if( !std::filesystem::remove_all( gdir.str() ) ) {
+        MERR("could not delete global checkpoint directory '%s'", gdir.str().c_str());
+      }
+      m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
+    }
     M_TRIGGER(STOP_DELETE_PFS,0);
   }
 }
