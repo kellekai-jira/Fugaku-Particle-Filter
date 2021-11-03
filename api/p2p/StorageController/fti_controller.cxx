@@ -352,6 +352,9 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   std::string mfn = L2_META_FN.str();
 
   int fd = open( gfn.c_str(), O_RDWR );
+  if( fd < 0 ) {
+    MERR("unable to read from file '%s'", gfn.c_str());
+  }
   std::ifstream metafs( mfn );
   std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
   metafs.close();
@@ -380,12 +383,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       ssize_t check = read( fd, buffer.data(), buffer.size() );
       // check if successful
       if (check != buffer.size()) {
-        errno = 0;
-        int reslen;
-        char str[FTI_BUFS], mpi_err[FTI_BUFS];
-        snprintf(str, FTI_BUFS,
-            "unable to read '%lu' from file '%s'", buffer.size(), gfn.c_str());
-        MDBG(str);
+        MDBG("unable to read '%lu' from file '%s'", buffer.size(), gfn.c_str());
         return;
       }
       
