@@ -385,6 +385,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     MERR("unable to read from file '%s'", gfn.c_str());
   }
   std::ifstream metafs( mfn );
+  MDBG("start reading from meta data file '%s'", mfn.c_str());
   std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
   metafs.close();
   
