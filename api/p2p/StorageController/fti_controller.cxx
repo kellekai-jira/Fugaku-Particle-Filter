@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <chrono>
 
 #include <fstream>
 
@@ -271,8 +272,14 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
     MDBG("stage 0 -> 1 | STATE SIZE [%d] | %ld", i, local_file_size);
+    
+    uint64_t t_open_local, t_read_local, t_write_global, t_close_local, t_meta; 
+    std::chrono::system_clock::time_point t1, t2;
 
+    t1 = std::chrono::system_clock::now();
     std::ifstream localfd( lfn, std::ios::binary );
+    t2 = std::chrono::system_clock::now();
+    t_open_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
     size_t pos = 0;
     while (pos < local_file_size) {
@@ -282,9 +289,16 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       }
 
       std::vector<char> buffer(bSize, 0);
+      t1 = std::chrono::system_clock::now();
       localfd.read(buffer.data(), buffer.size());
+      t2 = std::chrono::system_clock::now();
+      t_read_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
+      t1 = std::chrono::system_clock::now();
       ssize_t check = write( fd, buffer.data(), buffer.size() );
+      t2 = std::chrono::system_clock::now();
+      t_write_global = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+      
       // check if successful
       if (check != buffer.size()) {
         errno = 0;
@@ -299,8 +313,12 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       pos = pos + bSize;
     }
 
+    t1 = std::chrono::system_clock::now();
     localfd.close();
+    t2 = std::chrono::system_clock::now();
+    t_close_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
+    t1 = std::chrono::system_clock::now();
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
       std::stringstream L1_META_CKPT_FN;
@@ -312,6 +330,10 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       metafs << count_lines << std::endl << str;
       tmp_metafs.close();
     }
+    t2 = std::chrono::system_clock::now();
+    t_meta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+
+    MDBG("Performance -> [ol: %lu ms|rl: %lu ms|wg: %lu ms|cl: %lu ms|m: %lu ms]", t_open_local, t_read_local, t_write_global, t_close_local, t_meta);
   }
 
   fsync(fd);
