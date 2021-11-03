@@ -260,7 +260,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   L2_META_FN << L2_TEMP << "/Meta" << to_ckpt_id(state_id) << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
-  int fd = open( gfn.c_str(), O_WRONLY|O_CREAT, S_IRGRP|S_IWUSR );
+  int fd = open( gfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
   
   std::ofstream metafs(mfn);
 
