@@ -98,7 +98,7 @@ if(INSTALL_BOOST)
     set(Boost_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/BOOST/src/BOOST-build/install/boost_1_64_0/")
     message("Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 else()
-    find_package(Boost COMPONENTS system)
+    find_package(Boost COMPONENTS system filesystem)
 endif()
 
 

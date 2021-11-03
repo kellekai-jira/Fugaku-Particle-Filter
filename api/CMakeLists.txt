@@ -26,7 +26,7 @@ file(GLOB
     $<TARGET_OBJECTS:melissa_common>
 )
 
-target_link_libraries(melissa_da_api PUBLIC melissa_protocol)
+target_link_libraries(melissa_da_api PUBLIC melissa_protocol ${Boost_FILESYSTEM_LIBRARY_RELEASE})
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)
