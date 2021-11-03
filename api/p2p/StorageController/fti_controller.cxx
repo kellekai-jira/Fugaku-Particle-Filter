@@ -279,12 +279,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     
     t1 = std::chrono::system_clock::now();
     int lfd = open(lfn.c_str(), O_RDONLY, 0);
-    unsigned char* fmmap = (unsigned char*) mmap(0, local_file_size, PROT_READ, MAP_SHARED, lfd, 0);
-    if (fmmap == MAP_FAILED) {
-        MERR("could not map file '%s' to memory.", lfn.c_str());
-    }
-    // file is mapped, we can close it.
-    close(lfd);
+    std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
     t2 = std::chrono::system_clock::now();
     t_open_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
@@ -294,34 +289,34 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       if ((local_file_size - pos) < IO_TRANSFER_SIZE) {
         bSize = local_file_size - pos;
       }
-
-      std::vector<char> buffer(bSize, 0);
+      
+      ssize_t check;
+      
       t1 = std::chrono::system_clock::now();
-      buffer.insert(buffer.end(), fmmap + pos, fmmap + pos + bSize); 
+      check = read(lfd, buffer.get(), bSize); 
       t2 = std::chrono::system_clock::now();
       t_read_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+      
+      // check if successful
+      if (check != bSize) {
+        MDBG("unable to read '%lu' bytes from file '%s'", bSize, lfn.c_str());
+      }
 
       t1 = std::chrono::system_clock::now();
-      ssize_t check = write( fd, buffer.data(), buffer.size() );
+      check = write( fd, buffer.get(), bSize );
       t2 = std::chrono::system_clock::now();
       t_write_global = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
       
       // check if successful
-      if (check != buffer.size()) {
-        errno = 0;
-        int reslen;
-        char str[FTI_BUFS], mpi_err[FTI_BUFS];
-        snprintf(str, FTI_BUFS,
-            "unable to write '%lu' bytes into file '%s'", buffer.size(), gfn.c_str());
-        MDBG(str);
-        return;
+      if (check != bSize) {
+        MDBG("unable to write '%lu' bytes into file '%s'", bSize, gfn.c_str());
       }
 
       pos = pos + bSize;
     }
-
+    
     t1 = std::chrono::system_clock::now();
-    munmap(fmmap, local_file_size);
+    close(lfd);
     t2 = std::chrono::system_clock::now();
     t_close_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
