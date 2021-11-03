@@ -404,14 +404,21 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
         bSize = local_file_size - pos;
       }
 
-      ssize_t check = read( fd, buffer.get(), bSize );
+      ssize_t check;
+
+      check = read( fd, buffer.get(), bSize );
       // check if successful
       if (check != bSize) {
         MDBG("unable to read '%lu' from file '%s'", bSize, gfn.c_str());
         return;
       }
       
-      write(lfd, buffer.get(), bSize);
+      check = write(lfd, buffer.get(), bSize);
+      // check if successful
+      if (check != bSize) {
+        MDBG("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
+        return;
+      }
 
       pos = pos + bSize;
     }
