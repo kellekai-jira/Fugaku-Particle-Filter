@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <chrono>
+#include <sys/mman.h>
 
 #include <fstream>
 
@@ -275,9 +276,15 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     
     uint64_t t_open_local, t_read_local, t_write_global, t_close_local, t_meta; 
     std::chrono::system_clock::time_point t1, t2;
-
+    
     t1 = std::chrono::system_clock::now();
-    std::ifstream localfd( lfn, std::ios::binary );
+    int lfd = open(lfn.c_str(), O_RDONLY, 0);
+    unsigned char* fmmap = (unsigned char*) mmap(0, local_file_size, PROT_READ, MAP_SHARED, lfd, 0);
+    if (fmmap == MAP_FAILED) {
+        MERR("could not map file '%s' to memory.", lfn.c_str());
+    }
+    // file is mapped, we can close it.
+    close(lfd);
     t2 = std::chrono::system_clock::now();
     t_open_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
@@ -290,7 +297,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
 
       std::vector<char> buffer(bSize, 0);
       t1 = std::chrono::system_clock::now();
-      localfd.read(buffer.data(), buffer.size());
+      buffer.insert(buffer.end(), fmmap + pos, fmmap + pos + bSize); 
       t2 = std::chrono::system_clock::now();
       t_read_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
@@ -314,7 +321,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     }
 
     t1 = std::chrono::system_clock::now();
-    localfd.close();
+    munmap(fmmap, local_file_size);
     t2 = std::chrono::system_clock::now();
     t_close_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
