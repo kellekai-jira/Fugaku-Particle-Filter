@@ -394,7 +394,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     int64_t local_file_size = m_state_sizes_per_rank[i];
     MDBG("stage 1 -> 0 | STATE SIZE [%d] | %ld", i, local_file_size);
 
-    std::ofstream localfd( lfn, std::ios::binary );
+    int lfd = open( lfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
+    std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
 
     size_t pos = 0;
     while (pos < local_file_size) {
@@ -403,21 +404,20 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
         bSize = local_file_size - pos;
       }
 
-      std::vector<char> buffer(bSize, 0);
-
-      ssize_t check = read( fd, buffer.data(), buffer.size() );
+      ssize_t check = read( fd, buffer.get(), bSize );
       // check if successful
-      if (check != buffer.size()) {
-        MDBG("unable to read '%lu' from file '%s'", buffer.size(), gfn.c_str());
+      if (check != bSize) {
+        MDBG("unable to read '%lu' from file '%s'", bSize, gfn.c_str());
         return;
       }
       
-      localfd.write(buffer.data(), buffer.size());
+      write(lfd, buffer.get(), bSize);
 
       pos = pos + bSize;
     }
-
-    localfd.close();
+    
+    fsync(lfd);
+    close(lfd);
 
     if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
