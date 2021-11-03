@@ -281,7 +281,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     int lfd = open(lfn.c_str(), O_RDONLY, 0);
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
     t2 = std::chrono::system_clock::now();
-    t_open_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    t_open_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
     size_t pos = 0;
     while (pos < local_file_size) {
@@ -295,7 +295,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       t1 = std::chrono::system_clock::now();
       check = read(lfd, buffer.get(), bSize); 
       t2 = std::chrono::system_clock::now();
-      t_read_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+      t_read_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
       
       // check if successful
       if (check != bSize) {
@@ -305,7 +305,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       t1 = std::chrono::system_clock::now();
       check = write( fd, buffer.get(), bSize );
       t2 = std::chrono::system_clock::now();
-      t_write_global = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+      t_write_global = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
       
       // check if successful
       if (check != bSize) {
@@ -318,7 +318,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     t1 = std::chrono::system_clock::now();
     close(lfd);
     t2 = std::chrono::system_clock::now();
-    t_close_local = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    t_close_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
     t1 = std::chrono::system_clock::now();
     if (m_kernel.topo->groupRank == 0) {
@@ -333,7 +333,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       tmp_metafs.close();
     }
     t2 = std::chrono::system_clock::now();
-    t_meta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    t_meta = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
     MDBG("Performance -> [ol: %lu ms|rl: %lu ms|wg: %lu ms|cl: %lu ms|m: %lu ms]", t_open_local, t_read_local, t_write_global, t_close_local, t_meta);
   }
