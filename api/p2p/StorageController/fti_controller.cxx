@@ -7,8 +7,6 @@
 #include <fcntl.h>
 
 #include <fstream>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/filesystem.hpp>
 #include "api_common.h"  // for timing
@@ -263,7 +261,6 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   int fd = open( gfn.c_str(), O_WRONLY | O_CREAT );
   
   std::ofstream metafs(mfn);
-  boost::archive::text_oarchive oa( metafs );
 
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -311,7 +308,8 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       L1_META_CKPT_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       std::ifstream tmp_metafs(L1_META_CKPT_FN.str());
       std::string str(std::istreambuf_iterator<char>{tmp_metafs}, {});
-      oa << str;
+      size_t count_lines = std::count_if( str.begin(), str.end(), []( char c ){return c =='\n';});
+      metafs << count_lines << std::endl << str;
       tmp_metafs.close();
     }
   }
@@ -355,7 +353,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
   int fd = open( gfn.c_str(), O_RDWR );
   std::ifstream metafs( mfn );
-  boost::archive::text_iarchive ia( metafs );
+  std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
+  metafs.close();
   
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -403,14 +402,19 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       L1_META_TEMP_FN << L1_META_TEMP;
       L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       std::ofstream tmp_metafs(L1_META_TEMP_FN.str());
-      std::string str;
-      ia >> str;
-      tmp_metafs << str;
+      std::string count_str;
+      std::getline( metafs, count_str );
+      size_t count;
+      sscanf(count_str.c_str(), "%zu", &count);
+      for(size_t i=0; i<count; i++) {
+        std::string str;
+        std::getline( metafs, str );
+        tmp_metafs << str << std::endl;
+      }
       tmp_metafs.close();
     }
   }
 
-  metafs.close();
   close(fd);
 
   if( m_dict_bool["master_global"] ) {
