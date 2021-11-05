@@ -187,8 +187,9 @@ void StorageController::callback() {
 
       while (del_q.size() > 0 && del_q.front().t < last_assimilation_cycle-1) {
           auto to_remove = del_q.front();
-          FTI_Remove(to_ckpt_id(to_remove), 4);
+          //FTI_Remove(to_ckpt_id(to_remove), 4);
           //storage.m_remove_symlink(to_ckpt_id(to_remove));
+          storage.m_io->remove( { to_remove.t, to_remove.id }, IO_STORAGE_L2 ); 
           MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
           del_q.pop();
       }

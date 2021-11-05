@@ -175,7 +175,9 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
     if( m_dict_bool["master_global"] ) { 
       std::stringstream gdir;
       gdir << m_dict_string["global_dir"] << "/" << to_ckpt_id( state_id );
+      assert( boost::filesystem::exists( gdir.str() ) && "directory to remove does not exist!" );
       boost::filesystem::remove_all( gdir.str() );
+      assert( !boost::filesystem::exists( gdir.str() ) && "directory should be removed!" );
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
@@ -186,13 +188,8 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   
   assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
   assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
-
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
-  //assert( from == IO_STORAGE_L2 && to == IO_STORAGE_L1 && "copy from level 2 to level 1 not implemented for extern" );
   
-  if( from == IO_STORAGE_L1 ) M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
-  else M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
-
   // LEVEL 2 DIRECTORIES
   
   // Checkpoint + Metadata
@@ -202,8 +199,6 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   L2_TEMP << L2_BASE.str() << "/" << melissa::helpers::make_uuid();
   std::stringstream L2_CKPT;
   L2_CKPT << L2_BASE.str() << "/" << std::to_string(to_ckpt_id(state_id));
-  
-  MDBG("stage %d -> %d | L2 | %s, %s", from, to, L2_TEMP.str().c_str(), L2_CKPT.str().c_str());
   
   // LEVEL 1 DIRECTORIES
   
@@ -222,8 +217,6 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   L1_META_TEMP << L1_META_BASE.str() << "/" << melissa::helpers::make_uuid();
   std::stringstream L1_META_CKPT;
   L1_META_CKPT << L1_META_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
-  
-  MDBG("stage %d -> %d | L1 | %s, %s, %s, %s", from, to, L1_TEMP.str().c_str(), L1_CKPT.str().c_str(), L1_META_TEMP.str().c_str(), L1_META_CKPT.str().c_str());
  
   m_mpi->barrier();
   
@@ -236,13 +229,12 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
 
   m_mpi->barrier();
   
-  if( from == IO_STORAGE_L1 ) M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
-  else M_TRIGGER(STOP_COPY_STATE_FROM_PFS,0);
-
 }
 
 void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, std::string L2_TEMP,
     std::string L2_CKPT, io_state_id_t state_id  ) {
+
+  M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
 
   struct stat info;
   IO_TRY( stat( L2_CKPT.c_str(), &info ), -1, "the global checkpoint directory already exists!" );
@@ -272,7 +264,6 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     std::string lfn = L1_CKPT_FN.str();
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
-    MDBG("stage 0 -> 1 | STATE SIZE [%d] | %ld", i, local_file_size);
     
     uint64_t t_open_local, t_read_local, t_write_global, t_close_local, t_meta; 
     std::chrono::system_clock::time_point t1, t2;
@@ -299,7 +290,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       
       // check if successful
       if (check != bSize) {
-        MDBG("unable to read '%lu' bytes from file '%s'", bSize, lfn.c_str());
+        MERR("unable to read '%lu' bytes from file '%s'", bSize, lfn.c_str());
       }
 
       t1 = std::chrono::system_clock::now();
@@ -309,7 +300,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       
       // check if successful
       if (check != bSize) {
-        MDBG("unable to write '%lu' bytes into file '%s'", bSize, gfn.c_str());
+        MERR("unable to write '%lu' bytes into file '%s'", bSize, gfn.c_str());
       }
 
       pos = pos + bSize;
@@ -334,8 +325,6 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     }
     t2 = std::chrono::system_clock::now();
     t_meta = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-
-    MDBG("Performance -> [ol: %lu ms|rl: %lu ms|wg: %lu ms|cl: %lu ms|m: %lu ms]", t_open_local, t_read_local, t_write_global, t_close_local, t_meta);
   }
 
   fsync(fd);
@@ -351,12 +340,16 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
+  
+  M_TRIGGER(STOP_PUSH_STATE_TO_PFS,0);
 
 }
 
 void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
     std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id ) {
 
+  M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
+  
   struct stat info;
   IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
@@ -380,7 +373,6 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     MERR("unable to read from file '%s'", gfn.c_str());
   }
   std::ifstream metafs( mfn );
-  MDBG("start reading from meta data file '%s'", mfn.c_str());
   std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
   metafs.close();
   
@@ -392,7 +384,6 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     std::string lfn = L1_CKPT_FN.str();
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
-    MDBG("stage 1 -> 0 | STATE SIZE [%d] | %ld", i, local_file_size);
 
     int lfd = open( lfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
@@ -409,14 +400,14 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       check = read( fd, buffer.get(), bSize );
       // check if successful
       if (check != bSize) {
-        MDBG("unable to read '%lu' from file '%s'", bSize, gfn.c_str());
+        MERR("unable to read '%lu' from file '%s'", bSize, gfn.c_str());
         return;
       }
       
       check = write(lfd, buffer.get(), bSize);
       // check if successful
       if (check != bSize) {
-        MDBG("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
+        MERR("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
         return;
       }
 
@@ -457,6 +448,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
 
+  M_TRIGGER(STOP_COPY_STATE_FROM_PFS,0);
 
 }
 
