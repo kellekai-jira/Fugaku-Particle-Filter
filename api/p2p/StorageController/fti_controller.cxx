@@ -173,9 +173,9 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   } else if ( level == IO_STORAGE_L2 ) {
     M_TRIGGER(START_DELETE_PFS,0);
     if( m_dict_bool["master_global"] ) { 
-      std::stringstream gdir;
-      gdir << m_dict_string["global_dir"] << "/" << to_ckpt_id( state_id );
-      boost::filesystem::path gpath(gdir.str());
+      boost::filesystem::path gbase = m_dict_string["global_dir"];
+      boost::filesystem::path gpath = gbase / std::to_string(to_ckpt_id( state_id ));
+      MDBG("path to delete -> '%s'", gpath.string().c_str());
       assert( boost::filesystem::exists( gpath ) && "directory to remove does not exist!" );
       boost::filesystem::remove_all( gpath );
       assert( !boost::filesystem::exists( gpath ) && "directory should be removed!" );
