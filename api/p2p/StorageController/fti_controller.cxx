@@ -14,6 +14,29 @@
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
 
+#include <limits.h>
+#include <sys/stat.h>
+#include <ftw.h>
+
+/* Call unlink or rmdir on the path, as appropriate. */
+int
+rm(const char *path, const struct stat *s, int flag, struct FTW *f)
+{
+        int status;
+        int (*rm_func)(const char *);
+        (void)s;
+        (void)f;
+        rm_func = flag == FTW_DP ? rmdir : unlink;
+        if( status = rm_func(path), status != 0 ){
+                perror(path);
+        } else if( getenv("VERBOSE") ){
+                puts(path);
+        }
+        return status;
+}
+
+
+
 int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
   FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
@@ -178,11 +201,10 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
       snprintf(ckpt_id_c_str, 256, "%d", ckpt_id);
       std::string ckpt_id_str(ckpt_id_c_str);
       std::string g_path_string = m_dict_string["global_dir"] + "/" + ckpt_id_str;
-      boost::filesystem::path gpath = g_path_string;
-      MDBG("path to delete -> '%s' (str -> %s)", gpath.string().c_str(), g_path_string);
-      assert( boost::filesystem::exists( gpath ) && "directory to remove does not exist!" );
-      boost::filesystem::remove_all( gpath );
-      assert( !boost::filesystem::exists( gpath ) && "directory should be removed!" );
+      MDBG("path to delete -> '%s'", g_path_string.c_str());
+			if( nftw(g_path_string.c_str(), rm, FOPEN_MAX, FTW_DEPTH) == -1 ){ 
+        MERR("failed to remove checkpoint path ''", g_path_string.c_str());
+      }
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
