@@ -19,6 +19,7 @@
 #include <ftw.h>
 
 /* Call unlink or rmdir on the path, as appropriate. */
+// [FROM: https://stackoverflow.com/a/1149837/5073895]
 int
 rm(const char *path, const struct stat *s, int flag, struct FTW *f)
 {
