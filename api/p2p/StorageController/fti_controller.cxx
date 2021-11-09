@@ -94,7 +94,9 @@ void FtiController::init_core() {
   int app_procs_node = m_kernel.topo->nodeSize - m_kernel.topo->nbHeads;
   m_dict_int.insert( std::pair<std::string,int>( "app_procs_node", app_procs_node ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_total", m_kernel.topo->nbProc ) );
+  // node master process. One for each FTI-comm on each node. Heads are automatically node master.
   m_dict_bool.insert( std::pair<std::string,bool>( "master_local", m_kernel.topo->masterLocal ) );
+  // FTI-comm master processes. One app and one worker.
   m_dict_bool.insert( std::pair<std::string,bool>( "master_global", m_kernel.topo->masterGlobal ) );
   auto strip_id = [](std::string path, std::string id) {
     auto start_position_to_erase = path.find(std::string("/"+id));
@@ -175,6 +177,7 @@ void FtiController::fini() {
   FTI_Finalize();
 }
 
+// called from app processes to load checkpoint with certain ID
 bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   M_TRIGGER(START_FTI_LOAD, state_id.t);
@@ -192,6 +195,7 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   if( level == IO_STORAGE_L1 ) {
     M_TRIGGER(START_DELETE_LOCAL,0);
+    // collective and blocking
     IO_TRY( FTI_Remove( to_ckpt_id(state_id), m_io_level_map[level] ), FTI_SCES, "failed to remove file" );
     M_TRIGGER(STOP_DELETE_LOCAL,0);
   } else if ( level == IO_STORAGE_L2 ) {
@@ -207,6 +211,9 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
         MERR("failed to remove checkpoint path ''", g_path_string.c_str());
       }
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
+      m_mpi->barrier();
+    } else {
+      m_mpi->barrier();
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
   }
@@ -272,12 +279,14 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     IO_TRY( mkdir( L2_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
   }
 
+  m_mpi->barrier();
+
   std::stringstream L2_CKPT_FN;
-  L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-serialized.fti";
+  L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string gfn = L2_CKPT_FN.str();
   
   std::stringstream L2_META_FN;
-  L2_META_FN << L2_TEMP << "/Meta" << to_ckpt_id(state_id) << "-serialized.fti";
+  L2_META_FN << L2_TEMP << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
   int fd = open( gfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
@@ -360,10 +369,14 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   metafs.flush();
   metafs.close();
 
+  m_mpi->barrier();
+
   if( m_dict_bool["master_global"] ) {
     IO_TRY( std::rename( L2_TEMP.c_str(), L2_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
     update_metadata( state_id, IO_STORAGE_L2 );
   }
+
+  m_mpi->barrier();
 
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
@@ -383,17 +396,15 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   IO_TRY( stat( L1_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   
-  if( m_dict_bool["master_global"] ) {
-    IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
-    IO_TRY( mkdir( L1_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
-  }
-  
+  IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+  IO_TRY( mkdir( L1_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+
   std::stringstream L2_CKPT_FN;
-  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-serialized.fti";
+  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string gfn = L2_CKPT_FN.str();
   
   std::stringstream L2_META_FN;
-  L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-serialized.fti";
+  L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
 
   int fd = open( gfn.c_str(), O_RDWR );
@@ -466,11 +477,14 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
   close(fd);
 
+  IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+  IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
+
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
-    IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
     update_metadata( state_id, IO_STORAGE_L1 );
   }
+
+  m_mpi->barrier();
 
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
