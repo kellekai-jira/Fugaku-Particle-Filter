@@ -7,6 +7,7 @@
 #include <map>
 #include <cassert>
 #include <type_traits>
+#include "utils.h"
 
 struct mpi_request_t {
     MPI_Request mpi_request;
@@ -74,6 +75,11 @@ void MpiController::broadcast( std::vector<T> & buffer, std::string key, int roo
 template<class T>
 void MpiController::broadcast( T & value, std::string key, int root ) {
   MDBG("key: %s, root: %d", key.c_str(), root);
+  assert(m_comms.count(key) > 0 && "key not found!" );
+  MDBG("count of key: %d", m_comms.count(key));
+  for(auto &x : m_comms) {
+    MDBG("key: %s", x.first.c_str());  
+  }
   static_assert(std::is_integral<T>::value, "Integral required.");
   int elem_size = sizeof(T);
   int rank = m_comms[key].rank;
