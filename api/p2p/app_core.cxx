@@ -241,7 +241,7 @@ void push_weight_to_head(double weight)
         req.wait();  // be sure that there is nothing else in the mpi send queue
         MDBG("finished waiting for Head rank!");
         //if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
-        //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_ONE );
+        //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_MST );
     }
 
     // Now we can change buf!
@@ -260,8 +260,8 @@ void push_weight_to_head(double weight)
     }
 
     m.SerializeToArray(buf.data(), bs);
-    io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_ONE, req );
-    //io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_ONE);  // even faster than isend on juwels!
+    io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST, req );
+    //io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST);  // even faster than isend on juwels!
     req.wait();  // be synchronous on juwels with wrf for now
     MDBG("finished Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
     wait = true;
