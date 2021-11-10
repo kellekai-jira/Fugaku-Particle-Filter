@@ -73,6 +73,7 @@ void MpiController::broadcast( std::vector<T> & buffer, std::string key, int roo
 
 template<class T>
 void MpiController::broadcast( T & value, std::string key, int root ) {
+  MDBG("key: %s, root: %d", key.c_str(), root);
   static_assert(std::is_integral<T>::value, "Integral required.");
   int elem_size = sizeof(T);
   int rank = m_comms[key].rank;

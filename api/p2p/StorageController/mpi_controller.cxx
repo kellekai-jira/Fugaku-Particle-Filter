@@ -35,11 +35,13 @@ void mpi_request_t::free() {
 
 MpiController::MpiController()
 {
-    m_comms.insert( std::pair<std::string, mpi_comm_t>( "global_comm", { MPI_COMM_NULL, -1, -1 } ) );
+  MDBG("MpiController::MpiController");
+  m_comms.insert( std::pair<std::string, mpi_comm_t>( "global_comm", { MPI_COMM_NULL, -1, -1 } ) );
 }
 
 void MpiController::init( MPI_Comm & comm )
 {
+  MDBG("MpiController::init");
   // TODO init mit global comm
     m_comms[m_comm_set].comm = comm;
     MPI_Comm_size( m_comms[m_comm_set].comm, &m_comms[m_comm_set].size );
@@ -48,6 +50,7 @@ void MpiController::init( MPI_Comm & comm )
 
 void MpiController::register_comm( std::string key, MPI_Comm & comm )
 {
+  MDBG("MpiController::register_comm");
     int size; MPI_Comm_size( comm, &size );
     int rank; MPI_Comm_rank( comm, &rank );
     mpi_comm_t mpi_comm = { comm, size, rank }; 
@@ -56,6 +59,7 @@ void MpiController::register_comm( std::string key, MPI_Comm & comm )
 
 void MpiController::set_comm( std::string key )
 {
+  MDBG("MpiController::set_comm");
     assert( m_comms.count(key) > 0 && "invalid key for MPI communicator!");
 
     m_comm_set = key;
