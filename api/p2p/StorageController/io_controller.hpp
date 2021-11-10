@@ -44,7 +44,8 @@ enum io_type_t {
 
 enum io_msg_t {
   IO_MSG_ALL,
-  IO_MSG_ONE
+  IO_MSG_ONE,
+  IO_MSG_MST
 };
 
 enum io_tag_t {

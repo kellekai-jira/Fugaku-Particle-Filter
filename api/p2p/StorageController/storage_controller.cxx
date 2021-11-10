@@ -325,10 +325,13 @@ void StorageController::m_request_post() {
 
   Message weight_message;
   int msg_size;
-  m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_ONE );
-  char buffer[msg_size];
-  m_io->recv( buffer, msg_size, IO_TAG_POST, IO_MSG_ONE );
-  weight_message.ParseFromArray( buffer, msg_size );
+  m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_MST );
+  m_io->m_mpi->broadcast(msg_size);
+  std::vector<char> buffer(msg_size);
+  m_io->recv( buffer.data(), msg_size, IO_TAG_POST, IO_MSG_MST );
+  m_io->m_mpi->broadcast(buffer);
+
+  weight_message.ParseFromArray( buffer.data(), msg_size );
 
   assert( weight_message.has_weight() && "m does not contain a weight" );
 

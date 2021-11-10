@@ -3,7 +3,10 @@
 
 #include <mpi.h>
 #include <string>
+#include <vector>
 #include <map>
+#include <cassert>
+#include <type_traits>
 
 struct mpi_request_t {
     MPI_Request mpi_request;
@@ -31,6 +34,10 @@ class MpiController
         const int & size( std::string key = m_comm_set );
         const int & rank( std::string key = m_comm_set );
         void barrier( std::string key = m_comm_set );
+        template<class T>
+        void broadcast( std::vector<T> & buffer, std::string key = m_comm_set, int root = 0 );
+        template<class T>
+        void broadcast( T & value, std::string key = m_comm_set, int root = 0 );
         void finalize();
 
         MPI_Fint fortranComm();
@@ -45,5 +52,32 @@ class MpiController
         std::map<std::string,mpi_comm_t> m_comms;
 
 };
+        
+template<class T>
+void MpiController::broadcast( std::vector<T> & buffer, std::string key, int root ) {
+  int byte_count; 
+  int elem_size = sizeof(T);
+  int rank = m_comms[key].rank;
+  MPI_Comm comm = m_comms[key].comm;
+  if ( rank == root ) {
+    byte_count = buffer.size() * elem_size;
+  }
+  MPI_Bcast( &byte_count, 1, MPI_INT, root, comm );
+  if ( rank != root ) { 
+    assert( ((byte_count % elem_size) == 0) && "the unthinkable happened!" );
+    int elem_count = byte_count / elem_size;
+    buffer.resize( elem_count );
+  }
+  MPI_Bcast( buffer.data(), byte_count, MPI_BYTE, root, comm );
+}
+
+template<class T>
+void MpiController::broadcast( T & value, std::string key, int root ) {
+  static_assert(std::is_integral<T>::value, "Integral required.");
+  int elem_size = sizeof(T);
+  int rank = m_comms[key].rank;
+  MPI_Comm comm = m_comms[key].comm;
+  MPI_Bcast( &value, elem_size, MPI_BYTE, root, comm );
+}
 
 #endif // __MPIMANAGER__
