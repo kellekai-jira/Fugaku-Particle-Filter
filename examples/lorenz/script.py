@@ -37,6 +37,7 @@ print("global directory: " + global_dir)
 __env_steps = int(os.environ['MELISSA_LORENZ_ITER_MAX'])
 __env_members = int(os.environ['MELISSA_LORENZ_MEMBERS'])
 __env_procs_runners = int(os.environ['MELISSA_LORENZ_PROCS_RUNNERS'])
+__env_nodes_runners = int(os.environ['MELISSA_LORENZ_NODES_RUNNERS'])
 __env_num_runners = int(os.environ['MELISSA_LORENZ_NUM_RUNNERS'])
 __env_state_size_elem = os.environ['MELISSA_LORENZ_STATE_DIMENSION']
 __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
@@ -52,7 +53,7 @@ run_melissa_da_study(
     total_steps=__env_steps,
     ensemble_size=__env_members,
     procs_runner=__env_procs_runners,
-    nodes_runner=1,
+    nodes_runner=__env_nodes_runners,
     runner_group_size = __env_runner_group_size,
     n_runners=__env_num_runners,
     local_ckpt_dir=local_dir + '/melissa_cache',

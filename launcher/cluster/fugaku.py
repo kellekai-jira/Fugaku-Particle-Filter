@@ -113,11 +113,13 @@ class FugakuCluster(cluster.Cluster):
         # CHECK IF MPI DEBUGGING REQUESTED
         mpi_dbg = ''
         if 'MELISSA_MPI_DBG_FLAG' in os.environ and not is_server:
-            mpi_dbg_flag = os.environ['MELISSA_MPI_DBG_FLAG']
-            mpi_dbg_path = '-fjdbg-out-dir ' + \
-                    os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + \
-                    '/mpi_dbg/' + additional_env['MELISSA_DA_RUNNER_ID']
+            mpi_dbg_flag = os.environ['MELISSA_MPI_DBG_FLAG'] + ' -fjdbg-out-dir '
+            mpi_dbg_path = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR'] + \
+                    '/mpi_dbg.' + additional_env['MELISSA_DA_RUNNER_ID'].split(",",1)[0]
             mpi_dbg = mpi_dbg_flag + ' ' + mpi_dbg_path
+            os.makedirs(mpi_dbg_path, exist_ok=True)
+            print("for debugging, will create: '%s'" % mpi_dbg_path)
+            print("debugging flag: '%s'" % mpi_dbg_flag)
 
         if logfile == '':
             run_cmd = '%s %s --vcoordfile %s -n %d %s %s' % (
