@@ -32,6 +32,7 @@ int last_assimilation_cycle = 1;
 
 void StorageController::io_init( MpiController* mpi, IoController* io, int runner_id ) {
   
+  MDBG("enter io_init");
   m_mpi = mpi;
   m_io = io;
   m_io->register_callback( StorageController::callback );

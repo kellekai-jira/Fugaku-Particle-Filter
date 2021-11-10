@@ -21,6 +21,25 @@
 #include <mpi-ext.h>
 #include <sstream>
 
+#include <stdio.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void melissa_da_signal_handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+
 void print_local_hostname ( const MPI_Comm & comm, const std::string & filename ) {
   const std::string delim(", ");
   std::string hostname;
@@ -89,6 +108,7 @@ int fti_protect_id;
 
 MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 {
+		signal(SIGSEGV, melissa_da_signal_handler);
     // preceed all std::cout calls with a timestamp
     static AddTimeStamp ats( std::cout );
     if (is_p2p()) {
