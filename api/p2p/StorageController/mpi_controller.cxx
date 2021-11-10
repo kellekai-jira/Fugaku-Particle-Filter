@@ -2,7 +2,8 @@
 #include <cassert>
 #include "utils.h"
     
-std::string MpiController::m_comm_set = "global_comm";
+std::string m_comm_set;
+std::map<std::string,mpi_comm_t> m_comms;
 
 bool mpi_request_t::test() {
   int flag = 0;
@@ -43,6 +44,7 @@ void MpiController::init( MPI_Comm & comm )
 {
   MDBG("MpiController::init");
   // TODO init mit global comm
+    m_comm_set = "global_comm";
     m_comms[m_comm_set].comm = comm;
     MPI_Comm_size( m_comms[m_comm_set].comm, &m_comms[m_comm_set].size );
     MPI_Comm_rank( m_comms[m_comm_set].comm, &m_comms[m_comm_set].rank );
