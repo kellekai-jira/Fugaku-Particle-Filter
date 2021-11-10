@@ -29,7 +29,8 @@ class StorageController {
     StorageController() :
       m_worker_thread(true),
       m_request_counter(1),
-      m_request_interval(10000) {}
+      m_request_interval(10000),
+      server(*this) {}
 
     void io_init( MpiController* mpi, IoController* io, int runner_id );
     void init( size_t capacity, size_t state_size );
@@ -40,10 +41,6 @@ class StorageController {
     void store( io_state_id_t state_id );
     int protect( void* buffer, size_t size, io_type_t );
     int update( io_id_t id, void* buffer, size_t size );
-
-    // TODO put in private
-    void m_create_symlink( io_state_id_t state_id );
-    void m_remove_symlink( const io_id_t io_id );
 
   private:
 
@@ -123,7 +120,6 @@ class StorageController {
       private:
         size_t m_capacity;
         ssize_t m_used_slots;
-        friend class StorageController;
     };
 
     friend class StatePool;
@@ -137,16 +133,18 @@ class StorageController {
 
     class Server {
       public:
+        Server( StorageController& storage ) : m_storage(storage) {} 
         void init();
         void prefetch_request( StorageController* storage );
         void delete_request( StorageController* storage );
         void fini();
         void* m_socket;
-      //private:
-        //friend class StorageController;
+      private:
+        StorageController& m_storage;
     };
 
-    //friend class Server;
+    friend class Server;
+    
     Server server;
 
 };

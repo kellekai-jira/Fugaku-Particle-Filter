@@ -93,9 +93,10 @@ void StorageController::callback() {
     M_TRIGGER(START_INIT, 0);
     }
 #endif
-
-    storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
-    storage.server.init();
+    if ( comm_rank == 0 ) { 
+      storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
+      storage.server.init();
+    }
     storage.m_io->init_core();
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
@@ -187,8 +188,6 @@ void StorageController::callback() {
 
       while (del_q.size() > 0 && del_q.front().t < last_assimilation_cycle-1) {
           auto to_remove = del_q.front();
-          //FTI_Remove(to_ckpt_id(to_remove), 4);
-          //storage.m_remove_symlink(to_ckpt_id(to_remove));
           MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
           storage.m_io->remove( { to_remove.t, to_remove.id }, IO_STORAGE_L2 ); 
           del_q.pop();
@@ -344,8 +343,6 @@ void StorageController::m_request_post() {
 
   m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
 
-  // create symbolic link
-  //if(m_io->m_dict_bool["master_global"]) m_create_symlink( state_id );
   m_push_weight_to_server( weight_message );
 
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
@@ -460,6 +457,7 @@ StorageController::StatePool StorageController::StatePool::operator--(int) {
 //======================================================================
 
 void StorageController::Server::init() { // FIXME: why not simply using constructor and destructor instead of init and fini ?
+  if( m_storage.m_mpi->rank() != 0 ) return;
   char * melissa_server_master_gp_node = getenv(
       "MELISSA_SERVER_MASTER_GP_NODE");
   if (melissa_server_master_gp_node == nullptr)
@@ -468,49 +466,78 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
         "you must set the MELISSA_SERVER_MASTER_GP_NODE environment variable before running!");
     assert(false);
   }
-
+  
   m_socket = zmq_socket(storage.m_zmq_context, ZMQ_REQ);
   std::string port_name = fix_port_name(melissa_server_master_gp_node);
   IO_TRY( zmq_connect(m_socket, port_name.c_str()), 0, "unable to connect to zmq socket" );
 }
 
 void StorageController::Server::fini() {
+  if( m_storage.m_mpi->rank() != 0 ) return;
   zmq_close(m_socket);
 }
 
 void StorageController::Server::prefetch_request( StorageController* storage ) {
 
   M_TRIGGER(START_PREFETCH,0);
+  
+  std::vector<io_state_id_t> dump;
+  std::vector<io_state_id_t> pull;
 
-  // TODO server needs to assure that the minimum storage requirements
-  // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
-  Message request;
+  if( m_storage.m_mpi->rank() == 0 ) {
 
-  for( const auto& pair : storage->m_cached_states ) {
-    auto state = request.mutable_prefetch_request()->add_cached_states();
-    state->set_t(pair.second.t);
-    state->set_id(pair.second.id);
+    // TODO server needs to assure that the minimum storage requirements
+    // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
+    Message request;
+
+    for( const auto& pair : storage->m_cached_states ) {
+      auto state = request.mutable_prefetch_request()->add_cached_states();
+      state->set_t(pair.second.t);
+      state->set_id(pair.second.id);
+    }
+    request.mutable_prefetch_request()->set_capacity(storage->state_pool.capacity());
+    request.mutable_prefetch_request()->set_free(storage->state_pool.free());
+    request.set_runner_id(storage->m_runner_id);
+
+    M_TRIGGER(START_PREFETCH_REQ,0);
+    send_message(m_socket, request);
+    auto response = receive_message(m_socket);
+    M_TRIGGER(STOP_PREFETCH_REQ,0);
+  
+    auto pull_states = response.prefetch_response().pull_states();
+    for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
+      io_state_id_t state = { it->t(), it->id() };
+      storage->m_io->m_state_pull_requests.push( state );
+    }
+
+    auto dump_states = response.prefetch_response().dump_states();
+    for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
+      io_state_id_t state = { it->t(), it->id() };
+      storage->m_io->remove( state, IO_STORAGE_L1 );
+      storage->state_pool--;
+      dump.push_back(state);
+    }
+    
+    m_storage.m_mpi->broadcast(pull);
+    m_storage.m_mpi->broadcast(dump);
+  
+  } else {
+    
+    m_storage.m_mpi->broadcast(pull);
+    m_storage.m_mpi->broadcast(dump);
+    
+    for(auto &x : pull) {
+      storage->m_io->m_state_pull_requests.push( x );
+    }
+
+    for(auto &x : dump) {
+      storage->m_io->remove( x, IO_STORAGE_L1 );
+      storage->state_pool--;
+    }
+  
   }
-  request.mutable_prefetch_request()->set_capacity(storage->state_pool.capacity());
-  request.mutable_prefetch_request()->set_free(storage->state_pool.free());
-  request.set_runner_id(storage->m_runner_id);
 
-  M_TRIGGER(START_PREFETCH_REQ,0);
-  send_message(m_socket, request);
-  auto response = receive_message(m_socket);
-  M_TRIGGER(STOP_PREFETCH_REQ,0);
-
-  auto pull_states = response.prefetch_response().pull_states();
-  for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
-    io_state_id_t state = { it->t(), it->id() };
-    storage->m_io->m_state_pull_requests.push( state );
-  }
-
-  auto dump_states = response.prefetch_response().dump_states();
-  for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
-    storage->m_io->remove( { it->t(), it->id() }, IO_STORAGE_L1 );
-    storage->state_pool--;
-  }
+  m_storage.m_mpi->barrier();
 
   M_TRIGGER(STOP_PREFETCH,0);
 
@@ -519,26 +546,39 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
 void StorageController::Server::delete_request( StorageController* storage ) {
 
   M_TRIGGER(START_DELETE,0);
+    
+  int t, id;
+  
+  if( m_storage.m_mpi->rank() == 0 ) {
+    
+    Message request;
 
-  Message request;
+    for( const auto& pair : storage->m_cached_states ) {
+      auto state = request.mutable_delete_request()->add_cached_states();
+      state->set_t(pair.second.t);
+      state->set_id(pair.second.id);
+    }
+    request.set_runner_id(storage->m_runner_id);
 
-  for( const auto& pair : storage->m_cached_states ) {
-    auto state = request.mutable_delete_request()->add_cached_states();
-    state->set_t(pair.second.t);
-    state->set_id(pair.second.id);
+    // measure delete request
+    M_TRIGGER(START_DELETE_REQ,0);
+    send_message(m_socket, request);
+    Message response = receive_message(m_socket);
+    M_TRIGGER(STOP_DELETE_REQ,0);
+
+    auto pull_state = response.delete_response().to_delete();
+    t = pull_state.t();
+    id = pull_state.id();
+
+
+    std::cout << "HEAD IS REQUESTED TO DELETE (t: "<<t<<", id: "<<id<<")" <<  std::endl;
+
   }
-  request.set_runner_id(storage->m_runner_id);
-
-  // measure delete request
-  M_TRIGGER(START_DELETE_REQ,0);
-  send_message(m_socket, request);
-  Message response = receive_message(m_socket);
-  M_TRIGGER(STOP_DELETE_REQ,0);
-
-  auto pull_state = response.delete_response().to_delete();
-  io_state_id_t state_id( pull_state.t(), pull_state.id() );
-
-  std::cout << "HEAD IS REQUESTED TO DELETE (t: "<<state_id.t<<", id: "<<state_id.id<<")" <<  std::endl;
+  
+  m_storage.m_mpi->broadcast( t );
+  m_storage.m_mpi->broadcast( id );
+  
+  io_state_id_t state_id{ t, id } ;
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
@@ -569,55 +609,29 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 //======================================================================
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
-  M_TRIGGER(START_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().t());
-  send_message(server.m_socket, m);
-  MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
-  zmq::recv(server.m_socket);  // receive ack
-
+  
   int t = m.weight().state_id().t();
+  int id = m.weight().state_id().id();
+    
+  M_TRIGGER(START_PUSH_WEIGHT_TO_SERVER, t);
+  
+  if( m_mpi->rank() == 0 ) {
+  
+    send_message(server.m_socket, m);
+    MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
+    zmq::recv(server.m_socket);  // receive ack
+
+  }
+
+  m_mpi->barrier();
+
   if (t > last_assimilation_cycle) {  // what assimilation cycle are we working on? important for auto removing later
-      last_assimilation_cycle = t;
+    last_assimilation_cycle = t;
   }
 
   // its good, we can give it free for delete...
-  del_q.push(io_state_id_t(t, m.weight().state_id().id()));
-  M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, m.weight().state_id().id());
+  del_q.push(io_state_id_t(t, id));
+
+  M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, id);
 }
 
-void StorageController::m_create_symlink( io_state_id_t state_id ) {
-
-  std::stringstream target_global, link_global;
-  std::stringstream target_meta, link_meta;
-
-  target_global << m_io->m_dict_string["global_dir"] << "/" << m_io->m_dict_string["exec_id"] << "/l4/" << to_ckpt_id(state_id);
-  link_global << m_io->m_dict_string["global_dir"] << "/" << to_ckpt_id(state_id);
-  symlink( target_global.str().c_str(), link_global.str().c_str() );
-
-  target_meta << m_io->m_dict_string["meta_dir"] << "/" << m_io->m_dict_string["exec_id"] << "/l4/" << to_ckpt_id(state_id);
-  link_meta << m_io->m_dict_string["meta_dir"] <<  "/" << to_ckpt_id(state_id);
-  symlink( target_meta.str().c_str(), link_meta.str().c_str() );
-
-}
-
-
-void StorageController::m_remove_symlink( const io_id_t io_id ) {
-
-  std::stringstream link_global;
-  std::stringstream link_meta;
-
-  link_global << m_io->m_dict_string["global_dir"] << "/" << io_id;
-
-  if (remove(link_global.str().c_str()) == -1) {
-      if (errno != ENOENT) {
-          MERR("Error removing target directory.");
-      }
-  }
-
-  link_meta << m_io->m_dict_string["meta_dir"] <<  "/" << io_id;
-  if (remove(link_meta.str().c_str()) == -1) {
-      if (errno != ENOENT) {
-          MERR("Error removing target directory.");
-      }
-  }
-
-}
