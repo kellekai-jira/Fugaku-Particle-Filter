@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <cassert>
+#include "mpi_controller_impl.hpp"
 
 inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return lhs.t == rhs.t && lhs.id == rhs.id;
@@ -29,7 +30,7 @@ inline io_state_id_t to_state_id(const io_id_t ckpt_id) {
 
 class FtiController : public IoController {
   public:
-    void init_io( MpiController* mpi, int runner_id );
+    void init_io( int runner_id );
     void init_core();
     void fini();
     void set_state_size_per_proc( std::vector<uint64_t> vec );
@@ -68,7 +69,6 @@ class FtiController : public IoController {
     std::map<io_id_t,io_var_t> m_var_id_map;
     io_id_t m_id_counter;
     FTI::Kernel m_kernel;
-    MpiController* m_mpi;
     int m_runner_id;
     std::vector<uint64_t> m_state_sizes_per_rank;
 };

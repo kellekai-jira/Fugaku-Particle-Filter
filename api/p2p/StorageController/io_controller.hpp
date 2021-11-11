@@ -5,10 +5,11 @@
 #include <exception>
 #include "io_controller_defs.hpp"
 #include "mpi_controller.hpp"
+#include "mpi_controller_impl.hpp"
 
 class IoController {
    public:
-      virtual void init_io( MpiController* mpi, int runner_id ) = 0;
+      virtual void init_io( int runner_id ) = 0;
       virtual void init_core() = 0;
       virtual void fini() = 0;
       virtual void set_state_size_per_proc( std::vector<uint64_t> vec ) = 0;
@@ -39,7 +40,6 @@ class IoController {
       std::queue<io_state_id_t> m_state_pull_requests;
       std::queue<io_state_id_t> m_state_push_requests;
       std::queue<io_ckpt_t> m_state_dump_requests;
-      MpiController* m_mpi;
 };
 
 class IoException : public std::runtime_error {

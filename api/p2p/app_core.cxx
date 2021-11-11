@@ -6,6 +6,7 @@
 #include "StorageController/fti_controller.hpp"
 #include "StorageController/mpi_controller.hpp"
 #include "StorageController/storage_controller_impl.hpp"
+#include "StorageController/mpi_controller_impl.hpp"
 
 #include "StorageController/helpers.h"
 
@@ -103,7 +104,6 @@ std::vector<INDEX_MAP_T> local_index_map;
 std::vector<INDEX_MAP_T> local_index_map_hidden;
 
 FtiController io;
-MpiController mpi;
 int fti_protect_id;
 
 MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
@@ -144,7 +144,7 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 
         // TODO: only do this if is_p2p() !
         mpi.init( comm_split );
-        storage.io_init( &mpi, &io, runner_id );
+        storage.io_init( &io, runner_id );
         comm = mpi.comm();  // TODO: use mpi controller everywhere in api
 
         // To do good logging

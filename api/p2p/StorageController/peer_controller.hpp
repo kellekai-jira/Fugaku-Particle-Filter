@@ -12,6 +12,7 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <boost/system/error_code.hpp>
+#include "mpi_controller_impl.hpp"
 
 class Peer {
   public:
@@ -20,7 +21,7 @@ class Peer {
 
 class PeerController {
 public:
-    PeerController( IoController* io, void* zmq_context, MpiController* mpi );
+    PeerController( IoController* io, void* zmq_context );
     ~PeerController();
 
     /// checks if somebody wants to load states from the disk
@@ -40,8 +41,6 @@ private:
     void * state_server_socket;
 
     IoController* m_io;
-    MpiController* m_mpi;
-
 
     void handle_state_request();
     void handle_avail_request();

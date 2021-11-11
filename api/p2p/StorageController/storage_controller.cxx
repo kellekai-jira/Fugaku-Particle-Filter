@@ -30,10 +30,9 @@ int last_assimilation_cycle = 1;
 
 
 
-void StorageController::io_init( MpiController* mpi, IoController* io, int runner_id ) {
+void StorageController::io_init( IoController* io, int runner_id ) {
   
   MDBG("enter io_init");
-  m_mpi = mpi;
   m_io = io;
   m_io->register_callback( StorageController::callback );
 
@@ -43,7 +42,7 @@ void StorageController::io_init( MpiController* mpi, IoController* io, int runne
   m_runner_id = runner_id; 
 
   // heads dont return from init_io !!!
-  m_io->init_io(m_mpi, runner_id);
+  m_io->init_io(runner_id);
 
   m_io->init_core();
 
@@ -66,7 +65,7 @@ void StorageController::fini() {
   //delete m_peer;
   int dummy[2];
   m_io->sendrecv( &dummy[0], &dummy[1], sizeof(int), sizeof(int), IO_TAG_FINI, IO_MSG_ONE );
-  m_mpi->barrier("fti_comm_world");
+  mpi.barrier("fti_comm_world");
   m_io->fini();
 
   zmq_ctx_destroy(m_zmq_context);
@@ -84,7 +83,7 @@ void StorageController::callback() {
   static bool init = false;
   if( !init ) {
     // To do good logging
-    comm_rank = storage.m_mpi->rank();
+    comm_rank = mpi.rank();
 #ifdef REPORT_TIMING
 #ifndef REPORT_TIMING_ALL_RANKS
     if (comm_rank == 0)
@@ -326,10 +325,10 @@ void StorageController::m_request_post() {
   Message weight_message;
   int msg_size;
   m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_MST );
-  m_io->m_mpi->broadcast(msg_size);
+  mpi.broadcast(msg_size);
   std::vector<char> buffer(msg_size);
   m_io->recv( buffer.data(), msg_size, IO_TAG_POST, IO_MSG_MST );
-  m_io->m_mpi->broadcast(buffer);
+  mpi.broadcast(buffer);
 
   weight_message.ParseFromArray( buffer.data(), msg_size );
 
@@ -458,7 +457,7 @@ StorageController::StatePool StorageController::StatePool::operator--(int) {
 //======================================================================
 
 void StorageController::Server::init() { // FIXME: why not simply using constructor and destructor instead of init and fini ?
-  if( m_storage.m_mpi->rank() != 0 ) return;
+  if( mpi.rank() != 0 ) return;
   char * melissa_server_master_gp_node = getenv(
       "MELISSA_SERVER_MASTER_GP_NODE");
   if (melissa_server_master_gp_node == nullptr)
@@ -474,7 +473,7 @@ void StorageController::Server::init() { // FIXME: why not simply using construc
 }
 
 void StorageController::Server::fini() {
-  if( m_storage.m_mpi->rank() != 0 ) return;
+  if( mpi.rank() != 0 ) return;
   zmq_close(m_socket);
 }
 
@@ -485,7 +484,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   std::vector<io_state_id_t> dump;
   std::vector<io_state_id_t> pull;
 
-  if( m_storage.m_mpi->rank() == 0 ) {
+  if( mpi.rank() == 0 ) {
 
     // TODO server needs to assure that the minimum storage requirements
     // are fullfilled (minimum 2 slots for ckeckpoints and other peer requests).
@@ -520,13 +519,13 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
       dump.push_back(state);
     }
     
-    m_storage.m_mpi->broadcast(pull);
-    m_storage.m_mpi->broadcast(dump);
+    mpi.broadcast(pull);
+    mpi.broadcast(dump);
   
   } else {
     
-    m_storage.m_mpi->broadcast(pull);
-    m_storage.m_mpi->broadcast(dump);
+    mpi.broadcast(pull);
+    mpi.broadcast(dump);
     
     for(auto &x : pull) {
       storage->m_io->m_state_pull_requests.push( x );
@@ -539,7 +538,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   
   }
 
-  m_storage.m_mpi->barrier();
+  mpi.barrier();
 
   M_TRIGGER(STOP_PREFETCH,0);
 
@@ -551,7 +550,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
     
   int t, id;
   
-  if( m_storage.m_mpi->rank() == 0 ) {
+  if( mpi.rank() == 0 ) {
     
     Message request;
 
@@ -577,8 +576,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   }
   
-  m_storage.m_mpi->broadcast( t );
-  m_storage.m_mpi->broadcast( id );
+  mpi.broadcast( t );
+  mpi.broadcast( id );
   
   io_state_id_t state_id{ t, id } ;
 
@@ -617,7 +616,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
     
   M_TRIGGER(START_PUSH_WEIGHT_TO_SERVER, t);
   
-  if( m_mpi->rank() == 0 ) {
+  if( mpi.rank() == 0 ) {
   
     send_message(server.m_socket, m);
     MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
@@ -625,7 +624,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
 
   }
 
-  m_mpi->barrier();
+  mpi.barrier();
 
   if (t > last_assimilation_cycle) {  // what assimilation cycle are we working on? important for auto removing later
     last_assimilation_cycle = t;

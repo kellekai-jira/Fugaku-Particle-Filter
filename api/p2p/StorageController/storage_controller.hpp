@@ -12,6 +12,7 @@
 #include <vector>
 #include "helpers.h"
 #include "ZeroMQ.h"
+#include "mpi_controller_impl.hpp"
 
 #include "p2p.pb.h"
 
@@ -20,8 +21,6 @@
 #define STORAGE_MAX_PREFETCH 4 // 5 states
 
 using namespace melissa_p2p;
-
-static MpiController mpi_controller_null;
 
 class StorageController {
 
@@ -32,7 +31,7 @@ class StorageController {
       m_request_interval(10000),
       server(*this) {}
 
-    void io_init( MpiController* mpi, IoController* io, int runner_id );
+    void io_init( IoController* io, int runner_id );
     void init( size_t capacity, size_t state_size );
     void fini();
 
@@ -88,7 +87,6 @@ class StorageController {
 
     IoController* m_io;
     //PeerController* m_peer;
-    MpiController* m_mpi;
     
     void* m_zmq_context;
     int m_runner_id;

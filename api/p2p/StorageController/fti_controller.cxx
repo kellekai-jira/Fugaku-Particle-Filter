@@ -51,11 +51,10 @@ void FtiController::update( io_id_t id, void* buffer, size_t size ) {
   FTI_Protect(id, buffer, size, m_io_type_map[m_var_id_map[id].type]);
 }
 
-void FtiController::init_io( MpiController* mpi, int runner_id ) {
-  this->m_mpi = mpi;
+void FtiController::init_io( int runner_id ) {
   std::stringstream config_file;
   config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
-  FTI_Init( config_file.str().c_str(), m_mpi->comm() );
+  FTI_Init( config_file.str().c_str(), mpi.comm() );
   m_runner_id = runner_id;
 }
 
@@ -67,8 +66,8 @@ void FtiController::init_core() {
   // FTI_COMM_WORLD is the MPI_COMM_WORLD replacement
   // so FTI_COMM_WORLD contains all app cores if you are on an app core
   // and containes all FTI headranks if you are on an head rank
-  m_mpi->register_comm( "fti_comm_world", FTI_COMM_WORLD );
-  m_mpi->set_comm( "fti_comm_world" );
+  mpi.register_comm( "fti_comm_world", FTI_COMM_WORLD );
+  mpi.set_comm( "fti_comm_world" );
   char tmp[FTI_BUFS];
   if( FTI_AmIaHead() ) {
     snprintf(tmp, FTI_BUFS, "%s.head", m_kernel.conf->mTmpDir);
@@ -190,7 +189,7 @@ bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
 void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
-  m_mpi->barrier();
+  mpi.barrier();
 }
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
@@ -212,9 +211,9 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
         MERR("failed to remove checkpoint path ''", g_path_string.c_str());
       }
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
-      m_mpi->barrier();
+      mpi.barrier();
     } else {
-      m_mpi->barrier();
+      mpi.barrier();
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
   }
@@ -254,7 +253,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   std::stringstream L1_META_CKPT;
   L1_META_CKPT << L1_META_BASE.str() << "/l1/" << std::to_string(to_ckpt_id(state_id));
  
-  m_mpi->barrier();
+  mpi.barrier();
   
   if( from == IO_STORAGE_L1 ) {
     stage_l1l2( L1_CKPT.str(), L1_META_CKPT.str(), L2_TEMP.str(), L2_CKPT.str(), state_id  );
@@ -263,7 +262,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
     stage_l2l1( L2_CKPT.str(), L1_TEMP.str(), L1_META_TEMP.str(), L1_CKPT.str(), L1_META_CKPT.str(), state_id  );
   }
 
-  m_mpi->barrier();
+  mpi.barrier();
   
 }
 
@@ -280,7 +279,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     IO_TRY( mkdir( L2_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
   }
 
-  m_mpi->barrier();
+  mpi.barrier();
 
   std::stringstream L2_CKPT_FN;
   L2_CKPT_FN << L2_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
@@ -370,14 +369,14 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   metafs.flush();
   metafs.close();
 
-  m_mpi->barrier();
+  mpi.barrier();
 
   if( m_dict_bool["master_global"] ) {
     IO_TRY( std::rename( L2_TEMP.c_str(), L2_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
     update_metadata( state_id, IO_STORAGE_L2 );
   }
 
-  m_mpi->barrier();
+  mpi.barrier();
 
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
@@ -485,7 +484,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     update_metadata( state_id, IO_STORAGE_L1 );
   }
 
-  m_mpi->barrier();
+  mpi.barrier();
 
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
