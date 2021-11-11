@@ -104,7 +104,7 @@ enum Phase
 #else
 #define MDBG(x ...) \
     do { \
-        if(comm_rank == 0) { \
+        if( 1 /*comm_rank == 0*/) { \
             char str[1024]; \
             std::snprintf(str, 1024, x); \
             std::stringstream ss; \
