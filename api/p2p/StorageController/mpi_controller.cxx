@@ -36,16 +36,16 @@ void mpi_request_t::free() {
 MpiController::MpiController()
 {
   MDBG("MpiController::MpiController");
+  void *array[10];
+  size_t size;
+  size = backtrace(array, 10);
+  backtrace_symbols_fd(array, size, STDOUT_FILENO);
   m_comms.insert( std::pair<std::string, mpi_comm_t>( "global_comm", { MPI_COMM_NULL, -1, -1 } ) );
 }
 
 void MpiController::init( MPI_Comm & comm )
 {
   MDBG("MpiController::init");
-  void *array[10];
-  size_t size;
-  size = backtrace(array, 10);
-  backtrace_symbols_fd(array, size, STDOUT_FILENO);
   // TODO init mit global comm
     m_comm_set = "global_comm";
     m_comms[m_comm_set].comm = comm;
