@@ -73,7 +73,7 @@ run_melissa_da_study(
         'MELISSA_LORENZ_OBSERVATION_PERCENT': '20',
         'MELISSA_LORENZ_STATE_DIMENSION': __env_state_size_elem,
         'MELISSA_LORENZ_OBSERVATION_DIR': __env_obs_dir,
-        'MELISSA_DA_TEST_FIFO': '/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/timing.trace',
+        'MELISSA_DA_TEST_FIFO': global_dir + '/timing.trace',
         'MELISSA_DA_TIMING_REPORT': str(time.time() + __env_write_trace)
         },
 
