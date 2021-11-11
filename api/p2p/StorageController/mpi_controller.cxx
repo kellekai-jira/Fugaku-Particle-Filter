@@ -96,3 +96,38 @@ MPI_Fint MpiController::fortranComm()
 {
     return MPI_Comm_c2f(comm());
 }
+
+void MpiController::broadcast( std::vector<char> & vec, std::string key, int root ) {
+  int rank = m_comms[key].rank;
+  int count;
+  MPI_Comm comm = m_comms[key].comm;
+  if ( rank == root ) {
+    count = vec.size();
+  }
+  MPI_Bcast( &count, 1, MPI_INT, root, comm );
+  if ( rank != root ) { 
+    vec.resize( count );
+  }
+  MPI_Bcast( vec.data(), count, MPI_CHAR, root, comm );
+}
+
+void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key, int root ) {
+  int rank = m_comms[key].rank;
+  int count;
+  MPI_Comm comm = m_comms[key].comm;
+  if ( rank == root ) {
+    count = vec.size();
+  }
+  MPI_Bcast( &count, 1, MPI_INT, root, comm );
+  if ( rank != root ) { 
+    vec.resize( count );
+  }
+  count *= sizeof(io_state_id_t);
+  MPI_Bcast( vec.data(), count, MPI_BYTE, root, comm );
+}
+
+void MpiController::broadcast( int & value, std::string key, int root ) {
+  int rank = m_comms[key].rank;
+  MPI_Comm comm = m_comms[key].comm;
+  MPI_Bcast( &value, 1, MPI_INT, root, comm );
+}

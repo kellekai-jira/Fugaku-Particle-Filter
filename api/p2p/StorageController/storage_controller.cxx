@@ -509,6 +509,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
       io_state_id_t state = { it->t(), it->id() };
       storage->m_io->m_state_pull_requests.push( state );
+      pull.push_back(state);
     }
 
     auto dump_states = response.prefetch_response().dump_states();
