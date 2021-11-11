@@ -10,15 +10,6 @@
 #include "utils.h"
 #include "io_controller_defs.hpp"
 
-struct mpi_comm_t {
-  MPI_Comm comm;
-  int size;
-  int rank;
-};
-
-extern std::string m_comm_set;
-extern std::map<std::string,mpi_comm_t> m_comms;
-
 struct mpi_request_t {
     MPI_Request mpi_request;
     char errstr[MPI_MAX_ERROR_STRING];
@@ -53,6 +44,13 @@ class MpiController
         MPI_Fint fortranComm();
 
     private:
+        static std::string m_comm_set;
+        struct mpi_comm_t {
+          MPI_Comm comm;
+          int size;
+          int rank;
+        };
+        std::map<std::string,mpi_comm_t> m_comms;
 
 };
 

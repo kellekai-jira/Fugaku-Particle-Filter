@@ -2,8 +2,7 @@
 #include <cassert>
 #include "utils.h"
     
-std::string m_comm_set;
-std::map<std::string,mpi_comm_t> m_comms;
+std::string MpiController::m_comm_set = "global_comm";
 
 bool mpi_request_t::test() {
   int flag = 0;
