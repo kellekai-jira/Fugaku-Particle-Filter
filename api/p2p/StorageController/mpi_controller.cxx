@@ -35,7 +35,7 @@ void mpi_request_t::free() {
 
 MpiController::MpiController()
 {
-  MDBG("MpiController::MpiController");
+  MDBG("MpiController::MpiController (%p)", this);
   void *array[10];
   size_t size;
   size = backtrace(array, 10);
@@ -45,7 +45,7 @@ MpiController::MpiController()
 
 void MpiController::init( MPI_Comm & comm )
 {
-  MDBG("MpiController::init");
+  MDBG("MpiController::init (%p)", this);
   // TODO init mit global comm
     m_comm_set = "global_comm";
     m_comms[m_comm_set].comm = comm;
@@ -55,7 +55,7 @@ void MpiController::init( MPI_Comm & comm )
 
 void MpiController::register_comm( std::string key, MPI_Comm & comm )
 {
-  MDBG("MpiController::register_comm");
+  MDBG("MpiController::register_comm (%p)", this);
     int size; MPI_Comm_size( comm, &size );
     int rank; MPI_Comm_rank( comm, &rank );
     mpi_comm_t mpi_comm = { comm, size, rank }; 
@@ -64,7 +64,7 @@ void MpiController::register_comm( std::string key, MPI_Comm & comm )
 
 void MpiController::set_comm( std::string key )
 {
-  MDBG("MpiController::set_comm");
+  MDBG("MpiController::set_comm (%s)", this);
     assert( m_comms.count(key) > 0 && "invalid key for MPI communicator!");
 
     m_comm_set = key;
@@ -101,6 +101,7 @@ MPI_Fint MpiController::fortranComm()
 }
 
 void MpiController::broadcast( std::vector<char> & vec, std::string key, int root ) {
+  MDBG("MpiController::broadcast(char) (%s)", this);
   int rank = m_comms[key].rank;
   int count;
   MPI_Comm comm = m_comms[key].comm;
@@ -115,6 +116,7 @@ void MpiController::broadcast( std::vector<char> & vec, std::string key, int roo
 }
 
 void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key, int root ) {
+  MDBG("MpiController::broadcast(int) (%s)", this);
   int rank = m_comms[key].rank;
   int count;
   MPI_Comm comm = m_comms[key].comm;
@@ -130,6 +132,7 @@ void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key
 }
 
 void MpiController::broadcast( int & value, std::string key, int root ) {
+  MDBG("MpiController::broadcast(value) (%s)", this);
   int rank = m_comms[key].rank;
   MPI_Comm comm = m_comms[key].comm;
   MPI_Bcast( &value, 1, MPI_INT, root, comm );
