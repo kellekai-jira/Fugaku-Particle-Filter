@@ -4,7 +4,6 @@
 
 #include "api_common.h"
 #include "StorageController/fti_controller.hpp"
-#include "StorageController/mpi_controller.hpp"
 #include "StorageController/storage_controller_impl.hpp"
 #include "StorageController/mpi_controller_impl.hpp"
 

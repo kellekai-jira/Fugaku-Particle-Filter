@@ -82,6 +82,7 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
+    MDBG("initializing callback");
     // To do good logging
     comm_rank = mpi.rank();
 #ifdef REPORT_TIMING
@@ -93,18 +94,24 @@ void StorageController::callback() {
     M_TRIGGER(START_INIT, 0);
     }
 #endif
+    MDBG("initializing callback");
     if ( comm_rank == 0 ) { 
       storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
       storage.server.init();
     }
+    MDBG("initializing callback");
     storage.m_io->init_core();
+    MDBG("initializing callback");
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
+    MDBG("initializing callback");
 
     size_t capacity;
     storage.m_io->recv( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
+    MDBG("initializing callback");
     std::vector<uint64_t> size_proc(storage.m_io->m_dict_int["app_procs_node"]), size_node;
     storage.m_io->recv( size_proc.data(), sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
+    MDBG("initializing callback");
 
     size_t state_size_node = 0;
     for(int i=0; i<storage.m_io->m_dict_int["app_procs_node"]; i++) {
@@ -143,6 +150,7 @@ void StorageController::callback() {
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
     }
+    MDBG("initializing callback");
     M_TRIGGER(STOP_INIT, 0);
   }
 
