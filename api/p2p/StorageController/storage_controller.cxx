@@ -393,9 +393,17 @@ void StorageController::m_request_peer() {
 
 void StorageController::m_request_pull() {
   if( m_io->probe( IO_TAG_PULL ) ) {
-    if(m_io->m_dict_bool["master_global"]) std::cout << "head received PULL request" << std::endl;
-    if(!m_io->is_local(m_io->m_state_pull_requests.front())) {
-      pull( m_io->m_state_pull_requests.front() );
+    io_state_id_t state_id;
+    if(m_io->m_dict_bool["master_global"]) {
+      std::cout << "head received PULL request" << std::endl;
+      for(int i=1; i<mpi.size(); i++) {
+        MPI_Send( NULL, 0, MPI_BYTE, i, IO_TAG_PULL, mpi.comm() );
+      }
+      state_id = m_io->m_state_pull_requests.front();
+    }
+    mpi.broadcast(state_id);
+    if(!m_io->is_local(state_id)) {
+      pull( state_id );
     }
     m_io->m_state_pull_requests.pop();
   }
@@ -495,7 +503,6 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   M_TRIGGER(START_PREFETCH,0);
   
   std::vector<io_state_id_t> dump;
-  std::vector<io_state_id_t> pull;
 
   if( mpi.rank() == 0 ) {
 
@@ -521,7 +528,6 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
       io_state_id_t state = { it->t(), it->id() };
       storage->m_io->m_state_pull_requests.push( state );
-      pull.push_back(state);
     }
 
     auto dump_states = response.prefetch_response().dump_states();
@@ -532,26 +538,22 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
       dump.push_back(state);
     }
     
-    mpi.broadcast(pull);
     mpi.broadcast(dump);
   
   } else {
     
-    mpi.broadcast(pull);
     mpi.broadcast(dump);
     
-    for(auto &x : pull) {
-      storage->m_io->m_state_pull_requests.push( x );
-    }
-
     for(auto &x : dump) {
       storage->m_io->remove( x, IO_STORAGE_L1 );
       storage->state_pool--;
     }
   
   }
-
+  
+  MDBG("in prefetch/dump query [before barrier]");
   mpi.barrier();
+  MDBG("in prefetch/dump query [after barrier]");
 
   M_TRIGGER(STOP_PREFETCH,0);
 

@@ -404,6 +404,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
   M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
   
+  MDBG("pulling state_id '{t: %d, id: %d}'", state_id.id, state_id.id);
+
   struct stat info;
   IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
@@ -419,6 +421,9 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   std::stringstream L2_META_FN;
   L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
+  
+  MDBG("global ckpt file: ", gfn);
+  MDBG("global meta file: ", mfn);
 
   int fd = open( gfn.c_str(), O_RDWR );
   if( fd < 0 ) {

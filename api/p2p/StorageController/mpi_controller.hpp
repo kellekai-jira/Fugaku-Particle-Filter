@@ -38,7 +38,8 @@ class MpiController
         void barrier( std::string key = m_comm_set );
         void broadcast( std::vector<io_state_id_t> & buffer, std::string key = m_comm_set, int root = 0 );
         void broadcast( std::vector<char> & buffer, std::string key = m_comm_set, int root = 0 );
-        void broadcast( int & value, std::string key = m_comm_set, int root = 0 );
+        template<class T>  
+				void broadcast( T & value, std::string key = m_comm_set, int root = 0 );
         void finalize();
 
         MPI_Fint fortranComm();
@@ -53,5 +54,12 @@ class MpiController
         std::map<std::string,mpi_comm_t> m_comms;
 
 };
+
+template<class T>
+void MpiController::broadcast( T & value, std::string key, int root ) {
+  MDBG("MpiController::broadcast(value) (%s)", this);
+  int elem_size = sizeof(T);
+  MPI_Bcast( &value, elem_size, MPI_BYTE, root, m_comms[key].comm );
+}
 
 #endif // __MPIMANAGER__

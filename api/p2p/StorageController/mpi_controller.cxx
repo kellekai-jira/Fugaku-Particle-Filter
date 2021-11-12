@@ -131,9 +131,3 @@ void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key
   MPI_Bcast( vec.data(), count, MPI_BYTE, root, comm );
 }
 
-void MpiController::broadcast( int & value, std::string key, int root ) {
-  MDBG("MpiController::broadcast(value) (%s)", this);
-  int rank = m_comms[key].rank;
-  MPI_Comm comm = m_comms[key].comm;
-  MPI_Bcast( &value, 1, MPI_INT, root, comm );
-}
