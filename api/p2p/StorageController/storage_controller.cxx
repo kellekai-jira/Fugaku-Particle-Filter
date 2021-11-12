@@ -98,15 +98,6 @@ void StorageController::callback() {
     if ( comm_rank == 0 ) { 
       storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
       storage.server.init();
-  		MPI_Group group_global, group_worker;
-  		MPI_Comm_group( mpi.comm("global_comm"), &group_global );
-  		MPI_Comm_group( mpi.comm("fti_comm_world"), &group_worker );
-
-      std::vector<int> worker_ranks(mpi.size("fti_comm_world"));
-      std::iota(worker_ranks.begin(), worker_ranks.end(), 0); 
-      storage.m_worker_ranks.resize(mpi.size("fti_comm_world"));
-
-      MPI_Group_translate_ranks( group_worker, mpi.size("fti_comm_world"), worker_ranks.data(), group_global, storage.m_worker_ranks.data() );
     }
     MDBG("initializing callback");
     storage.m_io->init_core();
