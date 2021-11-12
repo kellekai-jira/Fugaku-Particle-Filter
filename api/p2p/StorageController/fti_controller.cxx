@@ -151,14 +151,22 @@ void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t me
 
 bool FtiController::probe( io_tag_t tag ) {
   if( FTI_AmIaHead() ) {
-    if( tag == IO_TAG_PULL ) {
-      return !m_state_pull_requests.empty();
-    } else if( tag == IO_TAG_PUSH ) {
-      return !m_state_push_requests.empty();
-    } else if( tag == IO_TAG_DUMP ) {
-      return !m_state_dump_requests.empty();
+    if( m_dict_bool["master_global"] ) { 
+      if( tag == IO_TAG_PULL ) {
+        return !m_state_pull_requests.empty();
+      } else if( tag == IO_TAG_PUSH ) {
+        return !m_state_push_requests.empty();
+      } else if( tag == IO_TAG_DUMP ) {
+        return !m_state_dump_requests.empty();
+      } else {
+        return FTI_HeadProbe( m_io_tag_map[tag] );
+      }
     } else {
-      return FTI_HeadProbe( m_io_tag_map[tag] );
+      int flag; MPI_Iprobe( 0, tag, mpi.comm(), &flag, MPI_STATUS_IGNORE ); 
+      if( flag ) {
+        MPI_Recv( NULL, 0, MPI_BYTE, 0, tag, mpi.comm(), MPI_STATUS_IGNORE ); 
+      }
+      return (bool)flag;
     }
   } else {
     return FTI_AppProbe( m_io_tag_map[tag] );

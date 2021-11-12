@@ -98,6 +98,15 @@ void StorageController::callback() {
     if ( comm_rank == 0 ) { 
       storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
       storage.server.init();
+  		MPI_Group group_global, group_worker;
+  		MPI_Comm_group( mpi.comm("global_comm"), &group_global );
+  		MPI_Comm_group( mpi.comm("fti_comm_world"), &group_worker );
+
+      std::vector<int> worker_ranks(mpi.size("fti_comm_world"));
+      std::iota(worker_ranks.begin(), worker_ranks.end(), 0); 
+      storage.m_worker_ranks.resize(mpi.size("fti_comm_world"));
+
+      MPI_Group_translate_ranks( group_worker, mpi.size("fti_comm_world"), worker_ranks.data(), group_global, storage.m_worker_ranks.data() );
     }
     MDBG("initializing callback");
     storage.m_io->init_core();
@@ -326,7 +335,12 @@ void StorageController::m_query_server() {
 
 void StorageController::m_request_post() {
   M_TRIGGER(START_MODEL_MESSAGE,0);
-  if(m_io->m_dict_bool["master_global"]) std::cout << "head received INFORMATION request" << std::endl;
+  if(m_io->m_dict_bool["master_global"]) {
+    std::cout << "head received INFORMATION request" << std::endl;
+    for(int i=1; i<mpi.size(); i++) {
+      MPI_Send( NULL, 0, MPI_BYTE, i, IO_TAG_POST, mpi.comm() );
+    }
+  }
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
 

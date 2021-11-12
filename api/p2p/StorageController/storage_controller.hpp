@@ -91,7 +91,8 @@ class StorageController {
     void* m_zmq_context;
     int m_runner_id;
     int m_cycle;
-
+    
+    std::vector<int> m_worker_ranks;
     std::map<io_id_t,io_state_id_t> m_ckpted_states;
     std::map<io_id_t,io_state_id_t> m_cached_states;
     

@@ -50,7 +50,8 @@ enum io_tag_t {
   IO_TAG_PUSH,
   IO_TAG_POST,
   IO_TAG_DUMP,
-  IO_TAG_FINI
+  IO_TAG_FINI,
+  IO_TAG_WORK
 };
 
 struct io_state_id_t {
