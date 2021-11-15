@@ -2,11 +2,10 @@
 #include <cassert>
 #include "utils.h"
 
-static int bcast_counter_val = 0;
-static int bcast_counter_int = 0;
-static int bcast_counter_char = 0;
-
 std::string MpiController::m_comm_set = "global_comm";
+int MpiController::bcast_counter_val = 0;
+int MpiController::bcast_counter_int = 0;
+int MpiController::bcast_counter_char = 0;
 
 bool mpi_request_t::test() {
   int flag = 0;

@@ -46,6 +46,9 @@ class MpiController
 
     private:
         static std::string m_comm_set;
+        static int bcast_counter_val;
+        static int bcast_counter_int;
+        static int bcast_counter_char;
         struct mpi_comm_t {
           MPI_Comm comm;
           int size;
@@ -57,9 +60,15 @@ class MpiController
 
 template<class T>
 void MpiController::broadcast( T & value, std::string key, int root ) {
-  MDBG("MpiController::broadcast(value) (%s)", this);
+  int bcast_counter_val_root;
+  if ( m_comms[key].rank == root ) {
+    bcast_counter_val_root = bcast_counter_val;
+  }
+  MPI_Bcast( &bcast_counter_val_root, 1, MPI_INT, root, m_comms[key].comm );
   int elem_size = sizeof(T);
   MPI_Bcast( &value, elem_size, MPI_BYTE, root, m_comms[key].comm );
+  MDBG("MpiController::broadcast(value) (root count: %d, my count: %d)", bcast_counter_val_root, bcast_counter_val);
+  bcast_counter_val++;
 }
 
 #endif // __MPIMANAGER__
