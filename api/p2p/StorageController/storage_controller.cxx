@@ -314,18 +314,16 @@ void StorageController::m_query_server() {
 
 void StorageController::m_communicate( io_tag_t tag ) {
   assert( m_io->m_dict_bool["master_global"] && "must only be called from head master!" ); 
-  std::vector<MPI_Request> send_request(mpi.size());
-  std::vector<MPI_Request> recv_request(mpi.size());
-  std::vector<MPI_Status> send_status(mpi.size());
-  std::vector<MPI_Status> recv_status(mpi.size());
-  std::vector<int> send_buf(mpi.size());
-  std::vector<int> recv_buf(mpi.size());
+  std::vector<MPI_Request> send_request(mpi.size()-1);
+  std::vector<MPI_Request> recv_request(mpi.size()-1);
+  std::vector<MPI_Status> send_status(mpi.size()-1);
+  std::vector<MPI_Status> recv_status(mpi.size()-1);
   for(int i=1; i<mpi.size(); i++) {
-    MPI_Isend( &send_buf[i-1], 1, MPI_INT, i, tag, mpi.comm(), &send_request[i-1] );
-    MPI_Irecv( &recv_buf[i-1], 1, MPI_INT, i, tag, mpi.comm(), &recv_request[i-1] );
+    MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i-1] );
+    MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i-1] );
   }
-  MPI_Waitall( mpi.size(), &send_request[0], &send_status[0] );
-  MPI_Waitall( mpi.size(), &recv_request[0], &recv_status[0] );
+  MPI_Waitall( mpi.size()-1, &send_request[0], &send_status[0] );
+  MPI_Waitall( mpi.size()-1, &recv_request[0], &recv_status[0] );
 }
 
 void StorageController::m_request_post() {

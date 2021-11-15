@@ -171,9 +171,8 @@ bool FtiController::probe( io_tag_t tag ) {
     } else {
       int flag; MPI_Iprobe( 0, tag, mpi.comm(), &flag, MPI_STATUS_IGNORE ); 
       if( flag ) {
-        int rbuf,sbuf;
-        MPI_Recv( &rbuf, 1, MPI_INT, 0, tag, mpi.comm(), MPI_STATUS_IGNORE ); 
-        MPI_Send( &sbuf, 1, MPI_INT, 0, tag, mpi.comm() ); 
+        MPI_Recv( NULL, 0, MPI_BYTE, 0, tag, mpi.comm(), MPI_STATUS_IGNORE ); 
+        MPI_Send( NULL, 0, MPI_BYTE, 0, tag, mpi.comm() ); 
       }
       return (bool)flag;
     }
