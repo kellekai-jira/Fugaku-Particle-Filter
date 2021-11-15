@@ -319,8 +319,8 @@ void StorageController::m_communicate( io_tag_t tag ) {
   std::vector<MPI_Status> send_status(mpi.size());
   std::vector<MPI_Status> recv_status(mpi.size());
   for(int i=1; i<mpi.size(); i++) {
-    MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i] );
-    MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i] );
+    MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i-1] );
+    MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i-1] );
   }
   MPI_Waitall( mpi.size(), send_request.data(), send_status.data() );
 }
