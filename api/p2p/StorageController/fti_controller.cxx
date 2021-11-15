@@ -521,6 +521,7 @@ bool FtiController::is_local( io_state_id_t state_id ) {
   std::bitset<8> x_dcp(st.dcp);
   std::bitset<8> x_device(st.device);
   std::stringstream ss;
+  ss << "id: " << to_ckpt_id(state_id) << std::endl;
   ss << "level: " << x_level << std::endl;
   ss << "io: " << x_level << std::endl;
   ss << "elastic: " << x_level << std::endl;
