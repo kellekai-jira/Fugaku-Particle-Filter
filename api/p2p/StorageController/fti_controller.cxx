@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <chrono>
 #include <sys/mman.h>
+#include <bitset>
 
 #include <fstream>
 
@@ -514,6 +515,18 @@ bool FtiController::is_local( io_state_id_t state_id ) {
   M_TRIGGER(START_CHECK_LOCAL, state_id.t);
   FTIT_stat st;
   FTI_Stat( to_ckpt_id(state_id), &st );
+  std::bitset<8> x_level(st.level);
+  std::bitset<8> x_io(st.io);
+  std::bitset<8> x_elastic(st.elastic);
+  std::bitset<8> x_dcp(st.dcp);
+  std::bitset<8> x_device(st.device);
+  std::stringstream ss;
+  ss << "level: " << x_level << std::endl;
+  ss << "io: " << x_level << std::endl;
+  ss << "elastic: " << x_level << std::endl;
+  ss << "dcp: " << x_level << std::endl;
+  ss << "device: " << x_level << std::endl;
+  MDBG("%s", ss.str().c_str());
   bool res = FTI_ST_IS_LOCAL(st.level);
   M_TRIGGER(STOP_CHECK_LOCAL, state_id.id);
   return res;
