@@ -322,7 +322,8 @@ void StorageController::m_communicate( io_tag_t tag ) {
     MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i-1] );
     MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i-1] );
   }
-  MPI_Waitall( mpi.size(), send_request.data(), send_status.data() );
+  MPI_Waitall( mpi.size(), &send_request[0], &send_status[0] );
+  MPI_Waitall( mpi.size(), &recv_request[0], &recv_status[0] );
 }
 
 void StorageController::m_request_post() {
