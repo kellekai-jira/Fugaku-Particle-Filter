@@ -120,6 +120,7 @@ void MpiController::broadcast( std::vector<char> & vec, std::string key, int roo
   }
   MPI_Bcast( vec.data(), count, MPI_CHAR, root, comm );
   MDBG("MpiController::broadcast(char) (root count: %d, my count: %d)", bcast_counter_char_root, bcast_counter_char);
+  bcast_counter_char++;
 }
 
 void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key, int root ) {
@@ -139,5 +140,6 @@ void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key
   count *= sizeof(io_state_id_t);
   MPI_Bcast( vec.data(), count, MPI_BYTE, root, comm );
   MDBG("MpiController::broadcast(int) (root count: %d, my count: %d)", bcast_counter_int_root, bcast_counter_int);
+  bcast_counter_int++;
 }
 
