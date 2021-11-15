@@ -594,7 +594,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   mpi.broadcast( t );
   mpi.broadcast( id );
   
-  io_state_id_t state_id( t, id ) ;
+  io_state_id_t state_id( t, id );
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
@@ -609,7 +609,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   struct stat info;
   IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
 
-  MDBG("delete_request -> {t: %d, id: %d}", state_id.t, state_id.t);
+  MDBG("delete_request -> {t: %d, id: %d}", state_id.t, state_id.id);
   assert(!storage->m_io->is_local(state_id));
   storage->state_pool--;
   std::cout << "free: " << storage->state_pool.free() << std::endl;
