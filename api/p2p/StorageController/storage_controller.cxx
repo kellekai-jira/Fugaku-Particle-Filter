@@ -594,7 +594,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   mpi.broadcast( t );
   mpi.broadcast( id );
   
-  io_state_id_t state_id{ t, id } ;
+  io_state_id_t state_id( t, id ) ;
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
