@@ -614,6 +614,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   storage->state_pool--;
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
+  
+  mpi.barrier();
 
   M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
   M_TRIGGER(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
