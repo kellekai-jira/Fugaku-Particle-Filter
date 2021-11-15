@@ -1,7 +1,11 @@
 #include "mpi_controller.hpp"
 #include <cassert>
 #include "utils.h"
-    
+
+static int bcast_counter_val = 0;
+static int bcast_counter_int = 0;
+static int bcast_counter_char = 0;
+
 std::string MpiController::m_comm_set = "global_comm";
 
 bool mpi_request_t::test() {
@@ -101,33 +105,39 @@ MPI_Fint MpiController::fortranComm()
 }
 
 void MpiController::broadcast( std::vector<char> & vec, std::string key, int root ) {
-  MDBG("MpiController::broadcast(char) (%s)", this);
   int rank = m_comms[key].rank;
   int count;
+  int bcast_counter_char_root;
   MPI_Comm comm = m_comms[key].comm;
   if ( rank == root ) {
     count = vec.size();
+    bcast_counter_char_root = bcast_counter_char;
   }
+  MPI_Bcast( &bcast_counter_char_root, 1, MPI_INT, root, comm );
   MPI_Bcast( &count, 1, MPI_INT, root, comm );
   if ( rank != root ) { 
     vec.resize( count );
   }
   MPI_Bcast( vec.data(), count, MPI_CHAR, root, comm );
+  MDBG("MpiController::broadcast(char) (root count: %d, my count: %d)", bcast_counter_char_root, bcast_counter_char);
 }
 
 void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key, int root ) {
-  MDBG("MpiController::broadcast(int) (%s)", this);
   int rank = m_comms[key].rank;
   int count;
+  int bcast_counter_int_root;
   MPI_Comm comm = m_comms[key].comm;
   if ( rank == root ) {
     count = vec.size();
+    bcast_counter_int_root = bcast_counter_int;
   }
+  MPI_Bcast( &bcast_counter_int_root, 1, MPI_INT, root, comm );
   MPI_Bcast( &count, 1, MPI_INT, root, comm );
   if ( rank != root ) { 
     vec.resize( count );
   }
   count *= sizeof(io_state_id_t);
   MPI_Bcast( vec.data(), count, MPI_BYTE, root, comm );
+  MDBG("MpiController::broadcast(int) (root count: %d, my count: %d)", bcast_counter_int_root, bcast_counter_int);
 }
 
