@@ -67,7 +67,9 @@ class FtiController : public IoController {
     std::map<io_msg_t,int> m_io_msg_map;
     std::map<io_tag_t,int> m_io_tag_map;
     std::map<io_id_t,io_var_t> m_var_id_map;
-    io_id_t m_id_counter;
+    int m_next_garbage_coll;
+    io_id_t m_id_counter;  
+    int m_last_cycle;
     FTI::Kernel m_kernel;
     int m_runner_id;
     std::vector<uint64_t> m_state_sizes_per_rank;

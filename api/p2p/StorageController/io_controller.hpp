@@ -39,7 +39,8 @@ class IoController {
 
       std::queue<io_state_id_t> m_state_pull_requests;
       std::queue<io_state_id_t> m_state_push_requests;
-      std::queue<io_ckpt_t> m_state_dump_requests;
+      std::queue<io_state_id_t> m_state_dump_requests;
+
 };
 
 class IoException : public std::runtime_error {

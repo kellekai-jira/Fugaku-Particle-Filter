@@ -81,6 +81,8 @@ class StorageController {
 
     bool m_trigger_query() { return (m_request_interval % m_request_counter++) == 0; }
 
+    void m_communicate( io_tag_t tag );
+
 //----------------------------------------------------------------------------------------
 //  VARIABLES
 //----------------------------------------------------------------------------------------

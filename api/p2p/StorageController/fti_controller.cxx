@@ -57,6 +57,7 @@ void FtiController::init_io( int runner_id ) {
   config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
   FTI_Init( config_file.str().c_str(), mpi.comm() );
   m_runner_id = runner_id;
+  m_next_garbage_coll = time(NULL) + 10;
 }
 
 void FtiController::set_state_size_per_proc( std::vector<uint64_t> vec ) {
@@ -90,6 +91,7 @@ void FtiController::init_core() {
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PULL, IO_TAG_PULL + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_PUSH, IO_TAG_PUSH + 1000000 ) );
   m_io_tag_map.insert( std::pair<io_tag_t,int>( IO_TAG_FINI, IO_TAG_FINI + 1000000 ) );
+  m_dict_int.insert( std::pair<std::string,int>( "current_cycle", 0 ) );
   m_dict_int.insert( std::pair<std::string,int>( "nodes", m_kernel.topo->nbNodes ) );
   m_dict_int.insert( std::pair<std::string,int>( "procs_node", m_kernel.topo->nodeSize ) );
   int app_procs_node = m_kernel.topo->nodeSize - m_kernel.topo->nbHeads;
@@ -158,7 +160,11 @@ bool FtiController::probe( io_tag_t tag ) {
       } else if( tag == IO_TAG_PUSH ) {
         return !m_state_push_requests.empty();
       } else if( tag == IO_TAG_DUMP ) {
-        return !m_state_dump_requests.empty();
+        if (time(NULL) > m_next_garbage_coll) {
+            m_next_garbage_coll = time(NULL) + 10;
+            return true;
+        }
+        return false;
       } else {
         return FTI_HeadProbe( m_io_tag_map[tag] );
       }
@@ -166,6 +172,7 @@ bool FtiController::probe( io_tag_t tag ) {
       int flag; MPI_Iprobe( 0, tag, mpi.comm(), &flag, MPI_STATUS_IGNORE ); 
       if( flag ) {
         MPI_Recv( NULL, 0, MPI_BYTE, 0, tag, mpi.comm(), MPI_STATUS_IGNORE ); 
+        MPI_Send( NULL, 0, MPI_BYTE, 0, tag, mpi.comm() ); 
       }
       return (bool)flag;
     }

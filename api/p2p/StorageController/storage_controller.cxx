@@ -18,8 +18,6 @@
 
 //dirty:
 time_t next_try_delete = 0;
-std::queue<io_state_id_t> del_q;
-int last_assimilation_cycle = 1;
 
 //======================================================================
 //  STORAGE CONTROLLER INITIALIZATION
@@ -190,17 +188,7 @@ void StorageController::callback() {
   // app core may tell the head to finish application. This will end in a call to fti_finalize on all cores (app and fti head cores) to ensure that the last checkpoint finished writing
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 
-
-  if (time(NULL) > next_try_delete) {
-      next_try_delete = time(NULL) + 10;
-
-      while (del_q.size() > 0 && del_q.front().t < last_assimilation_cycle-1) {
-          auto to_remove = del_q.front();
-          MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
-          storage.m_io->remove( { to_remove.t, to_remove.id }, IO_STORAGE_L2 ); 
-          del_q.pop();
-      }
-  }
+  IO_PROBE( IO_TAG_DUMP, storage.m_request_dump() );
 
 }
 
@@ -324,14 +312,27 @@ void StorageController::m_query_server() {
 //  REQUESTS
 //======================================================================
 
+void StorageController::m_communicate( io_tag_t tag ) {
+  assert( m_io->m_dict_bool["master_global"] && "must only be called from head master!" ); 
+  std::vector<MPI_Request> send_request(mpi.size());
+  std::vector<MPI_Request> recv_request(mpi.size());
+  std::vector<MPI_Status> send_status(mpi.size());
+  std::vector<MPI_Status> recv_status(mpi.size());
+  for(int i=1; i<mpi.size(); i++) {
+    MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i] );
+    MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i] );
+  }
+  MPI_Waitall( mpi.size(), send_request.data(), send_status.data() );
+}
+
 void StorageController::m_request_post() {
   M_TRIGGER(START_MODEL_MESSAGE,0);
   if(m_io->m_dict_bool["master_global"]) {
     std::cout << "head received INFORMATION request" << std::endl;
-    for(int i=1; i<mpi.size(); i++) {
-      MPI_Send( NULL, 0, MPI_BYTE, i, IO_TAG_POST, mpi.comm() );
-    }
+    // forward request to other head ranks
+    m_communicate( IO_TAG_POST );
   }
+  
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
 
@@ -377,13 +378,18 @@ void StorageController::m_request_post() {
 
 // (1) state request from user to worker
 void StorageController::m_request_load() {
-  io_state_id_t *state_id = new io_state_id_t[m_io->m_dict_int["app_procs_node"]];
+  if(m_io->m_dict_bool["master_global"]) {
+    // forward request to other head ranks
+    m_communicate( IO_TAG_LOAD );
+  }
+  std::vector<io_state_id_t> state_id(m_io->m_dict_int["app_procs_node"]);
   int result=(int)IO_SUCCESS;
-  m_io->recv( state_id, sizeof(io_state_id_t), IO_TAG_LOAD, IO_MSG_ALL );
-  if(m_io->m_dict_bool["master_global"]) std::cout << "head received LOAD request (ckpt_id: "<<to_ckpt_id(state_id[0])<<")" << std::endl;
+  m_io->recv( state_id.data(), sizeof(io_state_id_t), IO_TAG_LOAD, IO_MSG_ALL );
+  if(m_io->m_dict_bool["master_global"]) {
+    std::cout << "head received LOAD request (ckpt_id: "<<to_ckpt_id(state_id[0])<<")" << std::endl;
+  }
   pull( state_id[0] );
   m_io->send( &result, sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
-  delete[] state_id;
 }
 
 // (2) state request from peer to worker
@@ -392,20 +398,38 @@ void StorageController::m_request_peer() {
 }
 
 void StorageController::m_request_pull() {
-  if( m_io->probe( IO_TAG_PULL ) ) {
-    io_state_id_t state_id;
-    if(m_io->m_dict_bool["master_global"]) {
-      std::cout << "head received PULL request" << std::endl;
-      for(int i=1; i<mpi.size(); i++) {
-        MPI_Send( NULL, 0, MPI_BYTE, i, IO_TAG_PULL, mpi.comm() );
-      }
-      state_id = m_io->m_state_pull_requests.front();
-    }
-    mpi.broadcast(state_id);
-    if(!m_io->is_local(state_id)) {
-      pull( state_id );
-    }
+  io_state_id_t state_id;
+  if(m_io->m_dict_bool["master_global"]) {
+    std::cout << "head received PULL request" << std::endl;
+    // forward request to other head ranks
+    assert(!m_io->m_state_pull_requests.empty() && "no state to pull!");
+    m_communicate( IO_TAG_PULL );
+    state_id = m_io->m_state_pull_requests.front();
     m_io->m_state_pull_requests.pop();
+  }
+  mpi.broadcast(state_id);
+  if(!m_io->is_local(state_id)) {
+    pull( state_id );
+  }
+}
+
+void StorageController::m_request_dump() {
+  io_state_id_t to_remove;
+  if(m_io->m_dict_bool["master_global"]) {
+    std::cout << "head received DUMP request" << std::endl;
+    // forward request to other head ranks
+    while (m_io->m_state_dump_requests.size() > 0 && m_io->m_state_dump_requests.front().t < m_io->m_dict_int["current_cycle"]-2) {
+      m_communicate( IO_TAG_DUMP );
+      to_remove = m_io->m_state_dump_requests.front();
+      MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+      mpi.broadcast(to_remove);
+      storage.m_io->remove( to_remove, IO_STORAGE_L2 ); 
+      m_io->m_state_dump_requests.pop();
+    }
+  } else {
+    mpi.broadcast(to_remove);
+    MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+    storage.m_io->remove( to_remove, IO_STORAGE_L2 );
   }
 }
 
@@ -644,12 +668,12 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
 
   mpi.barrier();
 
-  if (t > last_assimilation_cycle) {  // what assimilation cycle are we working on? important for auto removing later
-    last_assimilation_cycle = t;
+  if (t > m_io->m_dict_int["current_cycle"]) {  // what assimilation cycle are we working on? important for auto removing later
+    m_io->m_dict_int["current_cycle"] = t;
   }
 
   // its good, we can give it free for delete...
-  del_q.push(io_state_id_t(t, id));
+  m_io->m_state_dump_requests.push(io_state_id_t(t, id));
 
   M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, id);
 }
