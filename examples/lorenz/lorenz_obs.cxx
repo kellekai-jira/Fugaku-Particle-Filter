@@ -43,9 +43,9 @@ void write_obs( const std::string file_name, std::vector<double> x,
 int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
-const double F = 5;
+const double F = 6;
 const double dt = 0.001;
-const double DT = 0.05;
+const double DT = 0.1;
 const double PI = 3.141592653589793238463;
 
 static uint64_t NG;
