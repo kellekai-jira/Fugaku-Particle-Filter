@@ -229,6 +229,7 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
       mpi.barrier();
     } else {
+      m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
       mpi.barrier();
     }
     M_TRIGGER(STOP_DELETE_PFS,0);
@@ -413,7 +414,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
   M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
   
-  MDBG("pulling state_id '{t: %d, id: %d}'", state_id.id, state_id.id);
+  MDBG("pulling state_id '{t: %d, id: %d}'", state_id.t, state_id.id);
 
   struct stat info;
   IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
