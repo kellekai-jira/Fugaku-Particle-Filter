@@ -448,7 +448,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     L1_CKPT_FN << L1_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
     std::string lfn = L1_CKPT_FN.str();
     
-    MDBG("local ckpt file: %s", mfn);
+    MDBG("local ckpt file: %s", lfn);
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
 
