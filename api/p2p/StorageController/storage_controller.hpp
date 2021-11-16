@@ -93,8 +93,9 @@ class StorageController {
     void* m_zmq_context;
     int m_runner_id;
     int m_cycle;
-
-    std::map<io_id_t,io_state_id_t> m_ckpted_states;
+    
+    // unused
+    // std::map<io_id_t,io_state_id_t> m_ckpted_states;
     std::map<io_id_t,io_state_id_t> m_cached_states;
     
     std::vector<uint64_t> m_state_sizes_per_rank;

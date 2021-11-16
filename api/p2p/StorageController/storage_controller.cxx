@@ -92,24 +92,21 @@ void StorageController::callback() {
     M_TRIGGER(START_INIT, 0);
     }
 #endif
-    MDBG("initializing callback");
     if ( comm_rank == 0 ) { 
       storage.m_zmq_context = zmq_ctx_new();  // TODO: simplify context handling
       storage.server.init();
     }
-    MDBG("initializing callback");
     storage.m_io->init_core();
-    MDBG("initializing callback");
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
-    MDBG("initializing callback");
 
     size_t capacity;
     storage.m_io->recv( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
-    MDBG("initializing callback");
+    
+    mpi.broadcast(capacity);
+
     std::vector<uint64_t> size_proc(storage.m_io->m_dict_int["app_procs_node"]), size_node;
     storage.m_io->recv( size_proc.data(), sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
-    MDBG("initializing callback");
 
     size_t state_size_node = 0;
     for(int i=0; i<storage.m_io->m_dict_int["app_procs_node"]; i++) {
@@ -142,13 +139,12 @@ void StorageController::callback() {
     //storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
 
-    if(storage.m_io->m_dict_bool["master_global"]) {
+    //if(storage.m_io->m_dict_bool["master_global"]) {
       std::cout << "storage capacity [# slots]: " << capacity << std::endl;
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
-    }
-    MDBG("initializing callback");
+    //}
     M_TRIGGER(STOP_INIT, 0);
   }
 
@@ -173,7 +169,7 @@ void StorageController::callback() {
 
   // EVENT
   // Bob check and serve peer requests
-  storage.m_request_peer();
+  // storage.m_request_peer();
 
   // QUERY (every x seconds)
   // request -> send (1) cached state list and (2) number of free slots to server
@@ -340,9 +336,10 @@ void StorageController::m_request_post() {
   Message weight_message;
   int msg_size;
   m_io->get_message_size( &msg_size, IO_TAG_POST, IO_MSG_MST );
-  mpi.broadcast(msg_size);
   std::vector<char> buffer(msg_size);
   m_io->recv( buffer.data(), msg_size, IO_TAG_POST, IO_MSG_MST );
+  
+  mpi.broadcast(msg_size);
   mpi.broadcast(buffer);
 
   weight_message.ParseFromArray( buffer.data(), msg_size );
@@ -356,9 +353,11 @@ void StorageController::m_request_post() {
   assert( m_io->is_local(state_id) && "state should be local");
   m_io->stage( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
-  m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-
+  //m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
+  
   m_push_weight_to_server( weight_message );
+  
+  mpi.barrier();
 
   m_cached_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
   state_pool++;
@@ -373,6 +372,13 @@ void StorageController::m_request_post() {
 
   // ask if something to prefetch
   server.prefetch_request( this );
+
+
+  
+  if (state_id.t > m_io->m_dict_int["current_cycle"]) {  // what assimilation cycle are we working on? important for auto removing later
+    m_io->m_dict_int["current_cycle"] = state_id.t;
+  }
+
   M_TRIGGER(STOP_MODEL_MESSAGE, ckpt_id);
   M_TRIGGER(STATE_LOCAL_CREATE, ckpt_id);
 }
@@ -386,9 +392,9 @@ void StorageController::m_request_load() {
   std::vector<io_state_id_t> state_id(m_io->m_dict_int["app_procs_node"]);
   int result=(int)IO_SUCCESS;
   m_io->recv( state_id.data(), sizeof(io_state_id_t), IO_TAG_LOAD, IO_MSG_ALL );
-  if(m_io->m_dict_bool["master_global"]) {
+  //if(m_io->m_dict_bool["master_global"]) {
     std::cout << "head received LOAD request (ckpt_id: "<<to_ckpt_id(state_id[0])<<")" << std::endl;
-  }
+  //}
   pull( state_id[0] );
   m_io->send( &result, sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
 }
@@ -558,22 +564,16 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     auto dump_states = response.prefetch_response().dump_states();
     for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
       io_state_id_t state = { it->t(), it->id() };
-      storage->m_io->remove( state, IO_STORAGE_L1 );
-      storage->state_pool--;
       dump.push_back(state);
     }
-    
-    mpi.broadcast(dump);
   
-  } else {
+  }
     
-    mpi.broadcast(dump);
-    
-    for(auto &x : dump) {
-      storage->m_io->remove( x, IO_STORAGE_L1 );
-      storage->state_pool--;
-    }
-  
+  mpi.broadcast(dump);
+  for(auto & x : dump) {
+    io_state_id_t state = { x.t, x.id };
+    storage->m_io->remove( state, IO_STORAGE_L1 );
+    storage->state_pool--;
   }
   
   MDBG("in prefetch/dump query [before barrier]");
@@ -587,7 +587,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
 void StorageController::Server::delete_request( StorageController* storage ) {
 
   M_TRIGGER(START_DELETE,0);
-    
+  
   int t, id;
   
   if( mpi.rank() == 0 ) {
@@ -633,13 +633,13 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   struct stat info;
   IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
-
   MDBG("delete_request -> {t: %d, id: %d}", state_id.t, state_id.id);
   assert(!storage->m_io->is_local(state_id));
+  
   storage->state_pool--;
   std::cout << "free: " << storage->state_pool.free() << std::endl;
   storage->m_cached_states.erase(to_ckpt_id(state_id));
-  
+
   mpi.barrier();
 
   M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
@@ -654,25 +654,16 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
   
+  if(!m_io->m_dict_bool["master_global"]) return;
+  
   int t = m.weight().state_id().t();
   int id = m.weight().state_id().id();
     
   M_TRIGGER(START_PUSH_WEIGHT_TO_SERVER, t);
   
-  if( mpi.rank() == 0 ) {
-  
-    send_message(server.m_socket, m);
-    MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
-    zmq::recv(server.m_socket);  // receive ack
-
-  }
-
-  mpi.barrier();
-
-  if (t > m_io->m_dict_int["current_cycle"]) {  // what assimilation cycle are we working on? important for auto removing later
-    m_io->m_dict_int["current_cycle"] = t;
-  }
-
+  send_message(server.m_socket, m);
+  MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
+  zmq::recv(server.m_socket);  // receive ack
   // its good, we can give it free for delete...
   m_io->m_state_dump_requests.push(io_state_id_t(t, id));
 
