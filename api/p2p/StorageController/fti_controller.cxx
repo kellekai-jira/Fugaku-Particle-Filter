@@ -438,16 +438,15 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   
   std::stringstream L2_META_FN;
   L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
-  std::string mfn = L2_META_FN.str();
-  
 
   int fd = open( gfn.c_str(), O_RDWR );
   if( fd < 0 ) {
     MERR("unable to read from file '%s'", gfn.c_str());
   }
   //if (m_kernel.topo->groupRank == 0) {
-    std::ifstream metafs( mfn );
-    std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
+    std::ifstream metafs( L2_META_FN.str() );
+    std::string metastr( (std::istreambuf_iterator<char>(metafs) ),
+                         (std::istreambuf_iterator<char>()    ) );
     metafs.close();
   //}
   
@@ -501,11 +500,14 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       std::getline( metafs, count_str );
       size_t count;
       sscanf(count_str.c_str(), "%zu", &count);
+      MDBG("count: %d", count);
       for(size_t i=0; i<count; i++) {
-        std::string str;
-        std::getline( metafs, str );
-        tmp_metafs << str << std::endl;
+        std::string line;
+        std::getline( metafs, line );
+        tmp_metafs << line << std::endl;
+        MDBG("[%d] %s", i, line.c_str());
       }
+      tmp_metafs.flush();
       tmp_metafs.close();
     //}
   }
