@@ -8,7 +8,7 @@ void FTI::Kernel::update_ckpt_metadata( int ckptId, int level ) {
 
 void FTI::Kernel::remove_ckpt_metadata( int ckptId, int level ) {
   // TODO make FTI_RemoveCkptMetaData collective and blocking
-  IO_TRY( FTI_RemoveCkptMetaData(conf, ckptId, level ), FTI_SCES, "failed to remove checkpoint metadata");
+  IO_TRY( FTI_RemoveCkptMetaData(topo, conf, ckptId, level ), FTI_SCES, "failed to remove checkpoint metadata");
 }
 
 void FTI::Kernel::file_copy( std::string from, std::string to ) {
