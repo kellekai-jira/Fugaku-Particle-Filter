@@ -417,10 +417,20 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
   struct stat info;
   IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
-  IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   IO_TRY( stat( L1_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   
-  IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+  std::vector<char> l1_meta_temp_vec;
+  
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+    IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
+    std::copy(L1_META_TEMP.begin(), L1_META_TEMP.end(), std::back_inserter(l1_meta_temp_vec));
+  }
+  
+  mpi.broadcast(l1_meta_temp_vec);
+
+  std::string l1_meta_temp(l1_meta_temp_vec.begin(), l1_meta_temp_vec.end());
+
   IO_TRY( mkdir( L1_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
 
   std::stringstream L2_CKPT_FN;
@@ -481,7 +491,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
         MERR("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
         return;
       }
-
+      MDBG("pos: %lu", pos);
       pos = pos + bSize;
     }
     
@@ -490,10 +500,12 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
     //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
+      MDBG("group id: %d", groupId);
       std::stringstream L1_META_TEMP_FN;
-      L1_META_TEMP_FN << L1_META_TEMP;
+      L1_META_TEMP_FN << l1_meta_temp;
       L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       std::ofstream tmp_metafs(L1_META_TEMP_FN.str());
+      MDBG("tmp_metafs: %s", L1_META_TEMP_FN.str().c_str());
       std::string count_str;
       std::getline( metafs, count_str );
       size_t count;
@@ -512,7 +524,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   mpi.barrier();
   
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+    IO_TRY( std::rename( l1_meta_temp.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
   }
   IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
 
