@@ -30,7 +30,6 @@ time_t next_try_delete = 0;
 
 void StorageController::io_init( IoController* io, int runner_id ) {
   
-  MDBG("enter io_init");
   m_io = io;
   m_io->register_callback( StorageController::callback );
 
@@ -80,7 +79,6 @@ void StorageController::callback() {
 
   static bool init = false;
   if( !init ) {
-    MDBG("initializing callback");
     // To do good logging
     comm_rank = mpi.rank();
 #ifdef REPORT_TIMING
@@ -576,9 +574,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     storage->state_pool--;
   }
   
-  MDBG("in prefetch/dump query [before barrier]");
   mpi.barrier();
-  MDBG("in prefetch/dump query [after barrier]");
 
   M_TRIGGER(STOP_PREFETCH,0);
 

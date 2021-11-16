@@ -310,8 +310,6 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   L2_META_FN << l2_temp << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
-  MDBG("ckpt file '%s'", gfn.c_str());
-  MDBG("meta file '%s'", mfn.c_str());
   int fd = open( gfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
   
   std::ofstream metafs(mfn);
@@ -442,8 +440,6 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
-  MDBG("global ckpt file: %s", gfn.c_str());
-  MDBG("global meta file: %s", mfn.c_str());
 
   int fd = open( gfn.c_str(), O_RDWR );
   if( fd < 0 ) {
@@ -462,11 +458,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     L1_CKPT_FN << L1_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
     std::string lfn = L1_CKPT_FN.str();
     
-    MDBG("local ckpt file: %s", lfn.c_str());
-    
     int64_t local_file_size = m_state_sizes_per_rank[i];
     
-    MDBG("local ckpt file size: %ld", local_file_size);
     int lfd = open( lfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
 
@@ -492,7 +485,6 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
         MERR("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
         return;
       }
-      MDBG("pos: %lu", pos);
       pos = pos + bSize;
     }
     
@@ -501,12 +493,10 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
 
     //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      MDBG("group id: %d", groupId);
       std::stringstream L1_META_TEMP_FN;
       L1_META_TEMP_FN << l1_meta_temp;
       L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
       std::ofstream tmp_metafs(L1_META_TEMP_FN.str());
-      MDBG("tmp_metafs: %s", L1_META_TEMP_FN.str().c_str());
       std::string count_str;
       std::getline( metafs, count_str );
       size_t count;
@@ -545,19 +535,6 @@ bool FtiController::is_local( io_state_id_t state_id ) {
   M_TRIGGER(START_CHECK_LOCAL, state_id.t);
   FTIT_stat st;
   FTI_Stat( to_ckpt_id(state_id), &st );
-  std::bitset<8> x_level(st.level);
-  std::bitset<8> x_io(st.io);
-  std::bitset<8> x_elastic(st.elastic);
-  std::bitset<8> x_dcp(st.dcp);
-  std::bitset<16> x_device(st.device);
-  std::stringstream ss;
-  ss << "id: " << to_ckpt_id(state_id) << std::endl;
-  ss << "level: " << x_level << std::endl;
-  ss << "io: " << x_level << std::endl;
-  ss << "elastic: " << x_level << std::endl;
-  ss << "dcp: " << x_level << std::endl;
-  ss << "device: " << x_level << std::endl;
-  MDBG("%s", ss.str().c_str());
   bool res = FTI_ST_IS_LOCAL(st.level);
   M_TRIGGER(STOP_CHECK_LOCAL, state_id.id);
   return res;
