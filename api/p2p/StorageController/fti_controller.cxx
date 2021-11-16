@@ -430,8 +430,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
-  MDBG("global ckpt file: %s", gfn);
-  MDBG("global meta file: %s", mfn);
+  MDBG("global ckpt file: %s", gfn.c_str());
+  MDBG("global meta file: %s", mfn.c_str());
 
   int fd = open( gfn.c_str(), O_RDWR );
   if( fd < 0 ) {
@@ -448,7 +448,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     L1_CKPT_FN << L1_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
     std::string lfn = L1_CKPT_FN.str();
     
-    MDBG("local ckpt file: %s", lfn);
+    MDBG("local ckpt file: %s", lfn.c_str());
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
 
@@ -504,8 +504,12 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   }
 
   close(fd);
-
-  IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+  
+  mpi.barrier();
+  
+  if( m_dict_bool["master_global"] ) {
+    IO_TRY( std::rename( L1_META_TEMP.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+  }
   IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
 
   update_metadata( state_id, IO_STORAGE_L1 );
