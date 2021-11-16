@@ -306,7 +306,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
   std::string gfn = L2_CKPT_FN.str();
   
   std::stringstream L2_META_FN;
-  L2_META_FN << l2_temp << "/meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
+  L2_META_FN << l2_temp << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
   std::string mfn = L2_META_FN.str();
   
   MDBG("ckpt file '%s'", gfn.c_str());
@@ -371,7 +371,8 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
     t_close_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
     t1 = std::chrono::system_clock::now();
-    if (m_kernel.topo->groupRank == 0) {
+    // FIXME this only takes into account group size of 1!!!
+    //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
       std::stringstream L1_META_CKPT_FN;
       L1_META_CKPT_FN << L1_META_CKPT;
@@ -381,7 +382,7 @@ void FtiController::stage_l1l2( std::string L1_CKPT, std::string L1_META_CKPT, s
       size_t count_lines = std::count_if( str.begin(), str.end(), []( char c ){return c =='\n';});
       metafs << count_lines << std::endl << str;
       tmp_metafs.close();
-    }
+    //}
     t2 = std::chrono::system_clock::now();
     t_meta = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
   }
@@ -437,9 +438,11 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   if( fd < 0 ) {
     MERR("unable to read from file '%s'", gfn.c_str());
   }
-  std::ifstream metafs( mfn );
-  std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
-  metafs.close();
+  //if (m_kernel.topo->groupRank == 0) {
+    std::ifstream metafs( mfn );
+    std::string metastr(std::istreambuf_iterator<char>{metafs}, {});
+    metafs.close();
+  //}
   
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -451,7 +454,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     MDBG("local ckpt file: %s", lfn.c_str());
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
-
+    
+    MDBG("local ckpt file size: %ld", local_file_size);
     int lfd = open( lfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
 
@@ -484,7 +488,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     fsync(lfd);
     close(lfd);
 
-    if (m_kernel.topo->groupRank == 0) {
+    //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
       std::stringstream L1_META_TEMP_FN;
       L1_META_TEMP_FN << L1_META_TEMP;
@@ -500,7 +504,7 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
         tmp_metafs << str << std::endl;
       }
       tmp_metafs.close();
-    }
+    //}
   }
 
   close(fd);
