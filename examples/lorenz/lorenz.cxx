@@ -37,9 +37,9 @@ double stddev;
 
 template<typename F>
 void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
-    //for (auto& x : data) {
-    //    x = x + dist(generator);
-    //}
+    for (auto& x : data) {
+        x = x + dist(generator);
+    }
 }
 
 void init_parallel() {
