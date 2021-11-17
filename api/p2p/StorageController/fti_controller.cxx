@@ -257,6 +257,13 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
   mpi.broadcast(l2_temp_dir);
   mpi.broadcast(l1_meta_temp_dir);
 
+  MDBG("l2_ckpt_dir: %s", l2_ckpt_dir.c_str());
+  MDBG("l1_ckpt_dir: %s", l1_ckpt_dir.c_str());
+  MDBG("l1_meta_dir: %s", l1_meta_dir.c_str());
+  MDBG("l1_temp_dir: %s", l1_temp_dir.c_str());
+  MDBG("l2_temp_dir: %s", l2_temp_dir.c_str());
+  MDBG("l1_meta_temp_dir: %s", l1_meta_temp_dir.c_str());
+
   if( from == IO_STORAGE_L1 ) {
     stage_l1l2( l1_ckpt_dir, l1_meta_dir, l2_temp_dir, l2_ckpt_dir, state_id  );
   }
@@ -294,7 +301,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
-    std::string lfn = l1_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
+    std::string l1_ckpt_fn = l1_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
     
@@ -302,7 +309,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
     std::chrono::system_clock::time_point t1, t2;
     
     t1 = std::chrono::system_clock::now();
-    int lfd = open(lfn.c_str(), O_RDONLY, 0);
+    int lfd = open(l1_ckpt_fn.c_str(), O_RDONLY, 0);
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
     t2 = std::chrono::system_clock::now();
     t_open_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
@@ -323,7 +330,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
       
       // check if successful
       if (check != bSize) {
-        MERR("unable to read '%lu' bytes from file '%s'", bSize, lfn.c_str());
+        MERR("unable to read '%lu' bytes from file '%s'", bSize, l1_ckpt_fn.c_str());
       }
 
       t1 = std::chrono::system_clock::now();
@@ -382,44 +389,36 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
 
 }
 
-void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
-    std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id ) {
+void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir, std::string l1_meta_temp_dir,
+    std::string l1_ckpt_dir, std::string l1_meta_dir, io_state_id_t state_id ) {
 
   M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
   
   MDBG("pulling state_id '{t: %d, id: %d}'", state_id.t, state_id.id);
 
   struct stat info;
-  IO_TRY( stat( L1_CKPT.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
-  IO_TRY( stat( L1_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
-  
-  std::vector<char> l1_meta_temp_vec;
+  IO_TRY( stat( l1_ckpt_dir.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+  IO_TRY( stat( l1_temp_dir.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
   
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( stat( L1_META_TEMP.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
-    IO_TRY( mkdir( L1_META_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
-    std::copy(L1_META_TEMP.begin(), L1_META_TEMP.end(), std::back_inserter(l1_meta_temp_vec));
+    IO_TRY( stat( l1_meta_temp_dir.c_str(), &info ), -1, "the local checkpoint directory already exists!" );
+    IO_TRY( mkdir( l1_meta_temp_dir.c_str(), 0777 ), 0, "unable to create directory" );
   }
   
-  mpi.broadcast(l1_meta_temp_vec);
+  mpi.barrier(); 
 
-  std::string l1_meta_temp(l1_meta_temp_vec.begin(), l1_meta_temp_vec.end());
-
-  IO_TRY( mkdir( L1_TEMP.c_str(), 0777 ), 0, "unable to create directory" );
-
-  std::stringstream L2_CKPT_FN;
-  L2_CKPT_FN << L2_CKPT << "/Ckpt" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
-  std::string gfn = L2_CKPT_FN.str();
+  IO_TRY( mkdir( l1_temp_dir.c_str(), 0777 ), 0, "unable to create directory" );
   
-  std::stringstream L2_META_FN;
-  L2_META_FN << L2_CKPT << "/Meta" << to_ckpt_id(state_id) << "-worker" << m_kernel.topo->splitRank << "-serialized.fti";
+  std::string l2_ckpt_fn, l2_meta_fn;
+  l2_ckpt_fn = l2_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-worker" + std::to_string(m_kernel.topo->splitRank) + "-serialized.fti";
+  l2_meta_fn = l2_ckpt_dir + "/Meta" + std::to_string(to_ckpt_id(state_id)) + "-worker" + std::to_string(m_kernel.topo->splitRank) + "-serialized.fti";
 
-  int fd = open( gfn.c_str(), O_RDWR );
+  int fd = open( l2_ckpt_fn.c_str(), O_RDWR );
   if( fd < 0 ) {
-    MERR("unable to read from file '%s'", gfn.c_str());
+    MERR("unable to read from file '%s'", l2_ckpt_fn.c_str());
   }
   //if (m_kernel.topo->groupRank == 0) {
-    std::ifstream metafs( L2_META_FN.str() );
+    std::ifstream metafs( l2_meta_fn );
     std::string metastr( (std::istreambuf_iterator<char>(metafs) ),
                          (std::istreambuf_iterator<char>()    ) );
     metafs.close();
@@ -428,13 +427,11 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
 
-    std::stringstream L1_CKPT_FN;
-    L1_CKPT_FN << L1_TEMP << "/Ckpt" << to_ckpt_id(state_id) << "-Rank" << proc << ".fti";
-    std::string lfn = L1_CKPT_FN.str();
+    std::string l1_ckpt_fn = l1_temp_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
     
-    int lfd = open( lfn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
+    int lfd = open( l1_ckpt_fn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
 
     size_t pos = 0;
@@ -449,14 +446,14 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       check = read( fd, buffer.get(), bSize );
       // check if successful
       if (check != bSize) {
-        MERR("unable to read '%lu' from file '%s'", bSize, gfn.c_str());
+        MERR("unable to read '%lu' from file '%s'", bSize, l2_ckpt_fn.c_str());
         return;
       }
       
       check = write(lfd, buffer.get(), bSize);
       // check if successful
       if (check != bSize) {
-        MERR("unable to write '%lu' into file '%s'", bSize, lfn.c_str());
+        MERR("unable to write '%lu' into file '%s'", bSize, l1_ckpt_fn.c_str());
         return;
       }
       pos = pos + bSize;
@@ -468,9 +465,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
     //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
       std::stringstream L1_META_TEMP_FN;
-      L1_META_TEMP_FN << l1_meta_temp;
-      L1_META_TEMP_FN << "/sector" << m_kernel.topo->sectorID << "-group" << groupId << ".fti";
-      std::ofstream tmp_metafs(L1_META_TEMP_FN.str());
+      std::string l1_meta_temp_fn = l1_meta_temp_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
+      std::ofstream tmp_metafs(l1_meta_temp_fn);
       std::string count_str;
       std::getline( metafs, count_str );
       size_t count;
@@ -479,10 +475,8 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
       for(size_t i=0; i<count; i++) {
         std::string line;
         std::getline( metafs, line );
-        tmp_metafs << line << std::endl;
-        MDBG("[%d] %s", i, line.c_str());
+        tmp_metafs << line << std::endl << std::flush;
       }
-      tmp_metafs.flush();
       tmp_metafs.close();
     //}
   }
@@ -492,9 +486,9 @@ void FtiController::stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::s
   mpi.barrier();
   
   if( m_dict_bool["master_global"] ) {
-    IO_TRY( std::rename( l1_meta_temp.c_str(), L1_META_CKPT.c_str() ), 0, "unable to rename local directory" );
+    IO_TRY( std::rename( l1_meta_temp_dir.c_str(), l1_meta_dir.c_str() ), 0, "unable to rename local directory" );
   }
-  IO_TRY( std::rename( L1_TEMP.c_str(), L1_CKPT.c_str() ), 0, "unable to rename local_meta directory" );
+  IO_TRY( std::rename( l1_temp_dir.c_str(), l1_ckpt_dir.c_str() ), 0, "unable to rename local_meta directory" );
 
   update_metadata( state_id, IO_STORAGE_L1 );
 
