@@ -37,6 +37,7 @@ class MpiController
         const int & rank( std::string key = m_comm_set );
         void barrier( std::string key = m_comm_set );
         void broadcast( std::vector<io_state_id_t> & buffer, std::string key = m_comm_set, int root = 0 );
+        void broadcast( std::string & buffer, std::string key = m_comm_set, int root = 0 );
         void broadcast( std::vector<char> & buffer, std::string key = m_comm_set, int root = 0 );
         template<class T>  
 				void broadcast( T & value, std::string key = m_comm_set, int root = 0 );

@@ -122,6 +122,31 @@ void MpiController::broadcast( std::vector<char> & vec, std::string key, int roo
   bcast_counter_char++;
 }
 
+void MpiController::broadcast( std::string & str, std::string key, int root ) {
+  int rank = m_comms[key].rank;
+  int count;
+  int bcast_counter_char_root;
+  std::vector<char> vec;
+  MPI_Comm comm = m_comms[key].comm;
+  if ( rank == root ) {
+    std::copy(str.begin(), str.end(), std::back_inserter(vec));
+    count = vec.size();
+    bcast_counter_char_root = bcast_counter_char;
+  }
+  MPI_Bcast( &bcast_counter_char_root, 1, MPI_INT, root, comm );
+  MPI_Bcast( &count, 1, MPI_INT, root, comm );
+  if ( rank != root ) { 
+    vec.resize( count );
+  }
+  MPI_Bcast( vec.data(), count, MPI_CHAR, root, comm );
+  if( rank != root ) {
+    str.clear();
+    str.assign(vec.begin(), vec.end());
+  }
+  MDBG("MpiController::broadcast(char) (root count: %d, my count: %d)", bcast_counter_char_root, bcast_counter_char);
+  bcast_counter_char++;
+}
+
 void MpiController::broadcast( std::vector<io_state_id_t> & vec, std::string key, int root ) {
   int rank = m_comms[key].rank;
   int count;
