@@ -422,6 +422,7 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
     std::string metastr( (std::istreambuf_iterator<char>(metafs) ),
                          (std::istreambuf_iterator<char>()    ) );
     metafs.close();
+    std::istringstream metaiss(metastr);
   //}
   
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
@@ -464,17 +465,16 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
 
     //if (m_kernel.topo->groupRank == 0) {
       int groupId = i+1;
-      std::stringstream L1_META_TEMP_FN;
       std::string l1_meta_temp_fn = l1_meta_temp_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
       std::ofstream tmp_metafs(l1_meta_temp_fn);
       std::string count_str;
-      std::getline( metafs, count_str );
+      std::getline( metaiss, count_str );
       size_t count;
       sscanf(count_str.c_str(), "%lu", &count);
       MDBG("count: %lu", count);
       for(size_t i=0; i<count; i++) {
         std::string line;
-        std::getline( metafs, line );
+        std::getline( metaiss, line );
         tmp_metafs << line << std::endl << std::flush;
       }
       tmp_metafs.close();
