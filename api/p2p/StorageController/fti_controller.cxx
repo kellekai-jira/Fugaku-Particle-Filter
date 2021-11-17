@@ -470,8 +470,8 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
       std::string count_str;
       std::getline( metafs, count_str );
       size_t count;
-      sscanf(count_str.c_str(), "%zu", &count);
-      MDBG("count: %d", count);
+      sscanf(count_str.c_str(), "%lu", &count);
+      MDBG("count: %lu", count);
       for(size_t i=0; i<count; i++) {
         std::string line;
         std::getline( metafs, line );
