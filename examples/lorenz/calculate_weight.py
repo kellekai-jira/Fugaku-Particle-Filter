@@ -14,6 +14,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         comm = MPI.COMM_WORLD.f2py(fcomm)
         cwlogfile = open("calculate_weight_rank-%d.txt" % (comm.rank),"w")
         cwlogfile.write("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
+        cwlogfile.flush()
 
         assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
@@ -125,6 +126,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         #print("observation: ", observation[:3], flush=True)
         #print("indeces: ", obs_idx[:3], flush=True)
         cwlogfile.write("dim_obs_p: %d" % (dim_obs_p))
+        cwlogfile.flush()
 
         sum_err_all = comm.allreduce(sum_err, MPI.SUM)
         sum_err_all = np.exp(-1*sum_err_all)
@@ -132,6 +134,9 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         t_compute_d = time.time() - t0
 
         cwlogfile.write("convert background: %d, compute indices: %d, read file: %d, compute weight: %d" % ( t_background_d, t_indices_d, t_readfile_d, t_compute_d ))
+        cwlogfile.flush()
+
+        cwlogfile.close()
 
         return sum_err_all
 
