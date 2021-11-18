@@ -297,6 +297,8 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
   int fd = open( l2_ckpt_fn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
   
   std::ofstream metafs( l2_meta_fn );
+    
+  uint64_t t_open_local=0, t_read_local=0, t_write_global=0, t_close_local=0, t_meta=0; 
 
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
     int proc = m_kernel.topo->body[i];
@@ -305,14 +307,13 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
     
     int64_t local_file_size = m_state_sizes_per_rank[i];
     
-    uint64_t t_open_local, t_read_local, t_write_global, t_close_local, t_meta; 
     std::chrono::system_clock::time_point t1, t2;
     
     t1 = std::chrono::system_clock::now();
     int lfd = open(l1_ckpt_fn.c_str(), O_RDONLY, 0);
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
     t2 = std::chrono::system_clock::now();
-    t_open_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    t_open_local += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
     size_t pos = 0;
     while (pos < local_file_size) {
@@ -326,7 +327,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
       t1 = std::chrono::system_clock::now();
       check = read(lfd, buffer.get(), bSize); 
       t2 = std::chrono::system_clock::now();
-      t_read_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+      t_read_local += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
       
       // check if successful
       if (check != bSize) {
@@ -336,7 +337,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
       t1 = std::chrono::system_clock::now();
       check = write( fd, buffer.get(), bSize );
       t2 = std::chrono::system_clock::now();
-      t_write_global = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+      t_write_global += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
       
       // check if successful
       if (check != bSize) {
@@ -349,7 +350,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
     t1 = std::chrono::system_clock::now();
     close(lfd);
     t2 = std::chrono::system_clock::now();
-    t_close_local = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    t_close_local += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
     t1 = std::chrono::system_clock::now();
     // FIXME this only takes into account group size of 1!!!
@@ -363,8 +364,10 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
       tmp_metafs.close();
     //}
     t2 = std::chrono::system_clock::now();
-    t_meta = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    t_meta += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
   }
+    
+  MDBG("Performance -> [ol: %lu ms|rl: %lu ms|wg: %lu ms|cl: %lu ms|m: %lu ms]", t_open_local, t_read_local, t_write_global, t_close_local, t_meta);
 
   fsync(fd);
   close(fd);
@@ -380,7 +383,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
   mpi.barrier();
 
   update_metadata( state_id, IO_STORAGE_L2 );
-
+    
   std::stringstream msg;
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
