@@ -524,8 +524,8 @@ int melissa_get_current_step() {
 
 
 void melissa_init_f(
-    const char* field_name, const int* local_doubles_count,
-    const int* local_hidden_doubles_count, MPI_Fint* comm_fortran) {
+    const char* field_name, const int64_t* local_doubles_count,
+    const int64_t* local_hidden_doubles_count, MPI_Fint* comm_fortran) {
 
     MPI_Comm comm = MPI_Comm_f2c(*comm_fortran);
     melissa_init(

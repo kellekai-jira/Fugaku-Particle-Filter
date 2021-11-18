@@ -10,6 +10,7 @@
 
 #include <mpi.h>
 #include "melissa_da_stype.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,8 +57,8 @@ void melissa_init_no_mpi(const char *field_name,
                          const size_t  *local_hidden_vect_size);      // comm is casted into an pointer to an mpi communicaotr if not null.
 
 void melissa_init_f(const char *field_name,
-                    const int *local_doubles_count,
-                    const int *local_hidden_doubles_count,
+                    const int64_t *local_doubles_count,
+                    const int64_t *local_hidden_doubles_count,
                     MPI_Fint   *comm_fortran);
 
 // TODO: test what happens when not acting like the following important hint! ( especially have different sleep times per rank ;)

@@ -17,14 +17,14 @@ int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
 const double F = 6;
-const double dt = 0.001;
+const double dt = 0.01;
 const double DT = 0.1;
 const double PI = 3.141592653589793238463;
 
-static uint64_t NG;
+static int64_t NG;
 
-uint64_t nlt, nl, state_min_p, state_max_p;
-std::vector<int> nl_all;
+int64_t nlt, nl, state_min_p, state_max_p;
+std::vector<int64_t> nl_all;
 const int MPI_MIN_BLK = 1;
 
 MPI_Fint fcomm_world;
@@ -69,8 +69,8 @@ void init_parallel() {
     }
 
     std::fill(nl_all.begin(), nl_all.end(), NG / comm_size);
-    uint64_t comm_uint64_t = comm_size;
-    uint64_t nl_mod = NG%comm_uint64_t;
+    int64_t comm_int64_t = comm_size;
+    int64_t nl_mod = NG%comm_int64_t;
     while (nl_mod > 0) {
       for(int i=0; i<comm_size; i++) {
         if (nl_mod > MPI_MIN_BLK) {
@@ -86,7 +86,7 @@ void init_parallel() {
 
     nl = nl_all[comm_rank];
     nlt = nl + 3;
-    uint64_t nl_off = 0;
+    int64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
     }
@@ -96,13 +96,13 @@ void init_parallel() {
 }
 
 void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std::vector<double> & k2, double w, double dt ) {
-  for(int i=0; i<x.size(); i++) {
+  for(int64_t i=0; i<x.size(); i++) {
     x[i] = k1[i] + dt * k2[i]/w;
   }
 }
 
 void exchange( std::vector<double> & x ) {
-  uint64_t nlt = x.size();
+  int64_t nlt = x.size();
   if( comm_size == 1 ) {
     x[0] = x[nlt-3];
     x[1] = x[nlt-2];
@@ -123,8 +123,8 @@ void exchange( std::vector<double> & x ) {
 }
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
-  uint64_t N = x_in.size();
-  for(uint64_t i=2; i<N-1; i++) {
+  int64_t N = x_in.size();
+  for(int64_t i=2; i<N-1; i++) {
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }
@@ -181,8 +181,8 @@ int main() {
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
                               std::mt19937(std::random_device{}()));
 
-  int zero = 0;
-  int nl_i = nl;
+  int64_t zero = 0;
+  int64_t nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
   
   std::vector<double> x_l(nlt);
@@ -214,7 +214,7 @@ int main() {
     MPI_Barrier(comm);
   } while (nsteps > 0);
 
-  //uint64_t off = 0;
+  //int64_t off = 0;
   //for(int i=0; i<comm_size; i++) {
   //  if(comm_rank == i) {
   //    for(int j=0; j<nl; j++) {

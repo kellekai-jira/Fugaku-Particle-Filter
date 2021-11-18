@@ -44,17 +44,17 @@ int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
 const double F = 6;
-const double dt = 0.001;
+const double dt = 0.01;
 const double DT = 0.1;
 const double PI = 3.141592653589793238463;
 
-static uint64_t NG;
+static int64_t NG;
 static int ITER_MAX;
 static double OBS_PERCENT;
-static uint64_t OBS_BLOCK_SIZE;
+static int64_t OBS_BLOCK_SIZE;
 
-uint64_t nlt, nl, state_min_p, state_max_p;
-std::vector<int> nl_all;
+int64_t nlt, nl, state_min_p, state_max_p;
+std::vector<int64_t> nl_all;
 const int MPI_MIN_BLK = 1;
 
 int main() {
@@ -77,8 +77,8 @@ int main() {
   std::string obs_dir(getenv("MELISSA_LORENZ_OBSERVATION_DIR"));
 
   init_parallel();
-  int zero = 0;
-  int nl_i = nl;
+  int64_t zero = 0;
+  int64_t nl_i = nl;
 
   std::vector<double> x_l(nlt);
   init_state( x_l );
@@ -122,8 +122,8 @@ void init_parallel() {
     }
 
     std::fill(nl_all.begin(), nl_all.end(), NG / comm_size);
-    uint64_t comm_uint64_t = comm_size;
-    uint64_t nl_mod = NG%comm_uint64_t;
+    int64_t comm_int64_t = comm_size;
+    int64_t nl_mod = NG%comm_int64_t;
     while (nl_mod > 0) {
       for(int i=0; i<comm_size; i++) {
         if (nl_mod > MPI_MIN_BLK) {
@@ -140,7 +140,7 @@ void init_parallel() {
     nl = nl_all[comm_rank];
     nlt = nl + 3;
 
-    uint64_t nl_off = 0;
+    int64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
     }
@@ -153,18 +153,18 @@ void init_parallel() {
 void write_obs( const std::string file_path, std::vector<double> x,
     double share, int epoch ) {
 
-    uint64_t offset;
-    uint64_t index_tmp;
+    int64_t offset;
+    int64_t index_tmp;
 
     // compute total number of observations
-    uint64_t dim_obs = std::floor(share * NG);
+    int64_t dim_obs = std::floor(share * NG);
     if (dim_obs == 0) {
       dim_obs = 1;
     }
     OUT_SYNC( "dim_obs" << dim_obs );
 
     // compute number of regions
-    uint64_t num_reg = dim_obs / OBS_BLOCK_SIZE;
+    int64_t num_reg = dim_obs / OBS_BLOCK_SIZE;
     if ( dim_obs%OBS_BLOCK_SIZE != 0 ) {
       num_reg++;
     }
@@ -174,13 +174,13 @@ void write_obs( const std::string file_path, std::vector<double> x,
     OUT_SYNC( "state_max_p: " << state_max_p );
 
     // compute stride for regions
-    uint64_t stride = NG / num_reg;
+    int64_t stride = NG / num_reg;
 
     OUT_SYNC( "stride: " << stride );
 
     // determine number of obs in pe
-    uint64_t dim_obs_p = 0;
-    uint64_t cnt_obs = 0;
+    int64_t dim_obs_p = 0;
+    int64_t cnt_obs = 0;
     for(int i=0; i<num_reg; i++) {
       offset = i * stride;
       index_tmp;
@@ -200,10 +200,10 @@ void write_obs( const std::string file_path, std::vector<double> x,
     OUT_SYNC( "rank: "<<comm_rank<<" dim_obs_p: " << dim_obs_p );
 
     std::vector<double> obs_p(dim_obs_p);
-    std::vector<uint64_t> idx_p(dim_obs_p);
+    std::vector<int64_t> idx_p(dim_obs_p);
 
     //assign indices to index array
-    uint64_t cnt_obs_p = 0;
+    int64_t cnt_obs_p = 0;
     for(int i=0; i<num_reg; i++) {
       offset = i * stride;
       for(int j=0; j<OBS_BLOCK_SIZE; j++) {
@@ -222,11 +222,11 @@ void write_obs( const std::string file_path, std::vector<double> x,
 
 
     // write observations
-    uint64_t dim_obs_all[comm_size];
-    MPI_Allgather( &dim_obs_p, 1, MPI_UINT64_T, dim_obs_all,
-      1, MPI_UINT64_T, comm );
+    int64_t dim_obs_all[comm_size];
+    MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all,
+      1, MPI_INT64_T, comm );
 
-    uint64_t disp_obs = 0;
+    int64_t disp_obs = 0;
 
     for(int i=0; i<comm_rank; i++) {
       disp_obs += dim_obs_all[i] * sizeof(double);
@@ -243,13 +243,13 @@ void write_obs( const std::string file_path, std::vector<double> x,
 }
 
 void RK_step( std::vector<double> & x, const std::vector<double> & k1, const std::vector<double> & k2, double w, double dt ) {
-  for(int i=0; i<x.size(); i++) {
+  for(int64_t i=0; i<x.size(); i++) {
     x[i] = k1[i] + dt * k2[i]/w;
   }
 }
 
 void exchange( std::vector<double> & x ) {
-  uint64_t nlt = x.size();
+  int64_t nlt = x.size();
   if( comm_size == 1 ) {
     x[0] = x[nlt-3];
     x[1] = x[nlt-2];
@@ -270,8 +270,8 @@ void exchange( std::vector<double> & x ) {
 }
 
 void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
-  uint64_t N = x_in.size();
-  for(uint64_t i=2; i<N-1; i++) {
+  int64_t N = x_in.size();
+  for(int64_t i=2; i<N-1; i++) {
     x_out[i] = ( x_in[i+1] - x_in[i-2] ) * x_in[i-1] - x_in[i] + F;
   }
 }

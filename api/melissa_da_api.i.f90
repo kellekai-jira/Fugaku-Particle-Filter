@@ -14,10 +14,10 @@ end subroutine melissa_init_no_mpi
 subroutine melissa_init_f(field_name,&
                         local_vect_size,&
                         local_hidden_vect_size, comm) bind(c, name = 'melissa_init_f')
-    use ISO_C_BINDING, only: C_INT, C_CHAR, C_SIZE_T
+    use ISO_C_BINDING, only: C_INT, C_INT64_T, C_CHAR, C_SIZE_T
     character(kind=C_CHAR), dimension(*) :: field_name
-    integer(kind=C_INT) :: local_vect_size
-    integer(kind=C_INT) :: local_hidden_vect_size
+    integer(kind=C_INT64_T) :: local_vect_size
+    integer(kind=C_INT64_T) :: local_hidden_vect_size
     integer(kind=C_INT) :: comm
 end subroutine melissa_init_f
 
