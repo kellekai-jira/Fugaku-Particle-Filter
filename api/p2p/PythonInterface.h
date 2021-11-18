@@ -164,7 +164,8 @@ public:
         err(pTime != NULL, "Cannot create argument");
         err(pId != NULL, "Cannot create argument");
 
-        MDBG("calculate_weight input parameter:");
+        int __rank; MPI_Comm_rank(comm, &__rank);
+        MDBG("calculate_weight input parameter: pid = %d, step = %d, rank = %d", current_state_id, current_step, __rank);
 
         // Py_INCREF(pValue);
         MPI_Fint fcomm = MPI_Comm_c2f(comm);

@@ -179,9 +179,7 @@ void melissa_p2p_init(const char *field_name,
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-
     field.current_state_id = runner_id;  // Start like this!
-
     if (local_index_map_ != nullptr) {
     // store local_index_map to reuse in weight calculation
         local_index_map.resize(local_vect_size);
@@ -236,7 +234,7 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
         pi = std::unique_ptr<PythonInterface>(new PythonInterface());
         is_first_time = false;
     }
-
+    
     return pi->calculate_weight(field.current_step, field.current_state_id, values,
             hidden_values);
 #else
