@@ -26,10 +26,11 @@ if int(os.environ['PJM_LLIO_LOCALTMP_SIZE']) > 0:
 else:
     local_dir = '/dev/shm'
 
-if int(os.environ['PJM_LLIO_SHAREDTMP_SIZE']) > 0:
-    global_dir = os.environ['PJM_SHAREDTMP']
-else:
-    global_dir = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR']
+#if int(os.environ['PJM_LLIO_SHAREDTMP_SIZE']) > 0:
+#    global_dir = os.environ['PJM_SHAREDTMP']
+#else:
+#    global_dir = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR']
+global_dir = os.environ['MELISSA_LORENZ_EXPERIMENT_DIR']
 
 print("local directory: " + local_dir)
 print("global directory: " + global_dir)
