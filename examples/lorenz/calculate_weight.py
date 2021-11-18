@@ -7,11 +7,13 @@ import math
 import ctypes
 from ctypes import *
 import os
+import time
 
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
         comm = MPI.COMM_WORLD.f2py(fcomm)
-        print("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
+        cwlogfile = open("calculate_weight_rank-%d.txt" % (comm.rank),"w")
+        cwlogfile.write("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
 
         assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
@@ -21,9 +23,13 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         blk_size = int(os.environ.get('MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE'))
         obs_dir = os.environ.get('MELISSA_LORENZ_OBSERVATION_DIR')
 
+        t0 = time.time()
         background_d = np.frombuffer(background, dtype='float64',
                              count=len(background) // 8)
+        t_background_d = time.time() - t0
 
+
+        t0 = time.time()
         NG = comm.allreduce(len(background_d), MPI.SUM)
 
         print("STATE DIMENSION: ", NG)
@@ -90,6 +96,10 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         dim_obs_all = np.empty(comm.size, dtype='int32')
         comm.Allgather([dim_obs_loc, MPI.INT], [dim_obs_all, MPI.INT])
 
+        t_indices_d = time.time() - t0
+
+        t0 = time.time()
+
         amode = MPI.MODE_RDONLY
         fh = MPI.File.Open(comm, obs_dir + "/iter-"+str(cycle)+".obs", amode)
         print("CYCLE", cycle)
@@ -102,6 +112,10 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         fh.Read(observation)
         fh.Close()
 
+        t_readfile_d = time.time() - t0
+
+        t0 = time.time()
+
         sum_err = 0
         for i in range(dim_obs_p):
             sum_err = sum_err + (background_d[obs_idx[i]] - observation[i]) ** 2
@@ -110,10 +124,14 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         #print("background: ", background_d[obs_idx[:3]], flush=True)
         #print("observation: ", observation[:3], flush=True)
         #print("indeces: ", obs_idx[:3], flush=True)
-        #print("dim_obs_p: ", dim_obs_p, flush=True)
+        cwlogfile.write("dim_obs_p: %d" % (dim_obs_p))
 
         sum_err_all = comm.allreduce(sum_err, MPI.SUM)
         sum_err_all = np.exp(-1*sum_err_all)
+
+        t_compute_d = time.time() - t0
+
+        cwlogfile.write("convert background: %d, compute indices: %d, read file: %d, compute weight: %d" % ( t_background_d, t_indices_d, t_readfile_d, t_compute_d ))
 
         return sum_err_all
 
