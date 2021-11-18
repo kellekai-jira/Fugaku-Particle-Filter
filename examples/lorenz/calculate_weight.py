@@ -17,10 +17,11 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         cwlogfile_path = os.environ.get('MELISSA_LORENZ_EXPERIMENT_DIR') + "/calculate_weight_rank-%d.txt" % (comm.rank)
         cwlogfile = open(cwlogfile_path,"w")
         frameinfo = getframeinfo(currentframe())
-        cwlogfile.write("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
+        cwlogfile.write("size: %d, rank %d t=%d, Calculating weight for particle with id=%d" % (comm.size, comm.rank, cycle, pid))
         cwlogfile.flush()
 
         cwlogfile.write("%s:%s elapsed time: %s" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
         assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_DIR' in os.environ.keys()
@@ -34,18 +35,23 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
                              count=len(background) // 8)
         t_background_d = time.time() - t0
         cwlogfile.write("%s:%s elapsed time: %s" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
 
 
         t0 = time.time()
         NG = comm.allreduce(len(background_d), MPI.SUM)
 
         cwlogfile.write("STATE DIMENSION: %d" % NG)
+        cwlogfile.flush()
         cwlogfile.write("COMM SIZE: %d" % comm.size)
+        cwlogfile.flush()
 
         NG = comm.allreduce(len(background_d), MPI.SUM)
         cwlogfile.write("%s:%s elapsed time: %s" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
 
         cwlogfile.write("STATE DIMENSION: %d" % NG)
+        cwlogfile.flush()
         print("COMM SIZE: ", comm.size)
 
         nl_all = np.full(comm.size, math.floor(NG / comm.size))
@@ -106,6 +112,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
 
         t_indices_d = time.time() - t0
         cwlogfile.write("%s:%s elapsed time: %s" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
 
         t0 = time.time()
 
@@ -121,6 +128,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         fh.Read(observation)
         fh.Close()
         cwlogfile.write("%s:%s elapsed time: %s" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
 
         t_readfile_d = time.time() - t0
 

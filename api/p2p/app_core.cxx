@@ -349,6 +349,8 @@ int melissa_p2p_expose(VEC_T *values,
     // 2. calculate weight and synchronize weight on rank 0
     M_TRIGGER(START_CALC_WEIGHT, current_state.t);
     MDBG("start calculating weight for state");
+    int __comm_size;MPI_Comm_size(comm, &__comm_size);
+    MDBG("mpi.size(): %d, comm size: %d", mpi.size(), __comm_size);
     double weight = calculate_weight(values, hidden_values);
     MDBG("finished calculating weight for state");
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
