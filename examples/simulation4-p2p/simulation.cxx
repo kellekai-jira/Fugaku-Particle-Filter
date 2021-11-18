@@ -13,11 +13,11 @@
 #include <csignal>
 
 
-int GLOBAL_VECT_SIZE = 1024*1024;
-//int GLOBAL_VECT_SIZE = 40;
-// const int GLOBAL_VECT_SIZE = 1000;
-// const int GLOBAL_VECT_SIZE = 1000*100*10;
-// const int GLOBAL_VECT_SIZE = 1000*1000*10;
+int64_t GLOBAL_VECT_SIZE = 1024*1024;
+//int64_t GLOBAL_VECT_SIZE = 40;
+// const int64_t GLOBAL_VECT_SIZE = 1000;
+// const int64_t GLOBAL_VECT_SIZE = 1000*100*10;
+// const int64_t GLOBAL_VECT_SIZE = 1000*1000*10;
 
 using namespace std;
 
@@ -47,7 +47,7 @@ int main(int argc, char * args[])
     MPI_Comm_size(comm, &comm_size);
     MPI_Comm_rank(comm, &comm_rank);
 
-    int local_vect_size = GLOBAL_VECT_SIZE / comm_size;
+    int64_t local_vect_size = GLOBAL_VECT_SIZE / comm_size;
     // do I have one more?
     if (GLOBAL_VECT_SIZE % comm_size != 0 && comm_rank < GLOBAL_VECT_SIZE %
         comm_size)
@@ -56,11 +56,11 @@ int main(int argc, char * args[])
     }
 
     // how many pixels are left of me?
-    vector<int> offsets(comm_size);
-    vector<int> counts(comm_size);
+    vector<int64_t> offsets(comm_size);
+    vector<int64_t> counts(comm_size);
     fill(offsets.begin(), offsets.end(), 0);
     fill(counts.begin(), counts.end(), 0);
-    int next_offset = 0;
+    int64_t next_offset = 0;
     for (int rank = 0; rank < comm_size; rank++)
     {
         offsets[rank] = next_offset;
@@ -76,7 +76,7 @@ int main(int argc, char * args[])
         next_offset += counts[rank];
     }
 
-    int zero = 0;
+    int64_t zero = 0;
     melissa_init_f("state1", &local_vect_size, &zero, &fcomm);
     vector<double> state1(local_vect_size);
     fill(state1.begin(), state1.end(), 0.0);
