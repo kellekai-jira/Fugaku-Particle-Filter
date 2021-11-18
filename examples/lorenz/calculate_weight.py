@@ -105,7 +105,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
                 cnt_obs = cnt_obs + 1
                 if (cnt_obs == dim_obs): break
                 if (index_tmp == state_max_p): break
-            cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+            cwlogfile.write("%d/%d\n" % (i, num_reg))
             cwlogfile.flush()
             if (cnt_obs == dim_obs): break
             if (index_tmp == state_max_p): break
