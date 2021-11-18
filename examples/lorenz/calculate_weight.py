@@ -12,7 +12,8 @@ import time
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
         comm = MPI.COMM_WORLD.f2py(fcomm)
-        cwlogfile = open("calculate_weight_rank-%d.txt" % (comm.rank),"w")
+        cwlogfile_path = os.environ.get('MELISSA_LORENZ_EXPERIMENT_DIR') + "/calculate_weight_rank-%d.txt" % (comm.rank)
+        cwlogfile = open(cwlogfile_path,"w")
         cwlogfile.write("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
         cwlogfile.flush()
 
