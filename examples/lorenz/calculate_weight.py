@@ -98,6 +98,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         i = 0
         while i < num_reg:
             index_tmp = i * stride
+            cnt_obs = i * blk_size
             if index_tmp >= state_min_p:
                 of = index_tmp + blk_size
                 while index_tmp < of:
@@ -114,6 +115,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
                         if index_tmp >= state_max_p:
                             break
                     index_tmp += 1
+                    cnt_obs += 1
             i += 1
 
         cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
