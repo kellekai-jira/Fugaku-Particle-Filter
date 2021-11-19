@@ -95,20 +95,29 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         obs_idx = []
         dim_obs_p = 0
         cnt_obs = 0
-        for i in range(num_reg):
-            offset = i * stride
-            for j in range(blk_size):
-                index_tmp = offset + j
-                if (index_tmp >= state_min_p) and (index_tmp <= state_max_p):
-                    dim_obs_p = dim_obs_p + 1
-                    obs_idx.append(index_tmp - state_min_p)
-                cnt_obs = cnt_obs + 1
-                if (cnt_obs == dim_obs): break
-                if (index_tmp == state_max_p): break
-            cwlogfile.write("%d/%d\n" % (i, num_reg))
-            cwlogfile.flush()
-            if (cnt_obs == dim_obs): break
-            if (index_tmp == state_max_p): break
+        i = 0
+        while i < num_reg:
+            index_tmp = i * stride
+            if index_tmp >= state_min_p:
+                of = index_tmp + blk_size
+                while index_tmp < of:
+                    if cnt_obs == dim_obs:
+                        break
+                    if index_tmp >= state_max_p:
+                        break
+                    if index_tmp >= state_min_p:
+                        dim_obs_p = dim_obs_p + 1
+                        obs_idx.append(index_tmp - state_min_p)
+                        cnt_obs = cnt_obs + 1
+                        if cnt_obs == dim_obs:
+                            break
+                        if index_tmp >= state_max_p:
+                            break
+                    index_tmp += 1
+            i += 1
+
+        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
+        cwlogfile.flush()
 
         dim_obs_loc = np.full(1, dim_obs_p, dtype='int64')
         dim_obs_all = np.empty(comm.size, dtype='int64')
