@@ -7,21 +7,12 @@ import math
 import ctypes
 from ctypes import *
 import os
-import time
-from inspect import currentframe, getframeinfo
 
 def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimilated_varid, fcomm):
     try:
-        t_start = time.time()
         comm = MPI.COMM_WORLD.f2py(fcomm)
-        cwlogfile_path = os.environ.get('MELISSA_LORENZ_EXPERIMENT_DIR') + "/calculate_weight_rank-%d.txt" % (comm.rank)
-        cwlogfile = open(cwlogfile_path,"w")
-        frameinfo = getframeinfo(currentframe())
-        cwlogfile.write("size: %d, rank %d t=%d, Calculating weight for particle with id=%d\n" % (comm.size, comm.rank, cycle, pid))
-        cwlogfile.flush()
+        print("rank %d t=%d, Calculating weight for particle with id=%d" % (comm.rank, cycle, pid))
 
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
         assert 'MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_PERCENT' in os.environ.keys()
         assert 'MELISSA_LORENZ_OBSERVATION_DIR' in os.environ.keys()
@@ -30,28 +21,17 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         blk_size = int(os.environ.get('MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE'))
         obs_dir = os.environ.get('MELISSA_LORENZ_OBSERVATION_DIR')
 
-        t0 = time.time()
         background_d = np.frombuffer(background, dtype='float64',
                              count=len(background) // 8)
-        t_background_d = time.time() - t0
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
-
-
-        t0 = time.time()
-        NG = comm.allreduce(len(background_d), MPI.SUM)
-
-        cwlogfile.write("STATE DIMENSION: %d\n" % NG)
-        cwlogfile.flush()
-        cwlogfile.write("COMM SIZE: %d\n" % comm.size)
-        cwlogfile.flush()
 
         NG = comm.allreduce(len(background_d), MPI.SUM)
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
 
-        cwlogfile.write("STATE DIMENSION: %d\n" % NG)
-        cwlogfile.flush()
+        print("STATE DIMENSION: ", NG)
+        print("COMM SIZE: ", comm.size)
+
+        NG = comm.allreduce(len(background_d), MPI.SUM)
+
+        print("STATE DIMENSION: ", NG)
         print("COMM SIZE: ", comm.size)
 
         nl_all = np.full(comm.size, math.floor(NG / comm.size))
@@ -67,8 +47,6 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
                     nl_mod = 0
                     break
 
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
         nl = nl_all[comm.rank]
 
         nl_off = 0;
@@ -95,40 +73,22 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         obs_idx = []
         dim_obs_p = 0
         cnt_obs = 0
-        i = 0
-        while i < num_reg:
-            index_tmp = i * stride
-            cnt_obs = i * blk_size
-            if index_tmp >= state_min_p:
-                of = index_tmp + blk_size
-                while index_tmp < of:
-                    if cnt_obs == dim_obs:
-                        break
-                    if index_tmp >= state_max_p:
-                        break
-                    if index_tmp >= state_min_p:
-                        dim_obs_p = dim_obs_p + 1
-                        obs_idx.append(index_tmp - state_min_p)
-                        if cnt_obs == dim_obs:
-                            break
-                        if index_tmp >= state_max_p:
-                            break
-                    index_tmp += 1
-                    cnt_obs += 1
-            i += 1
-
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
+        for i in range(num_reg):
+            offset = i * stride
+            for j in range(blk_size):
+                index_tmp = offset + j
+                if (index_tmp >= state_min_p) and (index_tmp <= state_max_p):
+                    dim_obs_p = dim_obs_p + 1
+                    obs_idx.append(index_tmp - state_min_p)
+                cnt_obs = cnt_obs + 1
+                if (cnt_obs == dim_obs): break
+                if (index_tmp == state_max_p): break
+            if (cnt_obs == dim_obs): break
+            if (index_tmp == state_max_p): break
 
         dim_obs_loc = np.full(1, dim_obs_p, dtype='int32')
         dim_obs_all = np.empty(comm.size, dtype='int32')
         comm.Allgather([dim_obs_loc, MPI.INT], [dim_obs_all, MPI.INT])
-
-        t_indices_d = time.time() - t0
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
-
-        t0 = time.time()
 
         amode = MPI.MODE_RDONLY
         fh = MPI.File.Open(comm, obs_dir + "/iter-"+str(cycle)+".obs", amode)
@@ -141,12 +101,6 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         observation = np.empty(dim_obs_p, dtype='float64')
         fh.Read(observation)
         fh.Close()
-        cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
-        cwlogfile.flush()
-
-        t_readfile_d = time.time() - t0
-
-        t0 = time.time()
 
         sum_err = 0
         for i in range(dim_obs_p):
@@ -156,18 +110,10 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         #print("background: ", background_d[obs_idx[:3]], flush=True)
         #print("observation: ", observation[:3], flush=True)
         #print("indeces: ", obs_idx[:3], flush=True)
-        cwlogfile.write("dim_obs_p: %d\n" % (dim_obs_p))
-        cwlogfile.flush()
+        #print("dim_obs_p: ", dim_obs_p, flush=True)
 
         sum_err_all = comm.allreduce(sum_err, MPI.SUM)
         sum_err_all = np.exp(-1*sum_err_all)
-
-        t_compute_d = time.time() - t0
-
-        cwlogfile.write("convert background: %d, compute indices: %d, read file: %d, compute weight: %d\n" % ( t_background_d, t_indices_d, t_readfile_d, t_compute_d ))
-        cwlogfile.flush()
-
-        cwlogfile.close()
 
         return sum_err_all
 
