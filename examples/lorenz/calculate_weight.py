@@ -109,7 +109,6 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
                     if index_tmp >= state_min_p:
                         dim_obs_p = dim_obs_p + 1
                         obs_idx.append(index_tmp - state_min_p)
-                        cnt_obs = cnt_obs + 1
                         if cnt_obs == dim_obs:
                             break
                         if index_tmp >= state_max_p:
@@ -121,9 +120,9 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
         cwlogfile.flush()
 
-        dim_obs_loc = np.full(1, dim_obs_p, dtype='int64')
-        dim_obs_all = np.empty(comm.size, dtype='int64')
-        comm.Allgather([dim_obs_loc, MPI.INT64_T], [dim_obs_all, MPI.INT64_T])
+        dim_obs_loc = np.full(1, dim_obs_p, dtype='int32')
+        dim_obs_all = np.empty(comm.size, dtype='int32')
+        comm.Allgather([dim_obs_loc, MPI.INT], [dim_obs_all, MPI.INT])
 
         t_indices_d = time.time() - t0
         cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
