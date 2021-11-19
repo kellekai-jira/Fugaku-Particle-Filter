@@ -99,7 +99,7 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
             cnt_obs = i * blk_size
             of = index_tmp + blk_size
             if max(index_tmp, state_min_p) < min(of, state_max_p):
-                while (index_tmp < of) and (cnt_obs <= dim_obs):
+                while (index_tmp < of) and (cnt_obs < dim_obs):
                     if (index_tmp >= state_min_p) and (index_tmp <= state_max_p):
                         obs_idx.append(index_tmp - state_min_p)
                     index_tmp += 1
