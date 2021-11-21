@@ -13,6 +13,8 @@
 #include <string>
 #include <queue>
 #include <fti.h>  // TODO: remove this from here!
+#include <string>
+#include <regex>
 
 #include "api_common.h"
 // TODO error checking!
@@ -27,7 +29,21 @@ time_t next_try_delete = 0;
 // init MPI
 // init IO
 
-
+long long get_mem_total() {
+  std::ifstream memifs("/proc/meminfo");
+  std::string line;
+  unsigned long mem_avail = -1;
+  while(std::getline(memifs, line)) {
+    if( line.find("MemFree") != std::string::npos ) {
+      std::string int_num = "[[:digit:]]+";
+      std::smatch int_str;
+      std::regex pattern(int_num);
+      std::regex_search(line, int_str, pattern);
+      mem_avail = stoi(int_str[0]); 
+    }
+  }
+  return mem_avail;
+}
 
 void StorageController::io_init( IoController* io, int runner_id ) {
   
@@ -148,8 +164,10 @@ void StorageController::callback() {
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
-      std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
-      std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
+      std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl;
+      std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl;
+      std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl;
+ 		  std::cout << "Total mem available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     //}
     M_TRIGGER(STOP_INIT, 0);
   }
@@ -215,6 +233,13 @@ void StorageController::load( io_state_id_t state_id ) {
 }
 
 void StorageController::pull( io_state_id_t state_id ) {
+	struct statvfs buf;
+  statvfs(storage.m_io->m_dict_string["local_dir"].c_str(), &buf);
+  double avail_fs = static_cast<double>(buf.f_bsize) * buf.f_bavail;
+  double free_fs = static_cast<double>(buf.f_bsize) * buf.f_bfree;
+  std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl;
+  std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl;
+ 	std::cout << "Total mem available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   if( m_worker_thread ) {
     return m_pull_head( state_id );
   } else {
@@ -227,8 +252,9 @@ void StorageController::store( io_state_id_t state_id ) {
   statvfs(storage.m_io->m_dict_string["local_dir"].c_str(), &buf);
   double avail_fs = static_cast<double>(buf.f_bsize) * buf.f_bavail;
   double free_fs = static_cast<double>(buf.f_bsize) * buf.f_bfree;
-  std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
-  std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
+  std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl;
+  std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl;
+ 	std::cout << "Total mem available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   if( m_worker_thread ) {
     return m_store_head( state_id );
   } else {
