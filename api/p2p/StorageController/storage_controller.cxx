@@ -1,6 +1,7 @@
 #include "storage_controller.hpp"
 #include "storage_controller_impl.hpp"
 
+#include <sys/statvfs.h>
 #include "utils.h"
 #include <memory>
 #include <numeric>
@@ -136,12 +137,19 @@ void StorageController::callback() {
 
     //storage.m_peer = new PeerController( storage.m_io, storage.m_zmq_context, storage.m_mpi );
     init = true;
+  	
+		struct statvfs buf;
+  	statvfs(storage.m_io->m_dict_string["local_dir"].c_str(), &buf);
+  	double avail_fs = static_cast<double>(buf.f_bsize) * buf.f_bavail;
+  	double free_fs = static_cast<double>(buf.f_bsize) * buf.f_bfree;
 
     //if(storage.m_io->m_dict_bool["master_global"]) {
       std::cout << "storage capacity [# slots]: " << capacity << std::endl;
       std::cout << "state size per node [Mb]: " << ((double)state_size_node)/(1024*1024) << std::endl;
       std::cout << "prefetch capacity [# slots]: " << storage.state_pool.capacity() << std::endl;
       std::cout << "free [# slots]: " << storage.state_pool.free() << std::endl;
+      std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
+      std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
     //}
     M_TRIGGER(STOP_INIT, 0);
   }
@@ -215,6 +223,12 @@ void StorageController::pull( io_state_id_t state_id ) {
 }
 
 void StorageController::store( io_state_id_t state_id ) {
+	struct statvfs buf;
+  statvfs(storage.m_io->m_dict_string["local_dir"].c_str(), &buf);
+  double avail_fs = static_cast<double>(buf.f_bsize) * buf.f_bavail;
+  double free_fs = static_cast<double>(buf.f_bsize) * buf.f_bfree;
+  std::cout << "free local fs: " << free_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
+  std::cout << "avail local fs: " << avail_fs/(1024*1024*1024) << " GB" << std::endl << std::fflush;
   if( m_worker_thread ) {
     return m_store_head( state_id );
   } else {

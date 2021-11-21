@@ -106,6 +106,7 @@ class StorageController {
     // FTI sleeps 500 us each iteration. Thus, a request interval of 2
     // coresponds to a server info request each second.
     int m_request_interval;
+    std::string m_local_storage_base;    
 
     class StatePool {
       public:
