@@ -111,7 +111,7 @@ enum Phase
             std::stringstream ss; \
             ss << str << " (" << __FILE__ << ":" <<  __LINE__ << ")"; \
             std::cout << ss.str() << std::endl; \
-            fflush(stdout); \
+            std::cout << std::fflush; \
         } \
     } while(false)
 #endif
@@ -125,7 +125,7 @@ enum Phase
             std::stringstream ss; \
             ss << "[rank:" << comm_rank << "] " << str << std::endl; \
             std::cout << ss.str() << std::endl; \
-            fflush(stdout); \
+            std::cout << std::fflush; \
         } \
     } while(false)
 
