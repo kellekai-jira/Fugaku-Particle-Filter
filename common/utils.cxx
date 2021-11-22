@@ -20,6 +20,22 @@ void check_data_types() {
     assert(sizeof(size_t) == 8);
 }
 
+long long get_mem_total() {
+  std::ifstream memifs("/proc/meminfo");
+  std::string line;
+  unsigned long mem_avail = -1;
+  while(std::getline(memifs, line)) {
+    if( line.find("MemFree") != std::string::npos ) {
+      std::string int_num = "[[:digit:]]+";
+      std::smatch int_str;
+      std::regex pattern(int_num);
+      std::regex_search(line, int_str, pattern);
+      mem_avail = stoi(int_str[0]); 
+    }
+  }
+  return mem_avail;
+}
+
 
 MPI_Datatype MPI_MY_INDEX_MAP_T;
 void create_MPI_INDEX_MAP_T() {

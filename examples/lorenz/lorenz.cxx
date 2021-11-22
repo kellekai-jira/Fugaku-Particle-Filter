@@ -26,6 +26,11 @@ static int64_t NG;
 int64_t nlt, nl, state_min_p, state_max_p;
 std::vector<int64_t> nl_all;
 const int MPI_MIN_BLK = 1;
+  
+std::vector<double> x_l;
+std::vector<double> x_b1;
+std::vector<double> x_b2;
+std::vector<double> x_b3;
 
 MPI_Fint fcomm_world;
 MPI_Fint fcomm;
@@ -131,23 +136,22 @@ void d96( std::vector<double> & x_in, std::vector<double> & x_out, double F) {
 
 // integration using Runge-Kutta 4
 void integrate( std::vector<double> & x, double F, double dt ) {
-  std::vector<double> x_old(x);
-  std::vector<double> ki(x);
-  std::vector<double> kj(x.size());
-  d96( ki, kj, F );
-  RK_step( x, x, kj, 6, dt );
-  RK_step( ki, x_old, kj, 2, dt );
-  exchange(ki);
-  d96(ki, kj, F);
-  RK_step( x, x, kj, 3, dt );
-  RK_step( ki, x_old, kj, 2, dt );
-  exchange(ki);
-  d96(ki, kj, F);
-  RK_step( x, x, kj, 3, dt );
-  RK_step( ki, x_old, kj, 1, dt );
-  exchange(ki);
-  d96(ki, kj, F);
-  RK_step( x, x, kj, 6, dt );
+  x_b1 = x;
+  x_b2 = x;
+  d96( x_b2, x_b3, F );
+  RK_step( x, x, x_b3, 6, dt );
+  RK_step( x_b2, x_b1, x_b3, 2, dt );
+  exchange(x_b2);
+  d96(x_b2, x_b3, F);
+  RK_step( x, x, x_b3, 3, dt );
+  RK_step( x_b2, x_b1, x_b3, 2, dt );
+  exchange(x_b2);
+  d96(x_b2, x_b3, F);
+  RK_step( x, x, x_b3, 3, dt );
+  RK_step( x_b2, x_b1, x_b3, 1, dt );
+  exchange(x_b2);
+  d96(x_b2, x_b3, F);
+  RK_step( x, x, x_b3, 6, dt );
   exchange(x);
 }
 
@@ -158,13 +162,17 @@ double index_function( size_t idx ) {
     return norm * cos( (double)(freq * unit * idx) );
 }
 
-void init_state( std::vector<double> & x ) {
+void init_state() {
+    x_l.resize(nlt);
+    x_b1.resize(nlt);
+    x_b2.resize(nlt);
+    x_b3.resize(nlt);
     size_t idx = state_min_p;
-    std::fill(x.begin(), x.end(), F);
-    for(auto &x_i : x) {
+    std::fill(x_l.begin(), x_l.end(), F);
+    for(auto &x_i : x_l) {
         x_i += index_function( idx++ );
     }
-    exchange( x );
+    exchange( x_l );
 }
 
 int main() {
@@ -185,8 +193,7 @@ int main() {
   int64_t nl_i = nl;
   melissa_init_f("state1", &nl_i, &zero, &fcomm);
   
-  std::vector<double> x_l(nlt);
-  init_state( x_l );
+  init_state();
 
   static bool is_first_timestep = true;
   int nsteps = 1;

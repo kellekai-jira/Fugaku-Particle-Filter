@@ -30,6 +30,7 @@
 
 #include <streambuf>
 #include <cassert>
+#include <regex>
 
 class AddTimeStamp : public std::streambuf
 {
@@ -246,5 +247,7 @@ void slow_MPI_Gatherv(const void *sendbuf, size_t sendcount, MPI_Datatype
                       void *recvbuf, const size_t *recvcounts, const
                       size_t *displs,
                       MPI_Datatype recvtype, int root, MPI_Comm comm);
+
+long long get_mem_total();
 
 #endif

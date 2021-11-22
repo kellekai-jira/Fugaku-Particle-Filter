@@ -14,7 +14,6 @@
 #include <queue>
 #include <fti.h>  // TODO: remove this from here!
 #include <string>
-#include <regex>
 
 #include "api_common.h"
 // TODO error checking!
@@ -28,22 +27,6 @@ time_t next_try_delete = 0;
 
 // init MPI
 // init IO
-
-long long get_mem_total() {
-  std::ifstream memifs("/proc/meminfo");
-  std::string line;
-  unsigned long mem_avail = -1;
-  while(std::getline(memifs, line)) {
-    if( line.find("MemFree") != std::string::npos ) {
-      std::string int_num = "[[:digit:]]+";
-      std::smatch int_str;
-      std::regex pattern(int_num);
-      std::regex_search(line, int_str, pattern);
-      mem_avail = stoi(int_str[0]); 
-    }
-  }
-  return mem_avail;
-}
 
 void StorageController::io_init( IoController* io, int runner_id ) {
   
