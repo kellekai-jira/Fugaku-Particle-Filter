@@ -70,6 +70,7 @@ def run_melissa_da_study(
         additional_server_env={},
         create_runner_dir=False,
         precommand_server='',
+        precommand_runner='',
         nodes_server=1,
         nodes_runner=1,
         walltime='xxxx01:00:00',
@@ -266,11 +267,8 @@ def run_melissa_da_study(
             self.runner_ids = runner_ids
             self.__group_size = len(runner_ids)
 
-            precommand = 'xterm_gdb'
-            precommand = ''
-
             cmd = '%s %s' % (
-                    precommand,
+                    precommand_runner,
                     RUNNER_CMD
                     )
 

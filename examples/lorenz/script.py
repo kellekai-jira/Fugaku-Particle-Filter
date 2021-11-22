@@ -45,11 +45,16 @@ __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
 __env_write_trace = float(os.environ['MELISSA_LORENZ_TIMING_TRACE'])
 __env_runner_group_size = int(os.environ['MELISSA_LORENZ_RUNNER_GROUP_SIZE'])
 
+__precommand_runner = ''
+if "MELISSA_PRECOMMAND_RUNNER" in os.environ:
+    __precommand_runner = os.environ["MELISSA_PRECOMMAND_RUNNER"]
+
 run_melissa_da_study(
     cluster=FugakuCluster(),
     walltime='02:00:00',
     is_p2p=True,
     precommand_server='',
+    precommand_runner=__precommand_runner,
     runner_cmd='simulation-lorenz',
     total_steps=__env_steps,
     ensemble_size=__env_members,
