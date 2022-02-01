@@ -199,12 +199,8 @@ void StorageController::callback() {
 //  STORAGE CONTROLLER API
 //======================================================================
 
-int StorageController::protect( void* buffer, size_t size, io_type_t type) {
-  m_io->protect(buffer, size, type);
-}
-
-int StorageController::update( io_id_t id, void* buffer, size_t size ) {
-  m_io->update(id, buffer, size);
+int StorageController::protect( std::string name, void* buffer, size_t size, io_type_t type) {
+  m_io->protect(name, buffer, size, type);
 }
 
 void StorageController::load( io_state_id_t state_id ) {

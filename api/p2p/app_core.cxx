@@ -198,7 +198,6 @@ void melissa_p2p_init(const char *field_name,
     // TODO move storage.init in constructor and use smartpointer instead
     assert(local_hidden_vect_size == 0 && "Melissa-P2P does not yet work if there is a hidden state");
     storage.init( 50L*1024L*1024L*1024L, local_vect_size);  // 50GB storage for now
-    fti_protect_id = storage.protect( NULL, local_vect_size, IO_BYTE );
 
     // open sockets to server on rank 0:
     if (mpi.rank() == 0)
@@ -308,11 +307,17 @@ void push_weight_to_head(double weight)
     return r.job_response();
 }
 
-int melissa_p2p_expose(VEC_T *values,
-                   VEC_T *hidden_values)
+int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
+                   VEC_T *hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
-    if (is_first) {
+    
+    // Update pointer
+    storage.protect( std::string(field_name), values, size, IO_BYTE );
+    // return immediately if just field to expose
+    if( mode == MELISSA_MODE_EXPOSE ) return 0;
+    
+    if ( is_first ) {
         M_TRIGGER(STOP_INIT, 0);
         is_first = false;
     }
@@ -325,9 +330,6 @@ int melissa_p2p_expose(VEC_T *values,
     timing->maybe_report();
     }
 #endif
-
-    // Update pointer
-    storage.update( fti_protect_id, values, field.local_vect_size );
 
     // store to ram disk
     // TODO: call protect direkt in chunk based api

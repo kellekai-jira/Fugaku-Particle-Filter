@@ -407,9 +407,12 @@ void melissa_init_no_mpi(
 
 
 int melissa_expose(
-    const char* field_name, VEC_T* values, VEC_T* hidden_values) {
-    M_TRIGGER(STOP_PROPAGATE_STATE, field.current_state_id);
-    M_TRIGGER(START_IDLE_RUNNER, getRunnerId());
+    const char* field_name, VEC_T* values, int64_t size, 
+    VEC_T* hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode) {
+    if( mode == MELISSA_MODE_UPDATE ) {
+      M_TRIGGER(STOP_PROPAGATE_STATE, field.current_state_id);
+      M_TRIGGER(START_IDLE_RUNNER, getRunnerId());
+    }
     assert(phase != PHASE_FINAL);
     if(phase == PHASE_INIT)
     {
@@ -428,7 +431,7 @@ int melissa_expose(
     int nsteps;
     if (is_p2p())
     {
-         nsteps = melissa_p2p_expose(values, hidden_values);
+        nsteps = melissa_p2p_expose(field_name, values, size, hidden_values, size_hidden, mode);
     } else {
 
         field.putState(values, hidden_values, field_name);
@@ -437,6 +440,10 @@ int melissa_expose(
 
         // and request new data
         nsteps = field.getState(values, hidden_values);
+    }
+    
+    if( mode == MELISSA_MODE_EXPOSE ) {
+      return nsteps;
     }
 
     M_TRIGGER(STOP_IDLE_RUNNER, getRunnerId());
@@ -535,8 +542,8 @@ void melissa_init_f(
 }
 
 
-int melissa_expose_f(const char* field_name, double* values) {
-    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), NULL);
+int melissa_expose_f(const char* field_name, double* values, int64_t size, int mode) {
+    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), size, NULL, 0, static_cast<MELISSA_EXPOSE_MODE>(mode));
 }
 
 
@@ -544,8 +551,8 @@ int melissa_expose_f(const char* field_name, double* values) {
 int melissa_expose_d(
     const char* field_name, double* values, double* hidden_values) {
     return melissa_expose(
-        field_name, reinterpret_cast<VEC_T*>(values),
-        reinterpret_cast<VEC_T*>(hidden_values));
+        field_name, reinterpret_cast<VEC_T*>(values), 0,
+        reinterpret_cast<VEC_T*>(hidden_values), 0);
 }
 
 

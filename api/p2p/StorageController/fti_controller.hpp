@@ -34,8 +34,7 @@ class FtiController : public IoController {
     void init_core();
     void fini();
     void set_state_size_per_proc( std::vector<uint64_t> vec );
-    io_id_t protect( void* buffer, size_t size, io_type_t type );
-    void update( io_id_t varid, void* buffer, size_t size );
+    io_id_t protect( std::string name, void* buffer, size_t size, io_type_t type );
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
@@ -66,7 +65,7 @@ class FtiController : public IoController {
     std::map<io_type_t,fti_id_t> m_io_type_map;
     std::map<io_msg_t,int> m_io_msg_map;
     std::map<io_tag_t,int> m_io_tag_map;
-    std::map<io_id_t,io_var_t> m_var_id_map;
+    std::map<std::string, io_var_t> m_var_id_map;
     int m_next_garbage_coll;
     io_id_t m_id_counter;  
     int m_last_cycle;

@@ -39,17 +39,18 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
 
 
 
-int FtiController::protect( void* buffer, size_t size, io_type_t type ) {
+int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
-  FTI_Protect(m_id_counter, buffer, size, m_io_type_map[type]);
-  io_var_t variable = { buffer, size, type };
-  m_var_id_map.insert( std::pair<io_id_t,io_var_t>( m_id_counter, variable ) );
-  return m_id_counter++;
-}
-
-void FtiController::update( io_id_t id, void* buffer, size_t size ) {
-  assert( m_var_id_map.count(id) != 0 && "invalid type" );
-  FTI_Protect(id, buffer, size, m_io_type_map[m_var_id_map[id].type]);
+  if(m_var_id_map.find(name) == m_var_id_map.end()) { 
+    io_var_t variable = { m_id_counter, buffer, size, type };
+    m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
+    m_id_counter++;
+  }
+  FTI_Protect(m_var_id_map[name].id, buffer, size, m_io_type_map[type]);
+  m_var_id_map[name].data = buffer;
+  m_var_id_map[name].size = size;
+  m_var_id_map[name].type = type;
+  return m_var_id_map[name].id;
 }
 
 void FtiController::init_io( int runner_id ) {

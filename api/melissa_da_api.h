@@ -16,6 +16,11 @@
 extern "C" {
 #endif
 
+typedef enum {
+  MELISSA_MODE_EXPOSE = 0,
+  MELISSA_MODE_UPDATE = 1
+} MELISSA_EXPOSE_MODE;
+
 /// Every rank that contains some model state information and thus shall communicate with
 /// the Melissa-DA server as must call this function once during init.
 /// local_vect_size and local_hidden_vect_Size are in bytes.
@@ -66,15 +71,15 @@ void melissa_init_f(const char *field_name,
 /// Exposes data to melissa
 /// returns 0 if simulation should end now.
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
-int melissa_expose(const char *field_name, VEC_T *values,
-                   VEC_T *hidden_values);
+int melissa_expose(const char *field_name, VEC_T *values, int64_t size, 
+                   VEC_T *hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode = MELISSA_MODE_UPDATE);
 
 /// legacy interface using doubles...
 int melissa_expose_d(const char *field_name, double *values, double *hidden_values);
 
 /// wrapper needed for the Fortran interface when using no hidden state as nullptr
 /// transfer between Fortran and C is not trivial
-int melissa_expose_f(const char *field_name, double *values);
+int melissa_expose_f(const char *field_name, double *values, int64_t size, MELISSA_EXPOSE_MODE mode = MELISSA_MODE_UPDATE);
 
 /// It sometimes is useful to have the melissa current state id
 /// outside of melissa.

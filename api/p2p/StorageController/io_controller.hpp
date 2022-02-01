@@ -13,8 +13,7 @@ class IoController {
       virtual void init_core() = 0;
       virtual void fini() = 0;
       virtual void set_state_size_per_proc( std::vector<uint64_t> vec ) = 0;
-      virtual io_id_t protect( void* buffer, size_t size, io_type_t type ) = 0;
-      virtual void update( io_id_t, void* buffer, size_t size ) = 0;
+      virtual io_id_t protect( std::string name, void* buffer, size_t size, io_type_t type ) = 0;
       virtual bool is_local( io_state_id_t state_id ) = 0;
       virtual bool is_global( io_state_id_t state_id ) = 0;
       virtual void remove( io_state_id_t state_id, io_level_t level ) = 0;

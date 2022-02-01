@@ -62,6 +62,7 @@ struct io_state_id_t {
 };
 
 struct io_var_t {
+  io_id_t id;
   void* data;
   size_t size;
   io_type_t type;

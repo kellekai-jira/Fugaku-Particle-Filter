@@ -38,8 +38,7 @@ class StorageController {
     // API
     void load( io_state_id_t state );
     void store( io_state_id_t state_id );
-    int protect( void* buffer, size_t size, io_type_t );
-    int update( io_id_t id, void* buffer, size_t size );
+    int protect( std::string name, void* buffer, size_t size, io_type_t );
 
   private:
 
