@@ -79,7 +79,7 @@ int melissa_expose_d(const char *field_name, double *values, double *hidden_valu
 
 /// wrapper needed for the Fortran interface when using no hidden state as nullptr
 /// transfer between Fortran and C is not trivial
-int melissa_expose_f(const char *field_name, double *values, int64_t size, int mode);
+int melissa_expose_f( const char *field_name, double *values, int64_t size, int mode = static_cast<int>(MELISSA_MODE_UPDATE) );
 
 /// It sometimes is useful to have the melissa current state id
 /// outside of melissa.
