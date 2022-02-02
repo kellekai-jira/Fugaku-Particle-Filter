@@ -136,7 +136,7 @@ int melissa_commit_chunks_f(MPI_Fint * comm_fortran) {
     }
 
     // expose buffer
-    int nsteps = melissa_expose("data", buf_assimilated.data(), buf_hidden.data());
+    int nsteps = melissa_expose("data", buf_assimilated.data(), buf_assimilated.size(), buf_hidden.data(), buf_assimilated.size());
 
     // buffer -> model
     pos_hidden = reinterpret_cast<VEC_T*>(buf_hidden.data());

@@ -204,7 +204,7 @@ int main() {
       integrate( x_l, F, dt );
     }
 
-    nsteps = melissa_expose_f("state1", &x_l[2]);
+    nsteps = melissa_expose_f("state1", &x_l[2], nl_i);
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
