@@ -31,6 +31,12 @@ function melissa_expose_hidden(field_name,&
     real(kind=C_DOUBLE), intent(inout), dimension(*) :: hidden_values
 end function melissa_expose_hidden
 
+subroutine melissa_register_weight_function( func ) bind (C, name="melissa_register_weight_function")
+  use, intrinsic :: iso_c_binding
+	type(c_funptr), value, intent(in) :: func
+end subroutine
+
+
 function melissa_expose(field_name,&
     values) bind(c, name = 'melissa_expose_f')
     use ISO_C_BINDING, only: C_CHAR, C_DOUBLE, C_INT
