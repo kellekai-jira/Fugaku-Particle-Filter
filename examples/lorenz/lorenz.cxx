@@ -208,12 +208,12 @@ int main() {
     }
     
     wtime = MPI_Wtime() - wtime_T0;
-    int64_t expose_size = 1;
+    int64_t expose_size = nl_i;
     int mode = static_cast<int>(MELISSA_MODE_EXPOSE);
-    nsteps = melissa_expose_f("wtime", &wtime, &expose_size, &mode);
-    expose_size = nl_i;
-    mode = static_cast<int>(MELISSA_MODE_UPDATE);
     nsteps = melissa_expose_f("state1", &x_l[2], &expose_size, &mode);
+    expose_size = 1;
+    mode = static_cast<int>(MELISSA_MODE_UPDATE);
+    nsteps = melissa_expose_f("wtime", &wtime, &expose_size, &mode);
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
