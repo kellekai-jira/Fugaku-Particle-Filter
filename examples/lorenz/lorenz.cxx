@@ -195,6 +195,8 @@ int main() {
   
   init_state();
 
+  double wtime_T0 = MPI_Wtime();
+  double wtime;
   static bool is_first_timestep = true;
   int nsteps = 1;
   do
@@ -203,7 +205,9 @@ int main() {
     for(int i=0; i<DT/dt; i++) {
       integrate( x_l, F, dt );
     }
-
+    
+    wtime = MPI_Wtime() - wtime_T0;
+    nsteps = melissa_expose_f("wtime", &wtime, sizeof(double), static_cast<int>(MELISSA_MODE_EXPOSE));
     nsteps = melissa_expose_f("state1", &x_l[2], nl_i * sizeof(double));
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
