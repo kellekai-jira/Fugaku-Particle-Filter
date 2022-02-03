@@ -542,8 +542,8 @@ void melissa_init_f(
 }
 
 
-int melissa_expose_f(const char* field_name, double* values, int64_t size, int mode) {
-    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), size, NULL, 0, static_cast<MELISSA_EXPOSE_MODE>(mode));
+int melissa_expose_f(const char* field_name, double* values, int64_t* size, int* mode) {
+    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), *size * sizeof(double), NULL, 0, static_cast<MELISSA_EXPOSE_MODE>(*mode));
 }
 
 

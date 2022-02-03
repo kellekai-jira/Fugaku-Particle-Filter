@@ -191,7 +191,7 @@ int main() {
 
   int64_t zero = 0;
   int64_t nl_i = nl;
-  int64_t lorenz_full_state_size = (nl_i + 1) * sizeof(double);
+  int64_t lorenz_full_state_size = nl_i + 1;
   melissa_init_f("state1", &lorenz_full_state_size, &zero, &fcomm);
   
   init_state();
@@ -208,8 +208,12 @@ int main() {
     }
     
     wtime = MPI_Wtime() - wtime_T0;
-    nsteps = melissa_expose_f("wtime", &wtime, sizeof(double), static_cast<int>(MELISSA_MODE_EXPOSE));
-    nsteps = melissa_expose_f("state1", &x_l[2], nl_i * sizeof(double));
+    int64_t expose_size = 1;
+    int mode = static_cast<int>(MELISSA_MODE_EXPOSE);
+    nsteps = melissa_expose_f("wtime", &wtime, &expose_size, &mode);
+    expose_size = nl_i;
+    mode = static_cast<int>(MELISSA_MODE_UPDATE);
+    nsteps = melissa_expose_f("state1", &x_l[2], &expose_size, &mode);
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());
