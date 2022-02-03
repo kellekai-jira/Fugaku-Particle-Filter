@@ -191,7 +191,8 @@ int main() {
 
   int64_t zero = 0;
   int64_t nl_i = nl;
-  melissa_init_f("state1", &nl_i, &zero, &fcomm);
+  int64_t lorenz_full_state_size = nl_i + sizeof(double);
+  melissa_init_f("state1", &lorenz_full_state_size, &zero, &fcomm);
   
   init_state();
 
