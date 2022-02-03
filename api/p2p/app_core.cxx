@@ -314,13 +314,16 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
     
     // Update pointer
     storage.protect( std::string(field_name), values, size, IO_BYTE );
+    MDBG("I am good");
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
+    MDBG("I am good");
     
     if ( is_first ) {
         M_TRIGGER(STOP_INIT, 0);
         is_first = false;
     }
+    MDBG("I am good");
 
 #ifdef REPORT_TIMING
 #ifndef REPORT_TIMING_ALL_RANKS
@@ -330,6 +333,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
     timing->maybe_report();
     }
 #endif
+    MDBG("I am good");
 
     // store to ram disk
     // TODO: call protect direkt in chunk based api
@@ -338,8 +342,10 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
         // if checkpointing initial state, use runner_id as state id
         field.current_state_id = runner_id; // We are beginning like this...
     }
+    MDBG("I am good");
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
+    MDBG("I am good");
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
