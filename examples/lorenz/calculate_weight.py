@@ -31,8 +31,9 @@ def calculate_weight(cycle, pid, background, hidden, assimilated_index, assimila
         obs_dir = os.environ.get('MELISSA_LORENZ_OBSERVATION_DIR')
 
         t0 = time.time()
+        blen = (len(background)-8)/8
         background_d = np.frombuffer(background, dtype='float64',
-                             count=len(background) // 8)
+                             count=blen)
         t_background_d = time.time() - t0
         cwlogfile.write("%s:%s elapsed time: %s\n" % (frameinfo.filename, frameinfo.lineno, time.time()- t_start))
         cwlogfile.flush()
