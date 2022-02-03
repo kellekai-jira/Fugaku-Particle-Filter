@@ -179,7 +179,6 @@ void melissa_p2p_init(const char *field_name,
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    assert(  calculateWeight != NULL && "no function registered for weight calculation (call 'melissa_register_weight_function' after melissa_init)" );
     field.current_state_id = runner_id;  // Start like this!
     if (local_index_map_ != nullptr) {
     // store local_index_map to reuse in weight calculation
@@ -319,6 +318,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
     MDBG("I am good");
+    
+    assert(  calculateWeight != NULL && "no function registered for weight calculation (call 'melissa_register_weight_function' after melissa_init)" );
     
     if ( is_first ) {
         M_TRIGGER(STOP_INIT, 0);
