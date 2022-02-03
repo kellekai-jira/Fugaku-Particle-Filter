@@ -426,7 +426,7 @@ int melissa_expose(
     }
 
     // Now Send data to the melissa server
-    assert(field.name == field_name);
+    //assert(field.name == field_name);
 
     int nsteps;
     if (is_p2p())
