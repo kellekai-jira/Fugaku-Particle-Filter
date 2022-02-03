@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "melissa_da_stype.h"
 
+extern calculateWeightFunction calculateWeight;
 
 //
 // zmq context:

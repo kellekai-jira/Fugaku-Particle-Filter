@@ -16,6 +16,14 @@
 int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
+double calculate_weight() {
+   double lower_bound = 0.8;
+   double upper_bound = 1.0;
+   std::uniform_real_distribution<double> unif(lower_bound,upper_bound);
+   std::default_random_engine re;
+   double a_random_double = unif(re);
+}
+
 const double F = 6;
 const double dt = 0.01;
 const double DT = 0.1;
@@ -193,7 +201,8 @@ int main() {
   int64_t nl_i = nl;
   int64_t lorenz_full_state_size = nl_i + 1;
   melissa_init_f("state1", &lorenz_full_state_size, &zero, &fcomm);
-  
+	melissa_register_weight_function(calculate_weight);	
+ 
   init_state();
 
   double wtime_T0 = MPI_Wtime();
@@ -208,12 +217,12 @@ int main() {
     }
     
     wtime = MPI_Wtime() - wtime_T0;
-    int64_t expose_size = nl_i;
+    int64_t expose_size = 1;
     int mode = static_cast<int>(MELISSA_MODE_EXPOSE);
-    nsteps = melissa_expose_f("state1", &x_l[2], &expose_size, &mode);
-    expose_size = 1;
-    mode = static_cast<int>(MELISSA_MODE_UPDATE);
     nsteps = melissa_expose_f("wtime", &wtime, &expose_size, &mode);
+    expose_size = nl_i;
+    mode = static_cast<int>(MELISSA_MODE_UPDATE);
+    nsteps = melissa_expose_f("state1", &x_l[2], &expose_size, &mode);
     if(comm_rank==0) printf("[DBG] --- DONE EXPOSE [nsteps=%d] ---\n", nsteps);
     printf("calculating from timestep %d\n",
         melissa_get_current_step());

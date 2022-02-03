@@ -41,10 +41,7 @@ std::unique_ptr<ApiTiming> timing(nullptr);
 /// Communicator used for simulation/Runner
 MPI_Comm comm;
 
-
-
-
-
+calculateWeightFunction calculateWeight;
 
 Server server;
 
@@ -305,6 +302,8 @@ void melissa_init_with_index_map(
     field.current_step = 0;
     field.local_vect_size = local_vect_size;
     field.local_hidden_vect_size = local_hidden_vect_size;
+    
+    calculateWeight = NULL;
 
     if (is_p2p())
     {
@@ -541,6 +540,10 @@ void melissa_init_f(
         sizeof(double), comm);
 }
 
+void melissa_register_weight_function( calculateWeightFunction func )
+{
+  calculateWeight = func;
+}
 
 int melissa_expose_f(const char* field_name, double* values, int64_t* size, int* mode) {
     return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), *size * sizeof(double), NULL, 0, static_cast<MELISSA_EXPOSE_MODE>(*mode));
