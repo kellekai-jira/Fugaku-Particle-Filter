@@ -13,27 +13,27 @@ def prepare_runner_directory(runner_id):
     os.mkdir(f"{runner_dir}/history")
     os.mkdir(f"{runner_dir}/restart")
 
-    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/nhm_driver", runner_dir)
-    os.symlink(f"{HMDIR}/Public/LEGACY/mnginfo/data/rl01-prc40.info", runner_dir)
-    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/vlayer/data/vgrid78.dat", runner_dir)
-    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/bsstate_ANL/data/vgrid78_ref_ANL.dat", runner_dir)
-    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/PARA.bnd29ch111sp", runner_dir)
-    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/invtau.formatted", runner_dir)
-    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/tautab.formatted", runner_dir)
+    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/nhm_driver", f"{runner_dir}/nhm_driver")
+    os.symlink(f"{HMDIR}/Public/LEGACY/mnginfo/data/rl01-prc40.info", f"{runner_dir}/rl01-prc40.info")
+    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/vlayer/data/vgrid78.dat", f"{runner_dir}/vgrid78.dat")
+    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/bsstate_ANL/data/vgrid78_ref_ANL.dat", f"{runner_dir}/vgrid78_ref_ANL.dat")
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/PARA.bnd29ch111sp", f"{runner_dir}/PARA.bnd29ch111sp")
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/invtau.formatted", f"{runner_dir}/invtau.formatted")
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/tautab.formatted", f"{runner_dir}/tautab.formatted")
 
     for rgn in range(40):
        RG = "{:08d}".format(rgn)
-       os.symlink(f"{HMDIR}/Public/NETCDF/boundary/gl05rl01Az78pe40/boundary_GL05RL01Az78.rgn{RG}.nc", runner_dir)
-       os.symlink(f"{HMDIR}/Public/NETCDF/init/gl05rl01Az78pe40/init_all_GL05RL01Az78.rgn{RG}.nc", runner_dir)
-       os.symlink(f"{HMDIR}/Public/NETCDF/sst/gl05rl01pe40/oisst_2019_GL05RL01.rgn{RG}.nc", runner_dir)
+       os.symlink(f"{HMDIR}/Public/NETCDF/boundary/gl05rl01Az78pe40/boundary_GL05RL01Az78.rgn{RG}.nc", f"{runner_dir}/boundary_GL05RL01Az78.rgn{RG}.nc")
+       os.symlink(f"{HMDIR}/Public/NETCDF/init/gl05rl01Az78pe40/init_all_GL05RL01Az78.rgn{RG}.nc", f"{runner_dir}/init_all_GL05RL01Az78.rgn{RG}.nc")
+       os.symlink(f"{HMDIR}/Public/NETCDF/sst/gl05rl01pe40/oisst_2019_GL05RL01.rgn{RG}.nc", f"{runner_dir}/oisst_2019_GL05RL01.rgn{RG}.nc")
 
-    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/fio_netcdf_ico2ll_mpi", runner_dir)
+    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/fio_netcdf_ico2ll_mpi", f"{runner_dir}/fio_netcdf_ico2ll_mpi")
 
     for rgn in range(40):
        RG = "{:05d}".format(rgn)
-       os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.rgn{RG}", runner_dir)
+       os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.rgn{RG}", f"{runner_dir}/llmap.rgn{RG}")
 
-    os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.info", runner_dir)
+    os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.info", f"{runner_dir}/llmap.info")
 
 os.system('killall gdb')
 
