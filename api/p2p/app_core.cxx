@@ -151,8 +151,8 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 
         MDBG( "my current working directory is '%s'", c_cwd );
 
-        std::stringstream runner_dir(c_cwd);
-        runner_dir << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
+        std::stringstream runner_dir;
+        runner_dir << c_cwd << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
    			
         MDBG( "now changing into directory '%s'", runner_dir.str().c_str() );
         
