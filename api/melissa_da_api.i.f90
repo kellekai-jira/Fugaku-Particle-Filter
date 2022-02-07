@@ -38,9 +38,11 @@ end subroutine
 
 
 function melissa_expose(field_name,&
-    values) bind(c, name = 'melissa_expose_f')
-    use ISO_C_BINDING, only: C_CHAR, C_DOUBLE, C_INT
+    values, state_size, expose_mode) bind(c, name = 'melissa_expose_f')
+    use ISO_C_BINDING, only: C_CHAR, C_DOUBLE, C_INT, C_INT64_T
     integer(kind=C_INT) :: melissa_expose
+    integer(kind=C_INT64_T) :: state_size
+    integer(kind=C_INT) :: expose_mode
     character(kind=C_CHAR), intent(in), dimension(*) :: field_name
     real(kind=C_DOUBLE), intent(inout), dimension(*) :: values
 end function melissa_expose
