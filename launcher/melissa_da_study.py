@@ -284,12 +284,13 @@ def run_melissa_da_study(
             coll_procs_runner = 0
             coll_nodes_runner = 0
 
-            if create_runner_dir:
-                runner_dir = '%s/runner-group-%03d' % (WORKDIR, group_id)
-                os.mkdir(runner_dir)
-                os.chdir(runner_dir)
+            base_dir = os.path.abspath(os.getcwd())
 
             for runner_id in runner_ids:
+                if create_runner_dir:
+                    runner_dir = '%s/runner-%03d' % (WORKDIR, runner_id)
+                    os.mkdir(runner_dir)
+                    os.chdir(runner_dir)
 
                 coll_procs_runner += procs_runner
                 coll_nodes_runner += nodes_runner
@@ -331,6 +332,9 @@ def run_melissa_da_study(
                 else:
                     content = additional_runner_env["MELISSA_DA_RUNNER_ID"]
                     additional_runner_env["MELISSA_DA_RUNNER_ID"] = content + "," + str(runner_id)
+
+                if create_runner_dir:
+                    os.chdir(base_dir)
 
             envs = additional_env.copy()
             join_dicts(envs, additional_runner_env)
