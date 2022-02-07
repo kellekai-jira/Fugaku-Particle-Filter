@@ -4,6 +4,37 @@ import configparser
 import time
 import sys
 
+def prepare_runner_directory(runner_id):
+    HMDIR="/2ndfs/ra000012/a04454/NICAM"
+    runner_dir = os.path.abspath(os.getcwd())
+
+    os.mkdir(f"{runner_dir}/ll")
+    os.mkdir(f"{runner_dir}/msg")
+    os.mkdir(f"{runner_dir}/history")
+    os.mkdir(f"{runner_dir}/restart")
+
+    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/nhm_driver", runner_dir)
+    os.symlink(f"{HMDIR}/Public/LEGACY/mnginfo/data/rl01-prc40.info", runner_dir)
+    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/vlayer/data/vgrid78.dat", runner_dir)
+    os.symlink(f"{HMDIR}/Public/LEGACY/vertical/bsstate_ANL/data/vgrid78_ref_ANL.dat", runner_dir)
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/PARA.bnd29ch111sp", runner_dir)
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/invtau.formatted", runner_dir)
+    os.symlink(f"{HMDIR}/Public/NICAM_DATABASE/radpara/tautab.formatted", runner_dir)
+
+    for rgn in range(40):
+       RG = "{:08d}".format(rgn)
+       os.symlink(f"{HMDIR}/Public/NETCDF/boundary/gl05rl01Az78pe40/boundary_GL05RL01Az78.rgn{RG}.nc", runner_dir)
+       os.symlink(f"{HMDIR}/Public/NETCDF/init/gl05rl01Az78pe40/init_all_GL05RL01Az78.rgn{RG}.nc", runner_dir)
+       os.symlink(f"{HMDIR}/Public/NETCDF/sst/gl05rl01pe40/oisst_2019_GL05RL01.rgn{RG}.nc", runner_dir)
+
+    os.symlink(f"{HMDIR}/nicam_20211118/NICAM/bin/fio_netcdf_ico2ll_mpi", runner_dir)
+
+    for rgn in range(40):
+       RG = "{:05d}".format(rgn)
+       os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.rgn{RG}", runner_dir)
+
+    os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.info", runner_dir)
+
 os.system('killall gdb')
 
 from melissa_da_study import *
@@ -71,6 +102,7 @@ run_melissa_da_study(
     show_simulation_log=False,
     runner_timeout=60 * 60,  # 60 seconds time for debugging!
     server_timeout=60 * 60,
+    prepare_runner_dir=prepare_runner_directory,
     additional_env={
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/lorenz:' + os.getenv('PYTHONPATH'),
         'MELISSA_DA_PYTHON_CALCULATE_WEIGHT_MODULE': 'calculate_weight',
