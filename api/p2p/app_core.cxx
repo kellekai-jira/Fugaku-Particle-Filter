@@ -142,25 +142,25 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         printf("Hello! I'm runner %d\n", runner_id);
         
         char c_cwd[PATH_MAX];
-   			//if (getcwd(c_cwd, sizeof(c_cwd)) != NULL) {
-   			//    printf("Current working dir: %s\n", c_cwd);
-   			//} else {
-   			//    perror("getcwd() error");
-   			//    return 1;
-   			//}
+   			if (getcwd(c_cwd, sizeof(c_cwd)) != NULL) {
+   			    printf("Current working dir: %s\n", c_cwd);
+   			} else {
+   			    perror("getcwd() error");
+   			    return 1;
+   			}
 
-        //MDBG( "my current working directory is '%s'", c_cwd );
+        MDBG( "my current working directory is '%s'", c_cwd );
 
-        //std::stringstream runner_dir;
-        //runner_dir << c_cwd << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
-   			//
-        //MDBG( "now changing into directory '%s'", runner_dir.str().c_str() );
-        //
-        //if (chdir( runner_dir.str().c_str() ) < 0) {
-   			//    perror("chdir() error");
-   			//    return 1;
-   			//}
-        //
+        std::stringstream runner_dir;
+        runner_dir << c_cwd << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
+   			
+        MDBG( "now changing into directory '%s'", runner_dir.str().c_str() );
+        
+        if (chdir( runner_dir.str().c_str() ) < 0) {
+   			    perror("chdir() error");
+   			    return 1;
+   			}
+        
    			if (getcwd(c_cwd, sizeof(c_cwd)) != NULL) {
    			    printf("Current working dir: %s\n", c_cwd);
    			} else {
