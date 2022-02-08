@@ -333,8 +333,8 @@ def run_melissa_da_study(
                     content = additional_runner_env["MELISSA_DA_RUNNER_ID"]
                     additional_runner_env["MELISSA_DA_RUNNER_ID"] = content + "," + str(runner_id)
 
-                if create_runner_dir:
-                    os.chdir(base_dir)
+                #if create_runner_dir:
+                #    os.chdir(base_dir)
 
             envs = additional_env.copy()
             join_dicts(envs, additional_runner_env)
