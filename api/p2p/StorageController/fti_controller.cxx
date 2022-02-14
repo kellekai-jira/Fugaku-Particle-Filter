@@ -47,6 +47,7 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
     m_id_counter++;
   }
   FTI_Protect(m_var_id_map[name].id, buffer, size, m_io_type_map[type]);
+  FTI_SetCompression( m_var_id_map[name].id, FTI_CPC_FPZIP, 32, FTI_CPC_DEFAULT);
   m_var_id_map[name].data = buffer;
   m_var_id_map[name].size = size;
   m_var_id_map[name].type = type;
