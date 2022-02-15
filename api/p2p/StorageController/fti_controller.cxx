@@ -55,17 +55,17 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
 int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
   if(m_var_id_map.find(name) == m_var_id_map.end()) { 
+    io_zip_t zip;
     if ( m_var_zip_map.find(name) == m_var_zip_map.end() ) {   
-      m_var_id_map[name].zip.mode = IO_ZIP_MODE_DEFAULT;
-      m_var_id_map[name].zip.parameter = 0;
-      m_var_id_map[name].zip.type = IO_ZIP_TYPE_DEFAULT;
+      zip.mode = IO_ZIP_MODE_DEFAULT;
+      zip.parameter = 0;
+      zip.type = IO_ZIP_TYPE_DEFAULT;
     } else {
-      m_var_id_map[name].zip.mode = m_var_zip_map[name].mode;
-      m_var_id_map[name].zip.parameter = m_var_zip_map[name].parameter;
-      m_var_id_map[name].zip.type = m_var_zip_map[name].type;
-      
+      zip.mode = m_var_zip_map[name].mode;
+      zip.parameter = m_var_zip_map[name].parameter;
+      zip.type = m_var_zip_map[name].type;
     }
-    io_var_t variable = { m_id_counter, buffer, size, type };
+    io_var_t variable = { m_id_counter, buffer, size, type, zip };
     m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
     m_id_counter++;
   }
