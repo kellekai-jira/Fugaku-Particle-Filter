@@ -597,6 +597,7 @@ void FtiController::init_compression_parameter() {
   catch(std::exception & e)
   {
     std::cout << "[WARNING] - failed to parse compression configuration 'compression.json' - " << e.what() << std::endl;
+    return;
   }
 	
 	auto it = root.get_child("compression");
