@@ -53,36 +53,51 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
 
 
 int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
+  
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
+
+  io_zip_t zip;
+
+  if ( m_var_zip_map.count(name) != 0 ) {   
+    zip.mode = m_var_zip_map[name].mode;
+    zip.parameter = m_var_zip_map[name].parameter;
+    zip.type = m_var_zip_map[name].type;
+  }
+
+  io_var_t variable;
+
+  variable.data = buffer;
+  variable.size = size; 
+  variable.type = type; 
+  variable.zip = zip;
+  
   if(m_var_id_map.find(name) == m_var_id_map.end()) { 
-    io_zip_t zip;
-    if ( m_var_zip_map.find(name) == m_var_zip_map.end() ) {   
-      zip.mode = IO_ZIP_MODE_DEFAULT;
-      zip.parameter = 0;
-      zip.type = IO_ZIP_TYPE_DEFAULT;
-    } else {
-      zip.mode = m_var_zip_map[name].mode;
-      zip.parameter = m_var_zip_map[name].parameter;
-      zip.type = m_var_zip_map[name].type;
-    }
-    io_var_t variable = { m_id_counter, buffer, size, type, zip };
+    variable.id = m_id_counter; 
     m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
     m_id_counter++;
+  } else {
+    m_var_id_map[name].data = variable.data;
+    m_var_id_map[name].size = variable.size;
+    m_var_id_map[name].type = variable.type;
+    m_var_id_map[name].zip.mode = variable.zip.mode;
+    m_var_id_map[name].zip.parameter = variable.zip.type;
+    m_var_id_map[name].zip.type = variable.zip.type;
   }
-  std::cout << "[COMPRESSION INFO] name: " << name;
-  std::cout << " mode: " << m_var_id_map[name].zip.mode;
-  std::cout << " parameter: " << m_var_id_map[name].zip.parameter;
-  std::cout << " type: " << m_var_id_map[name].zip.type << std::endl;
-  int id = m_var_id_map[name].id;
-  io_zip_mode_t zip_mode = m_var_id_map[name].zip.mode;
-  int zip_parameter = m_var_id_map[name].zip.parameter;
-  io_zip_type_t zip_type = m_var_id_map[name].zip.type;
-  FTI_Protect(id, buffer, size, m_io_type_map[type]);
-  FTI_SetCompression( id, m_io_zip_mode_map[zip_mode], zip_parameter, m_io_zip_type_map[zip_type]);
-  m_var_id_map[name].data = buffer;
-  m_var_id_map[name].size = size;
-  m_var_id_map[name].type = type;
+  
+  FTI_Protect(
+      m_var_id_map[name].id, 
+      m_var_id_map[name].data, 
+      m_var_id_map[name].size, 
+      m_io_type_map[m_var_id_map[name].type]);
+
+  FTI_SetCompression( 
+      m_var_id_map[name].id, 
+      m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
+      m_var_id_map[name].zip.parameter, 
+      m_io_zip_type_map[m_var_id_map[name].zip.type]);
+  
   return m_var_id_map[name].id;
+
 }
 
 void FtiController::init_io( int runner_id ) {
@@ -91,10 +106,6 @@ void FtiController::init_io( int runner_id ) {
   FTI_Init( config_file.str().c_str(), mpi.comm() );
   m_runner_id = runner_id;
   m_next_garbage_coll = time(NULL) + 10;
-}
-
-void FtiController::set_state_size_per_proc( std::vector<uint64_t> vec ) {
-  m_state_sizes_per_rank = vec;
 }
 
 void FtiController::init_core() {
@@ -355,7 +366,7 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
 
     std::string l1_ckpt_fn = l1_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
     
-    int64_t local_file_size; // = m_state_sizes_per_rank[i];
+    int64_t local_file_size;
     m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
     
     std::chrono::system_clock::time_point t1, t2;
@@ -486,7 +497,7 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
       
     MDBG( "trying to transfer to: '%s'", l1_ckpt_fn.c_str() );
     
-    int64_t local_file_size; // = m_state_sizes_per_rank[i];
+    int64_t local_file_size;
     m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
     
     MDBG( "number of bytes to transfer: '%ld'", local_file_size );
@@ -663,13 +674,6 @@ void FtiController::init_compression_parameter() {
       }
     }
     if( valid ) {
-      std::cout << "cpc.mode: " << cpc.mode;
-      std::cout << "cpc.parameter: " << cpc.parameter;
-      std::cout << "cpc.type: " << cpc.type;
-      std::cout << "cpc.mode.fti: " << m_io_zip_mode_map[cpc.mode];
-      std::cout << "cpc.type.fti: " << m_io_zip_type_map[cpc.type];
-      std::cout << "cpc.mode.inv: " << m_io_zip_mode_inv_map[m_io_zip_mode_map[cpc.mode]];
-      std::cout << "cpc.type.inv: " << m_io_zip_type_inv_map[m_io_zip_type_map[cpc.type]] << std::endl;
       m_var_zip_map.insert( std::pair<std::string,io_zip_t>( var_name, cpc ) );
     } else {
       std::cout << "[WARNING] - compression variable without name!" << std::endl;

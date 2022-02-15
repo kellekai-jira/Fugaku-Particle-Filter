@@ -32,7 +32,7 @@ class StorageController {
       server(*this) {}
 
     void io_init( IoController* io, int runner_id );
-    void init( size_t capacity, size_t state_size );
+    void init( size_t capacity, int64_t state_size );
     void fini();
 
     // API

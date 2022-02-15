@@ -45,12 +45,12 @@ void StorageController::io_init( IoController* io, int runner_id ) {
 
 }
 
-void StorageController::init( size_t capacity, size_t state_size_proc ) {
+void StorageController::init( size_t capacity, int64_t state_size_proc ) {
   // this is only called by app cores
 
   // propagate state size to head
   m_io->send( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
-  m_io->send( &state_size_proc, sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
+  m_io->send( &state_size_proc, sizeof(int64_t), IO_TAG_POST, IO_MSG_ALL );
 
   m_worker_thread = false;
 
@@ -104,14 +104,12 @@ void StorageController::callback() {
     mpi.broadcast(capacity);
 
     std::vector<uint64_t> size_proc(storage.m_io->m_dict_int["app_procs_node"]), size_node;
-    storage.m_io->recv( size_proc.data(), sizeof(size_t), IO_TAG_POST, IO_MSG_ALL );
+    storage.m_io->recv( size_proc.data(), sizeof(int64_t), IO_TAG_POST, IO_MSG_ALL );
 
-    size_t state_size_node = 0;
+    uint64_t state_size_node = 0;
     for(int i=0; i<storage.m_io->m_dict_int["app_procs_node"]; i++) {
       state_size_node += size_proc[i];
     }
-
-    storage.m_io->set_state_size_per_proc(size_proc);
 
     // in slots
     capacity = capacity / state_size_node;
@@ -328,6 +326,7 @@ void StorageController::m_query_server() {
 
 void StorageController::m_communicate( io_tag_t tag ) {
   assert( m_io->m_dict_bool["master_global"] && "must only be called from head master!" ); 
+  if(mpi.size() == 1) return;
   std::vector<MPI_Request> send_request(mpi.size()-1);
   std::vector<MPI_Request> recv_request(mpi.size()-1);
   std::vector<MPI_Status> send_status(mpi.size()-1);
@@ -344,6 +343,7 @@ void StorageController::m_request_post() {
   M_TRIGGER(START_MODEL_MESSAGE,0);
   if(m_io->m_dict_bool["master_global"]) {
     std::cout << "head received INFORMATION request" << std::endl;
+    fflush(stdout);
     // forward request to other head ranks
     m_communicate( IO_TAG_POST );
   }

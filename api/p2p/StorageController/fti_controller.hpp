@@ -33,7 +33,6 @@ class FtiController : public IoController {
     void init_io( int runner_id );
     void init_core();
     void fini();
-    void set_state_size_per_proc( std::vector<uint64_t> vec );
     io_id_t protect( std::string name, void* buffer, size_t size, io_type_t type );
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
@@ -77,7 +76,6 @@ class FtiController : public IoController {
     int m_last_cycle;
     FTI::Kernel m_kernel;
     int m_runner_id;
-    std::vector<uint64_t> m_state_sizes_per_rank;
 };
 
 #endif // _FTI_CONTROLLER_H_
