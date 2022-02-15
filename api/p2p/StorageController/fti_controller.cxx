@@ -653,6 +653,13 @@ void FtiController::init_compression_parameter() {
       }
     }
     if( valid ) {
+      std::cout << "cpc.mode: " << cpc.mode;
+      std::cout << "cpc.parameter: " << cpc.parameter;
+      std::cout << "cpc.type: " << cpc.type;
+      std::cout << "cpc.mode.fti: " << m_io_zip_mode_map[cpc.mode];
+      std::cout << "cpc.type.fti: " << m_io_zip_type_map[cpc.type];
+      std::cout << "cpc.mode.inv: " << m_io_zip_mode_inv_map[m_io_zip_mode_map[cpc.mode]];
+      std::cout << "cpc.type.inv: " << m_io_zip_type_inv_map[m_io_zip_type_map[cpc.type]] << std::endl;
       m_var_zip_map.insert( std::pair<std::string,io_zip_t>( var_name, cpc ) );
     } else {
       std::cout << "[WARNING] - compression variable without name!" << std::endl;
