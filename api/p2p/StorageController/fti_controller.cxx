@@ -489,9 +489,13 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
     int proc = m_kernel.topo->body[i];
 
     std::string l1_ckpt_fn = l1_temp_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
+      
+    MDBG( "trying to transfer to: '%s'", l1_ckpt_fn.c_str() );
     
     int64_t local_file_size; // = m_state_sizes_per_rank[i];
     m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
+    
+    MDBG( "number of bytes to transfer: '%ld'", local_file_size );
     
     int lfd = open( l1_ckpt_fn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
