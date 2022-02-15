@@ -284,8 +284,10 @@ void push_weight_to_head(double weight)
     static bool wait = false;
     if( wait ) {
         MDBG("start waiting for Head rank!");
+        fflush(stdout);
         req.wait();  // be sure that there is nothing else in the mpi send queue
         MDBG("finished waiting for Head rank!");
+        fflush(stdout);
         //if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
         //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_MST );
     }
@@ -298,6 +300,7 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->set_weight(weight);
 
     MDBG("start Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
+    fflush(stdout);
     size_t bs = m.ByteSize();  // TODO: change bytesize to bytesize long
 
     if (bs > buf.size())
@@ -310,6 +313,7 @@ void push_weight_to_head(double weight)
     //io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST);  // even faster than isend on juwels!
     req.wait();  // be synchronous on juwels with wrf for now
     MDBG("finished Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
+    fflush(stdout);
     wait = true;
 }
 
@@ -410,6 +414,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         fflush(stdout);
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
+        fflush(stdout);
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
         M_TRIGGER(START_JOB_REQUEST, current_state.t);
@@ -430,6 +435,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
             }
         } while (!job_response.has_parent());
         MDBG("Now  I work on %s", job_response.DebugString().c_str());
+        fflush(stdout);
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
         next_state.t = job_response.job().t();
@@ -485,6 +491,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         long long total = pages * page_size;
         long long avail = av_pages * page_size;
         printf("Total mem available: %llu / %llu MiB\n", avail/1024/1024, total/1024/1024);
+        fflush(stdout);
     }
 
     return nsteps;
