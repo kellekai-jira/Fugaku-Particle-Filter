@@ -149,13 +149,9 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
    			    return 1;
    			}
 
-        MDBG( "my current working directory is '%s'", c_cwd );
-
         std::stringstream runner_dir;
         runner_dir << c_cwd << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
    			
-        MDBG( "now changing into directory '%s'", runner_dir.str().c_str() );
-        
         if (chdir( runner_dir.str().c_str() ) < 0) {
    			    perror("chdir() error");
    			    return 1;
@@ -167,9 +163,6 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
    			    perror("getcwd() error");
    			    return 1;
    			}
-
-        MDBG( "my current working directory is '%s'", c_cwd );
-
 
         // TODO: only do this if is_p2p() !
         mpi.init( comm_split );
@@ -276,21 +269,19 @@ double calculate_weight(VEC_T *values, VEC_T *hidden_values)
 
 void push_weight_to_head(double weight)
 {
-    //static mpi_request_t req;
+    static mpi_request_t req;
     static std::vector<char> buf = {0};  // Isend wants us to not change this if still waiting!
 
     assert(comm_rank == 0);
 
-    //static bool wait = false;
-    //if( wait ) {
-    //    MDBG("start waiting for Head rank!");
-    //    fflush(stdout);
-    //    req.wait();  // be sure that there is nothing else in the mpi send queue
-    //    MDBG("finished waiting for Head rank!");
-    //    fflush(stdout);
-    //    //if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
-    //    //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_MST );
-    //}
+    static bool wait = false;
+    if( wait ) {
+        MDBG("start waiting for Head rank!");
+        req.wait();  // be sure that there is nothing else in the mpi send queue
+        MDBG("finished waiting for Head rank!");
+        //if( io.m_dict_bool["master_local"] ) req.wait();  // be sure that there is nothing else in the mpi send queue
+        //int dummy; io.recv( &dummy, sizeof(int), IO_TAG_POST, IO_MSG_MST );
+    }
 
     // Now we can change buf!
     ::melissa_p2p::Message m;
@@ -300,7 +291,6 @@ void push_weight_to_head(double weight)
     m.mutable_weight()->set_weight(weight);
 
     MDBG("start Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
-    fflush(stdout);
     size_t bs = m.ByteSize();  // TODO: change bytesize to bytesize long
 
     if (bs > buf.size())
@@ -309,12 +299,11 @@ void push_weight_to_head(double weight)
     }
 
     m.SerializeToArray(buf.data(), bs);
-    //io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST, req );
-    io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST);  // even faster than isend on juwels!
-    //req.wait();  // be synchronous on juwels with wrf for now
+    io.isend( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST, req );
+    //io.send( buf.data(), m.ByteSize(), IO_TAG_POST, IO_MSG_MST);  // even faster than isend on juwels!
+    req.wait();  // be synchronous on juwels with wrf for now
     MDBG("finished Pushing weight message(size = %d) to fti head: %s", m.ByteSize(), m.DebugString().c_str());
-    fflush(stdout);
-    //wait = true;
+    wait = true;
 }
 
 ::melissa_p2p::JobResponse request_work_from_server() {
@@ -348,10 +337,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     
     // Update pointer
     storage.protect( std::string(field_name), values, size, io_type );
-    MDBG("I am good");
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
-    MDBG("I am good");
     
     assert(  calculateWeight != NULL && "no function registered for weight calculation (call 'melissa_register_weight_function' after melissa_init)" );
     
@@ -359,7 +346,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         M_TRIGGER(STOP_INIT, 0);
         is_first = false;
     }
-    MDBG("I am good");
 
 #ifdef REPORT_TIMING
 #ifndef REPORT_TIMING_ALL_RANKS
@@ -369,7 +355,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     timing->maybe_report();
     }
 #endif
-    MDBG("I am good");
 
     // store to ram disk
     // TODO: call protect direkt in chunk based api
@@ -378,27 +363,21 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         // if checkpointing initial state, use runner_id as state id
         field.current_state_id = runner_id; // We are beginning like this...
     }
-    MDBG("I am good");
 
     io_state_id_t current_state = { field.current_step, field.current_state_id };
-    MDBG("I am good");
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
     MDBG("finished storing state as L1 checkpoint");
-    fflush(stdout);
     M_TRIGGER(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
     M_TRIGGER(START_CALC_WEIGHT, current_state.t);
     MDBG("start calculating weight for state");
-    fflush(stdout);
     int __comm_size;MPI_Comm_size(comm, &__comm_size);
     MDBG("mpi.size(): %d, comm size: %d", mpi.size(), __comm_size);
-    fflush(stdout);
     double weight = calculateWeight();
     MDBG("finished calculating weight for state");
-    fflush(stdout);
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
@@ -411,10 +390,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         // 3. push weight to server (via the head who forwards as soon nas the state is checkpointed to the pfs)
         M_TRIGGER(START_PUSH_WEIGHT_TO_HEAD, current_state.t);
         MDBG("start pushing weight to head");
-        fflush(stdout);
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
-        fflush(stdout);
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
 
         M_TRIGGER(START_JOB_REQUEST, current_state.t);
@@ -435,7 +412,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
             }
         } while (!job_response.has_parent());
         MDBG("Now  I work on %s", job_response.DebugString().c_str());
-        fflush(stdout);
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
         next_state.t = job_response.job().t();
@@ -491,7 +467,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         long long total = pages * page_size;
         long long avail = av_pages * page_size;
         printf("Total mem available: %llu / %llu MiB\n", avail/1024/1024, total/1024/1024);
-        fflush(stdout);
     }
 
     return nsteps;

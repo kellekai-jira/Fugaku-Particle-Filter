@@ -286,7 +286,8 @@ void StorageController::m_load_user( io_state_id_t state ) {
     M_TRIGGER(LOCAL_MISS, to_ckpt_id(state));
     int status;
     M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));
-    m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
+    io_id_t state_id = to_ckpt_id( state );
+    m_io->sendrecv( &state_id, &status, sizeof(io_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
     M_TRIGGER(STOP_WAIT_HEAD, to_ckpt_id(state));
     assert( m_io->is_local( state ) && "unable to load state to local storage" );
   }
@@ -310,7 +311,6 @@ void StorageController::m_store_head( io_state_id_t state_id ) {
 void StorageController::m_store_user( io_state_id_t state_id ) {
   int dummy;
   m_io->store( state_id );
-  MDBG("return from store");
 }
 
 //======================================================================
@@ -408,13 +408,13 @@ void StorageController::m_request_load() {
     // forward request to other head ranks
     m_communicate( IO_TAG_LOAD );
   }
-  std::vector<io_state_id_t> state_id(m_io->m_dict_int["app_procs_node"]);
+  std::vector<io_id_t> state_id(m_io->m_dict_int["app_procs_node"]);
   int result=(int)IO_SUCCESS;
-  m_io->recv( state_id.data(), sizeof(io_state_id_t), IO_TAG_LOAD, IO_MSG_ALL );
+  m_io->recv( state_id.data(), sizeof(io_id_t), IO_TAG_LOAD, IO_MSG_ALL );
   //if(m_io->m_dict_bool["master_global"]) {
-    std::cout << "head received LOAD request (ckpt_id: "<<to_ckpt_id(state_id[0])<<")" << std::endl;
+    std::cout << "head received LOAD request (ckpt_id: "<<state_id[0]<<")" << std::endl;
   //}
-  pull( state_id[0] );
+  pull( to_state_id(state_id[0]) );
   m_io->send( &result, sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
 }
 
