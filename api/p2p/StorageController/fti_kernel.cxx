@@ -6,6 +6,11 @@ void FTI::Kernel::update_ckpt_metadata( int ckptId, int level ) {
         false, false, 0 ), FTI_SCES, "failed to update checkpoint metadata");
 }
 
+void FTI::Kernel::load_ckpt_size_proc( int id, int proc, int64_t* fs ) {
+  IO_TRY( FTI_LoadCkptSizeProc(conf, exec, topo, ckpt, id, proc, fs )
+      , FTI_SCES, "failed to load the checkpoint filesize");
+}
+
 void FTI::Kernel::remove_ckpt_metadata( int ckptId, int level ) {
   // TODO make FTI_RemoveCkptMetaData collective and blocking
   IO_TRY( FTI_RemoveCkptMetaData(topo, conf, ckptId, level ), FTI_SCES, "failed to remove checkpoint metadata");

@@ -62,6 +62,7 @@ class FtiController : public IoController {
       std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id );
 		void init_compression_parameter();
     
+    std::map<io_id_t, int64_t> m_stored_size_rank;
     std::map<io_level_t,FTIT_level> m_io_level_map;
     std::map<io_type_t,fti_id_t> m_io_type_map;
     std::map<io_zip_type_t,FTIT_CPC_TYPE> m_io_zip_type_map;
