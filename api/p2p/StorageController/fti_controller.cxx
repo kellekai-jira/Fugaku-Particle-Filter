@@ -69,6 +69,10 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
     m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
     m_id_counter++;
   }
+  std::cout << "[COMPRESSION INFO] name: " << name;
+  std::cout << " mode: " << m_var_id_map[name].zip.mode;
+  std::cout << " parameter: " << m_var_id_map[name].zip.parameter;
+  std::cout << " type: " << m_var_id_map[name].zip.type << std::endl;
   int id = m_var_id_map[name].id;
   io_zip_mode_t zip_mode = m_var_id_map[name].zip.mode;
   int zip_parameter = m_var_id_map[name].zip.parameter;
