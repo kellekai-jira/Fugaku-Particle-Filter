@@ -256,12 +256,12 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
   mpi.barrier();
-  int64_t stored_size_rank = 0;
-  for(auto it = m_var_id_map.begin(); it != m_var_id_map.end(); it++) {
-    std::string name = it->first;
-    stored_size_rank += FTI_GetStoredSize(m_var_id_map[name].id);
-  }
-  m_stored_size_rank.insert( std::pair<io_id_t,int64_t>( to_ckpt_id(state_id), stored_size_rank ) );
+  //int64_t stored_size_rank = 0;
+  //for(auto it = m_var_id_map.begin(); it != m_var_id_map.end(); it++) {
+  //  std::string name = it->first;
+  //  stored_size_rank += FTI_GetStoredSize(m_var_id_map[name].id);
+  //}
+  //m_stored_size_rank.insert( std::pair<io_id_t,int64_t>( to_ckpt_id(state_id), stored_size_rank ) );
 }
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
@@ -490,7 +490,8 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
 
     std::string l1_ckpt_fn = l1_temp_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
     
-    int64_t local_file_size = m_state_sizes_per_rank[i];
+    int64_t local_file_size; // = m_state_sizes_per_rank[i];
+    m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
     
     int lfd = open( l1_ckpt_fn.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR );
     std::unique_ptr<char[]> buffer(new char[IO_TRANSFER_SIZE]);
