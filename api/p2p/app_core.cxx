@@ -337,13 +337,13 @@ void push_weight_to_head(double weight)
     return r.job_response();
 }
 
-int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size,
-                   VEC_T *hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode)
+int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_type_t io_type,
+                   VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
     
     // Update pointer
-    storage.protect( std::string(field_name), values, size, IO_BYTE );
+    storage.protect( std::string(field_name), values, size, io_type );
     MDBG("I am good");
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;

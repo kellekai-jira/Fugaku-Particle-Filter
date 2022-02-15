@@ -11,6 +11,7 @@
 #include <mpi.h>
 #include "melissa_da_stype.h"
 #include <stdint.h>
+#include "p2p/StorageController/io_controller_defs.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,8 +72,8 @@ void melissa_init_f(const char *field_name,
 /// Exposes data to melissa
 /// returns 0 if simulation should end now.
 /// otherwise returns nsteps, the number of timesteps that need to be simulated.
-int melissa_expose(const char *field_name, VEC_T *values, int64_t size, 
-                   VEC_T *hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode = MELISSA_MODE_UPDATE);
+int melissa_expose(const char *field_name, VEC_T *values, int64_t size, io_type_t io_type, 
+                   VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode = MELISSA_MODE_UPDATE);
 
 /// legacy interface using doubles...
 int melissa_expose_d(const char *field_name, double *values, double *hidden_values);

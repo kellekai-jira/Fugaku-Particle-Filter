@@ -406,8 +406,8 @@ void melissa_init_no_mpi(
 
 
 int melissa_expose(
-    const char* field_name, VEC_T* values, int64_t size, 
-    VEC_T* hidden_values, int64_t size_hidden, MELISSA_EXPOSE_MODE mode) {
+    const char* field_name, VEC_T* values, int64_t size, io_type_t io_type, 
+    VEC_T* hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode) {
     if( mode == MELISSA_MODE_UPDATE ) {
       M_TRIGGER(STOP_PROPAGATE_STATE, field.current_state_id);
       M_TRIGGER(START_IDLE_RUNNER, getRunnerId());
@@ -430,7 +430,7 @@ int melissa_expose(
     int nsteps;
     if (is_p2p())
     {
-        nsteps = melissa_p2p_expose(field_name, values, size, hidden_values, size_hidden, mode);
+        nsteps = melissa_p2p_expose(field_name, values, size, io_type, hidden_values, size_hidden, io_type_hidden, mode);
     } else {
 
         field.putState(values, hidden_values, field_name);
@@ -546,7 +546,7 @@ void melissa_register_weight_function( calculateWeightFunction func )
 }
 
 int melissa_expose_f(const char* field_name, double* values, int64_t* size, int* mode) {
-    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), *size * sizeof(double), NULL, 0, static_cast<MELISSA_EXPOSE_MODE>(*mode));
+    return melissa_expose(field_name, reinterpret_cast<VEC_T*>(values), *size, IO_DOUBLE, NULL, 0, IO_DOUBLE, static_cast<MELISSA_EXPOSE_MODE>(*mode));
 }
 
 
@@ -554,8 +554,8 @@ int melissa_expose_f(const char* field_name, double* values, int64_t* size, int*
 int melissa_expose_d(
     const char* field_name, double* values, double* hidden_values) {
     return melissa_expose(
-        field_name, reinterpret_cast<VEC_T*>(values), 0,
-        reinterpret_cast<VEC_T*>(hidden_values), 0);
+        field_name, reinterpret_cast<VEC_T*>(values), 0, IO_DOUBLE,
+        reinterpret_cast<VEC_T*>(hidden_values), 0, IO_DOUBLE);
 }
 
 
