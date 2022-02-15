@@ -54,6 +54,28 @@ enum io_tag_t {
   IO_TAG_WORK
 };
 
+enum io_zip_type_t {
+  IO_ZIP_TYPE_DEFAULT,
+  IO_ZIP_TYPE_A,
+  IO_ZIP_TYPE_B,
+  IO_ZIP_TYPE_C,
+  IO_ZIP_TYPE_D,
+  IO_ZIP_TYPE_E,
+  IO_ZIP_TYPE_F,
+  IO_ZIP_TYPE_G
+};
+
+enum io_zip_mode_t {
+  IO_ZIP_MODE_DEFAULT,
+  IO_ZIP_MODE_A,
+  IO_ZIP_MODE_B,
+  IO_ZIP_MODE_C,
+  IO_ZIP_MODE_D,
+  IO_ZIP_MODE_E,
+  IO_ZIP_MODE_F,
+  IO_ZIP_MODE_G
+};
+
 struct io_state_id_t {
   io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
   io_state_id_t() : t(0), id(0) {}
@@ -61,11 +83,18 @@ struct io_state_id_t {
   io_id_t id;
 };
 
+struct io_zip_t {
+  io_zip_mode_t mode;
+  int parameter;
+  io_zip_type_t type;
+};
+
 struct io_var_t {
   io_id_t id;
   void* data;
   size_t size;
   io_type_t type;
+  io_zip_t zip;
 };
 
 struct io_ckpt_t {

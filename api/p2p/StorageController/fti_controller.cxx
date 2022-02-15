@@ -12,12 +12,25 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+#include <algorithm>
+#include <cctype>
+
 #include "api_common.h"  // for timing
 #include "helpers.hpp"
 
 #include <limits.h>
 #include <sys/stat.h>
 #include <ftw.h>
+
+
+constexpr unsigned int str2int(const char* str, int h = 0)
+{
+      return !str[h] ? 5381 : (str2int(str, h+1) * 33) ^ str[h];
+}
+
 
 /* Call unlink or rmdir on the path, as appropriate. */
 // [FROM: https://stackoverflow.com/a/1149837/5073895]
@@ -42,12 +55,26 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
 int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
   if(m_var_id_map.find(name) == m_var_id_map.end()) { 
+    if ( m_var_zip_map.find(name) == m_var_zip_map.end() ) {   
+      m_var_id_map[name].zip.mode = IO_ZIP_MODE_DEFAULT;
+      m_var_id_map[name].zip.parameter = 0;
+      m_var_id_map[name].zip.type = IO_ZIP_TYPE_DEFAULT;
+    } else {
+      m_var_id_map[name].zip.mode = m_var_zip_map[name].mode;
+      m_var_id_map[name].zip.parameter = m_var_zip_map[name].parameter;
+      m_var_id_map[name].zip.type = m_var_zip_map[name].type;
+      
+    }
     io_var_t variable = { m_id_counter, buffer, size, type };
     m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
     m_id_counter++;
   }
-  FTI_Protect(m_var_id_map[name].id, buffer, size, m_io_type_map[type]);
-  FTI_SetCompression( m_var_id_map[name].id, FTI_CPC_FPZIP, 32, FTI_CPC_DEFAULT);
+  int id = m_var_id_map[name].id;
+  io_zip_mode_t zip_mode = m_var_id_map[name].zip.mode;
+  int zip_parameter = m_var_id_map[name].zip.parameter;
+  io_zip_type_t zip_type = m_var_id_map[name].zip.type;
+  FTI_Protect(id, buffer, size, m_io_type_map[type]);
+  FTI_SetCompression( id, m_io_zip_mode_map[zip_mode], zip_parameter, m_io_zip_type_map[zip_type]);
   m_var_id_map[name].data = buffer;
   m_var_id_map[name].size = size;
   m_var_id_map[name].type = type;
@@ -57,6 +84,7 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
 void FtiController::init_io( int runner_id ) {
   std::stringstream config_file;
   config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
+  init_compression_parameter();
   FTI_Init( config_file.str().c_str(), mpi.comm() );
   m_runner_id = runner_id;
   m_next_garbage_coll = time(NULL) + 10;
@@ -82,6 +110,22 @@ void FtiController::init_core() {
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_BYTE, FTI_CHAR ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
+  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_DEFAULT, FTI_CPC_DEFAULT ) );
+  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_A, FTI_CPC_ACCURACY ) );
+  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_B, FTI_CPC_PRECISION ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_DEFAULT, FTI_CPC_NONE ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_A, FTI_CPC_FPZIP ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_B, FTI_CPC_ZFP ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_C, FTI_CPC_SINGLE ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_D, FTI_CPC_HALF ) );
+  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_DEFAULT, IO_ZIP_TYPE_DEFAULT ) );
+  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_ACCURACY, IO_ZIP_TYPE_A ) );
+  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_PRECISION, IO_ZIP_TYPE_B ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_NONE, IO_ZIP_MODE_DEFAULT ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_FPZIP, IO_ZIP_MODE_A ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_ZFP, IO_ZIP_MODE_B ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_SINGLE, IO_ZIP_MODE_C ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_HALF, IO_ZIP_MODE_D ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L1, FTI_L1 ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L2, FTI_L4 ) );
   m_io_msg_map.insert( std::pair<io_msg_t,int>( IO_MSG_ALL, FTI_HEAD_MODE_COLL ) );
@@ -545,4 +589,67 @@ void FtiController::update_metadata( io_state_id_t state_id, io_level_t level ) 
   m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), m_io_level_map[level] );
 }
 
-
+void FtiController::init_compression_parameter() {
+  boost::property_tree::ptree root;
+  try {
+    boost::property_tree::read_json("compression.json", root);
+  }
+  catch(std::exception & e)
+  {
+    std::cout << "[WARNING] - failed to parse compression configuration 'compression.json' - " << e.what() << std::endl;
+  }
+	
+	auto it = root.get_child("compression");
+	for (auto it2 = it.begin(); it2 != it.end(); ++it2) { 
+    io_zip_t cpc;
+    std::string var_name;
+    bool valid = false;
+    for (auto it3 = it2->second.begin(); it3 != it2->second.end(); ++it3){
+      std::string key(it3->first);
+      std::string value(it3->second.data());
+      if ( key == std::string("name") ) {
+        var_name = value;
+        valid = true;
+      } else if ( key == std::string("mode") ) { 
+        std::transform(value.begin(), value.end(), value.begin(),
+            [](unsigned char c){ return std::tolower(c); });
+        switch( str2int(value.c_str()) ) { 
+          case str2int("fpzip"):
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_FPZIP];
+            break;
+          case str2int("zfp"):
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_ZFP];
+            break;
+          case str2int("single"):
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_SINGLE];
+            break;
+          case str2int("half"):
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_HALF];
+            break;
+          default:
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_NONE];
+        }
+      } else if ( key == std::string("parameter") ) {
+        cpc.parameter = std::stoi(value);
+      } else if ( key == std::string("type") ) { 
+        std::transform(value.begin(), value.end(), value.begin(),
+            [](unsigned char c){ return std::tolower(c); });
+        switch( str2int(value.c_str()) ) { 
+          case str2int("accuracy"):
+            cpc.type = m_io_zip_type_inv_map[FTI_CPC_ACCURACY];
+            break;
+          case str2int("precision"):
+            cpc.type = m_io_zip_type_inv_map[FTI_CPC_PRECISION];
+            break;
+          default:
+            cpc.type = m_io_zip_type_inv_map[FTI_CPC_DEFAULT];
+        }
+      }
+    }
+    if( valid ) {
+      m_var_zip_map.insert( std::pair<std::string,io_zip_t>( var_name, cpc ) );
+    } else {
+      std::cout << "[WARNING] - compression variable without name!" << std::endl;
+    }
+  }
+}

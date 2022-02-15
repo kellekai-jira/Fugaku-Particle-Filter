@@ -60,12 +60,18 @@ class FtiController : public IoController {
     void stage_l1l2( std::string L1_CKPT, std::string L1_META, std::string L2_TEMP, std::string L2_CKPT, io_state_id_t state_id );
     void stage_l2l1( std::string L2_CKPT, std::string L1_TEMP, std::string L1_META_TEMP,
       std::string L1_CKPT, std::string L1_META_CKPT, io_state_id_t state_id );
+		void init_compression_parameter();
     
     std::map<io_level_t,FTIT_level> m_io_level_map;
     std::map<io_type_t,fti_id_t> m_io_type_map;
+    std::map<io_zip_type_t,FTIT_CPC_TYPE> m_io_zip_type_map;
+    std::map<io_zip_mode_t,FTIT_CPC_MODE> m_io_zip_mode_map;
+    std::map<FTIT_CPC_TYPE,io_zip_type_t> m_io_zip_type_inv_map;
+    std::map<FTIT_CPC_MODE,io_zip_mode_t> m_io_zip_mode_inv_map;
     std::map<io_msg_t,int> m_io_msg_map;
     std::map<io_tag_t,int> m_io_tag_map;
     std::map<std::string, io_var_t> m_var_id_map;
+    std::map<std::string, io_zip_t> m_var_zip_map;
     int m_next_garbage_coll;
     io_id_t m_id_counter;  
     int m_last_cycle;
