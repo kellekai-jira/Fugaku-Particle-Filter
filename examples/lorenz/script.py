@@ -7,6 +7,7 @@ import sys
 def prepare_runner_directory(runner_id):
     HMDIR="/2ndfs/ra000012/a04454/NICAM"
     runner_dir = os.path.abspath(os.getcwd())
+    LORDIR="/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz"
 
     os.mkdir(f"{runner_dir}/ll")
     os.mkdir(f"{runner_dir}/msg")
@@ -34,6 +35,7 @@ def prepare_runner_directory(runner_id):
        os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.rgn{RG}", f"{runner_dir}/llmap.rgn{RG}")
 
     os.symlink(f"{HMDIR}/Public/LEGACY/gl05/rl01/grid/llmap/i180j90/data/llmap.info", f"{runner_dir}/llmap.info")
+    shutil.copyfile(f"{LORDIR}/compression.json", f"{runner_dir}/compression.json")
 
 os.system('killall gdb')
 

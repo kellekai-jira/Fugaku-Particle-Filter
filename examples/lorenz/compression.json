@@ -1,0 +1,14 @@
+{
+  "compression" : 
+  [ 
+    { 
+      "name" : "wtime",
+      "mode" : "none"
+    },
+    {
+      "name" : "state1",
+      "mode" : "fpzip",
+      "parameter" : "20"
+    }
+  ]
+}

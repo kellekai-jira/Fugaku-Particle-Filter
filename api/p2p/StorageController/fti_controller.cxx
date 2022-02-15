@@ -615,6 +615,9 @@ void FtiController::init_compression_parameter() {
         std::transform(value.begin(), value.end(), value.begin(),
             [](unsigned char c){ return std::tolower(c); });
         switch( str2int(value.c_str()) ) { 
+          case str2int("none"):
+            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_NONE];
+            break;
           case str2int("fpzip"):
             cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_FPZIP];
             break;
@@ -628,6 +631,7 @@ void FtiController::init_compression_parameter() {
             cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_HALF];
             break;
           default:
+            std::cout << "[WARNING] - unknown compression mode '"<<value<<"'!" << std::endl;
             cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_NONE];
         }
       } else if ( key == std::string("parameter") ) {
@@ -643,6 +647,7 @@ void FtiController::init_compression_parameter() {
             cpc.type = m_io_zip_type_inv_map[FTI_CPC_PRECISION];
             break;
           default:
+            std::cout << "[WARNING] - invalid combination or unknown compression type '"<<value<<"'!" << std::endl;
             cpc.type = m_io_zip_type_inv_map[FTI_CPC_DEFAULT];
         }
       }
