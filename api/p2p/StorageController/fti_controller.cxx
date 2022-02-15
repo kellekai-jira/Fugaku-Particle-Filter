@@ -256,12 +256,6 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
   mpi.barrier();
-  //int64_t stored_size_rank = 0;
-  //for(auto it = m_var_id_map.begin(); it != m_var_id_map.end(); it++) {
-  //  std::string name = it->first;
-  //  stored_size_rank += FTI_GetStoredSize(m_var_id_map[name].id);
-  //}
-  //m_stored_size_rank.insert( std::pair<io_id_t,int64_t>( to_ckpt_id(state_id), stored_size_rank ) );
 }
 
 void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
