@@ -84,7 +84,6 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
 void FtiController::init_io( int runner_id ) {
   std::stringstream config_file;
   config_file << "config-" << std::setw(3) << std::setfill('0') << runner_id << ".fti";
-  init_compression_parameter();
   FTI_Init( config_file.str().c_str(), mpi.comm() );
   m_runner_id = runner_id;
   m_next_garbage_coll = time(NULL) + 10;
@@ -158,6 +157,7 @@ void FtiController::init_core() {
   m_dict_string.insert( std::pair<std::string,std::string>( "local_dir", strip_id(m_kernel.conf->localDir,m_kernel.exec->id) ) );
   m_dict_string.insert( std::pair<std::string,std::string>( "meta_dir", strip_id(m_kernel.conf->metadDir,m_kernel.exec->id) ) );
   m_dict_string.insert( std::pair<std::string,std::string>( "exec_id", m_kernel.exec->id ) );
+  init_compression_parameter();
   m_id_counter = 0;
 }
 

@@ -55,7 +55,7 @@ enum io_tag_t {
 };
 
 enum io_zip_type_t {
-  IO_ZIP_TYPE_DEFAULT,
+  IO_ZIP_TYPE_DEFAULT = 0,
   IO_ZIP_TYPE_A,
   IO_ZIP_TYPE_B,
   IO_ZIP_TYPE_C,
@@ -66,7 +66,7 @@ enum io_zip_type_t {
 };
 
 enum io_zip_mode_t {
-  IO_ZIP_MODE_DEFAULT,
+  IO_ZIP_MODE_DEFAULT = 0,
   IO_ZIP_MODE_A,
   IO_ZIP_MODE_B,
   IO_ZIP_MODE_C,
@@ -84,6 +84,7 @@ struct io_state_id_t {
 };
 
 struct io_zip_t {
+  io_zip_t() : mode(IO_ZIP_MODE_DEFAULT), type(IO_ZIP_TYPE_DEFAULT), parameter(0) {}
   io_zip_mode_t mode;
   int parameter;
   io_zip_type_t type;
