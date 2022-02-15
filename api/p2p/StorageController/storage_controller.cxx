@@ -190,7 +190,8 @@ void StorageController::callback() {
   IO_PROBE( IO_TAG_FINI, storage.m_request_fini() );
 
   IO_PROBE( IO_TAG_DUMP, storage.m_request_dump() );
-
+  
+  fflush(stdout);
 }
 
 //======================================================================
