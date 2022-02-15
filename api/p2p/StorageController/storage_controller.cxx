@@ -311,6 +311,7 @@ void StorageController::m_store_head( io_state_id_t state_id ) {
 void StorageController::m_store_user( io_state_id_t state_id ) {
   int dummy;
   m_io->store( state_id );
+  MDBG("return from store");
 }
 
 //======================================================================
