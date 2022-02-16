@@ -15,6 +15,17 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::queue<zip_t> parame
   
   double error = minimize( data, parameters, original, sigma );
 
+  std::cout << "== m_vars["<<data->id<<"] <- sorted ->" << std::endl;
+  int i = 0;
+  for(auto p : m_vars[data->id]) {
+    std::cout << "==    ["<<i++<<"]" << std::endl;
+    std::cout << "==    RATE      : " << p.rate << std::endl;
+    std::cout << "==    mode      : " << p.mode << std::endl;
+    std::cout << "==    parameter : " << p.parameter << std::endl;
+    std::cout << "==    type      : " << p.type << std::endl;
+  }
+	fflush(stdout);
+
 }
   
 double ZipController::minimize ( FTI::data_t* data, std::queue<zip_t> parameters, double* original, double sigma ) {
