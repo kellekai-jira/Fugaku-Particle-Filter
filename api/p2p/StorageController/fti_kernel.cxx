@@ -6,8 +6,8 @@ void FTI::Kernel::update_ckpt_metadata( int ckptId, int level ) {
         false, false, 0 ), FTI_SCES, "failed to update checkpoint metadata");
 }
 
-void FTI::Kernel::load_ckpt_size_proc( int id, int proc, int64_t* fs ) {
-  IO_TRY( FTI_LoadCkptSizeProc(conf, exec, topo, ckpt, id, proc, fs )
+void FTI::Kernel::load_ckpt_meta_proc( int id, int proc, int64_t* fs, std::string mfn ) {
+  IO_TRY( FTI_LoadCkptMetaProc( topo, ckpt, mfn.c_str(), id, proc, fs )
       , FTI_SCES, "failed to load the checkpoint filesize");
 }
 

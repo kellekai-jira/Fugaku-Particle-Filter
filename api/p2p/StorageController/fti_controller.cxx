@@ -362,14 +362,30 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
   uint64_t t_open_local=0, t_read_local=0, t_write_global=0, t_close_local=0, t_meta=0; 
 
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
-    int proc = m_kernel.topo->body[i];
-
-    std::string l1_ckpt_fn = l1_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
     
-    int64_t local_file_size;
-    m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
+    int proc = m_kernel.topo->body[i];
     
     std::chrono::system_clock::time_point t1, t2;
+    
+    t1 = std::chrono::system_clock::now();
+    // FIXME this only takes into account group size of 1!!!
+    //if (m_kernel.topo->groupRank == 0) {
+      int groupId = i+1;
+      std::string l1_meta_fn = l1_meta_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
+      std::ifstream tmp_metafs( l1_meta_fn );
+      std::string str( std::istreambuf_iterator<char>(tmp_metafs), (std::istreambuf_iterator<char>()) );
+      size_t count_lines = std::count_if( str.begin(), str.end(), []( char c ){return c =='\n';});
+      metafs << count_lines << std::endl << str << std::flush;
+      tmp_metafs.close();
+    //}
+    t2 = std::chrono::system_clock::now();
+    t_meta += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+    int64_t local_file_size;
+    m_kernel.load_ckpt_meta_proc( to_ckpt_id(state_id), proc, &local_file_size, l1_meta_fn.c_str() );
+    
+    std::string l1_ckpt_fn = l1_ckpt_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
+    
     
     t1 = std::chrono::system_clock::now();
     int lfd = open(l1_ckpt_fn.c_str(), O_RDONLY, 0);
@@ -414,19 +430,6 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
     t2 = std::chrono::system_clock::now();
     t_close_local += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
-    t1 = std::chrono::system_clock::now();
-    // FIXME this only takes into account group size of 1!!!
-    //if (m_kernel.topo->groupRank == 0) {
-      int groupId = i+1;
-      std::string l1_meta_fn = l1_meta_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
-      std::ifstream tmp_metafs( l1_meta_fn );
-      std::string str( std::istreambuf_iterator<char>(tmp_metafs), (std::istreambuf_iterator<char>()) );
-      size_t count_lines = std::count_if( str.begin(), str.end(), []( char c ){return c =='\n';});
-      metafs << count_lines << std::endl << str << std::flush;
-      tmp_metafs.close();
-    //}
-    t2 = std::chrono::system_clock::now();
-    t_meta += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
   }
     
   MDBG("Performance -> [ol: %lu ms|rl: %lu ms|wg: %lu ms|cl: %lu ms|m: %lu ms]", t_open_local, t_read_local, t_write_global, t_close_local, t_meta);
@@ -491,14 +494,44 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
   //}
   
   for(int i=0; i<m_dict_int["app_procs_node"]; i++) {
+    
     int proc = m_kernel.topo->body[i];
+    
+    /****************************************************************************
+     * 
+     *    transfer meta data
+     *
+     ***************************************************************************/
+    
+    //if (m_kernel.topo->groupRank == 0) {
+      int groupId = i+1;
+      std::string l1_meta_temp_fn = l1_meta_temp_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
+      std::ofstream tmp_metafs(l1_meta_temp_fn);
+      std::string count_str;
+      std::getline( metaiss, count_str );
+      size_t count;
+      sscanf(count_str.c_str(), "%lu", &count);
+      MDBG("count: %lu", count);
+      for(size_t i=0; i<count; i++) {
+        std::string line;
+        std::getline( metaiss, line );
+        tmp_metafs << line << std::endl << std::flush;
+      }
+      tmp_metafs.close();
+    //}
+    
+    /****************************************************************************
+     * 
+     *    transfer ckpt data
+     *
+     ***************************************************************************/
 
     std::string l1_ckpt_fn = l1_temp_dir + "/Ckpt" + std::to_string(to_ckpt_id(state_id)) + "-Rank" + std::to_string(proc) + ".fti";
       
     MDBG( "trying to transfer to: '%s'", l1_ckpt_fn.c_str() );
     
     int64_t local_file_size;
-    m_kernel.load_ckpt_size_proc( to_ckpt_id(state_id), proc, &local_file_size );
+    m_kernel.load_ckpt_meta_proc( to_ckpt_id(state_id), proc, &local_file_size, l1_meta_temp_fn );
     
     MDBG( "number of bytes to transfer: '%ld'", local_file_size );
     
@@ -533,22 +566,6 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
     fsync(lfd);
     close(lfd);
 
-    //if (m_kernel.topo->groupRank == 0) {
-      int groupId = i+1;
-      std::string l1_meta_temp_fn = l1_meta_temp_dir + "/sector" + std::to_string(m_kernel.topo->sectorID) + "-group" + std::to_string(groupId) + ".fti";
-      std::ofstream tmp_metafs(l1_meta_temp_fn);
-      std::string count_str;
-      std::getline( metaiss, count_str );
-      size_t count;
-      sscanf(count_str.c_str(), "%lu", &count);
-      MDBG("count: %lu", count);
-      for(size_t i=0; i<count; i++) {
-        std::string line;
-        std::getline( metaiss, line );
-        tmp_metafs << line << std::endl << std::flush;
-      }
-      tmp_metafs.close();
-    //}
   }
 
   close(fd);
