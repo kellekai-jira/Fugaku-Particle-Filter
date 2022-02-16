@@ -5,12 +5,16 @@
 #include <fti.h>
 
 class FtiController;
+class ZipController;
 class StorageController;
 
 namespace FTI {
   
+  typedef FTIT_dataset data_t;
+
   class Kernel {
     friend class ::FtiController;
+    friend class ::ZipController;
     friend class ::StorageController;
     private:
 
@@ -20,6 +24,8 @@ namespace FTI {
       void load_ckpt_meta_proc( int ckptId, int proc, int64_t* fs, std::string mfn );
       void file_copy( std::string from,  std::string to );
       void print( std::string msg, int priority );
+      
+      void transform( FTIT_dataset* );
       
       // FTI Core
       FTIT_topology* topo = FTI_GetTopo();
@@ -46,6 +52,8 @@ int FTI_FileCopy(const char* from, const char *to, size_t buffersize,
     size_t* offset, size_t count, bool overwrite);
 
 int FTI_RemoveCkptMetaData(FTIT_topology* FTI_Topo, FTIT_configuration* FTI_Conf, int ckptId, int level );
+  
+int FTI_Transform( FTIT_dataset* data );
 
 }
 

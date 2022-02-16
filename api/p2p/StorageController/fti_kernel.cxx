@@ -25,3 +25,8 @@ void FTI::Kernel::print( std::string msg, int priority ) {
   FTI_Print( msg.c_str(), priority );
 }
 
+void FTI::Kernel::transform( FTIT_dataset* data ) {
+  //std::cout << "[info | finish decompression ]"<< std::endl;
+  FTI_Transform( data );
+}
+
