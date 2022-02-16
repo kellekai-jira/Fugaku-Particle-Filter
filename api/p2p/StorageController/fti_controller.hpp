@@ -4,6 +4,7 @@
 #include <fti.h>
 #include "fti_kernel.hpp"
 #include "io_controller.hpp"
+#include "zip_controller.hpp"
 #include <vector>
 #include <map>
 #include <cassert>
@@ -75,6 +76,7 @@ class FtiController : public IoController {
     io_id_t m_id_counter;  
     int m_last_cycle;
     FTI::Kernel m_kernel;
+    ZipController m_zip_controller;
     int m_runner_id;
 };
 

@@ -95,7 +95,43 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
       m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
       m_var_id_map[name].zip.parameter, 
       m_io_zip_type_map[m_var_id_map[name].zip.type]);
+ 
+  std::queue<ZipController::zip_t> zip_params;
+  zip_params.push({ FTI_CPC_HALF, 0, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_SINGLE, 0, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_ZFP, 0, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_ZFP, 2, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_ZFP, 4, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_ZFP, 6, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_ZFP, 8, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_ZFP, 10, FTI_CPC_ACCURACY });
+  zip_params.push({ FTI_CPC_FPZIP, 20, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 22, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 24, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 26, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 28, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 30, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 32, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 34, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 36, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 38, FTI_CPC_DEFAULT });
+  zip_params.push({ FTI_CPC_FPZIP, 40, FTI_CPC_DEFAULT });
+
+  FTI::data_t data = {0};
+  data.ptr = (void*) buffer;
+  data.count = size;
+  data.size = size * sizeof(double);
+	
+	double sigma = 10e-4;
+	
+  m_zip_controller.adaptParameter( &data, zip_params, sigma );
   
+  std::cout << "== best parameters (sigma -> "<<sigma<<") ==" << std::endl;
+  std::cout << "== mode: " << data.compression.mode << std::endl;
+  std::cout << "== parameter: " << data.compression.parameter << std::endl;
+  std::cout << "== type: " << data.compression.type << std::endl;
+	fflush(stdout);	
+ 
   return m_var_id_map[name].id;
 
 }
