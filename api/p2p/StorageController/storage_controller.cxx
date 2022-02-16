@@ -280,13 +280,13 @@ void StorageController::m_load_head( io_state_id_t state ) {
 void StorageController::m_load_user( io_state_id_t state ) {
   bool local_hit = m_io->is_local( state );
   M_TRIGGER(START_M_LOAD_USER, (local_hit)?1:0 );
+  io_id_t state_id = to_ckpt_id( state );
   if( local_hit ) {
     M_TRIGGER(LOCAL_HIT, to_ckpt_id(state));
   } else {
     M_TRIGGER(LOCAL_MISS, to_ckpt_id(state));
     int status;
     M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));
-    io_id_t state_id = to_ckpt_id( state );
     m_io->sendrecv( &state_id, &status, sizeof(io_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
     M_TRIGGER(STOP_WAIT_HEAD, to_ckpt_id(state));
     assert( m_io->is_local( state ) && "unable to load state to local storage" );
@@ -297,7 +297,7 @@ void StorageController::m_load_user( io_state_id_t state ) {
         int status;
         // FIXME: remove this and let server send to app cores where they need to find the state from!
         M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));
-            m_io->sendrecv( &state, &status, sizeof(io_state_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
+            m_io->sendrecv( &state_id, &status, sizeof(io_id_t), sizeof(int), IO_TAG_LOAD, IO_MSG_ALL );
             M_TRIGGER(DIRTY_LOAD, to_ckpt_id(state));
         M_TRIGGER(STOP_WAIT_HEAD, to_ckpt_id(state));
     }
