@@ -6,6 +6,9 @@
 #include "utils.h"
 #include <fstream>
 
+std::string stream_as_string( std::istream& stm ) // #include <iterator>
+{ return { std::istreambuf_iterator<char>(stm), std::istreambuf_iterator<char>{} } ; }
+
 void ZipController::init() {
  
   m_is_first = true;
