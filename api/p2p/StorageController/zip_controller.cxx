@@ -3,8 +3,12 @@
 #include "zip_controller.hpp"
 #include <cmath>
 #include <climits>
-#include "utils.h"
 #include <fstream>
+
+void str_to_lower( std::string & str ) {
+  std::transform(str.begin(), str.end(), str.begin(),
+      [](unsigned char c){ return std::tolower(c); });
+}
 
 constexpr unsigned int str2int(const char* str, int h = 0)
 {

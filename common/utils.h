@@ -33,8 +33,6 @@
 #include <regex>
 #include <iterator>
 
-void str_to_lower( std::string & str );
-
 class AddTimeStamp : public std::streambuf
 {
 public:
