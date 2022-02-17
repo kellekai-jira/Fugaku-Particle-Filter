@@ -25,13 +25,6 @@
 #include <sys/stat.h>
 #include <ftw.h>
 
-
-constexpr unsigned int str2int(const char* str, int h = 0)
-{
-      return !str[h] ? 5381 : (str2int(str, h+1) * 33) ^ str[h];
-}
-
-
 /* Call unlink or rmdir on the path, as appropriate. */
 // [FROM: https://stackoverflow.com/a/1149837/5073895]
 int
@@ -89,49 +82,26 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
       m_var_id_map[name].data, 
       m_var_id_map[name].size, 
       m_io_type_map[m_var_id_map[name].type]);
+  
+  FTI::data_t data = {0};
+  data.ptr = (void*) buffer;
+  data.count = size;
+  data.size = size * sizeof(double);
+	
+  m_zip_controller.adaptParameter( &data, name );
+  
+  std::cout << "== best parameters ( variable: "<<name<<" ) ==" << std::endl;
+  std::cout << "== mode: " << data.compression.mode << std::endl;
+  std::cout << "== parameter: " << data.compression.parameter << std::endl;
+  std::cout << "== type: " << data.compression.type << std::endl;
+	fflush(stdout);	
 
   FTI_SetCompression( 
       m_var_id_map[name].id, 
       m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
       m_var_id_map[name].zip.parameter, 
       m_io_zip_type_map[m_var_id_map[name].zip.type]);
- 
-  std::queue<ZipController::zip_t> zip_params;
-  zip_params.push({ FTI_CPC_HALF, 0, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_SINGLE, 0, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_ZFP, 0, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_ZFP, 2, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_ZFP, 4, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_ZFP, 6, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_ZFP, 8, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_ZFP, 10, FTI_CPC_ACCURACY });
-  zip_params.push({ FTI_CPC_FPZIP, 20, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 22, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 24, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 26, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 28, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 30, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 32, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 34, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 36, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 38, FTI_CPC_DEFAULT });
-  zip_params.push({ FTI_CPC_FPZIP, 40, FTI_CPC_DEFAULT });
-
-  FTI::data_t data = {0};
-  data.ptr = (void*) buffer;
-  data.count = size;
-  data.size = size * sizeof(double);
-	
-	double sigma = 10e-4;
-	
-  m_zip_controller.adaptParameter( &data, zip_params, sigma );
   
-  std::cout << "== best parameters (sigma -> "<<sigma<<") ==" << std::endl;
-  std::cout << "== mode: " << data.compression.mode << std::endl;
-  std::cout << "== parameter: " << data.compression.parameter << std::endl;
-  std::cout << "== type: " << data.compression.type << std::endl;
-	fflush(stdout);	
- 
   return m_var_id_map[name].id;
 
 }
@@ -160,18 +130,18 @@ void FtiController::init_core() {
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_BYTE, FTI_CHAR ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
-  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_DEFAULT, FTI_CPC_DEFAULT ) );
+  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_DEFAULT, FTI_CPC_TYPE_NONE ) );
   m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_A, FTI_CPC_ACCURACY ) );
   m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_B, FTI_CPC_PRECISION ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_DEFAULT, FTI_CPC_NONE ) );
+  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_DEFAULT, FTI_CPC_MODE_NONE ) );
   m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_A, FTI_CPC_FPZIP ) );
   m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_B, FTI_CPC_ZFP ) );
   m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_C, FTI_CPC_SINGLE ) );
   m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_D, FTI_CPC_HALF ) );
-  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_DEFAULT, IO_ZIP_TYPE_DEFAULT ) );
+  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_TYPE_NONE, IO_ZIP_TYPE_DEFAULT ) );
   m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_ACCURACY, IO_ZIP_TYPE_A ) );
   m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_PRECISION, IO_ZIP_TYPE_B ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_NONE, IO_ZIP_MODE_DEFAULT ) );
+  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_MODE_NONE, IO_ZIP_MODE_DEFAULT ) );
   m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_FPZIP, IO_ZIP_MODE_A ) );
   m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_ZFP, IO_ZIP_MODE_B ) );
   m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_SINGLE, IO_ZIP_MODE_C ) );
@@ -208,7 +178,7 @@ void FtiController::init_core() {
   m_dict_string.insert( std::pair<std::string,std::string>( "local_dir", strip_id(m_kernel.conf->localDir,m_kernel.exec->id) ) );
   m_dict_string.insert( std::pair<std::string,std::string>( "meta_dir", strip_id(m_kernel.conf->metadDir,m_kernel.exec->id) ) );
   m_dict_string.insert( std::pair<std::string,std::string>( "exec_id", m_kernel.exec->id ) );
-  init_compression_parameter();
+  m_zip_controller.init();
   m_id_counter = 0;
 }
 
@@ -663,73 +633,3 @@ void FtiController::update_metadata( io_state_id_t state_id, io_level_t level ) 
   m_kernel.update_ckpt_metadata( to_ckpt_id(state_id), m_io_level_map[level] );
 }
 
-void FtiController::init_compression_parameter() {
-  boost::property_tree::ptree root;
-  try {
-    boost::property_tree::read_json("compression.json", root);
-  }
-  catch(std::exception & e)
-  {
-    std::cout << "[WARNING] - failed to parse compression configuration 'compression.json' - " << e.what() << std::endl;
-    return;
-  }
-	
-	auto it = root.get_child("compression");
-	for (auto it2 = it.begin(); it2 != it.end(); ++it2) { 
-    io_zip_t cpc;
-    std::string var_name;
-    bool valid = false;
-    for (auto it3 = it2->second.begin(); it3 != it2->second.end(); ++it3){
-      std::string key(it3->first);
-      std::string value(it3->second.data());
-      if ( key == std::string("name") ) {
-        var_name = value;
-        valid = true;
-      } else if ( key == std::string("mode") ) { 
-        std::transform(value.begin(), value.end(), value.begin(),
-            [](unsigned char c){ return std::tolower(c); });
-        switch( str2int(value.c_str()) ) { 
-          case str2int("none"):
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_NONE];
-            break;
-          case str2int("fpzip"):
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_FPZIP];
-            break;
-          case str2int("zfp"):
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_ZFP];
-            break;
-          case str2int("single"):
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_SINGLE];
-            break;
-          case str2int("half"):
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_HALF];
-            break;
-          default:
-            std::cout << "[WARNING] - unknown compression mode '"<<value<<"'!" << std::endl;
-            cpc.mode = m_io_zip_mode_inv_map[FTI_CPC_NONE];
-        }
-      } else if ( key == std::string("parameter") ) {
-        cpc.parameter = std::stoi(value);
-      } else if ( key == std::string("type") ) { 
-        std::transform(value.begin(), value.end(), value.begin(),
-            [](unsigned char c){ return std::tolower(c); });
-        switch( str2int(value.c_str()) ) { 
-          case str2int("accuracy"):
-            cpc.type = m_io_zip_type_inv_map[FTI_CPC_ACCURACY];
-            break;
-          case str2int("precision"):
-            cpc.type = m_io_zip_type_inv_map[FTI_CPC_PRECISION];
-            break;
-          default:
-            std::cout << "[WARNING] - invalid combination or unknown compression type '"<<value<<"'!" << std::endl;
-            cpc.type = m_io_zip_type_inv_map[FTI_CPC_DEFAULT];
-        }
-      }
-    }
-    if( valid ) {
-      m_var_zip_map.insert( std::pair<std::string,io_zip_t>( var_name, cpc ) );
-    } else {
-      std::cout << "[WARNING] - compression variable without name!" << std::endl;
-    }
-  }
-}
