@@ -1,14 +1,19 @@
 {
-  "compression" : 
-  [ 
-    { 
-      "name" : "wtime",
-      "mode" : "none"
-    },
-    {
-      "name" : "state1",
-      "mode" : "fpzip",
-      "parameter" : "20"
-    }
-  ]
+  "compression" : {
+    "adapted" : [
+      {
+        "name"  : "state1",
+        "sigma" : 10e-4,
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : [0,1,2,3,4,5,6,7,8,9,10]
+      },
+      {
+        "name"  : "state1",
+        "mode" : "fpzip",
+        "sigma" : 10e-4,
+        "parameter" : [22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+      }
+    ]
+  }
 }
