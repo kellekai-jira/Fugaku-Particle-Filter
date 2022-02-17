@@ -6,6 +6,11 @@
 #include "utils.h"
 #include <fstream>
 
+constexpr unsigned int str2int(const char* str, int h = 0)
+{
+    return !str[h] ? 5381 : (str2int(str, h+1) * 33) ^ str[h];
+}
+
 std::string stream_as_string( std::istream& stm ) // #include <iterator>
 { return { std::istreambuf_iterator<char>(stm), std::istreambuf_iterator<char>{} } ; }
 
