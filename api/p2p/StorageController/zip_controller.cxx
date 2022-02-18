@@ -209,6 +209,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       m_kernel.transform( &data_train );
     } catch ( IoException &e ) {
       MDBG("%s", e.what() );
+      continue;
     }
     
     double* compressed = (double*) data_train.ptr;
@@ -266,6 +267,7 @@ void ZipController::minimize ( FTI::data_t* data, std::string name, double* orig
       m_kernel.transform( &data_train );
     } catch ( IoException &e ) {
       MDBG("%s", e.what() );
+      continue;
     }
     
     double* compressed = (double*) data_train.ptr;
