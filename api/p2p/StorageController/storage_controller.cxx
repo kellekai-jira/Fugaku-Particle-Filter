@@ -333,6 +333,7 @@ void StorageController::m_communicate( io_tag_t tag ) {
   std::vector<MPI_Status> send_status(mpi.size()-1);
   std::vector<MPI_Status> recv_status(mpi.size()-1);
   for(int i=1; i<mpi.size(); i++) {
+    MDBG("head master notifies slave TAG : %d", tag);
     MPI_Isend( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &send_request[i-1] );
     MPI_Irecv( NULL, 0, MPI_BYTE, i, tag, mpi.comm(), &recv_request[i-1] );
   }
