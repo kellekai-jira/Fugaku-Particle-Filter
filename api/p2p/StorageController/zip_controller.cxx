@@ -188,9 +188,9 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
  
   int64_t minSize = INT64_MAX;
   double* ptr = new double[data->count];
-   
+  
   while ( !m_vars[name].empty() ) {
-   
+    
     bool inBound = true;
     
     melissa::zip::zip_t zip = m_vars[name].front(); m_vars[name].pop();
@@ -205,12 +205,14 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     data_train.compression.parameter = zip.parameter;
     data_train.compression.type = zip.type;
 
+    double t0 = MPI_Wtime();
     try {
       m_kernel.transform( &data_train );
     } catch ( IoException &e ) {
       MDBG("%s", e.what() );
       continue;
     }
+    double t1 = MPI_Wtime();
     
     double* compressed = (double*) data_train.ptr;
 
@@ -229,11 +231,12 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     zip.rate = ((double)data->size) / data_train.compression.size;
      
     if( inBound ) {
-      std::cout << "[add parameter (sigma="<<zip.sigma<<")]    ";
+      std::cout << "[add parameter (sigma="<<zip.sigma<<")    ]";
       std::cout << " mode: " << std::setw(2) << zip.mode;
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
       std::cout << " rate: " << std::setw(10) << zip.rate;
       std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
+      std::cout << " time [sec]: " << std::setw(10) << t1-t0 << std::endl;
       m_vars_set[name].insert( zip );
     } else {
       std::cout << "[discard parameter (sigma="<<zip.sigma<<")]";
@@ -241,6 +244,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
       std::cout << " rate: " << std::setw(10) << zip.rate;
       std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
+      std::cout << " time [sec]: " << std::setw(10) << t1-t0 << std::endl;
     }
 
     if( inBound && (minSizeTrain < minSize) ) {
