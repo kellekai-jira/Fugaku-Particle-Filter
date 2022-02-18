@@ -166,21 +166,20 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   
   if( m_is_first ) {
     select_parameters( data, name, original );
+    std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
+    int i = 0;
+    for(auto p : m_vars_set[name]) {
+      std::cout << "==    ["<<i++<<"]" << std::endl;
+      std::cout << "==    RATE      : " << p.rate << std::endl;
+      std::cout << "==    mode      : " << p.mode << std::endl;
+      std::cout << "==    parameter : " << p.parameter << std::endl;
+      std::cout << "==    type      : " << p.type << std::endl;
+    }
+	  fflush(stdout);
     m_is_first = false;
   } else {
     minimize( data, name, original );
   }
-
-  std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
-  int i = 0;
-  for(auto p : m_vars_set[name]) {
-    std::cout << "==    ["<<i++<<"]" << std::endl;
-    std::cout << "==    RATE      : " << p.rate << std::endl;
-    std::cout << "==    mode      : " << p.mode << std::endl;
-    std::cout << "==    parameter : " << p.parameter << std::endl;
-    std::cout << "==    type      : " << p.type << std::endl;
-  }
-	fflush(stdout);
 
 }
   
