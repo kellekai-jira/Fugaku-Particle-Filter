@@ -4,6 +4,15 @@
 #include <cmath>
 #include <climits>
 #include <fstream>
+#include <boost/json/src.hpp>
+
+namespace json = boost::json;
+
+namespace melissa {
+  namespace zip {
+    void populate( json::object & obj, std::map<std::string, std::queue<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase );
+  }
+}
 
 void str_to_lower( std::string & str ) {
   std::transform(str.begin(), str.end(), str.begin(),
@@ -46,7 +55,7 @@ void ZipController::init() {
     
     std::cout << "static" << std::endl;
 
-    populate( obj, FTI_CPC_ADAPTED );
+    melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPTED );
     
   }
 
@@ -70,7 +79,7 @@ void ZipController::init() {
 
 }
 
-void ZipController::populate( json::object & obj, FTIT_CPC_CASE zcase ) {
+void melissa::zip::populate( json::object & obj, std::map<std::string, std::queue<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
 
   if ( obj.find("name") == obj.end() ) {
     std::cerr << "[error] variable without 'name'" << std::endl;
@@ -114,22 +123,22 @@ void ZipController::populate( json::object & obj, FTIT_CPC_CASE zcase ) {
     sigma = obj["sigma"].as_double();
   }
 
-  ZipController::zip_t zip;
+  melissa::zip::zip_t zip;
 
   zip.method  = zcase;
-  zip.mode    = ZipController::string2mode(mode);
-  zip.type    = ZipController::string2type(type);
+  zip.mode    = melissa::zip::string2mode(mode);
+  zip.type    = melissa::zip::string2type(type);
   zip.sigma   = sigma;
 
   if ( obj.find("parameter") == obj.end() ) {
     zip.parameter = 0;
-    m_vars[name].push(zip);
+    vars[name].push(zip);
   } else if ( obj["parameter"].is_string() ) {
     zip.parameter = std::stoi( obj["parameter"].as_string().c_str() );
-    m_vars[name].push(zip);
+    vars[name].push(zip);
   } else if ( obj["parameter"].is_int64() ){
     zip.parameter = obj["parameter"].as_int64();
-    m_vars[name].push(zip);
+    vars[name].push(zip);
   } else if ( obj["parameter"].is_array() ) {
     auto pit = obj["parameter"].as_array().begin();
     for ( ; pit != obj["parameter"].as_array().end(); pit++ ) {
@@ -138,7 +147,7 @@ void ZipController::populate( json::object & obj, FTIT_CPC_CASE zcase ) {
       } else if ( pit->is_int64() ){
         zip.parameter = pit->as_int64();
       }
-      m_vars[name].push(zip);
+      vars[name].push(zip);
     }
   }
 
@@ -178,7 +187,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
    
     bool inBound = true;
     
-    zip_t zip = m_vars[name].front(); m_vars[name].pop();
+    melissa::zip::zip_t zip = m_vars[name].front(); m_vars[name].pop();
     
     double maxError = zip.sigma;
   
@@ -269,7 +278,7 @@ void ZipController::minimize ( FTI::data_t* data, std::string name, double* orig
 
 }
 
-FTIT_CPC_MODE ZipController::string2mode( std::string str ) {
+FTIT_CPC_MODE melissa::zip::string2mode( std::string str ) {
   switch( str2int(str.c_str()) ) { 
     case str2int("none"):
       return FTI_CPC_MODE_NONE;
@@ -287,7 +296,7 @@ FTIT_CPC_MODE ZipController::string2mode( std::string str ) {
   }
 }
 
-FTIT_CPC_TYPE ZipController::string2type( std::string str ) {
+FTIT_CPC_TYPE melissa::zip::string2type( std::string str ) {
   switch( str2int(str.c_str()) ) { 
     case str2int("none"):
       return FTI_CPC_TYPE_NONE;
@@ -301,7 +310,7 @@ FTIT_CPC_TYPE ZipController::string2type( std::string str ) {
   }
 }
 
-FTIT_CPC_CASE ZipController::string2case( std::string str ) {
+FTIT_CPC_CASE melissa::zip::string2case( std::string str ) {
   switch( str2int(str.c_str()) ) { 
     case str2int("accuracy"):
       return FTI_CPC_ADAPTED;
