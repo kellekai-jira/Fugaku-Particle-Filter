@@ -229,7 +229,6 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     zip.rate = ((double)data->size) / data_train.compression.size;
      
     if( inBound ) {
-      MDBG("added to set mode %d, parameter: %d", zip.mode, zip.parameter );
       std::cout << "[added params]";
       std::cout << " mode: " << std::setw(2) << zip.mode;
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
