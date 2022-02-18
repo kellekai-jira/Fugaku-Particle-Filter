@@ -246,6 +246,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
       std::cout << " time [sec]: " << std::setw(10) << t1-t0 << std::endl;
     }
+    fflush(stdout);
 
     if( inBound && (minSizeTrain < minSize) ) {
       data->compression.mode = zip.mode; 
