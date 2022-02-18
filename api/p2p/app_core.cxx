@@ -369,15 +369,19 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
     MDBG("finished storing state as L1 checkpoint");
+    fflush(stdout);
     M_TRIGGER(STOP_STORE, to_ckpt_id(current_state));
 
     // 2. calculate weight and synchronize weight on rank 0
     M_TRIGGER(START_CALC_WEIGHT, current_state.t);
     MDBG("start calculating weight for state");
+    fflush(stdout);
     int __comm_size;MPI_Comm_size(comm, &__comm_size);
     MDBG("mpi.size(): %d, comm size: %d", mpi.size(), __comm_size);
+    fflush(stdout);
     double weight = calculateWeight();
     MDBG("finished calculating weight for state");
+    fflush(stdout);
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
 
     int nsteps = 0;
