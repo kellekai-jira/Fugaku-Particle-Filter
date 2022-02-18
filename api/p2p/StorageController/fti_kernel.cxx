@@ -27,6 +27,6 @@ void FTI::Kernel::print( std::string msg, int priority ) {
 
 void FTI::Kernel::transform( FTIT_dataset* data ) {
   //std::cout << "[info | finish decompression ]"<< std::endl;
-  FTI_Transform( data );
+  IO_TRY( FTI_Transform( data ), FTI_SCES, "failed to remove checkpoint metadata" );
 }
 

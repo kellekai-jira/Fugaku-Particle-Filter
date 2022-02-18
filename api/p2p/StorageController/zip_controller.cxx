@@ -5,6 +5,8 @@
 #include <climits>
 #include <fstream>
 #include <boost/json/src.hpp>
+#include "utils.h"
+#include "io_controller.hpp"
 
 namespace json = boost::json;
 
@@ -203,7 +205,11 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     data_train.compression.parameter = zip.parameter;
     data_train.compression.type = zip.type;
 
-    m_kernel.transform( &data_train );
+    try {
+      m_kernel.transform( &data_train );
+    } catch ( IoException &e ) {
+      MDBG("%s", e.what() );
+    }
     
     double* compressed = (double*) data_train.ptr;
 
@@ -256,7 +262,11 @@ void ZipController::minimize ( FTI::data_t* data, std::string name, double* orig
     data_train.compression.parameter = zip.parameter;
     data_train.compression.type = zip.type;
 
-    m_kernel.transform( &data_train );
+    try {
+      m_kernel.transform( &data_train );
+    } catch ( IoException &e ) {
+      MDBG("%s", e.what() );
+    }
     
     double* compressed = (double*) data_train.ptr;
 
