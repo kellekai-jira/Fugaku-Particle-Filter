@@ -7,6 +7,7 @@
 #include <boost/json/src.hpp>
 #include "utils.h"
 #include "io_controller.hpp"
+#include <iomanip>
 
 namespace json = boost::json;
 
@@ -229,6 +230,11 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
      
     if( inBound ) {
       MDBG("added to set mode %d, parameter: %d", zip.mode, zip.parameter );
+      std::cout << "[added params]";
+      std::cout << " mode: " << std::setw(2) << zip.mode;
+      std::cout << " parameter: " << std::setw(3) << zip.parameter;
+      std::cout << " rate: " << std::setw(10) << zip.rate;
+      std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
       m_vars_set[name].insert( zip );
     }
 
