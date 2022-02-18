@@ -229,12 +229,18 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     zip.rate = ((double)data->size) / data_train.compression.size;
      
     if( inBound ) {
-      std::cout << "[added params]";
+      std::cout << "[add parameter (sigma="<<zip.sigma<<")]    ";
       std::cout << " mode: " << std::setw(2) << zip.mode;
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
       std::cout << " rate: " << std::setw(10) << zip.rate;
       std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
       m_vars_set[name].insert( zip );
+    } else {
+      std::cout << "[discard parameter (sigma="<<zip.sigma<<")]";
+      std::cout << " mode: " << std::setw(2) << zip.mode;
+      std::cout << " parameter: " << std::setw(3) << zip.parameter;
+      std::cout << " rate: " << std::setw(10) << zip.rate;
+      std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
     }
 
     if( inBound && (minSizeTrain < minSize) ) {
