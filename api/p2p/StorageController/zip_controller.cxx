@@ -162,8 +162,12 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
 
   double* original = (double*) data->ptr;
   
-  if( m_is_first ) select_parameters( data, name, original );
-  else minimize( data, name, original );
+  if( m_is_first ) {
+    select_parameters( data, name, original );
+    m_is_first = false;
+  } else {
+    minimize( data, name, original );
+  }
 
   std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
   int i = 0;
@@ -204,7 +208,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     double* compressed = (double*) data_train.ptr;
 
     double maxErrorTrain = 0;
-    int64_t minSizeTrain = data_train.sizeStored;
+    int64_t minSizeTrain = data_train.compression.size;
 
     for ( int i=0; i<data_train.count; i++ ) {
       double error = fabs( original[i] - compressed[i] );
@@ -215,7 +219,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       if ( error > maxErrorTrain ) maxErrorTrain = error;
     }
 
-    zip.rate = ((double)data->size) / data_train.sizeStored;
+    zip.rate = ((double)data->size) / data_train.compression.size;
      
     if( inBound ) {
       m_vars_set[name].insert( zip );
@@ -265,7 +269,6 @@ void ZipController::minimize ( FTI::data_t* data, std::string name, double* orig
     }
      
     if( inBound ) {
-      m_vars_set[name].insert( zip );
       data->compression.mode = zip.mode; 
       data->compression.parameter = zip.parameter; 
       data->compression.type = zip.type;

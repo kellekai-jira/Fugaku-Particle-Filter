@@ -46,20 +46,20 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
   
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
 
-  io_zip_t zip;
+  //io_zip_t zip;
 
-  if ( m_var_zip_map.count(name) != 0 ) {   
-    zip.mode = m_var_zip_map[name].mode;
-    zip.parameter = m_var_zip_map[name].parameter;
-    zip.type = m_var_zip_map[name].type;
-  }
+  //if ( m_var_zip_map.count(name) != 0 ) {   
+  //  zip.mode = m_var_zip_map[name].mode;
+  //  zip.parameter = m_var_zip_map[name].parameter;
+  //  zip.type = m_var_zip_map[name].type;
+  //}
 
   io_var_t variable;
 
   variable.data = buffer;
   variable.size = size; 
   variable.type = type; 
-  variable.zip = zip;
+  //variable.zip = zip;
   
   if(m_var_id_map.find(name) == m_var_id_map.end()) { 
     variable.id = m_id_counter; 
@@ -69,9 +69,9 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
     m_var_id_map[name].data = variable.data;
     m_var_id_map[name].size = variable.size;
     m_var_id_map[name].type = variable.type;
-    m_var_id_map[name].zip.mode = variable.zip.mode;
-    m_var_id_map[name].zip.parameter = variable.zip.type;
-    m_var_id_map[name].zip.type = variable.zip.type;
+    //m_var_id_map[name].zip.mode = variable.zip.mode;
+    //m_var_id_map[name].zip.parameter = variable.zip.type;
+    //m_var_id_map[name].zip.type = variable.zip.type;
   }
   
   FTI_Protect(
@@ -95,9 +95,15 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
 
   FTI_SetCompression( 
       m_var_id_map[name].id, 
-      m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
-      m_var_id_map[name].zip.parameter, 
-      m_io_zip_type_map[m_var_id_map[name].zip.type]);
+      data.compression.mode, 
+      data.compression.parameter, 
+      data.compression.type);
+  
+  //FTI_SetCompression( 
+  //    m_var_id_map[name].id, 
+  //    m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
+  //    m_var_id_map[name].zip.parameter, 
+  //    m_io_zip_type_map[m_var_id_map[name].zip.type]);
   
   return m_var_id_map[name].id;
 
@@ -127,22 +133,22 @@ void FtiController::init_core() {
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_DOUBLE, FTI_DBLE ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_BYTE, FTI_CHAR ) );
   m_io_type_map.insert( std::pair<io_type_t,fti_id_t>( IO_INT, FTI_INTG ) );
-  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_DEFAULT, FTI_CPC_TYPE_NONE ) );
-  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_A, FTI_CPC_ACCURACY ) );
-  m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_B, FTI_CPC_PRECISION ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_DEFAULT, FTI_CPC_MODE_NONE ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_A, FTI_CPC_FPZIP ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_B, FTI_CPC_ZFP ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_C, FTI_CPC_SINGLE ) );
-  m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_D, FTI_CPC_HALF ) );
-  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_TYPE_NONE, IO_ZIP_TYPE_DEFAULT ) );
-  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_ACCURACY, IO_ZIP_TYPE_A ) );
-  m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_PRECISION, IO_ZIP_TYPE_B ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_MODE_NONE, IO_ZIP_MODE_DEFAULT ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_FPZIP, IO_ZIP_MODE_A ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_ZFP, IO_ZIP_MODE_B ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_SINGLE, IO_ZIP_MODE_C ) );
-  m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_HALF, IO_ZIP_MODE_D ) );
+  //m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_DEFAULT, FTI_CPC_TYPE_NONE ) );
+  //m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_A, FTI_CPC_ACCURACY ) );
+  //m_io_zip_type_map.insert( std::pair<io_zip_type_t,FTIT_CPC_TYPE>( IO_ZIP_TYPE_B, FTI_CPC_PRECISION ) );
+  //m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_DEFAULT, FTI_CPC_MODE_NONE ) );
+  //m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_A, FTI_CPC_FPZIP ) );
+  //m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_B, FTI_CPC_ZFP ) );
+  //m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_C, FTI_CPC_SINGLE ) );
+  //m_io_zip_mode_map.insert( std::pair<io_zip_mode_t,FTIT_CPC_MODE>( IO_ZIP_MODE_D, FTI_CPC_HALF ) );
+  //m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_TYPE_NONE, IO_ZIP_TYPE_DEFAULT ) );
+  //m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_ACCURACY, IO_ZIP_TYPE_A ) );
+  //m_io_zip_type_inv_map.insert( std::pair<FTIT_CPC_TYPE,io_zip_type_t>( FTI_CPC_PRECISION, IO_ZIP_TYPE_B ) );
+  //m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_MODE_NONE, IO_ZIP_MODE_DEFAULT ) );
+  //m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_FPZIP, IO_ZIP_MODE_A ) );
+  //m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_ZFP, IO_ZIP_MODE_B ) );
+  //m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_SINGLE, IO_ZIP_MODE_C ) );
+  //m_io_zip_mode_inv_map.insert( std::pair<FTIT_CPC_MODE,io_zip_mode_t>( FTI_CPC_HALF, IO_ZIP_MODE_D ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L1, FTI_L1 ) );
   m_io_level_map.insert( std::pair<io_level_t,FTIT_level>( IO_STORAGE_L2, FTI_L4 ) );
   m_io_msg_map.insert( std::pair<io_msg_t,int>( IO_MSG_ALL, FTI_HEAD_MODE_COLL ) );
