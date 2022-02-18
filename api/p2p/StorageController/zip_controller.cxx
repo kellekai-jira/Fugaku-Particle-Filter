@@ -235,7 +235,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       std::cout << " mode: " << std::setw(2) << zip.mode;
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
       std::cout << " rate: " << std::setw(10) << zip.rate;
-      std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
+      std::cout << " max error: " << std::setw(10) << maxErrorTrain;
       std::cout << " time [sec]: " << std::setw(10) << t1-t0 << std::endl;
       m_vars_set[name].insert( zip );
     } else {
@@ -243,7 +243,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       std::cout << " mode: " << std::setw(2) << zip.mode;
       std::cout << " parameter: " << std::setw(3) << zip.parameter;
       std::cout << " rate: " << std::setw(10) << zip.rate;
-      std::cout << " max error: " << std::setw(10) << maxErrorTrain << std::endl;
+      std::cout << " max error: " << std::setw(10) << maxErrorTrain;
       std::cout << " time [sec]: " << std::setw(10) << t1-t0 << std::endl;
     }
     fflush(stdout);
