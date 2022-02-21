@@ -109,6 +109,7 @@ void init_parallel() {
 
     nl = nl_all[comm_rank];
     nlt = nl + 3;
+    
     int64_t nl_off = 0;
     for(int i=0; i<comm_rank; i++) {
       nl_off = nl_off + nl_all[i];
@@ -381,7 +382,7 @@ double calculate_weight( int cycle )  {
 
 
   double sum_err_all;
-  MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
+  //MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
   double weight = exp( -1*sum_err_all );
 
   std::cout << "SUM ERROR ALL: " << sum_err_all << " (cycle: '"<<cycle<<"')" << std::endl;
