@@ -1,6 +1,7 @@
 #include "storage_controller.hpp"
 #include "storage_controller_impl.hpp"
 
+#include <boost/filesystem.hpp>
 #include <sys/statvfs.h>
 #include "utils.h"
 #include <memory>
@@ -349,6 +350,11 @@ void StorageController::m_request_post() {
     // forward request to other head ranks
     m_communicate( IO_TAG_POST );
   }
+
+  auto si = boost::filesystem::space("/local");
+  MDBG( "[CACHE] capacity: %lu", si.capacity );
+  MDBG( "[CACHE] free: %lu", si.free );
+  MDBG( "[CACHE] available: %lu", si.available );
   
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
