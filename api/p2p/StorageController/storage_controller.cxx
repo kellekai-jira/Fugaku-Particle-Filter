@@ -1,7 +1,6 @@
 #include "storage_controller.hpp"
 #include "storage_controller_impl.hpp"
 
-#include <boost/filesystem.hpp>
 #include <sys/statvfs.h>
 #include "utils.h"
 #include <memory>
@@ -349,15 +348,6 @@ void StorageController::m_request_post() {
     fflush(stdout);
     // forward request to other head ranks
     m_communicate( IO_TAG_POST );
-  }
-
-  try {
-    auto si = boost::filesystem::space("/local");
-    MDBG( "[CACHE] capacity: %lu", si.capacity );
-    MDBG( "[CACHE] free: %lu", si.free );
-    MDBG( "[CACHE] available: %lu", si.available );
-  } catch (boost::filesystem::filesystem_error & e) {
-    MDBG( "[BOOST::ERROR] %s", e.what() );
   }
   
   //static mpi_request_t req;
