@@ -293,16 +293,19 @@ double calculate_weight( int cycle )  {
   if ( dim_obs%OBS_BLOCK_SIZE != 0 ) {
     num_reg++;
   }
+  
+  std::cout << "num_reg: " << num_reg << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   // compute stride for regions
   int64_t stride = NG / num_reg;
   // determine number of obs in pe
   int64_t dim_obs_p = 0;
   int64_t cnt_obs = 0;
-  for(int i=0; i<num_reg; i++) {
+  for(int64_t i=0; i<num_reg; i++) {
     offset = i * stride;
     index_tmp;
-    for(int j=0; j<OBS_BLOCK_SIZE; j++) {
+    for(int64_t j=0; j<OBS_BLOCK_SIZE; j++) {
       index_tmp = offset + j;
       if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
         dim_obs_p++;
@@ -319,9 +322,9 @@ double calculate_weight( int cycle )  {
 
   //assign indices to index array
   int64_t cnt_obs_p = 0;
-  for(int i=0; i<num_reg; i++) {
+  for(int64_t i=0; i<num_reg; i++) {
     offset = i * stride;
-    for(int j=0; j<OBS_BLOCK_SIZE; j++) {
+    for(int64_t j=0; j<OBS_BLOCK_SIZE; j++) {
       index_tmp = offset + j;
       if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
         idx_p[cnt_obs_p] = index_tmp;
@@ -335,12 +338,11 @@ double calculate_weight( int cycle )  {
 
   // write observations
   int64_t dim_obs_all[comm_size];
-  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all,
-      1, MPI_INT64_T, comm );
+  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all, 1, MPI_INT64_T, comm );
 
   int64_t disp_obs = 0;
 
-  for(int i=0; i<comm_rank; i++) {
+  for(int64_t i=0; i<comm_rank; i++) {
     disp_obs += dim_obs_all[i] * sizeof(double);
   }
 
