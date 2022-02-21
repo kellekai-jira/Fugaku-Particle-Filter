@@ -265,10 +265,6 @@ int main() {
 }
 
 double calculate_weight( int cycle )  {
-        
-  int rank, size;
-  MPI_Comm_rank( comm, &rank );
-  MPI_Comm_size( comm, &size );
        
   double share;
   int blk_size;
@@ -282,10 +278,14 @@ double calculate_weight( int cycle )  {
   GETENV( envvar, "MELISSA_LORENZ_OBSERVATION_DIR" );
   obs_dir = envvar;
   
-  std::vector<int64_t> nl_all(size, NG/size);
-  int64_t nl_mod = NG%((int64_t)size);
+  std::cout << "SHARE: " << share << " (cycle: '"<<cycle<<"')" << std::endl;
+  std::cout << "BLOCK SIZE " << blk_size << " (cycle: '"<<cycle<<"')" << std::endl;
+  std::cout << "OBSERVATION PATH " << obs_dir << " (cycle: '"<<cycle<<"')" << std::endl;
+  
+  std::vector<int64_t> nl_all(comm_size, NG/comm_size);
+  int64_t nl_mod = NG%((int64_t)comm_size);
   while ( nl_mod > 0 ) {
-    for (int i=0; i<size; i++) {
+    for (int i=0; i<comm_size; i++) {
       if (nl_mod > 1) {
         nl_all[i] = nl_all[i] + 1;
         nl_mod = nl_mod - 1;
@@ -297,10 +297,10 @@ double calculate_weight( int cycle )  {
     }
   }
 
-  int64_t nl = nl_all[rank];
+  int64_t nl = nl_all[comm_rank];
 
   int64_t nl_off = 0;
-  for ( int  i=0; i<rank; i++ ) {
+  for ( int  i=0; i<comm_rank; i++ ) {
       nl_off = nl_off + nl_all[i];
   }
 
@@ -308,7 +308,7 @@ double calculate_weight( int cycle )  {
   int64_t state_max_p = nl_off + nl - 1;
 
   // compute total number of observations
-  uint64_t dim_obs = static_cast<int>(share * NG);
+  int64_t dim_obs = static_cast<int64_t>(share * NG);
   if ( dim_obs == 0 ) {
     dim_obs = 1;
   }
@@ -320,11 +320,11 @@ double calculate_weight( int cycle )  {
   }
 
   // compute stride for regions
-  uint64_t stride = NG / num_reg;
+  int64_t stride = NG / num_reg;
 
   // determine number of obs in pe
-  std::vector<uint64_t> obs_idx;
-  uint64_t i = 0;
+  std::vector<int64_t> obs_idx;
+  int64_t i = 0;
   while ( i < num_reg ) {
       int64_t index_tmp = i * stride;
       int64_t cnt_obs = i * blk_size;
@@ -343,17 +343,18 @@ double calculate_weight( int cycle )  {
       }
       i += 1;
   }
-
-
+  
   int64_t dim_obs_p = obs_idx.size();
-  std::vector<int64_t> dim_obs_all(size);
+  std::vector<int64_t> dim_obs_all(comm_size);
     
   int64_t disp_obs = 0;
-  if ( rank > 0 ) {
-    for ( int i=0; i<rank; i++ ) {
+  if ( comm_rank > 0 ) {
+    for ( int i=0; i<comm_rank; i++ ) {
       disp_obs += dim_obs_all[i] * sizeof(double);
     }
   }
+  
+  std::cout << "DISPLACEMENT OBS: " << disp_obs << " (cycle: '"<<cycle<<"')" << std::endl;
  
   std::vector<double> obs_p(dim_obs_p);
 
@@ -365,6 +366,7 @@ double calculate_weight( int cycle )  {
   MPI_File_write(fh, obs_p.data(), dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
   
+  std::cout << "OBSERVATION PATH: " << obs_path << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "DIMENSION OBS: " << dim_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
   
   double sum_err = 0;
