@@ -372,9 +372,8 @@ double calculate_weight( int cycle )  {
   fflush(stdout);
 
   double sum_err = 0;
-  double* x = &x_l[2];
   for (int64_t i=0; i<dim_obs_p; i++) {
-    sum_err = sum_err + (x[idx_p[i]] - obs_p[i]) * (x[idx_p[i]] - obs_p[i]);
+    sum_err = sum_err + (x_l[idx_p[i] - state_min_p + 2] - obs_p[i]) * (x_l[idx_p[i] - state_min_p + 2] - obs_p[i]);
   }
 
   std::cout << "SUM ERROR: " << sum_err << " (cycle: '"<<cycle<<"')" << std::endl;
