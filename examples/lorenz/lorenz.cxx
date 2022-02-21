@@ -345,7 +345,9 @@ double calculate_weight( int cycle )  {
   }
   
   int64_t dim_obs_p = obs_idx.size();
+  
   std::vector<int64_t> dim_obs_all(comm_size);
+  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all.data(), 1, MPI_INT64_T, comm);
     
   int64_t disp_obs = 0;
   if ( comm_rank > 0 ) {
@@ -358,7 +360,6 @@ double calculate_weight( int cycle )  {
  
   std::vector<double> obs_p(dim_obs_p);
 
-  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all.data(), 1, MPI_INT64_T, comm);
   std::string obs_path = obs_dir + "/iter-" + std::to_string(cycle) + ".obs";
   MPI_File fh;
   MPI_File_open(comm, obs_path.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
