@@ -186,13 +186,10 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   
 void ZipController::select_parameters ( FTI::data_t* data, std::string name, double* original ) {
  
-  std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   int64_t minSize = INT64_MAX;
   double* ptr = new double[data->count];
-  std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   
   while ( !m_vars[name].empty() ) {
-    std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     
     bool inBound = true;
     
@@ -208,6 +205,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     data_train.compression.parameter = zip.parameter;
     data_train.compression.type = zip.type;
 
+    std::cout << "[BEFORE TRANSFORM]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     double t0 = MPI_Wtime();
     try {
       m_kernel.transform( &data_train );
@@ -215,6 +213,7 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       MDBG("%s", e.what() );
       continue;
     }
+    std::cout << "[AFTER TRANSFORM]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     double t1 = MPI_Wtime();
     
     double* compressed = (double*) data_train.ptr;
