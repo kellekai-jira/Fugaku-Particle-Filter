@@ -186,10 +186,13 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   
 void ZipController::select_parameters ( FTI::data_t* data, std::string name, double* original ) {
  
+  std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   int64_t minSize = INT64_MAX;
   double* ptr = new double[data->count];
+  std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
   
   while ( !m_vars[name].empty() ) {
+    std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     
     bool inBound = true;
     
