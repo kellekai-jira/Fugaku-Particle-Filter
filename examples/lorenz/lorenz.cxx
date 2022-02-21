@@ -281,6 +281,7 @@ double calculate_weight( int cycle )  {
   std::cout << "SHARE: " << share << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "BLOCK SIZE " << OBS_BLOCK_SIZE << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "OBSERVATION PATH " << obs_dir << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   // compute total number of observations
   int64_t dim_obs = std::floor(share * NG);
@@ -317,6 +318,9 @@ double calculate_weight( int cycle )  {
     if ( cnt_obs == dim_obs ) break;
     if ( index_tmp == state_max_p ) break;
   }
+  
+  std::cout << "dim_obs_p: " << dim_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   std::vector<int64_t> idx_p(dim_obs_p);
 
@@ -335,10 +339,16 @@ double calculate_weight( int cycle )  {
     if ( cnt_obs_p == dim_obs_p ) break;
   }
 
+  std::cout << "cnt_obs_p: " << cnt_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   // write observations
-  int64_t dim_obs_all[comm_size];
-  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all, 1, MPI_INT64_T, comm );
+  std::vector<int64_t> dim_obs_all(comm_size);
+  
+  std::cout << "cnt_obs_p: " << cnt_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
+  
+  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all.data(), 1, MPI_INT64_T, comm );
 
   int64_t disp_obs = 0;
 
@@ -358,6 +368,7 @@ double calculate_weight( int cycle )  {
 
   std::cout << "OBSERVATION PATH: " << obs_path << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "DIMENSION OBS: " << dim_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   double sum_err = 0;
   double* x = &x_l[2];
@@ -366,6 +377,7 @@ double calculate_weight( int cycle )  {
   }
 
   std::cout << "SUM ERROR: " << sum_err << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
 
   double sum_err_all;
@@ -374,6 +386,7 @@ double calculate_weight( int cycle )  {
 
   std::cout << "SUM ERROR ALL: " << sum_err_all << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "CALCULATED WEIGHT: " << weight << " (cycle: '"<<cycle<<"')" << std::endl;
+  fflush(stdout);
 
   return weight;
 
