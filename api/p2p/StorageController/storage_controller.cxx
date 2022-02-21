@@ -351,10 +351,14 @@ void StorageController::m_request_post() {
     m_communicate( IO_TAG_POST );
   }
 
-  auto si = boost::filesystem::space("/local");
-  MDBG( "[CACHE] capacity: %lu", si.capacity );
-  MDBG( "[CACHE] free: %lu", si.free );
-  MDBG( "[CACHE] available: %lu", si.available );
+  try {
+    auto si = boost::filesystem::space("/local");
+    MDBG( "[CACHE] capacity: %lu", si.capacity );
+    MDBG( "[CACHE] free: %lu", si.free );
+    MDBG( "[CACHE] available: %lu", si.available );
+  } catch (boost::filesystem::filesystem_error & e) {
+    MDBG( "[BOOST::ERROR] %s", e.what() );
+  }
   
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
