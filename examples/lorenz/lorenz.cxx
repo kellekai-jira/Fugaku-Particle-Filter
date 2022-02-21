@@ -306,7 +306,6 @@ double calculate_weight( int cycle )  {
   int64_t cnt_obs = 0;
   for(int64_t i=0; i<num_reg; i++) {
     offset = i * stride;
-    index_tmp;
     for(int64_t j=0; j<OBS_BLOCK_SIZE; j++) {
       index_tmp = offset + j;
       if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
@@ -381,7 +380,7 @@ double calculate_weight( int cycle )  {
 
 
   double sum_err_all;
-  //MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
+  MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
   double weight = exp( -1*sum_err_all );
 
   std::cout << "SUM ERROR ALL: " << sum_err_all << " (cycle: '"<<cycle<<"')" << std::endl;
