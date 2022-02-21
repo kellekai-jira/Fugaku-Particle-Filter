@@ -379,7 +379,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     int __comm_size;MPI_Comm_size(comm, &__comm_size);
     MDBG("mpi.size(): %d, comm size: %d", mpi.size(), __comm_size);
     fflush(stdout);
-    double weight = calculateWeight();
+    double weight = calculateWeight( field.current_step );
     MDBG("finished calculating weight for state");
     fflush(stdout);
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);

@@ -11,18 +11,28 @@
 #include "../api/melissa_da_api.h"
 #include <cmath>
 
+#define GETENV( VAR, KEY ) do { \
+  VAR = getenv( KEY ); \
+  if ( VAR == NULL ) { \
+    std::cerr << "environment variable '"<< VAR <<"' could not be found" << std::endl; \
+    return -1; \
+  } \
+}while (0);
+
 #define OUT( MSG ) std::cout << MSG << std::endl
 
 int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
-double calculate_weight() {
-   double lower_bound = 0.8;
-   double upper_bound = 1.0;
-   std::uniform_real_distribution<double> unif(lower_bound,upper_bound);
-   std::default_random_engine re;
-   double a_random_double = unif(re);
-}
+double calculate_weight( int cycle );
+
+//double calculate_weight() {
+//   double lower_bound = 0.8;
+//   double upper_bound = 1.0;
+//   std::uniform_real_distribution<double> unif(lower_bound,upper_bound);
+//   std::default_random_engine re;
+//   double a_random_double = unif(re);
+//}
 
 const double F = 6;
 const double dt = 0.01;
@@ -251,5 +261,121 @@ int main() {
   //}
 
   MPI_Finalize();
+
+}
+
+double calculate_weight( int cycle )  {
+        
+  int rank, size;
+  MPI_Comm_rank( comm, &rank );
+  MPI_Comm_size( comm, &size );
+       
+  double share;
+  int blk_size;
+  std::string obs_dir;
+
+  char* envvar;
+  GETENV( envvar, "MELISSA_LORENZ_OBSERVATION_PERCENT" );
+  share = atoi( envvar ) * 0.01;
+  GETENV( envvar, "MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE" );
+  blk_size = atoi( envvar );
+  GETENV( envvar, "MELISSA_LORENZ_OBSERVATION_DIR" );
+  obs_dir = envvar;
+  
+  std::vector<int64_t> nl_all(size, NG/size);
+  int64_t nl_mod = NG%((int64_t)size);
+  while ( nl_mod > 0 ) {
+    for (int i=0; i<size; i++) {
+      if (nl_mod > 1) {
+        nl_all[i] = nl_all[i] + 1;
+        nl_mod = nl_mod - 1;
+      } else {
+        nl_all[i] = nl_all[i] + nl_mod;
+        nl_mod = 0;
+        break;
+      }
+    }
+  }
+
+  int64_t nl = nl_all[rank];
+
+  int64_t nl_off = 0;
+  for ( int  i=0; i<rank; i++ ) {
+      nl_off = nl_off + nl_all[i];
+  }
+
+  int64_t state_min_p = nl_off;
+  int64_t state_max_p = nl_off + nl - 1;
+
+  // compute total number of observations
+  uint64_t dim_obs = static_cast<int>(share * NG);
+  if ( dim_obs == 0 ) {
+    dim_obs = 1;
+  }
+
+  // compute number of regions
+  int64_t num_reg = dim_obs / blk_size;
+  if ( dim_obs%blk_size != 0 ) {
+      num_reg = num_reg + 1;
+  }
+
+  // compute stride for regions
+  uint64_t stride = NG / num_reg;
+
+  // determine number of obs in pe
+  std::vector<uint64_t> obs_idx;
+  uint64_t i = 0;
+  while ( i < num_reg ) {
+      int64_t index_tmp = i * stride;
+      int64_t cnt_obs = i * blk_size;
+      int64_t of = index_tmp + blk_size;
+      if ( std::max(index_tmp, state_min_p) < std::min(of, state_max_p) ) {
+          while ( (index_tmp < of) && (cnt_obs < dim_obs) ) {
+              if ( (index_tmp >= state_min_p) && (index_tmp <= state_max_p) ) {
+                  obs_idx.push_back(index_tmp - state_min_p);
+              }
+              index_tmp += 1;
+              cnt_obs += 1;
+          }
+      }
+      if ( index_tmp > state_max_p ) {
+          break;
+      }
+      i += 1;
+  }
+
+
+  int64_t dim_obs_p = obs_idx.size();
+  std::vector<int64_t> dim_obs_all(size);
+    
+  int64_t disp_obs = 0;
+  if ( rank > 0 ) {
+    for ( int i=0; i<rank; i++ ) {
+      disp_obs += dim_obs_all[i] * sizeof(double);
+    }
+  }
+ 
+  std::vector<double> obs_p(dim_obs_p);
+
+  MPI_Allgather( &dim_obs_p, 1, MPI_INT64_T, dim_obs_all.data(), 1, MPI_INT64_T, comm);
+  std::string obs_path = obs_dir + "/iter-" + std::to_string(cycle) + ".obs";
+  MPI_File fh;
+  MPI_File_open(comm, obs_path.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+  MPI_File_set_view(fh, disp_obs, MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+  MPI_File_write(fh, obs_p.data(), dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
+  MPI_File_close(&fh);
+  
+  double sum_err = 0;
+  double* x = &x_l[2];
+  for (int i=0; i<dim_obs_p; i++) {
+    sum_err = sum_err + (x[obs_idx[i]] - obs_p[i]) * (x[obs_idx[i]] - obs_p[i]);
+  }
+
+  
+  double sum_err_all;
+  MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_INT64_T, MPI_SUM, comm ); 
+  double weight = exp( -1*sum_err_all );
+
+  return weight;
 
 }

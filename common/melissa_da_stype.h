@@ -34,7 +34,7 @@
 #define VEC_T char
 #define VARID_T int  // TODO: change to short in future? As I do not know for now how to do shorts in Fortran I stay with ints so far.
 
-typedef double (*calculateWeightFunction)(void);
+typedef double (*calculateWeightFunction)(int);
 
 #if __cplusplus >= 201103L
 static_assert(alignof(VEC_T) == 1,
