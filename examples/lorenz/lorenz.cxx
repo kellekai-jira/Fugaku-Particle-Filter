@@ -282,30 +282,30 @@ double calculate_weight( int cycle )  {
   std::cout << "BLOCK SIZE " << blk_size << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "OBSERVATION PATH " << obs_dir << " (cycle: '"<<cycle<<"')" << std::endl;
   
-  std::vector<int64_t> nl_all(comm_size, NG/comm_size);
+  std::vector<int64_t> m_nl_all(comm_size, NG/comm_size);
   int64_t nl_mod = NG%((int64_t)comm_size);
   while ( nl_mod > 0 ) {
     for (int i=0; i<comm_size; i++) {
       if (nl_mod > 1) {
-        nl_all[i] = nl_all[i] + 1;
+        m_nl_all[i] = m_nl_all[i] + 1;
         nl_mod = nl_mod - 1;
       } else {
-        nl_all[i] = nl_all[i] + nl_mod;
+        m_nl_all[i] = m_nl_all[i] + nl_mod;
         nl_mod = 0;
         break;
       }
     }
   }
 
-  int64_t nl = nl_all[comm_rank];
+  int64_t m_nl = m_nl_all[comm_rank];
 
   int64_t nl_off = 0;
   for ( int  i=0; i<comm_rank; i++ ) {
-      nl_off = nl_off + nl_all[i];
+      nl_off = nl_off + m_nl_all[i];
   }
 
   int64_t state_min_p = nl_off;
-  int64_t state_max_p = nl_off + nl - 1;
+  int64_t state_max_p = nl_off + m_nl - 1;
 
   // compute total number of observations
   int64_t dim_obs = static_cast<int64_t>(share * NG);

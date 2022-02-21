@@ -266,6 +266,8 @@ void ZipController::minimize ( FTI::data_t* data, std::string name, double* orig
  
   int64_t minSize = INT64_MAX;
   double* ptr = new double[data->count];
+ 		  
+  std::cout << "[IN MINIMIZE FUNCTION]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
    
   for(auto zip : m_vars_set[name]) {
     
