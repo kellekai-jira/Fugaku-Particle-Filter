@@ -365,16 +365,22 @@ double calculate_weight( int cycle )  {
   MPI_File_write(fh, obs_p.data(), dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
   
+  std::cout << "DIMENSION OBS: " << dim_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
+  
   double sum_err = 0;
   double* x = &x_l[2];
   for (int i=0; i<dim_obs_p; i++) {
     sum_err = sum_err + (x[obs_idx[i]] - obs_p[i]) * (x[obs_idx[i]] - obs_p[i]);
   }
+    
+  std::cout << "SUM ERROR: " << sum_err << " (cycle: '"<<cycle<<"')" << std::endl;
 
   
   double sum_err_all;
-  MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_INT64_T, MPI_SUM, comm ); 
+  MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
   double weight = exp( -1*sum_err_all );
+
+  std::cout << "CALCULATED WEIGHT: " << weight << " (cycle: '"<<cycle<<"')" << std::endl;
 
   return weight;
 
