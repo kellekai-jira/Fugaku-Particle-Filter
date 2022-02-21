@@ -363,12 +363,12 @@ double calculate_weight( int cycle )  {
   MPI_File fh;
   MPI_File_open(comm, obs_path.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   MPI_File_set_view(fh, disp_obs, MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
-  MPI_File_write(fh, obs_p.data(), dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
+  MPI_File_read(fh, obs_p.data(), dim_obs_p, MPI_DOUBLE, MPI_STATUS_IGNORE);
   MPI_File_close(&fh);
   
   std::cout << "OBSERVATION PATH: " << obs_path << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "DIMENSION OBS: " << dim_obs_p << " (cycle: '"<<cycle<<"')" << std::endl;
-  
+
   double sum_err = 0;
   double* x = &x_l[2];
   for (int i=0; i<dim_obs_p; i++) {
