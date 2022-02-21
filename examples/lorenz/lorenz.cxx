@@ -267,7 +267,7 @@ int main() {
 double calculate_weight( int cycle )  {
        
   double share;
-  int blk_size;
+  int64_t blk_size;
   std::string obs_dir;
 
   char* envvar;
@@ -285,7 +285,7 @@ double calculate_weight( int cycle )  {
   std::vector<int64_t> m_nl_all(comm_size, NG/comm_size);
   int64_t nl_mod = NG%((int64_t)comm_size);
   while ( nl_mod > 0 ) {
-    for (int i=0; i<comm_size; i++) {
+    for (int64_t i=0; i<comm_size; i++) {
       if (nl_mod > 1) {
         m_nl_all[i] = m_nl_all[i] + 1;
         nl_mod = nl_mod - 1;
@@ -300,7 +300,7 @@ double calculate_weight( int cycle )  {
   int64_t m_nl = m_nl_all[comm_rank];
 
   int64_t nl_off = 0;
-  for ( int  i=0; i<comm_rank; i++ ) {
+  for ( int64_t  i=0; i<comm_rank; i++ ) {
       nl_off = nl_off + m_nl_all[i];
   }
 
@@ -351,7 +351,7 @@ double calculate_weight( int cycle )  {
     
   int64_t disp_obs = 0;
   if ( comm_rank > 0 ) {
-    for ( int i=0; i<comm_rank; i++ ) {
+    for ( int64_t i=0; i<comm_rank; i++ ) {
       disp_obs += dim_obs_all[i] * sizeof(double);
     }
   }
@@ -372,7 +372,7 @@ double calculate_weight( int cycle )  {
 
   double sum_err = 0;
   double* x = &x_l[2];
-  for (int i=0; i<dim_obs_p; i++) {
+  for (int64_t i=0; i<dim_obs_p; i++) {
     sum_err = sum_err + (x[obs_idx[i]] - obs_p[i]) * (x[obs_idx[i]] - obs_p[i]);
   }
     
