@@ -382,6 +382,7 @@ double calculate_weight( int cycle )  {
   MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
   double weight = exp( -1*sum_err_all );
 
+  std::cout << "SUM ERROR ALL: " << sum_err_all << " (cycle: '"<<cycle<<"')" << std::endl;
   std::cout << "CALCULATED WEIGHT: " << weight << " (cycle: '"<<cycle<<"')" << std::endl;
 
   return weight;
