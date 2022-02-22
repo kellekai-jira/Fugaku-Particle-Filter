@@ -35,8 +35,8 @@ double calculate_weight( int cycle );
 //}
 
 const double F = 6;
-const double dt = 0.04;
-const double DT = 0.4;
+const double dt = 0.001;
+const double DT = 0.01;
 const double PI = 3.141592653589793238463;
 
 static int64_t NG;
