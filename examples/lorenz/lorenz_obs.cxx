@@ -44,8 +44,8 @@ int comm_rank, comm_size, mpi_left, mpi_right;
 MPI_Comm comm;
 
 const double F = 6;
-const double dt = 0.01;
-const double DT = 0.1;
+const double dt = 0.04;
+const double DT = 0.4;
 const double PI = 3.141592653589793238463;
 
 static int64_t NG;

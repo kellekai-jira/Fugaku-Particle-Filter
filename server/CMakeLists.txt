@@ -16,6 +16,7 @@ add_executable(melissa_da_server
     server.cxx
     $<TARGET_OBJECTS:melissa_common>
 )
+target_compile_definitions(melissa_da_server PUBLIC __AARCH64EL__=1 __ARM_64BIT_STATE=1)
 
 if(INSTALL_FTI)
     add_dependencies(melissa_da_server FTI)

@@ -27,6 +27,8 @@ file(GLOB
 )
 
 target_link_libraries(melissa_da_api PUBLIC melissa_protocol ${Boost_FILESYSTEM_LIBRARY_RELEASE})
+#target_compile_options(melissa_da_api PUBLIC )
+target_compile_definitions(melissa_da_api PUBLIC __AARCH64EL__=1 __ARM_64BIT_STATE=1)
 
 if(INSTALL_ZMQ)
    add_dependencies(melissa_da_api ZeroMQ)
