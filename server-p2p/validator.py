@@ -111,11 +111,6 @@ class Validator:
 
     def compare_state( self, proc, id ):
 
-        global m_experiments
-        global m_meta
-
-        print(f"comparing id: {id}, rank: {proc}")
-
         states = {}
 
         for state in self.m_meta[id]:
