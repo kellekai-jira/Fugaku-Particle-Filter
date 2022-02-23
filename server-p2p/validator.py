@@ -162,8 +162,8 @@ if __name__ == "__main__":
     experiments = {
         1 :
             {
-                'compressed'    : '/home/kellekai/STUDY/PhD/Japan/lab/melissa_readCkpt_python/data/1',
-                'original'      : '/home/kellekai/STUDY/PhD/Japan/lab/melissa_readCkpt_python/data/200001'
+                'compressed'    : '/path/to/compressed/state/1',
+                'original'      : '/path/to/original/state/200001'
             }
     }
 
@@ -173,23 +173,5 @@ if __name__ == "__main__":
     result = test.validate(1, range(47))
 
     print ( f"result from validation function (stddev) is : {result}")
-
-
-#    init(experiments)
-#
-#    results = submit(1, range(47), sum_square_error)
-#
-#    n = 0
-#    for p in self.m_meta[1]["original"]:
-#        n += self.m_meta[1]["original"][p]['count']
-#
-#    sigma = 0
-#    for result in results:
-#        sigma += result
-#
-#    sigma = np.sqrt(sigma/n)
-#
-#    print(sigma)
-
 
 
