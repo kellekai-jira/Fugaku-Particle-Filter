@@ -150,8 +150,8 @@ message Message {
 
         // Messages Runner - Server-General-Purpose socket
         Weight weight = 6;
-        ValidationRequest validation_request = 20
-        ValidationResponse validation_response = 21
+        ValidationRequest validation_request = 20;
+        ValidationResponse validation_response = 21;
         PrefetchRequest prefetch_request = 7;
         PrefetchResponse prefetch_response = 8;
         DeleteRequest delete_request = 9;
