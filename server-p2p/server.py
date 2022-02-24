@@ -12,6 +12,27 @@ from enum import Enum
 
 from collections import OrderedDict
 
+def elegantPair( x, y ):
+    return  (x * x + x + y) if (x >= y) else (y * y + x)
+
+def elegantUnpair( z ) -> (int, int):
+    sqrtz = int(np.floor(np.sqrt(z)))
+    sqz = int(sqrtz ** 2)
+    if ((z - sqz) >= sqrtz):
+        return sqrtz, z - sqz - sqrtz
+    else:
+        return z - sqz, sqrtz
+
+def encode_state_id( mode, parameter, id, t ):
+    mp = mode*100 + parameter
+    return elegantPair( mp, elegantPair( id, t ) )
+
+def decode_state_id( hash ):
+    mp, idt = elegantUnpair( hash )
+    mode = mp // 100
+    parameter = mp % 100
+    id, t = elegantUnpair( idt )
+    return mode, parameter, id, t
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -75,7 +96,7 @@ class Alive:
 # very dirty to not have the but latest protobuf on juwels defines this function with
 # an error handler...
 # https://groups.google.com/g/protobuf/c/0p0EMmEWiKQ?pli=1
-cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
+cm.StateId.__hash__ = lambda x : encode_state_id(x.mode, x.parameter, x.t, x.id)
 
 class SimulationStatus(Enum):
     CONNECTED = 0

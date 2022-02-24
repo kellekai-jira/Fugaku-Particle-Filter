@@ -10,8 +10,10 @@ package melissa_p2p;
 // Types
 
 message StateId {
-    int32 t = 1;
-    int32 id = 2;
+    int32 mode = 1;
+    int32 parameter = 2;
+    int32 t = 3;
+    int32 id = 4;
 }
 
 message StateServerSocket {
@@ -125,7 +127,13 @@ message StopStudy {
     ExitCode exit_code = 1;
 }
 
+message ValidationRequest {
+    repeated StateId to_validate = 1; 
+}
 
+message ValidationResponse {
+    StateId is_validated = 1; 
+}
 
 // Wrapper message
 
@@ -142,6 +150,8 @@ message Message {
 
         // Messages Runner - Server-General-Purpose socket
         Weight weight = 6;
+        ValidationRequest validation_request = 20
+        ValidationResponse validation_response = 21
         PrefetchRequest prefetch_request = 7;
         PrefetchResponse prefetch_response = 8;
         DeleteRequest delete_request = 9;
