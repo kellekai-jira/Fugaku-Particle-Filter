@@ -8,7 +8,7 @@
 
 const size_t IO_TRANSFER_SIZE = 1*1024*1024; // 1 Mb
 
-typedef int io_id_t;
+typedef int64_t io_id_t;
 
 enum io_status_t {
   IO_STATE_BUSY,
