@@ -12,6 +12,9 @@ from enum import Enum
 
 from collections import OrderedDict
 
+def equals( s1, s2 ):
+    return (s1.t == s2.t) and (s1.id == s2.id)
+
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -127,7 +130,7 @@ class DueDates:
         """Trys to find and remove associated due dates"""
         found = False
         for i, (dd, jid, parent_id) in enumerate(DueDates.all_per_runner[runner_id]):
-            if jid == job_id:
+            if equals(jid,job_id):
                 found = True
                 break
         # print("removing due date", runner_id, job_id, parent_id)
@@ -136,7 +139,7 @@ class DueDates:
 
         found = False
         for i, elem in enumerate(DueDates.due_dates[dd]):
-            if elem[0] == runner_id and elem[1] == job_id:
+            if elem[0] == runner_id and equals(elem[1],job_id):
                 del DueDates.due_dates[dd][i]  # remove from due_dates
                 if len(DueDates.due_dates[dd]) == 0:
                     del DueDates.due_dates[dd]
