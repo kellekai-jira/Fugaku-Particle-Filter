@@ -104,8 +104,6 @@ struct Field
     std::string name;
     int current_state_id;
     int current_step;
-    int current_zip_mode;
-    int current_zip_parameter;
     size_t local_vect_size;
     size_t local_hidden_vect_size;
     std::vector<ConnectedServerRank> connected_server_ranks;

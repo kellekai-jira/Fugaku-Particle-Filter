@@ -367,8 +367,6 @@ void StorageController::m_request_post() {
   assert( weight_message.has_weight() && "m does not contain a weight" );
 
   io_state_id_t state_id( 
-      weight_message.weight().state_id().mode(),
-      weight_message.weight().state_id().parameter(),
       weight_message.weight().state_id().t(), 
       weight_message.weight().state_id().id() );
 
@@ -582,13 +580,13 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   
     auto pull_states = response.prefetch_response().pull_states();
     for(auto it=pull_states.begin(); it!=pull_states.end(); it++) {
-      io_state_id_t state = { it->mode(), it->parameter(), it->t(), it->id() };
+      io_state_id_t state = { it->t(), it->id() };
       storage->m_io->m_state_pull_requests.push( state );
     }
 
     auto dump_states = response.prefetch_response().dump_states();
     for(auto it=dump_states.begin(); it!=dump_states.end(); it++) {
-      io_state_id_t state = { it->mode(), it->parameter(), it->t(), it->id() };
+      io_state_id_t state = { it->t(), it->id() };
       dump.push_back(state);
     }
   
@@ -596,7 +594,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     
   mpi.broadcast(dump);
   for(auto & x : dump) {
-    io_state_id_t state = { x.mode, x.parameter, x.t, x.id };
+    io_state_id_t state = { x.t, x.id };
     storage->m_io->remove( state, IO_STORAGE_L1 );
     storage->state_pool--;
   }
@@ -611,7 +609,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   M_TRIGGER(START_DELETE,0);
   
-  int mode, parameter, t, id;
+  int t, id;
   
   if( mpi.rank() == 0 ) {
     
@@ -619,8 +617,6 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
     for( const auto& pair : storage->m_cached_states ) {
       auto state = request.mutable_delete_request()->add_cached_states();
-      state->set_mode(pair.second.mode);
-      state->set_parameter(pair.second.parameter);
       state->set_t(pair.second.t);
       state->set_id(pair.second.id);
     }
@@ -633,8 +629,6 @@ void StorageController::Server::delete_request( StorageController* storage ) {
     M_TRIGGER(STOP_DELETE_REQ,0);
 
     auto pull_state = response.delete_response().to_delete();
-    mode = pull_state.mode();
-    parameter = pull_state.parameter();
     t = pull_state.t();
     id = pull_state.id();
 
@@ -643,12 +637,10 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   }
   
-  mpi.broadcast( mode );
-  mpi.broadcast( parameter );
   mpi.broadcast( t );
   mpi.broadcast( id );
   
-  io_state_id_t state_id( mode, parameter, t, id );
+  io_state_id_t state_id( t, id );
 
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
@@ -685,8 +677,6 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   
   if(!m_io->m_dict_bool["master_global"]) return;
   
-  int mode = m.weight().state_id().mode();
-  int parameter = m.weight().state_id().parameter();
   int t = m.weight().state_id().t();
   int id = m.weight().state_id().id();
     
@@ -696,7 +686,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
   // its good, we can give it free for delete...
-  m_io->m_state_dump_requests.push(io_state_id_t(mode, parameter, t, id));
+  m_io->m_state_dump_requests.push(io_state_id_t(t, id));
 
   M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, id);
 }

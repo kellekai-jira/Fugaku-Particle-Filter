@@ -22,20 +22,21 @@ uint64_t elegantPair( int x, int y );
 
 std::pair<int,int> elegantUnpair(uint64_t);
 
+inline uint64_t to_ckpt_id(io_state_id_t state_id, int mode) {
+  // this should work for up to 100000 members!
+  return elegantPair( mode, elegantPair( state_id.id, state_id.t ) );
+}
+
 inline uint64_t to_ckpt_id(io_state_id_t state_id) {
   // this should work for up to 100000 members!
-  int64_t mp = 100*state_id.mode + state_id.parameter;
-  return elegantPair( mp, elegantPair( state_id.id, state_id.t ) );
+  return elegantPair( 0, elegantPair( state_id.id, state_id.t ) );
 }
 
 inline io_state_id_t to_state_id(const uint64_t ckpt_id) {
   // this should work for up to 100000 members!
-  std::pair<int,int> mp_idt = elegantUnpair( ckpt_id );
-  int mp = mp_idt.first;
-  int mode = mp/100;
-  int parameter = mp%100;
-  std::pair<int,int> idt = elegantUnpair( mp_idt.second );
-  return { mode, parameter, idt.first, idt.second };
+  std::pair<int,int> m_idt = elegantUnpair( ckpt_id );
+  std::pair<int,int> idt = elegantUnpair( m_idt.second );
+  return { idt.first, idt.second };
 }
 
 class FtiController : public IoController {
