@@ -40,14 +40,14 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
         return status;
 }
 
-uint64_t elegantPair( int x, int y ) {
+int64_t elegantPair( int64_t x, int64_t y ) {
     return (x >= y) ? (x * x + x + y) : (y * y + x);
 }
 
-std::pair<int,int> elegantUnpair(uint64_t z) {
-    uint64_t sqrtz = static_cast<uint64_t>(sqrt(z));
-    uint64_t sqz = sqrtz * sqrtz;
-    std::pair<int,int> state;
+std::pair<int64_t,int64_t> elegantUnpair(int64_t z) {
+    int64_t sqrtz = static_cast<int64_t>(sqrt(z));
+    int64_t sqz = sqrtz * sqrtz;
+    std::pair<int64_t,int64_t> state;
     if ((z - sqz) >= sqrtz) {
         state.first = sqrtz;
         state.second = z - sqz - sqrtz; 
