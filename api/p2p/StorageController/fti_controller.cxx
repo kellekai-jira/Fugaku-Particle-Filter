@@ -40,9 +40,27 @@ rm(const char *path, const struct stat *s, int flag, struct FTW *f)
         return status;
 }
 
+uint64_t elegantPair( int x, int y ) {
+    return (x >= y) ? (x * x + x + y) : (y * y + x);
+}
+
+std::pair<int,int> elegantUnpair(uint64_t z) {
+    uint64_t sqrtz = static_cast<uint64_t>(sqrt(z));
+    uint64_t sqz = sqrtz * sqrtz;
+    std::pair<int,int> state;
+    if ((z - sqz) >= sqrtz) {
+        state.first = sqrtz;
+        state.second = z - sqz - sqrtz; 
+    } else {
+        state.first = z - sqz;
+        state.second = sqrtz;
+    }
+    return state;
+  //return ((z - sqz) >= sqrtz) ? [sqrtz, z - sqz - sqrtz] : [z - sqz, sqrtz];
+}
 
 
-int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
+io_zip_t FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
   
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
 
@@ -98,14 +116,15 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
       data.compression.mode, 
       data.compression.parameter, 
       data.compression.type);
-  
+ 	
+	io_zip_t zip_parameters(data.compression.mode, data.compression.parameter); 
   //FTI_SetCompression( 
   //    m_var_id_map[name].id, 
   //    m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
   //    m_var_id_map[name].zip.parameter, 
   //    m_io_zip_type_map[m_var_id_map[name].zip.type]);
   
-  return m_var_id_map[name].id;
+  return zip_parameters;
 
 }
 

@@ -286,6 +286,8 @@ void push_weight_to_head(double weight)
     // Now we can change buf!
     ::melissa_p2p::Message m;
     m.set_runner_id(runner_id);
+    m.mutable_weight()->mutable_state_id()->set_mode(field.current_zip_mode);
+    m.mutable_weight()->mutable_state_id()->set_parameter(field.current_zip_parameter);
     m.mutable_weight()->mutable_state_id()->set_t(field.current_step);
     m.mutable_weight()->mutable_state_id()->set_id(field.current_state_id);
     m.mutable_weight()->set_weight(weight);
@@ -336,10 +338,13 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     static bool is_first = true;
     
     // Update pointer
-    storage.protect( std::string(field_name), values, size, io_type );
+    io_zip_t zip_params = storage.protect( std::string(field_name), values, size, io_type );
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
     
+    field.current_zip_mode = zip_params.mode;    
+    field.current_zip_parameter = zip_params.parameter;    
+ 
     assert(  calculateWeight != NULL && "no function registered for weight calculation (call 'melissa_register_weight_function' after melissa_init)" );
     
     if ( is_first ) {
@@ -364,7 +369,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         field.current_state_id = runner_id; // We are beginning like this...
     }
 
-    io_state_id_t current_state = { field.current_step, field.current_state_id };
+    io_state_id_t current_state = { field.current_zip_mode, field.current_zip_parameter, field.current_step, field.current_state_id };
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
@@ -416,8 +421,12 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
             }
         } while (!job_response.has_parent());
         MDBG("Now  I work on %s", job_response.DebugString().c_str());
+        parent_state.mode = job_response.parent().mode();
+        parent_state.parameter = job_response.parent().parameter();
         parent_state.t = job_response.parent().t();
         parent_state.id = job_response.parent().id();
+        next_state.mode = job_response.job().mode();
+        next_state.parameter = job_response.job().parameter();
         next_state.t = job_response.job().t();
         next_state.id = job_response.job().id();
         nsteps = job_response.nsteps();
@@ -428,8 +437,12 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     }
 
     // Broadcast to all ranks:
+    MPI_Bcast(&parent_state.mode, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&parent_state.parameter, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&parent_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&parent_state.id, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&next_state.mode, 1, MPI_INT, 0, mpi.comm());
+    MPI_Bcast(&next_state.parameter, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());

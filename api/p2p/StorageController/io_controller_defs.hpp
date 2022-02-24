@@ -54,6 +54,12 @@ enum io_tag_t {
   IO_TAG_WORK
 };
 
+typedef struct io_zip_t {
+  io_zip_t( int m, int p ) : mode(m), parameter(p) {}
+  int mode;
+  int parameter;
+} io_zip_t;
+
 //enum io_zip_type_t {
 //  IO_ZIP_TYPE_DEFAULT = 0,
 //  IO_ZIP_TYPE_A,
@@ -77,8 +83,10 @@ enum io_tag_t {
 //};
 
 struct io_state_id_t {
-  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
-  io_state_id_t() : t(0), id(0) {}
+  io_state_id_t( int m, int p, io_id_t _t, io_id_t _id ) : mode(m), parameter(p), t(_t), id(_id) {}
+  io_state_id_t() : mode(0), parameter(0), t(0), id(0) {}
+  int mode;
+  int parameter;
 	io_id_t t;
   io_id_t id;
 };

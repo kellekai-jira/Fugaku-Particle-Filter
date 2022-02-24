@@ -18,15 +18,24 @@ inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return !(lhs == rhs);
 }
 
-inline io_id_t to_ckpt_id(io_state_id_t state_id) {
+uint64_t elegantPair( int x, int y );
+
+std::pair<int,int> elegantUnpair(uint64_t);
+
+inline uint64_t to_ckpt_id(io_state_id_t state_id) {
   // this should work for up to 100000 members!
-  assert(state_id.id < 100000 && "too many state_ids!");
-  return state_id.t*100000 + state_id.id;
+  int64_t mp = 100*state_id.mode + state_id.parameter;
+  return elegantPair( mp, elegantPair( state_id.id, state_id.t ) );
 }
 
-inline io_state_id_t to_state_id(const io_id_t ckpt_id) {
+inline io_state_id_t to_state_id(const uint64_t ckpt_id) {
   // this should work for up to 100000 members!
-  return { ckpt_id / 100000, ckpt_id % 100000 };
+  std::pair<int,int> mp_idt = elegantUnpair( ckpt_id );
+  int mp = mp_idt.first;
+  int mode = mp/100;
+  int parameter = mp%100;
+  std::pair<int,int> idt = elegantUnpair( mp_idt.second );
+  return { mode, parameter, idt.first, idt.second };
 }
 
 class FtiController : public IoController {
@@ -34,7 +43,7 @@ class FtiController : public IoController {
     void init_io( int runner_id );
     void init_core();
     void fini();
-    io_id_t protect( std::string name, void* buffer, size_t size, io_type_t type );
+    io_zip_t protect( std::string name, void* buffer, size_t size, io_type_t type );
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
