@@ -96,7 +96,7 @@ void StorageController::callback() {
     }
     storage.m_io->init_core();
     std::vector<std::string> files;
-    //storage.m_io->filelist_local( {0,1}, files );
+    storage.m_io->filelist_local( {0,1}, files );
 
     size_t capacity;
     storage.m_io->recv( &capacity, sizeof(size_t), IO_TAG_POST, IO_MSG_ONE );
@@ -198,8 +198,8 @@ void StorageController::callback() {
 //  STORAGE CONTROLLER API
 //======================================================================
 
-io_zip_t StorageController::protect( std::string name, void* buffer, size_t size, io_type_t type) {
-  return m_io->protect(name, buffer, size, type);
+int StorageController::protect( std::string name, void* buffer, size_t size, io_type_t type) {
+  m_io->protect(name, buffer, size, type);
 }
 
 void StorageController::load( io_state_id_t state_id ) {
@@ -366,10 +366,7 @@ void StorageController::m_request_post() {
 
   assert( weight_message.has_weight() && "m does not contain a weight" );
 
-  io_state_id_t state_id( 
-      weight_message.weight().state_id().t(), 
-      weight_message.weight().state_id().id() );
-
+  io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
   io_id_t ckpt_id = to_ckpt_id( state_id );
 
   m_io->update_metadata( state_id, IO_STORAGE_L1 );

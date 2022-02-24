@@ -59,8 +59,7 @@ std::pair<int,int> elegantUnpair(uint64_t z) {
   //return ((z - sqz) >= sqrtz) ? [sqrtz, z - sqz - sqrtz] : [z - sqz, sqrtz];
 }
 
-
-io_zip_t FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
+int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
   
   assert( m_io_type_map.count(type) != 0 && "invalid type" );
 
@@ -116,15 +115,14 @@ io_zip_t FtiController::protect( std::string name, void* buffer, size_t size, io
       data.compression.mode, 
       data.compression.parameter, 
       data.compression.type);
- 	
-	io_zip_t zip_parameters(data.compression.mode, data.compression.parameter); 
+  
   //FTI_SetCompression( 
   //    m_var_id_map[name].id, 
   //    m_io_zip_mode_map[m_var_id_map[name].zip.mode], 
   //    m_var_id_map[name].zip.parameter, 
   //    m_io_zip_type_map[m_var_id_map[name].zip.type]);
   
-  return zip_parameters;
+  return m_var_id_map[name].id;
 
 }
 

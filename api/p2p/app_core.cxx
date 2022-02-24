@@ -336,10 +336,10 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     static bool is_first = true;
     
     // Update pointer
-    io_zip_t zip_params = storage.protect( std::string(field_name), values, size, io_type );
+    storage.protect( std::string(field_name), values, size, io_type );
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
- 
+    
     assert(  calculateWeight != NULL && "no function registered for weight calculation (call 'melissa_register_weight_function' after melissa_init)" );
     
     if ( is_first ) {

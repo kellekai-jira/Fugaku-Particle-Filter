@@ -10,8 +10,8 @@ package melissa_p2p;
 // Types
 
 message StateId {
-    int32 t = 2;
-    int32 id = 3;
+    int32 t = 1;
+    int32 id = 2;
 }
 
 message StateServerSocket {

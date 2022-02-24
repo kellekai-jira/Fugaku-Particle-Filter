@@ -38,7 +38,7 @@ class StorageController {
     // API
     void load( io_state_id_t state );
     void store( io_state_id_t state_id );
-    io_zip_t protect( std::string name, void* buffer, size_t size, io_type_t );
+    int protect( std::string name, void* buffer, size_t size, io_type_t );
 
   private:
 

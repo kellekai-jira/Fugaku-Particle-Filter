@@ -44,7 +44,7 @@ class FtiController : public IoController {
     void init_io( int runner_id );
     void init_core();
     void fini();
-    io_zip_t protect( std::string name, void* buffer, size_t size, io_type_t type );
+    io_id_t protect( std::string name, void* buffer, size_t size, io_type_t type );
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void remove( io_state_id_t state_id, io_level_t level );
