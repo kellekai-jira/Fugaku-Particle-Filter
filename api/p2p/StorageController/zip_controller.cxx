@@ -34,6 +34,7 @@ void ZipController::init() {
 
   m_parameter_id = 0;
   m_num_parameters = 0;
+  m_case = FTI_CPC_CASE_NONE;
 
   m_is_first = true;
 
@@ -236,6 +237,8 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
     data->compression.mode = m_vars[name][m_parameter_id].mode;
     data->compression.parameter = m_vars[name][m_parameter_id].parameter;
     data->compression.type = m_vars[name][m_parameter_id].type;
+
+    m_parameter_id++;
 
   }
 
