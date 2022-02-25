@@ -13,7 +13,7 @@ namespace json = boost::json;
 
 namespace melissa {
   namespace zip {
-    void populate( json::object & obj, std::map<std::string, std::deque<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase );
+    void populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase );
   }
 }
 
@@ -101,7 +101,7 @@ void ZipController::init() {
 
 }
 
-void melissa::zip::populate( json::object & obj, std::map<std::string, std::deque<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
+void melissa::zip::populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
   
   static int id = 1;
 
@@ -157,13 +157,13 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::dequ
 
   if ( obj.find("parameter") == obj.end() ) {
     zip.parameter = 0;
-    vars[name].push_front(zip);
+    vars[name].push_back(zip);
   } else if ( obj["parameter"].is_string() ) {
     zip.parameter = std::stoi( obj["parameter"].as_string().c_str() );
-    vars[name].push_front(zip);
+    vars[name].push_back(zip);
   } else if ( obj["parameter"].is_int64() ){
     zip.parameter = obj["parameter"].as_int64();
-    vars[name].push_front(zip);
+    vars[name].push_back(zip);
   } else if ( obj["parameter"].is_array() ) {
     auto pit = obj["parameter"].as_array().begin();
     for ( ; pit != obj["parameter"].as_array().end(); pit++ ) {
@@ -172,7 +172,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::dequ
       } else if ( pit->is_int64() ){
         zip.parameter = pit->as_int64();
       }
-      vars[name].push_front(zip);
+      vars[name].push_back(zip);
     }
   }
 
@@ -194,7 +194,7 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   zip.id      = 0;
   zip.parameter = 0;
   zip.rate   = 0;
-  m_vars[name].push_front(zip);
+  m_vars[name].push_back(zip);
 
   if ( is_adapt() ) {
     
@@ -231,11 +231,11 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
   int64_t minSize = INT64_MAX;
   double* ptr = new double[data->count];
   
-  while ( !m_vars[name].empty() ) {
+  for ( auto var : m_vars[name] ) {
     
     bool inBound = true;
     
-    melissa::zip::zip_t zip = m_vars[name].front(); m_vars[name].pop_front();
+    melissa::zip::zip_t zip = var;
     
     double maxError = zip.sigma;
   
