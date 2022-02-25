@@ -2,7 +2,8 @@
 #define __ZIP_CONTROLLER__
 
 #include "fti_kernel.hpp"
-#include <queue>
+#include <vector>
+#include <deque>
 #include <set>
 #include <map>
 
@@ -79,9 +80,11 @@ class ZipController {
   
   private:
 	
-	std::map<std::string, std::queue<melissa::zip::zip_t> > m_vars;
+	std::map<std::string, std::deque<melissa::zip::zip_t> > m_vars;
 	
   std::map<std::string, std::set<melissa::zip::zip_t> > m_vars_set;
+  
+  std::map<std::string, std::vector<melissa::zip::zip_t> > m_vars_vec;
   
   bool m_is_first;
   
