@@ -73,7 +73,8 @@ class ZipController {
   public:
    
   void init();
-
+  bool is_adapt() { return m_case == FTI_CPC_ADAPT; }
+  bool is_validate() { return m_case == FTI_CPC_VALIDATE; }
   void adaptParameter ( FTI::data_t* data, std::string name );
   
   private:
@@ -83,10 +84,12 @@ class ZipController {
   std::map<std::string, std::set<melissa::zip::zip_t> > m_vars_set;
   
   bool m_is_first;
+  
+  FTIT_CPC_CASE m_case;
 
   void select_parameters ( FTI::data_t* data, std::string name, double* original );
   void minimize ( FTI::data_t* data, std::string name, double* original );
-
+  
   FTI::Kernel m_kernel;
 
 };

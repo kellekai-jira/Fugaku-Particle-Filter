@@ -68,6 +68,9 @@ void ZipController::init() {
       melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPT );
 
     }
+
+    m_case = FTI_CPC_ADAPT;
+
   } else if ( method == "validate" ) {
     
     /****************************************************************************
@@ -90,6 +93,8 @@ void ZipController::init() {
 
     }
     
+    m_case = FTI_CPC_VALIDATE;
+    
   } else {
     MWRN("no method defined! skip compression.");
 	}
@@ -98,7 +103,7 @@ void ZipController::init() {
 
 void melissa::zip::populate( json::object & obj, std::map<std::string, std::queue<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
   
-  static int id = 0;
+  static int id = 1;
 
   if ( obj.find("name") == obj.end() ) {
     std::cerr << "[error] variable without 'name'" << std::endl;
@@ -179,24 +184,43 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   if ( m_vars.find(name) == m_vars.end() ) {
 		return;
 	}
-
-  double* original = (double*) data->ptr;
   
-  if( m_is_first ) {
-    select_parameters( data, name, original );
-    std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
-    int i = 0;
-    for(auto p : m_vars_set[name]) {
-      std::cout << "==    ["<<i++<<"]" << std::endl;
-      std::cout << "==    RATE      : " << p.rate << std::endl;
-      std::cout << "==    mode      : " << p.mode << std::endl;
-      std::cout << "==    parameter : " << p.parameter << std::endl;
-      std::cout << "==    type      : " << p.type << std::endl;
+  melissa::zip::zip_t zip;
+
+  zip.method  = FTI_CPC_VALIDATE;
+  zip.mode    = FTI_CPC_MODE_NONE;
+  zip.type    = FTI_CPC_TYPE_NONE;
+  zip.sigma   = 0;
+  zip.id      = 0;
+  zip.parameter = 0;
+  zip.rate   = 0;
+  m_vars[name].push(zip);
+
+  if ( is_adapt() ) {
+    
+    double* original = (double*) data->ptr;
+
+    if( m_is_first ) {
+      select_parameters( data, name, original );
+      std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
+      int i = 0;
+      for(auto p : m_vars_set[name]) {
+        std::cout << "==    ["<<i++<<"]" << std::endl;
+        std::cout << "==    RATE      : " << p.rate << std::endl;
+        std::cout << "==    mode      : " << p.mode << std::endl;
+        std::cout << "==    parameter : " << p.parameter << std::endl;
+        std::cout << "==    type      : " << p.type << std::endl;
+      }
+      fflush(stdout);
+      m_is_first = false;
+    } else {
+      minimize( data, name, original );
     }
-	  fflush(stdout);
-    m_is_first = false;
-  } else {
-    minimize( data, name, original );
+
+  }
+
+  if ( is_validate() ) { 
+
   }
 
 }

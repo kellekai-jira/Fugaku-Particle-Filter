@@ -41,6 +41,7 @@ namespace Color {
         FG_GREEN    = 32,
         FG_BLUE     = 34,
 				FG_MAGENTA 	= 35,
+        FG_CYAN     = 36,
         FG_LIGHT_GRAY = 37,
         FG_DEFAULT  = 39,
         BG_RED      = 41,
@@ -165,11 +166,13 @@ enum Phase
 #define MPRT(x ...) \
     do { \
         if(comm_rank == 0) { \
+   		 			Color::Modifier prt(Color::FG_CYAN); \
+    				Color::Modifier nrm(Color::FG_DEFAULT); \
             char str[1024]; \
             std::snprintf(str, 1024, x); \
             std::stringstream ss; \
             ss << "[rank:" << comm_rank << "] " << str << std::endl; \
-            std::cout << ss.str() << std::endl; \
+            std::cout << prt << "[MELISSA INFO] " << ss.str() << nrm << std::endl; \
             std::cout << std::fflush; \
             fflush(stdout); \
         } \
