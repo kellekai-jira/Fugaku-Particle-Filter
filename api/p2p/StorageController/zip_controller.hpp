@@ -8,8 +8,8 @@
 
 enum FTIT_CPC_CASE {
   FTI_CPC_CASE_NONE = 0,
-  FTI_CPC_ADAPTED = 1,
-  FTI_CPC_STATIC,
+  FTI_CPC_ADAPT,
+  FTI_CPC_VALIDATE,
 };
 
 namespace melissa {
@@ -18,10 +18,11 @@ namespace melissa {
     FTIT_CPC_MODE string2mode( std::string str );
     FTIT_CPC_TYPE string2type( std::string str );
     FTIT_CPC_CASE string2case( std::string str );
-
+    
     struct zip_t {
       FTIT_CPC_CASE method;
       FTIT_CPC_MODE mode;
+      int id;
       int parameter; 
       FTIT_CPC_TYPE type;
       double rate;
@@ -33,6 +34,36 @@ namespace melissa {
         return rhs.rate < rate;
       }
     };
+   
+    struct zip_params_t {
+      
+      zip_params_t(const zip_t & copy) {
+        method    = copy.method    ;
+        mode      = copy.mode      ;
+        id        = copy.id        ;
+        parameter = copy.parameter ; 
+        type      = copy.type      ;
+      }
+
+      FTIT_CPC_CASE method;
+      FTIT_CPC_MODE mode;
+      int id;
+      int parameter; 
+      FTIT_CPC_TYPE type;
+      
+      public:
+
+      bool operator<(const zip_params_t &rhs) const {
+        if (   method <  rhs.method ) return true;
+        if ( ( method == rhs.method ) && ( mode <  rhs.mode ) ) return true;
+        if ( ( method == rhs.method ) && ( mode == rhs.mode ) && ( id <  rhs.id ) )return true;
+        if ( ( method == rhs.method ) && ( mode == rhs.mode ) && ( id == rhs.id ) && ( parameter <  rhs.parameter ) ) return true;
+        if ( ( method == rhs.method ) && ( mode == rhs.mode ) && ( id == rhs.id ) && ( parameter == rhs.parameter ) && ( type < rhs.type ) ) return true;
+        return false;
+      }
+    };
+    
+    std::vector<zip_params_t> intersection (const std::vector<std::vector<zip_params_t>> &vecs);
 
   }
 }

@@ -334,6 +334,9 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
                    VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
+    static int nsteps = 0;
+    static io_state_id_t parent_state;
+    static io_state_id_t next_state;
     
     // Update pointer
     storage.protect( std::string(field_name), values, size, io_type );
@@ -384,10 +387,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     fflush(stdout);
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
 
-    int nsteps = 0;
-
-    io_state_id_t parent_state, next_state;
-
     // Rank 0:
     uint64_t loop_counter = 0;
     if (mpi.rank() == 0) {
@@ -397,30 +396,31 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
+        if ( !storage.validate() ) {  
+          M_TRIGGER(START_JOB_REQUEST, current_state.t);
+          // 4. ask server for more work
+          ::melissa_p2p::JobResponse job_response;
+          bool entered_loop = false;
+          do {
+              job_response = request_work_from_server();
+              if (!job_response.has_parent()) {
+                  if (!entered_loop)
+                  {
+                      entered_loop = true;
+                      MDBG("Server does not have any good jobs for me. Retrying in 500 ms intervals");
 
-        M_TRIGGER(START_JOB_REQUEST, current_state.t);
-        // 4. ask server for more work
-        ::melissa_p2p::JobResponse job_response;
-        bool entered_loop = false;
-        do {
-            job_response = request_work_from_server();
-            if (!job_response.has_parent()) {
-                if (!entered_loop)
-                {
-                    entered_loop = true;
-                    MDBG("Server does not have any good jobs for me. Retrying in 500 ms intervals");
-
-                }
-                usleep(500000); // retry after 500ms
-                loop_counter++;
-            }
-        } while (!job_response.has_parent());
-        MDBG("Now  I work on %s", job_response.DebugString().c_str());
-        parent_state.t = job_response.parent().t();
-        parent_state.id = job_response.parent().id();
-        next_state.t = job_response.job().t();
-        next_state.id = job_response.job().id();
-        nsteps = job_response.nsteps();
+                  }
+                  usleep(500000); // retry after 500ms
+                  loop_counter++;
+              }
+          } while (!job_response.has_parent());
+          MDBG("Now  I work on %s", job_response.DebugString().c_str());
+          parent_state.t = job_response.parent().t();
+          parent_state.id = job_response.parent().id();
+          next_state.t = job_response.job().t();
+          next_state.id = job_response.job().id();
+          nsteps = job_response.nsteps();
+        } 
     }
     else
     {

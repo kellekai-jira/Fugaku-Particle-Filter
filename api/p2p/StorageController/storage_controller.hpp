@@ -36,6 +36,7 @@ class StorageController {
     void fini();
 
     // API
+    bool validate() {return false;}
     void load( io_state_id_t state );
     void store( io_state_id_t state_id );
     int protect( std::string name, void* buffer, size_t size, io_type_t );

@@ -51,7 +51,7 @@ void ZipController::init() {
     
     /****************************************************************************
      *
-     *    store the parameters for the adaptive case
+     *    store the parameters for the adapt case
      *
      **************************************************************************/
 
@@ -65,30 +65,31 @@ void ZipController::init() {
 
       json::object obj = am_var->as_object();
 
-      std::cout << "static" << std::endl;
-
-      melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPTED );
+      melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPT );
 
     }
   } else if ( method == "validate" ) {
     
     /****************************************************************************
      *
-     *    store the parameters for the static case
+     *    store the parameters for the validate case
      *
      **************************************************************************/
     
-    // TODO activate
+    if ( !root["validate"].is_array() ) { 
+      std::cerr << "[error] unexpected structure in json file" << std::endl;
+      return;
+    }
 
-    //am_var = root["static"].as_array().begin();
-    //for ( ; am_var != root["static"].as_array().end(); am_var++ ) {
-    //  
-    //  json::object obj = am_var->as_object();
-    //  
-    //  populate( obj, FTI_CPC_STATIC );
-    //  
-    //}
-  
+    auto am_var = root["validate"].as_array().begin();
+    for ( ; am_var != root["validate"].as_array().end(); am_var++ ) {
+      
+      json::object obj = am_var->as_object();
+
+      melissa::zip::populate( obj, m_vars, FTI_CPC_VALIDATE );
+
+    }
+    
   } else {
     MWRN("no method defined! skip compression.");
 	}
@@ -96,6 +97,8 @@ void ZipController::init() {
 }
 
 void melissa::zip::populate( json::object & obj, std::map<std::string, std::queue<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
+  
+  static int id = 0;
 
   if ( obj.find("name") == obj.end() ) {
     std::cerr << "[error] variable without 'name'" << std::endl;
@@ -145,6 +148,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::queu
   zip.mode    = melissa::zip::string2mode(mode);
   zip.type    = melissa::zip::string2type(type);
   zip.sigma   = sigma;
+  zip.id      = id++;
 
   if ( obj.find("parameter") == obj.end() ) {
     zip.parameter = 0;
@@ -361,11 +365,27 @@ FTIT_CPC_TYPE melissa::zip::string2type( std::string str ) {
 FTIT_CPC_CASE melissa::zip::string2case( std::string str ) {
   switch( str2int(str.c_str()) ) { 
     case str2int("accuracy"):
-      return FTI_CPC_ADAPTED;
+      return FTI_CPC_ADAPT;
     case str2int("precision"):
-      return FTI_CPC_STATIC;
+      return FTI_CPC_VALIDATE;
     default:
       std::cout << "[WARNING] - unknown compression mode '"<<str<<"'!" << std::endl;
       return FTI_CPC_CASE_NONE;
   }
 }
+
+std::vector<melissa::zip::zip_params_t> melissa::zip::intersection (const std::vector<std::vector<melissa::zip::zip_params_t>> &vecs) {
+
+    auto last_intersection = vecs[0];
+    std::vector<melissa::zip::zip_params_t> curr_intersection;
+
+    for (std::size_t i = 1; i < vecs.size(); ++i) {
+        std::set_intersection(last_intersection.begin(), last_intersection.end(),
+            vecs[i].begin(), vecs[i].end(),
+            std::back_inserter(curr_intersection));
+        std::swap(last_intersection, curr_intersection);
+        curr_intersection.clear();
+    }
+    return last_intersection;
+}
+
