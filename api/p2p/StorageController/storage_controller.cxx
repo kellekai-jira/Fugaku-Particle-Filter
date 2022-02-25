@@ -293,7 +293,7 @@ void StorageController::m_load_user( io_state_id_t state ) {
   }
   //try {
     while (!m_io->load( state )){
-        MDBG("try again...");
+        MDBG("try again... (id: %d, t: %d)", state.id, state.t);
         int status;
         // FIXME: remove this and let server send to app cores where they need to find the state from!
         M_TRIGGER(START_WAIT_HEAD, to_ckpt_id(state));

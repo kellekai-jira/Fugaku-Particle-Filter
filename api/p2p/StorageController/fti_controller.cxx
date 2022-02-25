@@ -285,6 +285,7 @@ void FtiController::fini() {
 bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   M_TRIGGER(START_FTI_LOAD, state_id.t);
+  MDBG("try to load ckpt id: %ld", to_ckpt_id(state_id, m_zip_controller.get_parameter_id()));
   bool res = FTI_Load( to_ckpt_id(state_id, m_zip_controller.get_parameter_id()), m_io_level_map[level] ) == FTI_SCES;
   M_TRIGGER(STOP_FTI_LOAD, state_id.id);
   return res; 
