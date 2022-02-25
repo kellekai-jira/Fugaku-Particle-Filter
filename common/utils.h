@@ -33,6 +33,32 @@
 #include <regex>
 #include <iterator>
 
+#include <ostream>
+
+namespace Color {
+    enum Code {
+        FG_RED      = 31,
+        FG_GREEN    = 32,
+        FG_BLUE     = 34,
+				FG_MAGENTA 	= 35,
+        FG_LIGHT_GRAY = 37,
+        FG_DEFAULT  = 39,
+        BG_RED      = 41,
+        BG_GREEN    = 42,
+        BG_BLUE     = 44,
+        BG_DEFAULT  = 49
+    };
+    class Modifier {
+        Code code;
+    public:
+        Modifier(Code pCode) : code(pCode) {}
+        friend std::ostream&
+        operator<<(std::ostream& os, const Modifier& mod) {
+            return os << "\033[" << mod.code << "m";
+        }
+    };
+}
+
 class AddTimeStamp : public std::streambuf
 {
 public:
@@ -107,15 +133,33 @@ enum Phase
 #define MDBG(x ...) \
     do { \
         if( 1 /*comm_rank == 0*/) { \
+   		 			Color::Modifier dbg(Color::FG_LIGHT_GRAY); \
+    				Color::Modifier nrm(Color::FG_DEFAULT); \
             char str[1024]; \
             std::snprintf(str, 1024, x); \
             std::stringstream ss; \
             ss << str << " (" << __FILE__ << ":" <<  __LINE__ << ")"; \
-            std::cout << ss.str() << std::endl; \
+            std::cout << dbg << "[MELISSA DEBUG] " << ss.str() << nrm << std::endl; \
             std::cout << std::fflush; \
+            fflush(stdout); \
         } \
     } while(false)
 #endif
+
+#define MWRN(x ...) \
+    do { \
+        if( 1 /*comm_rank == 0*/) { \
+   		 			Color::Modifier wrn(Color::FG_MAGENTA); \
+    				Color::Modifier nrm(Color::FG_DEFAULT); \
+            char str[1024]; \
+            std::snprintf(str, 1024, x); \
+            std::stringstream ss; \
+            ss << str << " (" << __FILE__ << ":" <<  __LINE__ << ")"; \
+            std::cout << wrn << "[MELISSA WARNING] " << ss.str() << nrm << std::endl; \
+            std::cout << std::fflush; \
+            fflush(stdout); \
+        } \
+    } while(false)
 
 // normal logging:
 #define MPRT(x ...) \
@@ -127,6 +171,7 @@ enum Phase
             ss << "[rank:" << comm_rank << "] " << str << std::endl; \
             std::cout << ss.str() << std::endl; \
             std::cout << std::fflush; \
+            fflush(stdout); \
         } \
     } while(false)
 
@@ -141,6 +186,7 @@ enum Phase
             std::fprintf(stderr, "\n"); \
             std::raise(SIGINT); \
             std::exit(EXIT_FAILURE); \
+            fflush(stdout); \
         } \
     } while(false)
 

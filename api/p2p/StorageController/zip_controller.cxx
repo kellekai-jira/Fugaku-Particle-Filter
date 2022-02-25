@@ -40,45 +40,58 @@ void ZipController::init() {
   
   json::object root = tree.as_object()["compression"].as_object();
   
-  if ( !root["adapted"].is_array() ) { 
-    std::cerr << "[error] unexpected structure in json file" << std::endl;
+  if ( root.find("method") == root.end() ) {
+    std::cerr << "[error] no method specified" << std::endl;
     return;
   }
 
-  /****************************************************************************
-   *
-   *    store the parameters for the adaptive case
-   *
-   **************************************************************************/
+  std::string method = root["method"].as_string().c_str(); str_to_lower(method);
   
-  auto am_var = root["adapted"].as_array().begin();
-  for ( ; am_var != root["adapted"].as_array().end(); am_var++ ) {
+  if ( method == "adapt" ) {
     
-    json::object obj = am_var->as_object();
-    
-    std::cout << "static" << std::endl;
+    /****************************************************************************
+     *
+     *    store the parameters for the adaptive case
+     *
+     **************************************************************************/
 
-    melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPTED );
-    
-  }
+    if ( !root["adapt"].is_array() ) { 
+      std::cerr << "[error] unexpected structure in json file" << std::endl;
+      return;
+    }
 
-  /****************************************************************************
-   *
-   *    store the parameters for the static case
-   *
-   **************************************************************************/
+    auto am_var = root["adapt"].as_array().begin();
+    for ( ; am_var != root["adapt"].as_array().end(); am_var++ ) {
+
+      json::object obj = am_var->as_object();
+
+      std::cout << "static" << std::endl;
+
+      melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPTED );
+
+    }
+  } else if ( method == "validate" ) {
+    
+    /****************************************************************************
+     *
+     *    store the parameters for the static case
+     *
+     **************************************************************************/
+    
+    // TODO activate
+
+    //am_var = root["static"].as_array().begin();
+    //for ( ; am_var != root["static"].as_array().end(); am_var++ ) {
+    //  
+    //  json::object obj = am_var->as_object();
+    //  
+    //  populate( obj, FTI_CPC_STATIC );
+    //  
+    //}
   
-  // TODO activate
-
-  //am_var = root["static"].as_array().begin();
-  //for ( ; am_var != root["static"].as_array().end(); am_var++ ) {
-  //  
-  //  json::object obj = am_var->as_object();
-  //  
-  //  populate( obj, FTI_CPC_STATIC );
-  //  
-  //}
-
+  } else {
+    MWRN("no method defined! skip compression.");
+	}
 
 }
 

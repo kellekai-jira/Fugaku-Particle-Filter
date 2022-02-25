@@ -1,6 +1,6 @@
 {
   "compression" : {
-    "adapted" : [
+    "adapt" : [
       {
         "name"  : "state1",
         "sigma" : 10e-8,
