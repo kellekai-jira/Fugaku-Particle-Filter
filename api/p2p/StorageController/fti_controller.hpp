@@ -27,17 +27,22 @@ inline int64_t to_ckpt_id(io_state_id_t state_id, int mode) {
   return elegantPair( mode, elegantPair( state_id.id, state_id.t ) );
 }
 
-inline int64_t to_ckpt_id(io_state_id_t state_id) {
-  // this should work for up to 100000 members!
-  return elegantPair( 0, elegantPair( state_id.id, state_id.t ) );
-}
-
 inline io_state_id_t to_state_id(const int64_t ckpt_id) {
   // this should work for up to 100000 members!
   std::pair<int64_t,int64_t> m_idt = elegantUnpair( ckpt_id );
   std::pair<int64_t,int64_t> idt = elegantUnpair( m_idt.second );
   return { idt.first, idt.second };
 }
+
+inline int64_t to_ckpt_id(io_state_id_t state_id) {
+  // this should work for up to 100000 members!
+  int64_t hash = elegantPair( 0, elegantPair( state_id.id, state_id.t ) );
+  io_state_id_t state = to_state_id( hash );
+  MDBG("[TO_CKPT_ID] id: %d, t: %d [before]", state_id.id, state_id.t);
+  MDBG("[TO_CKPT_ID] id: %d, t: %d [after]", state.id, state.t);
+  return elegantPair( 0, elegantPair( state_id.id, state_id.t ) );
+}
+
 
 class FtiController : public IoController {
   public:
