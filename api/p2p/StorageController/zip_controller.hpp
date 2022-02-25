@@ -21,6 +21,15 @@ namespace melissa {
     FTIT_CPC_CASE string2case( std::string str );
     
     struct zip_t {
+      
+      zip_t() :
+        method(FTI_CPC_CASE_NONE), 
+        mode(FTI_CPC_MODE_NONE),
+        id(0),
+        parameter(0),
+        type(FTI_CPC_TYPE_NONE)
+      {}
+
       FTIT_CPC_CASE method;
       FTIT_CPC_MODE mode;
       int id;

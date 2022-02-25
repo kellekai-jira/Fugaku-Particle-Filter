@@ -132,6 +132,16 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
 
   std::string name = obj["name"].as_string().c_str(); str_to_lower(name);
   std::string mode = obj["mode"].as_string().c_str(); str_to_lower(mode);
+  
+  
+  if( vars.find(name) == vars.end() ) {
+    melissa::zip::zip_t zip_init;
+    vars[name].push_back(zip_init);
+  }
+
+  
+  //m_vars[name].push_back(zip);
+
 
   if ( (obj.find("type") == obj.end()) && (mode == "zfp") ) {
     std::cerr << "[error] for 'mode' = 'zfp', 'type' can not be missing" << std::endl;
@@ -196,17 +206,6 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
 		return;
 	}
   
-  melissa::zip::zip_t zip;
-
-  zip.method  = FTI_CPC_VALIDATE;
-  zip.mode    = FTI_CPC_MODE_NONE;
-  zip.type    = FTI_CPC_TYPE_NONE;
-  zip.sigma   = 0;
-  zip.id      = 0;
-  zip.parameter = 0;
-  zip.rate   = 0;
-  m_vars[name].push_back(zip);
-
   if ( is_adapt() ) {
     
     double* original = (double*) data->ptr;
