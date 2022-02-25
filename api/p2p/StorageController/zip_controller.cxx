@@ -13,7 +13,7 @@ namespace json = boost::json;
 
 namespace melissa {
   namespace zip {
-    void populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase );
+    void populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, std::map<std::string,int> num_vars_parameters, FTIT_CPC_CASE zcase );
   }
 }
 
@@ -31,7 +31,10 @@ std::string stream_as_string( std::istream& stm ) // #include <iterator>
 { return { std::istreambuf_iterator<char>(stm), std::istreambuf_iterator<char>{} } ; }
 
 void ZipController::init() {
- 
+
+  m_parameter_id = 0;
+  m_num_parameters = 0;
+
   m_is_first = true;
 
   std::ifstream jsonfile("compression.json");
@@ -65,7 +68,8 @@ void ZipController::init() {
 
       json::object obj = am_var->as_object();
 
-      melissa::zip::populate( obj, m_vars, FTI_CPC_ADAPT );
+      melissa::zip::populate( obj, m_vars, m_vars_num_parameters, FTI_CPC_ADAPT );
+      m_num_parameters++;
 
     }
 
@@ -89,7 +93,8 @@ void ZipController::init() {
       
       json::object obj = am_var->as_object();
 
-      melissa::zip::populate( obj, m_vars, FTI_CPC_VALIDATE );
+      melissa::zip::populate( obj, m_vars, m_vars_num_parameters, FTI_CPC_VALIDATE );
+      m_num_parameters++;
 
     }
     
@@ -101,7 +106,7 @@ void ZipController::init() {
 
 }
 
-void melissa::zip::populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, FTIT_CPC_CASE zcase ) {
+void melissa::zip::populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, std::map<std::string,int> vars_num_parameters, FTIT_CPC_CASE zcase ) {
   
   static int id = 1;
 
@@ -147,6 +152,10 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
     sigma = obj["sigma"].as_double();
   }
 
+  if ( vars_num_parameters.find( name ) == vars_num_parameters.end() ) {
+    vars_num_parameters["name"] = 1;
+  }
+  
   melissa::zip::zip_t zip;
 
   zip.method  = zcase;
@@ -175,6 +184,8 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
       vars[name].push_back(zip);
     }
   }
+    
+  vars_num_parameters["name"]++;
 
 }
 
@@ -221,6 +232,11 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
 
   if ( is_validate() ) { 
     
+    if ( (m_parameter_id % m_vars_num_parameters[name]) == 0 ) m_parameter_id = 0;
+    
+    data->compression.mode = m_vars[name][m_parameter_id].mode;
+    data->compression.parameter = m_vars[name][m_parameter_id].parameter;
+    data->compression.type = m_vars[name][m_parameter_id].type;
 
   }
 

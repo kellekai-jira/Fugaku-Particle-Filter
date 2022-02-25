@@ -1,18 +1,13 @@
 {
   "compression" : {
-    "adapt" : [
+    "method"    : "validate",
+    "validate" : [ 
       {
         "name"  : "state1",
         "sigma" : 10e-8,
-        "mode" : "zfp",
-        "type" : "accuracy",
-        "parameter" : [0,2,4,6,8,10]
-      },
-      {
-        "name"  : "state1",
         "mode" : "fpzip",
-        "sigma" : 10e-8,
-        "parameter" : [36,38,40,42,44,46]
+        "type" : "accuracy",
+        "parameter" : 42
       }
     ]
   }
