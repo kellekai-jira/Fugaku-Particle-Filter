@@ -14,6 +14,7 @@ class IoController {
       virtual void fini() = 0;
       virtual int protect( std::string name, void* buffer, size_t size, io_type_t type ) = 0;
       virtual bool is_local( io_state_id_t state_id ) = 0;
+      virtual bool to_validate() = 0;
       virtual bool is_global( io_state_id_t state_id ) = 0;
       virtual void remove( io_state_id_t state_id, io_level_t level ) = 0;
       virtual void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 ) = 0;

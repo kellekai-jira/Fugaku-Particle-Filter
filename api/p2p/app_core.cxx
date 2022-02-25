@@ -396,7 +396,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
-        if ( !storage.validate() ) {  
+        if ( !storage.to_validate() ) {  
           M_TRIGGER(START_JOB_REQUEST, current_state.t);
           // 4. ask server for more work
           ::melissa_p2p::JobResponse job_response;

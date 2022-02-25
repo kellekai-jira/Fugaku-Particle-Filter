@@ -67,6 +67,7 @@ class FtiController : public IoController {
     void request( io_state_id_t state_id );
 
     bool probe( io_tag_t tag );
+    bool to_validate() {return m_zip_controller.to_validate();}
     void sendrecv( const void* send_buffer, void* recv_buffer, int send_size, int recv_size, io_tag_t tag, io_msg_t message_type  );
     void send( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  );
     void isend( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  );
