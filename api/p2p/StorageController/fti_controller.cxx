@@ -300,6 +300,7 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
         protect( var.first, var.second.data, var.second.size, var.second.type );
       }
       FTI_Checkpoint( to_ckpt_id(state_id, m), m_io_level_map[level] );
+      m_zip_controller.advance_validate();
     }
   } else if ( m_zip_controller.is_validate() ) {
     m_zip_controller.advance_validate();
