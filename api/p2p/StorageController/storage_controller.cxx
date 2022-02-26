@@ -651,7 +651,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   
   io_state_id_t state_id( t, id );
 
-  MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state.t, state.id, state.param);
+  MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state_id.t, state_id.id, state_id.param);
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
   std::stringstream local;
