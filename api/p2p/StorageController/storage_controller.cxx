@@ -359,6 +359,7 @@ void StorageController::m_request_post() {
   }
   
   MDBG("[num_parameters:%d] STORAGE CONTROLLER", get_num_parameters());
+  MDBG("[num_parameters:%d] STORAGE CONTROLLER (m_io)", m_io->get_num_parameters());
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
 
@@ -607,9 +608,9 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     
   mpi.broadcast(dump);
   for(auto & x : dump) {
-    for( int i=0; i<storage->get_num_parameters(); i++) {
+    for( int i=0; i<storage->m_io->get_num_parameters(); i++) {
       io_state_id_t state = { x.t, x.id, i };
-      MDBG("[num_parameters:%d] removing the state t=%d, id=%d, parameter:%d  from the cache", storage->get_num_parameters(), state.t, state.id, state.param);
+      MDBG("[num_parameters:%d] removing the state t=%d, id=%d, parameter:%d  from the cache", storage->m_io->get_num_parameters(), state.t, state.id, state.param);
       storage->m_io->remove( state, IO_STORAGE_L1 );
       storage->state_pool--;
     }
@@ -653,17 +654,17 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
   }
   
-  MDBG("[num_parameters:%d] SERVER", storage->get_num_parameters());
+  MDBG("[num_parameters:%d] SERVER", storage->m_io->get_num_parameters());
   
   mpi.broadcast( t );
   mpi.broadcast( id );
   
 
-  for( int i=0; i<storage->get_num_parameters(); i++) {
+  for( int i=0; i<storage->m_io->get_num_parameters(); i++) {
     
     io_state_id_t state_id( t, id, i );
     
-    MDBG("removing the state t=%d, id=%d, parameter:%d/%d  from the cache", state_id.t, state_id.id, state_id.param, storage->get_num_parameters());
+    MDBG("removing the state t=%d, id=%d, parameter:%d/%d  from the cache", state_id.t, state_id.id, state_id.param, storage->m_io->get_num_parameters());
     storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
     std::stringstream local;
@@ -710,7 +711,7 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
   // its good, we can give it free for delete...
-  for(int i=0; i<get_num_parameters(); i++) { 
+  for(int i=0; i<m_io->get_num_parameters(); i++) { 
     m_io->m_state_dump_requests.push(io_state_id_t(t, id, i));
   }
 
