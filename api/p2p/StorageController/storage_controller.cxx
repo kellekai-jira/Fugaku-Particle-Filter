@@ -455,6 +455,7 @@ void StorageController::m_request_dump() {
   if(m_io->m_dict_bool["master_global"]) {
     std::cout << "head received DUMP request" << std::endl;
     // forward request to other head ranks
+    // TODO revise for the validate mode
     while (m_io->m_state_dump_requests.size() > 0 && m_io->m_state_dump_requests.front().t < m_io->m_dict_int["current_cycle"]-2) {
       m_communicate( IO_TAG_DUMP );
       to_remove = m_io->m_state_dump_requests.front();
@@ -465,7 +466,7 @@ void StorageController::m_request_dump() {
     }
   } else {
     mpi.broadcast(to_remove);
-    MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+    MDBG("Automatically removing the state t=%d, id=%d, parameter:%d  from the pfs", to_remove.t, to_remove.id, to_remove.param);
     storage.m_io->remove( to_remove, IO_STORAGE_L2 );
   }
 }
@@ -602,6 +603,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
   mpi.broadcast(dump);
   for(auto & x : dump) {
     io_state_id_t state = { x.t, x.id };
+    MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state.t, state.id, state.param);
     storage->m_io->remove( state, IO_STORAGE_L1 );
     storage->state_pool--;
   }
@@ -649,6 +651,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   
   io_state_id_t state_id( t, id );
 
+  MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state.t, state.id, state.param);
   storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
   std::stringstream local;
