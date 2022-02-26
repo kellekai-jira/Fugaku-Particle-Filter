@@ -34,6 +34,7 @@ class StorageController {
     void io_init( IoController* io, int runner_id );
     void init( size_t capacity, int64_t state_size );
     void fini();
+    void reprotect();
 
     // API
     bool to_validate() { return m_io->to_validate(); }

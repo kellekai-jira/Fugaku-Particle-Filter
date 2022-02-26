@@ -341,6 +341,10 @@ void StorageController::m_communicate( io_tag_t tag ) {
   MPI_Waitall( mpi.size()-1, &recv_request[0], &recv_status[0] );
 }
 
+void StorageController::reprotect() {
+  m_io->reprotect_all();
+}
+
 void StorageController::m_request_post() {
   M_TRIGGER(START_MODEL_MESSAGE,0);
   if(m_io->m_dict_bool["master_global"]) {

@@ -12,6 +12,7 @@ class IoController {
       virtual void init_io( int runner_id ) = 0;
       virtual void init_core() = 0;
       virtual void fini() = 0;
+      virtual int reprotect_all() = 0;
       virtual int protect( std::string name, void* buffer, size_t size, io_type_t type ) = 0;
       virtual bool is_local( io_state_id_t state_id ) = 0;
       virtual bool to_validate() = 0;
