@@ -458,7 +458,7 @@ void StorageController::m_request_dump() {
     while (m_io->m_state_dump_requests.size() > 0 && m_io->m_state_dump_requests.front().t < m_io->m_dict_int["current_cycle"]-2) {
       m_communicate( IO_TAG_DUMP );
       to_remove = m_io->m_state_dump_requests.front();
-      MDBG("Automatically removing the state t=%d, id=%d from the pfs", to_remove.t, to_remove.id);
+      MDBG("Automatically removing the state t=%d, id=%d, parameter:%d  from the pfs", to_remove.t, to_remove.id, to_remove.param);
       mpi.broadcast(to_remove);
       storage.m_io->remove( to_remove, IO_STORAGE_L2 ); 
       m_io->m_state_dump_requests.pop();
