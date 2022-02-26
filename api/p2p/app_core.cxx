@@ -380,6 +380,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
             push_weight_to_head(weight);
         }
         storage.advance_validate();
+        current_state.param = storage.get_parameter_id();
         storage.reprotect();
       }
     }
