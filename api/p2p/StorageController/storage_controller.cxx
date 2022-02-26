@@ -354,6 +354,7 @@ void StorageController::m_request_post() {
     m_communicate( IO_TAG_POST );
   }
   
+  MDBG("[num_parameters:%d] STORAGE CONTROLLER", get_num_parameters());
   //static mpi_request_t req;
   //req.wait();  // be sure that there is nothing else in the mpi send queue
 
@@ -647,6 +648,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
     std::cout << "HEAD IS REQUESTED TO DELETE (t: "<<t<<", id: "<<id<<")" <<  std::endl;
 
   }
+  
+  MDBG("[num_parameters:%d] SERVER", storage->get_num_parameters());
   
   mpi.broadcast( t );
   mpi.broadcast( id );
