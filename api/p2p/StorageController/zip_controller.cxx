@@ -246,9 +246,12 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
     
     if ( (m_vars_parameter_id[name] % m_vars_num_parameters[name]) == 0 ) m_vars_parameter_id[name] = 0;
     
-    data->compression.mode = m_vars[name][m_vars_parameter_id[name]].mode;
-    data->compression.parameter = m_vars[name][m_vars_parameter_id[name]].parameter;
-    data->compression.type = m_vars[name][m_vars_parameter_id[name]].type;
+    //data->compression.mode = m_vars[name][m_vars_parameter_id[name]].mode;
+    //data->compression.parameter = m_vars[name][m_vars_parameter_id[name]].parameter;
+    //data->compression.type = m_vars[name][m_vars_parameter_id[name]].type;
+    data->compression.mode = m_vars[name][get_parameter_id()].mode;
+    data->compression.parameter = m_vars[name][get_parameter_id()].parameter;
+    data->compression.type = m_vars[name][get_parameter_id()].type;
 
     m_vars_parameter_id[name]++;
 
