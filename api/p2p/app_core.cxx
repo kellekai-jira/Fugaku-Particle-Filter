@@ -368,7 +368,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     }
 
 
-    io_state_id_t current_state = { field.current_step, field.current_state_id };
+    io_state_id_t current_state = { field.current_step, field.current_state_id, storage.get_parameter_id() };
     
     double weight;
     
@@ -437,6 +437,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     MPI_Bcast(&next_state.t, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
+    parent_state.param = storage.get_parameter_id();
+    next_state.param = storage.get_parameter_id();
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
     
     if ( field.current_step == 0 ) {
