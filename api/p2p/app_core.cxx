@@ -368,19 +368,19 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     }
 
 
-    io_state_id_t current_state = { field.current_step, field.current_state_id, storage.get_parameter_id() };
+    io_state_id_t current_state = { field.current_step, field.current_state_id, storage.m_io->get_parameter_id() };
     
     double weight;
     
     if ( field.current_step == 0 ) {
-      while ( storage.to_validate() && (storage.get_parameter_id() > 0) ) {
-        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
+      while ( storage.to_validate() && (storage.m_io->get_parameter_id() > 0) ) {
+        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [parameter_id:%d]", current_state.id, current_state.t,storage.m_io->get_num_parameters());
         storage.store( current_state );
         if (mpi.rank() == 0) {
             push_weight_to_head(weight);
         }
         storage.advance_validate();
-        current_state.param = storage.get_parameter_id();
+        current_state.param = storage.m_io->get_parameter_id();
         storage.reprotect();
       }
     }
@@ -413,7 +413,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
-        if ( storage.get_parameter_id() == 0 ) {  
+        if ( storage.m_io->get_parameter_id() == 0 ) {  
           M_TRIGGER(START_JOB_REQUEST, current_state.t);
           // 4. ask server for more work
           ::melissa_p2p::JobResponse job_response;
@@ -451,8 +451,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
     storage.advance_validate();
-    parent_state.param = storage.get_parameter_id();
-    next_state.param = storage.get_parameter_id();
+    parent_state.param = storage.m_io->get_parameter_id();
+    next_state.param = storage.m_io->get_parameter_id();
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
 
     if (nsteps > 0) {

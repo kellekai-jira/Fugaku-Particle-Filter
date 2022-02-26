@@ -29,19 +29,10 @@ inline io_state_id_t to_state_id(const int64_t ckpt_id) {
   return { tid.first, tid.second, m_tid.first };
 }
 
-//inline int64_t to_ckpt_id(io_state_id_t state_id, int mode) {
-//  // this should work for up to 100000 members!
-//  int64_t hash = elegantPair( mode, elegantPair( state_id.t, state_id.id ) );
-//  io_state_id_t state = to_state_id( hash );
-//  MDBG("[TO_CKPT_ID] id: %ld", state);
-//  return elegantPair( mode, elegantPair( state_id.t, state_id.id ) );
-//}
-
 inline int64_t to_ckpt_id(io_state_id_t state_id) {
   // this should work for up to 100000 members!
   int64_t hash = elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
   io_state_id_t state = to_state_id( hash );
-  MDBG("[TO_CKPT_ID] id: %ld", hash);
   return elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
 }
 
