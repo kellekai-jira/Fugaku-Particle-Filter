@@ -378,7 +378,7 @@ void StorageController::m_request_post() {
   assert( m_io->is_local(state_id) && "state should be local");
   m_io->stage( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
-  //m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
+  m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
   
   m_push_weight_to_server( weight_message );
   
