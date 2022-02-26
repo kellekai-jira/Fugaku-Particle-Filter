@@ -39,7 +39,7 @@ bool ZipController::to_validate() {
 void ZipController::init() {
 
   m_num_parameters = 1;
-  m_parameter_id = 0;
+  m_parameter_id = 1;
   m_validate_phase = true;
   m_case = FTI_CPC_CASE_NONE;
 
