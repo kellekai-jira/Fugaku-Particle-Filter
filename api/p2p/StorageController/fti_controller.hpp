@@ -41,7 +41,7 @@ inline int64_t to_ckpt_id(io_state_id_t state_id) {
   // this should work for up to 100000 members!
   int64_t hash = elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
   io_state_id_t state = to_state_id( hash );
-  MDBG("[TO_CKPT_ID] id: %ld", state);
+  MDBG("[TO_CKPT_ID] id: %ld", hash);
   return elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
 }
 
