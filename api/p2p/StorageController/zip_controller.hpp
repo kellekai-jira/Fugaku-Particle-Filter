@@ -89,14 +89,7 @@ class ZipController {
   bool get_parameter_id() { return m_parameter_id; }
   bool to_validate();
   
-  void advance_validate() { 
-    if( (m_parameter_id + 1) == m_num_parameters ) {
-      m_validate_phase = false;
-    } else {
-      m_validate_phase = true;
-    }
-    m_parameter_id = ( m_parameter_id + 1 ) % m_num_parameters;
-  }
+  void advance_validate();
 
   void adaptParameter ( FTI::data_t* data, std::string name );
   

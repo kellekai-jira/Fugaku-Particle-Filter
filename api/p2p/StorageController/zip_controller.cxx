@@ -443,4 +443,15 @@ std::vector<melissa::zip::zip_params_t> melissa::zip::intersection (const std::v
     }
     return last_intersection;
 }
+  
+void ZipController::advance_validate() { 
+  static int count = 0;
+  if( (m_parameter_id + 1) == m_num_parameters ) {
+    m_validate_phase = false;
+  } else {
+    m_validate_phase = true;
+  }
+  m_parameter_id = ( m_parameter_id + 1 ) % m_num_parameters;
+  MDBG("called advance_validate '%d' times", count);
+}
 

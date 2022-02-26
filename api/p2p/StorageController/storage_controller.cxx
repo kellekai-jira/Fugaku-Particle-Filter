@@ -380,10 +380,10 @@ void StorageController::m_request_post() {
   //m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
    
   if( storage.m_io->get_parameter_id() > 0 ) {
-    storage.m_io->advance_validate();
+    storage.advance_validate();
     return;
   }
-  storage.m_io->advance_validate();
+  storage.advance_validate();
   
   m_push_weight_to_server( weight_message );
   
