@@ -207,6 +207,7 @@ void FtiController::init_core() {
   m_dict_string.insert( std::pair<std::string,std::string>( "meta_dir", strip_id(m_kernel.conf->metadDir,m_kernel.exec->id) ) );
   m_dict_string.insert( std::pair<std::string,std::string>( "exec_id", m_kernel.exec->id ) );
   m_zip_controller.init();
+  MDBG("[num_parameters:%d] FTI CONTROLLER", get_num_parameters());
   m_id_counter = 0;
 }
 
