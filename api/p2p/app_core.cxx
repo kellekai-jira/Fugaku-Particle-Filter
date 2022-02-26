@@ -334,9 +334,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
                    VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
-    static int nsteps = 0;
-    static io_state_id_t parent_state;
-    static io_state_id_t next_state;
+    int nsteps = 0;
+    io_state_id_t parent_state, next_state;
     
     // Update pointer
     storage.protect( std::string(field_name), values, size, io_type );
@@ -367,7 +366,11 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         field.current_state_id = runner_id; // We are beginning like this...
     }
 
+
     io_state_id_t current_state = { field.current_step, field.current_state_id };
+    
+    double weight;
+    
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
     storage.store( current_state );
@@ -382,7 +385,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     int __comm_size;MPI_Comm_size(comm, &__comm_size);
     MDBG("mpi.size(): %d, comm size: %d", mpi.size(), __comm_size);
     fflush(stdout);
-    double weight = calculateWeight( field.current_step );
+    weight = calculateWeight( field.current_step );
     MDBG("finished calculating weight for state");
     fflush(stdout);
     M_TRIGGER(STOP_CALC_WEIGHT, current_state.id);
@@ -434,7 +437,15 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     MPI_Bcast(&next_state.id, 1, MPI_INT, 0, mpi.comm());
     MPI_Bcast(&nsteps, 1, MPI_INT, 0, mpi.comm());
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
-
+    
+    if ( field.current_step == 0 ) {
+      while ( storage.to_validate() ) {
+        storage.store( current_state );
+        if (mpi.rank() == 0) {
+            push_weight_to_head(weight);
+        }
+      }
+    }
 
     if (nsteps > 0) {
         M_TRIGGER(START_LOAD, to_ckpt_id(parent_state));

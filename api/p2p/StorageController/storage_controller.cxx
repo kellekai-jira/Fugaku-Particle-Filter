@@ -375,7 +375,7 @@ void StorageController::m_request_post() {
 
   //m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
   
-  if(!to_validate()) m_push_weight_to_server( weight_message );
+  m_push_weight_to_server( weight_message );
   
   mpi.barrier();
 
@@ -671,6 +671,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 //======================================================================
 
 void StorageController::m_push_weight_to_server(const Message & m ) {
+  
+  if( to_validate() ) return;
   
   if(!m_io->m_dict_bool["master_global"]) return;
   
