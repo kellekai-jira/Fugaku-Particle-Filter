@@ -348,6 +348,8 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
 
 void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t to ) {
   
+  MDBG("staging state {id:%d | t:%d | p:%d}", state_id.id, state_id.t, get_parameter_id());
+  
   assert( m_io_level_map.count(from) != 0 && "invalid checkpoint level" );
   assert( m_io_level_map.count(to) != 0 && "invalid checkpoint level" );
   assert( m_kernel.topo->amIaHead == 1 && "copy for application threads not implemented for extern" );
