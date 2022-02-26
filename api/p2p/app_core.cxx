@@ -339,7 +339,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     static io_state_id_t next_state;
     
     // Update pointer
-    //storage.protect( std::string(field_name), values, size, io_type );
+    storage.protect( std::string(field_name), values, size, io_type );
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
     
@@ -375,16 +375,14 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     if ( field.current_step == 0 ) {
       while ( storage.to_validate() ) {
         MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
-        storage.protect( std::string(field_name), values, size, io_type );
         storage.store( current_state );
         if (mpi.rank() == 0) {
             push_weight_to_head(weight);
         }
         storage.advance_validate();
+        storage.reprotect();
       }
     }
-    
-    storage.protect( std::string(field_name), values, size, io_type );
     
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
