@@ -83,10 +83,12 @@ typedef struct io_zip_t {
 //};
 
 struct io_state_id_t {
-  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id) {}
-  io_state_id_t() : t(0), id(0) {}
+  io_state_id_t( io_id_t _t, io_id_t _id ) : t(_t), id(_id), param(0) {}
+  io_state_id_t( io_id_t _t, io_id_t _id, int p ) : t(_t), id(_id), param(p) {}
+  io_state_id_t() : t(0), id(0), param(0) {}
 	io_id_t t;
   io_id_t id;
+  int param;
 };
 
 //struct io_zip_t {

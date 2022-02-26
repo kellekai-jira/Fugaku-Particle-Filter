@@ -370,8 +370,8 @@ void StorageController::m_request_post() {
 
   assert( weight_message.has_weight() && "m does not contain a weight" );
 
-  io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id() );
-  io_id_t ckpt_id = to_ckpt_id( state_id, storage.m_io->get_parameter_id() );
+  io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id(), storage.m_io->get_parameter_id() );
+  io_id_t ckpt_id = to_ckpt_id( state_id );
 
   m_io->update_metadata( state_id, IO_STORAGE_L1 );
   assert( m_io->is_local(state_id) && "state should be local");

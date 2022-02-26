@@ -293,8 +293,8 @@ void FtiController::fini() {
 bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   M_TRIGGER(START_FTI_LOAD, state_id.t);
-  MDBG("try to load ckpt id: %ld", to_ckpt_id(state_id, get_parameter_id()));
-  bool res = FTI_Load( to_ckpt_id(state_id, get_parameter_id()), m_io_level_map[level] ) == FTI_SCES;
+  MDBG("try to load ckpt id: %ld", to_ckpt_id(state_id));
+  bool res = FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] ) == FTI_SCES;
   M_TRIGGER(STOP_FTI_LOAD, state_id.id);
   return res; 
 }
@@ -302,7 +302,7 @@ bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
 void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   MDBG("storing state {id:%d | t:%d | p:%d}", state_id.id, state_id.t, get_parameter_id());
-  FTI_Checkpoint( to_ckpt_id(state_id, get_parameter_id()), m_io_level_map[level] );
+  FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
   //if( (state_id.t == 0) && m_zip_controller.is_validate() ) {
   //  for(int m=1; m<m_zip_controller.num_parameters(); m++) {
   //    for(auto const& var : m_var_id_map) {
