@@ -33,7 +33,8 @@ std::string stream_as_string( std::istream& stm ) // #include <iterator>
 
 bool ZipController::to_validate() {
   if ( (m_parameter_id % m_num_parameters) == 0 ) m_parameter_id = 0;
-  return (m_parameter_id == 0) ? false : true;
+  MDBG("to_validate: %d {m_parameter_id:%d | m_num_parameters:%d}", (m_parameter_id != 0), m_parameter_id, m_num_parameters);
+  return (m_parameter_id != 0);
 }
 
 void ZipController::init() {
