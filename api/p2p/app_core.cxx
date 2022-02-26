@@ -334,8 +334,9 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
                    VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
-    int nsteps = 0;
-    io_state_id_t parent_state, next_state;
+    static int nsteps = 0;
+    static io_state_id_t parent_state;
+    static io_state_id_t next_state;
     
     // Update pointer
     storage.protect( std::string(field_name), values, size, io_type );
@@ -450,12 +451,12 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     if (nsteps > 0) {
         M_TRIGGER(START_LOAD, to_ckpt_id(parent_state));
         // called by every app core
-        if ( current_state == parent_state ) {
-            printf("Not performing a state load as good state already in memory");
-            M_TRIGGER(LOCAL_HIT, parent_state.id);
-        } else {
-            storage.load( parent_state );
-        }
+        //if ( current_state == parent_state ) {
+        //    printf("Not performing a state load as good state already in memory");
+        //    M_TRIGGER(LOCAL_HIT, parent_state.id);
+        //} else {
+          storage.load( parent_state );
+        //}
 
 
         field.current_step = next_state.t;
