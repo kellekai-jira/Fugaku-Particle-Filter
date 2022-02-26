@@ -103,7 +103,7 @@ void ZipController::init() {
 
       melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_VALIDATE );
       m_num_parameters++;
-
+      MDBG("num parameters init zip: %d", m_num_parameters);
     }
     
     m_case = FTI_CPC_VALIDATE;
