@@ -42,8 +42,6 @@ void StorageController::io_init( IoController* io, int runner_id ) {
   m_io->init_io(runner_id);
 
   m_io->init_core();
-  MDBG("[num_parameters:%d] (init_core) STORAGE CONTROLLER", get_num_parameters());
-  MDBG("[num_parameters:%d] (init_core|m_io) STORAGE CONTROLLER", m_io->get_num_parameters());
 
 }
 
@@ -97,6 +95,10 @@ void StorageController::callback() {
       storage.server.init();
     }
     storage.m_io->init_core();
+    
+    MDBG("[num_parameters:%d] (init_core) STORAGE CONTROLLER", storage.get_num_parameters());
+    MDBG("[num_parameters:%d] (init_core|m_io) STORAGE CONTROLLER", storage.m_io->get_num_parameters());
+    
     std::vector<std::string> files;
     storage.m_io->filelist_local( {0,1}, files );
 
