@@ -440,8 +440,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
     
     if ( field.current_step == 0 ) {
+      MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
       while ( storage.to_validate() ) {
-        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d})", current_state.id, current_state.t);
         storage.store( current_state );
         if (mpi.rank() == 0) {
             push_weight_to_head(weight);
