@@ -696,7 +696,9 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   MDBG("Pushing weight message to weight server: %s", m.DebugString().c_str());
   zmq::recv(server.m_socket);  // receive ack
   // its good, we can give it free for delete...
-  m_io->m_state_dump_requests.push(io_state_id_t(t, id));
+  for(int i=0; i<m_io->get_num_parameters(); i++) { 
+    m_io->m_state_dump_requests.push(io_state_id_t(t, id, i));
+  }
 
   M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, id);
 }

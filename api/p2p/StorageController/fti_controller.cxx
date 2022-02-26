@@ -60,7 +60,7 @@ std::pair<int64_t,int64_t> elegantUnpair(int64_t z) {
 }
 
 int FtiController::reprotect_all() {
-  for(int m=1; m<m_zip_controller.num_parameters(); m++) {
+  for(int m=1; m<m_zip_controller.get_num_parameters(); m++) {
     for(auto const& var : m_var_id_map) {
       protect( var.first, var.second.data, var.second.size, var.second.type );
     }
