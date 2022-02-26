@@ -32,15 +32,15 @@ std::string stream_as_string( std::istream& stm ) // #include <iterator>
 { return { std::istreambuf_iterator<char>(stm), std::istreambuf_iterator<char>{} } ; }
 
 bool ZipController::to_validate() {
-  if ( (m_parameter_id % m_num_parameters) == 0 ) m_parameter_id = 0;
-  MDBG("to_validate: %d {m_parameter_id:%d | m_num_parameters:%d}", (m_parameter_id < m_num_parameters), m_parameter_id, m_num_parameters);
-  return (m_parameter_id < m_num_parameters);
+  MDBG("to_validate: %d {m_parameter_id:%d | m_num_parameters:%d}", m_validate_phase, m_parameter_id, m_num_parameters);
+  return m_validate_phase;
 }
 
 void ZipController::init() {
 
   m_num_parameters = 1;
   m_parameter_id = 0;
+  m_validate_phase = true;
   m_case = FTI_CPC_CASE_NONE;
 
   m_is_first = true;

@@ -400,7 +400,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         push_weight_to_head(weight);
         MDBG("finished pushing weight to head");
         M_TRIGGER(STOP_PUSH_WEIGHT_TO_HEAD, current_state.id);
-        if ( !storage.to_validate() ) {  
+        if ( storage.get_parameter_id() == 0 ) {  
           M_TRIGGER(START_JOB_REQUEST, current_state.t);
           // 4. ask server for more work
           ::melissa_p2p::JobResponse job_response;
@@ -440,8 +440,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
     
     if ( field.current_step == 0 ) {
-      MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
       while ( storage.to_validate() ) {
+        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
         storage.reprotect();
         storage.store( current_state );
         if (mpi.rank() == 0) {

@@ -88,7 +88,16 @@ class ZipController {
   bool is_validate() { return m_case == FTI_CPC_VALIDATE; }
   bool get_parameter_id() { return m_parameter_id; }
   bool to_validate();
-  void advance_validate() { m_parameter_id++; }
+  
+  void advance_validate() { 
+    if( (m_parameter_id + 1) == m_num_parameters ) {
+      m_validate_phase = false;
+    } else {
+      m_validate_phase = true;
+    }
+    m_parameter_id = ( m_parameter_id + 1 ) % m_num_parameters;
+  }
+
   void adaptParameter ( FTI::data_t* data, std::string name );
   
   private:
@@ -105,7 +114,8 @@ class ZipController {
   std::map<std::string, std::set<melissa::zip::zip_t> > m_vars_set;
   
   bool m_is_first;
-  
+  bool m_validate_phase;
+
   FTIT_CPC_CASE m_case;
 
   void select_parameters ( FTI::data_t* data, std::string name, double* original );
