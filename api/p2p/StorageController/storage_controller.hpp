@@ -38,6 +38,7 @@ class StorageController {
 
     // API
     bool to_validate() { return m_io->to_validate(); }
+    void advance_validate() { return m_io->advance_validate(); }
     bool get_parameter_id() { return m_io->get_parameter_id(); }
     void load( io_state_id_t state );
     void store( io_state_id_t state_id );

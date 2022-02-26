@@ -314,7 +314,7 @@ void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   //} else if ( m_zip_controller.is_validate() ) {
   //  m_zip_controller.advance_validate();
   //}
-  advance_validate();
+  //advance_validate();
   mpi.barrier();
 }
 

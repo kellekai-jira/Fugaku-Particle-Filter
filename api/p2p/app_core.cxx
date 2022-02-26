@@ -450,6 +450,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         if (mpi.rank() == 0) {
             push_weight_to_head(weight);
         }
+        storage.advance_validate();
       }
     }
 
@@ -460,7 +461,8 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         //    printf("Not performing a state load as good state already in memory");
         //    M_TRIGGER(LOCAL_HIT, parent_state.id);
         //} else {
-          storage.load( parent_state );
+        storage.load( parent_state );
+        storage.advance_validate();
         //}
 
 
