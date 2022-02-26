@@ -334,12 +334,12 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
                    VEC_T *hidden_values, int64_t size_hidden, io_type_t io_type_hidden, MELISSA_EXPOSE_MODE mode)
 {
     static bool is_first = true;
-    static int nsteps = 0;
+    static int nsteps = 1;
     static io_state_id_t parent_state;
     static io_state_id_t next_state;
     
     // Update pointer
-    storage.protect( std::string(field_name), values, size, io_type );
+    //storage.protect( std::string(field_name), values, size, io_type );
     // return immediately if just field to expose
     if( mode == MELISSA_MODE_EXPOSE ) return 0;
     
@@ -371,6 +371,20 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     io_state_id_t current_state = { field.current_step, field.current_state_id, storage.get_parameter_id() };
     
     double weight;
+    
+    if ( field.current_step == 0 ) {
+      while ( storage.to_validate() ) {
+        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
+        storage.protect( std::string(field_name), values, size, io_type );
+        storage.store( current_state );
+        if (mpi.rank() == 0) {
+            push_weight_to_head(weight);
+        }
+        storage.advance_validate();
+      }
+    }
+    
+    storage.protect( std::string(field_name), values, size, io_type );
     
     M_TRIGGER(START_STORE, to_ckpt_id(current_state));
     MDBG("start storing state as L1 checkpoint");
@@ -441,19 +455,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     parent_state.param = storage.get_parameter_id();
     next_state.param = storage.get_parameter_id();
     M_TRIGGER(STOP_JOB_REQUEST, loop_counter);
-    
-    if ( field.current_step == 0 ) {
-      while ( storage.to_validate() ) {
-        MDBG("T == 0, generating initial states for validation ({id:%d | t:%d}) [storage.to_validate():%d]", current_state.id, current_state.t,storage.to_validate());
-        storage.reprotect();
-        current_state.param = storage.get_parameter_id();
-        storage.store( current_state );
-        if (mpi.rank() == 0) {
-            push_weight_to_head(weight);
-        }
-        storage.advance_validate();
-      }
-    }
 
     if (nsteps > 0) {
         M_TRIGGER(START_LOAD, to_ckpt_id(parent_state));
