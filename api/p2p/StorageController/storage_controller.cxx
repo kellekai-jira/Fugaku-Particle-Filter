@@ -651,32 +651,37 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   mpi.broadcast( t );
   mpi.broadcast( id );
   
-  io_state_id_t state_id( t, id );
 
-  MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state_id.t, state_id.id, state_id.param);
-  storage->m_io->remove( state_id, IO_STORAGE_L1 );
+  for( int i=0; i<storage->get_num_parameters(); i++) {
+    
+    io_state_id_t state_id( t, id, i );
+    
+    MDBG("removing the state t=%d, id=%d, parameter:%d/%d  from the cache", state_id.t, state_id.id, state_id.param, storage->get_num_parameters());
+    storage->m_io->remove( state_id, IO_STORAGE_L1 );
 
-  std::stringstream local;
-  local << storage->m_io->m_dict_string["local_dir"];
-  local << "/";
-  local << storage->m_io->m_dict_string["exec_id"];
-  local << "/l1/";
-  local << std::to_string(to_ckpt_id(state_id));
+    std::stringstream local;
+    local << storage->m_io->m_dict_string["local_dir"];
+    local << "/";
+    local << storage->m_io->m_dict_string["exec_id"];
+    local << "/l1/";
+    local << std::to_string(to_ckpt_id(state_id));
 
 
-  struct stat info;
-  IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
-  MDBG("delete_request -> {t: %d, id: %d}", state_id.t, state_id.id);
-  assert(!storage->m_io->is_local(state_id));
+    struct stat info;
+    IO_TRY( stat( local.str().c_str(), &info ), -1, "the local checkpoint directory has not been deleted!" );
+    MDBG("delete_request -> {t: %d, id: %d}", state_id.t, state_id.id);
+    assert(!storage->m_io->is_local(state_id));
+    
+    storage->state_pool--;
+    std::cout << "free: " << storage->state_pool.free() << std::endl;
+    storage->m_cached_states.erase(to_ckpt_id(state_id));
   
-  storage->state_pool--;
-  std::cout << "free: " << storage->state_pool.free() << std::endl;
-  storage->m_cached_states.erase(to_ckpt_id(state_id));
+  
+    mpi.barrier();
 
-  mpi.barrier();
-
-  M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
-  M_TRIGGER(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
+    M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
+    M_TRIGGER(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
+  }
 
 }
 
