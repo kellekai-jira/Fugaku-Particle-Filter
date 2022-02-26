@@ -602,10 +602,12 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
     
   mpi.broadcast(dump);
   for(auto & x : dump) {
-    io_state_id_t state = { x.t, x.id };
-    MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state.t, state.id, state.param);
-    storage->m_io->remove( state, IO_STORAGE_L1 );
-    storage->state_pool--;
+    for( int i=0; i<storage->m_io->get_num_parameters(); i++) {
+      io_state_id_t state = { x.t, x.id, i };
+      MDBG("removing the state t=%d, id=%d, parameter:%d  from the cache", state.t, state.id, state.param);
+      storage->m_io->remove( state, IO_STORAGE_L1 );
+      storage->state_pool--;
+    }
   }
   
   mpi.barrier();
