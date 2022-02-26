@@ -42,6 +42,8 @@ void StorageController::io_init( IoController* io, int runner_id ) {
   m_io->init_io(runner_id);
 
   m_io->init_core();
+  MDBG("[num_parameters:%d] (init_core) STORAGE CONTROLLER", get_num_parameters());
+  MDBG("[num_parameters:%d] (init_core|m_io) STORAGE CONTROLLER", m_io->get_num_parameters());
 
 }
 
