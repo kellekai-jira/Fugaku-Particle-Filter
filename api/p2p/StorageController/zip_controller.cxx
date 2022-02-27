@@ -455,6 +455,6 @@ void ZipController::advance_validate() {
     m_validate_phase = true;
   }
   m_parameter_id = ( m_parameter_id + 1 ) % m_num_parameters;
-  MDBG("called advance_validate '%d' times", count);
+  MDBG("called advance_validate '%d' times -> parameter_id: %d", count, m_parameter_id);
 }
 

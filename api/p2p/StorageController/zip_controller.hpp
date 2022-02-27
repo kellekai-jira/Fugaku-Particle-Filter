@@ -86,7 +86,7 @@ class ZipController {
   int get_num_parameters() { return m_num_parameters; }
   bool is_adapt() { return m_case == FTI_CPC_ADAPT; }
   bool is_validate() { return m_case == FTI_CPC_VALIDATE; }
-  bool get_parameter_id() { return m_num_parameters - (m_parameter_id+1); }
+  int get_parameter_id() { return m_num_parameters - (m_parameter_id+1); }
   bool to_validate();
   
   void advance_validate();
