@@ -60,11 +60,11 @@ std::pair<int64_t,int64_t> elegantUnpair(int64_t z) {
 }
 
 int FtiController::reprotect_all() {
-  for(int m=1; m<get_num_parameters(); m++) {
-    for(auto const& var : m_var_id_map) {
-      protect( var.first, var.second.data, var.second.size, var.second.type );
-    }
+  //for(int m=1; m<get_num_parameters(); m++) {
+  for(auto const& var : m_var_id_map) {
+    protect( var.first, var.second.data, var.second.size, var.second.type );
   }
+  //}
 }
 
 int FtiController::protect( std::string name, void* buffer, size_t size, io_type_t type ) {
