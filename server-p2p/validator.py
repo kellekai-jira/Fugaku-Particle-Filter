@@ -1,172 +1,308 @@
 from multiprocessing import Pool
 import numpy as np
 import configparser
+import p2p_pb2 as cm
 import io
 import fpzip
 import glob
 from functools import partial
+import array
+import json
+import os
+import zmq
 
+from utils import get_node_name
+from common import bind_socket, parse
+
+
+experimentPath = os.getcwd() + '/'
+globalCkptPath =  experimentPath + 'Global/'
+
+
+FTI_CPC_MODE_NONE   = 0
+FTI_CPC_FPZIP       = 1
+FTI_CPC_ZFP         = 2
+FTI_CPC_SINGLE      = 3
+FTI_CPC_HALF        = 4
+FTI_CPC_STRIP       = 5
+FTI_CPC_TYPE_NONE   = 0
+FTI_CPC_ACCURACY    = 1
+FTI_CPC_PRECISION   = 2
+
+
+def send_message(socket, data):
+    socket.send(data.SerializeToString())
+
+
+def elegantPair( x, y ):
+    return  (x * x + x + y) if (x >= y) else (y * y + x)
+
+
+def elegantUnpair( z ) -> (int, int):
+    sqrtz = int(np.floor(np.sqrt(z)))
+    sqz = int(sqrtz ** 2)
+    if ((z - sqz) >= sqrtz):
+        return sqrtz, z - sqz - sqrtz
+    else:
+        return z - sqz, sqrtz
+
+
+def encode_state_id( t, id, mode ):
+    return elegantPair( mode, elegantPair( t, id ) )
+
+
+def decode_state_id( hash ):
+    mode, tid = elegantUnpair( hash )
+    t, id = elegantUnpair( tid )
+    return t, id, mode
+
+
+class cpc_t:
+    __items = 1
+    def __init__(self, name, mode, parameter):
+        self.name = name
+        self.mode = None
+        if mode == 'none':
+            self.mode = FTI_CPC_MODE_NONE
+        if mode == 'fpzip':
+            self.mode = FTI_CPC_FPZIP
+        if mode == 'zfp':
+            self.mode = FTI_CPC_ZFP
+        if mode == 'single' or mode == 'sp':
+            self.mode = FTI_CPC_SINGLE
+        if mode == 'half' or mode == 'hp':
+            self.mode = FTI_CPC_HALF
+        assert( self.mode != None )
+        self.parameter = parameter
+        self.id = cpc_t.__items
+        cpc_t.__items += 1
+    def num_parameters(self):
+        return self.__items
 
 class Validator:
 
     # set global class values
-    def __init__ (
+    def __init__(
             self,
-            validation_function = None,
-            reduction_function = None,
-            experiments = {}
-            ):
+            validation_function=None,
+            reduction_function=None,
+            states = [],
+            cpc = None
+    ):
 
         if validation_function == None:
             self.m_func = self.sse
         if reduction_function == None:
             self.m_reduce = self.reduce_sse
-
-        self.m_experiments = experiments
+        self.cpc = cpc
+        assert( self.cpc != None )
+        self.m_states = states
         self.m_meta = {}
+        self.m_num_procs = 0
 
         self.m_state_dimension = 0
         self.init()
 
     # initialize validator
-    def init ( self ):
+    def init(self):
 
-        for exp in self.m_experiments:
+        for state in self.m_states:
 
-            state_item = {}
+            sid = elegantPair(state.t, state.id)
 
-            for state in self.m_experiments[exp]:
-                meta_pattern = self.m_experiments[exp][state] + '/Meta*-worker*-serialized.fti'
-                ckpt_pattern = self.m_experiments[exp][state] + '/Ckpt*-worker*-serialized.fti'
-                meta_files = glob.glob(meta_pattern)
-                ckpt_files = glob.glob(ckpt_pattern)
+            for cpc in self.cpc:
 
-                meta_item = {}
-                proc = 0
-                for idx, f in enumerate(meta_files):
-                    fh = open(f)
-                    fstring = fh.read()
-                    fh.close()
+                state_item = {}
 
-                    procs_per_node = 0
-                    buf = io.StringIO(fstring)
+                for p in [0,cpc.id]:
 
-                    base = 0
+                    path = experimentPath + 'Global/' + str(encode_state_id(state.t, state.id, p))
 
+                    meta_pattern = path + '/Meta*-worker*-serialized.fti'
+                    ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
+                    meta_files = glob.glob(meta_pattern)
+                    ckpt_files = glob.glob(ckpt_pattern)
 
-                    self.m_state_dimension = 0
-                    for line in iter(lambda: buf.readline(), ""):
-                        nb_lines = int(line.replace("\n", ""))
-                        meta_str = ""
-                        for i in range(nb_lines):
-                            meta_str = meta_str + buf.readline()
-                        config = configparser.ConfigParser()
-                        config.read_string(meta_str)
+                    meta_item = {}
+                    proc = 0
+                    for idx, f in enumerate(meta_files):
+                        fh = open(f)
+                        fstring = fh.read()
+                        fh.close()
 
-                        mode        = int(config["0"]["var1_compression_mode"])
-                        type        = int(config["0"]["var1_compression_type"])
-                        parameter   = int(config["0"]["var1_compression_parameter"])
-                        offset      = int(config["0"]["var1_pos"])
-                        size        = int(config["0"]["var1_size"])
-                        count       = int(config["0"]["var1_count"])
-                        meta_item[proc] = {
-                            "ckpt_file" : ckpt_files[idx],
-                            "mode"      : mode,
-                            "type"      : type,
-                            "parameter" : parameter,
-                            "offset"    : base + offset,
-                            "size"      : size,
-                            "count"     : count
-                        }
-                        base += size + offset
+                        procs_per_node = 0
+                        buf = io.StringIO(fstring)
 
-                        self.m_state_dimension += count
+                        base = 0
 
-                        proc += 1
-                        procs_per_node += 1
+                        self.m_state_dimension = 0
+                        for line in iter(lambda: buf.readline(), ""):
+                            nb_lines = int(line.replace("\n", ""))
+                            meta_str = ""
+                            for i in range(nb_lines):
+                                meta_str = meta_str + buf.readline()
+                            config = configparser.ConfigParser()
+                            config.read_string(meta_str)
 
-                state_item[state] = meta_item
+                            mode = int(config["0"]["var1_compression_mode"])
+                            type = int(config["0"]["var1_compression_type"])
+                            parameter = int(config["0"]["var1_compression_parameter"])
+                            offset = int(config["0"]["var1_pos"])
+                            size = int(config["0"]["var1_size"])
+                            count = int(config["0"]["var1_count"])
+                            meta_item[proc] = {
+                                "ckpt_file": ckpt_files[idx],
+                                "mode": mode,
+                                "type": type,
+                                "parameter": parameter,
+                                "offset": base + offset,
+                                "size": size,
+                                "count": count
+                            }
+                            base += size + offset
 
-            self.m_meta[exp] = state_item
+                            self.m_state_dimension += count
 
+                            proc += 1
+                            procs_per_node += 1
 
-    def sse( self, data ):
+                    self.m_num_procs = proc
+                    state_item[p] = meta_item
+
+                self.m_meta[sid] = state_item
+
+    def info(self):
+        for m in self.m_meta:
+            print(self.m_meta[m])
+
+    def sse(self, data):
 
         sigma = 0
-        a1 = data['original']
-        a2 = data['compressed']
+        a1 = data[0]
+        a2 = data[1]
+
+        assert(len(a1) == len(a2))
 
         for i in range(len(a1)):
-            sigma += ( a1[i] - a2[i] ) ** 2
+            sigma += (a1[i] - a2[i]) ** 2
 
         return sigma
 
-    def reduce_sse ( self, parts, n ):
+    def reduce_sse(self, parts, n):
         sigma = 0
         for part in parts:
             sigma += part
 
-        return np.sqrt(sigma/n)
+        return np.sqrt(sigma / n)
 
+    def compare_state(self, proc, id):
 
-    def compare_state( self, proc, id ):
-
-        states = {}
+        states = []
 
         for state in self.m_meta[id]:
-            data = []
 
             meta = self.m_meta[id][state][proc]
             ckpt_file = meta['ckpt_file']
             ckpt = open(ckpt_file, 'rb')
 
-            n = meta['count']
-            bs = 1024 * 1024
-            nb = n // bs + ( 1 if n%bs != 0 else 0 )
+            if state == 0:
+                ckpt.seek(meta['offset'])
+                bytes = ckpt.read(meta['size'])
+                states.append(array.array('d', bytes))
 
-            ckpt.seek(meta['offset'])
+            else:
+                data = []
+                n = meta['count']
+                bs = 1024 * 1024
+                nb = n // bs + (1 if n % bs != 0 else 0)
 
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0,0,0]
-                data = [*data, *block]
+                ckpt.seek(meta['offset'])
+
+                for b in range(nb):
+                    bytes = ckpt.read(8)
+                    bs = int.from_bytes(bytes, byteorder='little')
+                    bytes = ckpt.read(bs)
+                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                    data = [*data, *block]
+
+                states.append(data)
 
             ckpt.close()
 
-            states[state] = data
-
         return self.m_func(states)
 
-
-
-
-    def validate(self, id, procs):
+    def validate(self):
 
         pool = Pool()
 
-        results = pool.map(partial(self.compare_state, id=id), procs)
+        sigmas = {}
+        for sid in self.m_meta:
+            results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
+            sigmas[sid] = self.m_reduce(results, self.m_state_dimension)
+            t, id = elegantUnpair(sid)
+            print(f"[t:{t}|id:{id}] sigma -> {sigmas[sid]}")
 
-        return self.m_reduce( results, self.m_state_dimension )
-
-
-
-if __name__ == "__main__":
-
-    experiments = {
-        1 :
-            {
-                'compressed'    : '/path/to/compressed/state/1',
-                'original'      : '/path/to/original/state/200001'
-            }
-    }
+        return sigmas
 
 
-    test = Validator(experiments=experiments)
+# main
 
-    result = test.validate(1, range(47))
+with open( experimentPath + 'compression.json') as fp:
+    cpc_json = json.load(fp)
 
-    print ( f"result from validation function (stddev) is : {result}")
+assert(cpc_json['compression']['method'] == 'validate')
 
 
+cpc_parameters = []
+for item in cpc_json['compression']['validate']:
+    cpc_parameters.append(cpc_t(
+        item['name'],
+        item['mode'],
+        item['parameter']
+    ))
+
+for cpc in cpc_parameters:
+    print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
+
+context = zmq.Context()
+context.setsockopt(zmq.LINGER, 0)
+addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
+
+socket, port_socket = \
+        bind_socket(context, zmq.REQ, addr)
+
+
+assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
+
+worker_id = os.getenv('MELISSA_DA_WORKER_ID')
+
+host = get_node_name()
+
+with open(experimentPath + f'worker-{worker_id}-ip.dat', 'w') as f:
+    f.write(host)
+
+
+while True:
+    response = cm.Message()
+    send_message(socket, response)
+    msg = socket.recv()
+
+    print("received task...")
+    request = parse(msg)
+
+    states = []
+    for item in request.validation_request.to_validate:
+            states.append(item)
+
+    test = Validator(states=states, cpc=cpc_parameters)
+    result = test.validate()
+
+
+    #test = Validator(experiments=experiments)
+
+    #t0 = time.time()
+    #result = test.validate(1, range(4))
+    #t1 = time.time()
+    #te = t1 - t0
+
+    #print(f"result from validation function (stddev) is : {result} [elapsed time: {te} seconds]")

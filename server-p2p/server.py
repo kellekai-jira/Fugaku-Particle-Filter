@@ -12,6 +12,7 @@ from enum import Enum
 
 from collections import OrderedDict
 
+validate_states = None
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -771,7 +772,7 @@ class LauncherConnection:
 
 
 def do_update_step():
-    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache
+    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache, validate_states
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
     print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
     state_loads = 0
@@ -795,16 +796,21 @@ def do_update_step():
     next_job_id = 0
     weights_this_cycle = 0
 
-    print("alpha old: ", alpha.keys())
-
     for op in out_particles:
         parent_id = op
         if op not in alpha:
             alpha[op] = 0
         alpha[op] += 1
 
+    if validate_states != None:
+        request = cm.Message()
+        for s in validate_states:
+            request.validatino_request.to_validate.append(s)
+        print("now sending states to workers...", request.validation_request.to_validate)
+        #send_message(validation_socket, request)
 
-    print("alpha new: ", alpha.keys())
+    validate_states = list(alpha.keys)
+
 
     with open('checkpoint.bin.tmp', 'wb') as f:
         pickle.dump(alpha, f)
