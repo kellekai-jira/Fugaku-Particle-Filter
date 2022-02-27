@@ -9,10 +9,14 @@ import numpy as np
 import math
 import pickle
 from enum import Enum
+import glob
+import re
 
 from collections import OrderedDict
 
 validate_states = None
+validation_sockets = []
+worker_ids = []
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
@@ -801,6 +805,23 @@ def do_update_step():
         if op not in alpha:
             alpha[op] = 0
         alpha[op] += 1
+
+    pattern = os.path.dirname(os.getcwd()) + '/worker-*-ip.dat'
+    worker_ip_files = glob.glob(pattern)
+
+    p = re.compile("worker-(.*)-ip.dat")
+    for fn in worker_ip_files:
+        id = int(p.search(os.path.basename(fn)).group(1))
+        if id not in worker_ids:
+            with open(fn, 'r') as file:
+                ip = file.read().rstrip()
+            addr = "tcp://" + ip + ":4000"
+            so = context.socket(zmq.REP)
+            so.connect(addr)
+            validation_sockets.append(so)
+            worker_ids.append(id)
+
+
 
     if validate_states != None:
         request = cm.Message()
