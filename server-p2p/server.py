@@ -802,6 +802,7 @@ def do_update_step():
         alpha[op] += 1
 
 
+    print(alpha.keys())
 
     with open('checkpoint.bin.tmp', 'wb') as f:
         pickle.dump(alpha, f)
