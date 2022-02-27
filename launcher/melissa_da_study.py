@@ -348,6 +348,31 @@ def run_melissa_da_study(
 
             Job.__init__(self, job_id)
 
+
+    class Validator(Job):
+        def __init__(self, validator_id):
+            self.validator_id = validator_id
+
+            validator_cmd = 'python3 -u %s/server-p2p/validator.py' % os.getenv('MELISSA_DA_SOURCE_PATH')
+
+            cmd = '%s %s' % (
+                    precommand_runner,
+                    validator_cmd
+                    )
+
+            logfile = '%s/validator-%03d.log' % (WORKDIR, validator_id)
+
+            print(logfile)
+
+            envs = additional_env.copy()
+            envs['MELISSA_TIMING_NULL'] = str(start_time)
+            envs['MELISSA_DA_WORKER_ID'] = str(validator_id)
+
+            job_id = cluster.ScheduleJob('melissa_da_validator',
+                    walltime, 1, 1, cmd, envs, logfile, is_server=False)
+
+            Job.__init__(self, job_id)
+
     init_sockets()
 
     runners = {}  # running runners

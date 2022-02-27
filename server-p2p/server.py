@@ -830,7 +830,7 @@ def do_update_step():
         print("now sending states to workers...", request.validation_request.to_validate)
         #send_message(validation_socket, request)
 
-    validate_states = list(alpha.keys)
+    validate_states = list(alpha.keys())
 
 
     with open('checkpoint.bin.tmp', 'wb') as f:
