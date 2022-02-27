@@ -795,6 +795,8 @@ def do_update_step():
     next_job_id = 0
     weights_this_cycle = 0
 
+    print("alpha old: ", alpha.keys())
+
     for op in out_particles:
         parent_id = op
         if op not in alpha:
@@ -802,7 +804,7 @@ def do_update_step():
         alpha[op] += 1
 
 
-    print(alpha.keys())
+    print("alpha new: ", alpha.keys())
 
     with open('checkpoint.bin.tmp', 'wb') as f:
         pickle.dump(alpha, f)
