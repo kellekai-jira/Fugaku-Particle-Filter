@@ -57,6 +57,7 @@ def run_melissa_da_study(
         procs_server=1,
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
+        n_validator=1,  # may be a function if the allowed runner amount may change over time
         runner_group_size=1,
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
@@ -195,6 +196,12 @@ def run_melissa_da_study(
 
             time.sleep(.1)
     state_refresher = defer(refresh_states)
+
+    def num_launched_validators():
+        return sum(list(map(lambda x: len(validators[x].validator_ids), validators.keys()))) if validators else 0
+
+    def launched_validators():
+        return [x for validator in validators.keys() for x in validators[runner].validator_ids]
 
     def num_launched_runners():
         return sum(list(map(lambda x: len(runners[x].runner_ids), runners.keys()))) if runners else 0
@@ -410,6 +417,23 @@ def run_melissa_da_study(
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
+                #vr = max_validators()
+                #active_validators = num_launched_validators()
+                #if active_validators < vr:  # TODO depend on check load here!
+                #    slots = vr - active_validators
+                #    runner_ids = list( range(next_runner_id, next_runner_id) )
+                #    next_runner_id += group_size
+                #    group_id = next_group_id
+                #    next_group_id += 1
+                #    runners[group_id] = Runner(group_id, runner_ids, server.node_name)
+                #    debug('Starting runner(s) %s' % runner_ids)
+                #else:
+                #    while num_launched_runners() > vr:
+                #        to_remove = random.choice(list(runners))
+                #        log("killing a runner-group (with id=%d) as too many runners are up" % to_remove)
+                #        runners[to_remove].remove()
+                #        del runners[to_remove]
+                #        # TODO: notify server!
 
 
             # Check if the server did not timeout!

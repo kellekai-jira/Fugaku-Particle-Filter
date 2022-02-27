@@ -826,7 +826,7 @@ def do_update_step():
     if validate_states != None:
         request = cm.Message()
         for s in validate_states:
-            request.validatino_request.to_validate.append(s)
+            request.validation_request.to_validate.append(s)
         print("now sending states to workers...", request.validation_request.to_validate)
         #send_message(validation_socket, request)
 
