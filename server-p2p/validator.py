@@ -18,6 +18,9 @@ from common import bind_socket, parse
 experimentPath = os.getcwd() + '/'
 checkpointPath = os.path.dirname(experimentPath) + '/Global/'
 
+print(f"experimentPath: {experimentPath}")
+print(f"checkpointPath: {checkpointPath}")
+
 
 FTI_CPC_MODE_NONE   = 0
 FTI_CPC_FPZIP       = 1
@@ -126,6 +129,7 @@ class Validator:
                     meta_item = {}
                     proc = 0
                     for idx, f in enumerate(meta_files):
+                        print(f"meta file: {f}")
                         fh = open(f)
                         fstring = fh.read()
                         fh.close()
