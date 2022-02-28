@@ -16,7 +16,7 @@ from common import bind_socket, parse
 
 
 experimentPath = os.getcwd() + '/'
-globalCkptPath =  experimentPath + 'Global/'
+checkpointPath = os.path.dirname(experimentPath) + '/Global/'
 
 
 FTI_CPC_MODE_NONE   = 0
@@ -116,7 +116,7 @@ class Validator:
 
                 for p in [0,cpc.id]:
 
-                    path = experimentPath + 'Global/' + str(encode_state_id(state.t, state.id, p))
+                    path = checkpointPath + str(encode_state_id(state.t, state.id, p))
 
                     meta_pattern = path + '/Meta*-worker*-serialized.fti'
                     ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
@@ -293,6 +293,7 @@ while True:
     states = []
     for item in request.validation_request.to_validate:
             states.append(item)
+            print(item)
 
     test = Validator(states=states, cpc=cpc_parameters)
     result = test.validate()
