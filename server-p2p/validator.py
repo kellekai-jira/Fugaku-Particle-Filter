@@ -114,7 +114,7 @@ class Validator:
 
             for cpc in self.cpc:
 
-                sid = elegantPair(cpc.id, elegantPair(state.t, state.id))
+                sid = encode_state_id(state.t, state.id, cpc.id)
 
                 print(sid)
 
@@ -246,10 +246,9 @@ class Validator:
 
         sigmas = []
         for sid in self.m_meta:
-            parameter = list(self.m_meta[sid].keys())[1]
             results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
             sigma = self.m_reduce(results, self.m_state_dimension)
-            t, id = elegantUnpair(sid)
+            t, id, parameter = decode_state_id(sid)
             sigmas.append( { 't' : t, 'id' : id, 'parameter' : parameter, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}] sigma -> {sigma}")
 
