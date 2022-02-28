@@ -112,9 +112,11 @@ class Validator:
 
         for state in self.m_states:
 
-            sid = elegantPair(state.t, state.id)
-
             for cpc in self.cpc:
+
+                sid = elegantPair(cpc.id, elegantPair(state.t, state.id))
+
+                print(sid)
 
                 state_item = {}
 
@@ -126,6 +128,9 @@ class Validator:
                     ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
                     meta_files = glob.glob(meta_pattern)
                     ckpt_files = glob.glob(ckpt_pattern)
+
+                    if p == cpc.id:
+                        print(meta_files)
 
                     meta_item = {}
                     proc = 0
