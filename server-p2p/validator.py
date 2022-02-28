@@ -16,7 +16,7 @@ from common import bind_socket, parse
 
 
 experimentPath = os.getcwd() + '/'
-checkpointPath = os.path.dirname(experimentPath) + '/Global/'
+checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 
 print(f"experimentPath: {experimentPath}")
 print(f"checkpointPath: {checkpointPath}")
