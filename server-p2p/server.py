@@ -824,7 +824,7 @@ def do_update_step():
     #
     #############################################################
 
-    pattern = os.path.dirname(os.getcwd()) + '/worker-*-ip.dat'
+    pattern = os.getcwd() + '/worker-*-ip.dat'
     worker_ip_files = glob.glob(pattern)
 
     p = re.compile("worker-(.*)-ip.dat")
