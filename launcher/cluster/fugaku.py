@@ -225,7 +225,7 @@ class FugakuCluster(cluster.Cluster):
         tmpname = '/tmp/' + next(tempfile._get_candidate_names()) + '.vcoord'
         logger.debug('vcoord file: %s', tmpname)
         with open( tmpname, "w" ) as vcoordfile:
-            num_cores = 48/procs_per_vcoord
+            num_cores = int(48//procs_per_vcoord)
             for coord in vcoords:
                 for i in range(procs_per_vcoord):
                     vcoordfile.write("(" + str(coord) + ") core="+str(num_cores)+"\n")
