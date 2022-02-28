@@ -95,6 +95,8 @@ run_melissa_da_study(
     nodes_runner=__env_nodes_runners,
     runner_group_size = __env_runner_group_size,
     n_runners=__env_num_runners,
+    n_validator=1,
+    validator_config='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/compression.json',
     local_ckpt_dir=local_dir + '/melissa_cache',
     global_ckpt_dir=global_dir + '/Global',
     meta_ckpt_dir=global_dir + '/Meta',
