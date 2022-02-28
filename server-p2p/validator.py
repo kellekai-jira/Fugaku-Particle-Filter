@@ -248,7 +248,7 @@ class Validator:
             print(f"[t:{t}|id:{id}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
-        df_file = experimentPath + f"dataframe-t{t}.csv"
+        df_file = experimentPath + f"validator{worker_id}-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
 
