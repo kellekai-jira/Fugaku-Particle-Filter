@@ -10,6 +10,7 @@ import array
 import json
 import os
 import zmq
+import pandas as pd
 
 from utils import get_node_name
 from common import bind_socket, parse
@@ -238,14 +239,17 @@ class Validator:
 
         pool = Pool()
 
-        sigmas = {}
+        sigmas = []
         for sid in self.m_meta:
             results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
-            sigmas[sid] = self.m_reduce(results, self.m_state_dimension)
+            sigma = self.m_reduce(results, self.m_state_dimension)
             t, id = elegantUnpair(sid)
+            sigmas.append( { 't' : t, 'id' : id, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}] sigma -> {sigmas[sid]}")
 
-        return sigmas
+        df = pd.DataFrame(sigmas)
+        df_file = experimentPath + f"dataframe-t{t}.csv"
+        df.to_csv(df_file, sep='\t', encoding='utf-8')
 
 
 # main
@@ -299,7 +303,7 @@ while True:
             print(item)
 
     test = Validator(states=states, cpc=cpc_parameters)
-    result = test.validate()
+    test.validate()
 
 
     #test = Validator(experiments=experiments)
