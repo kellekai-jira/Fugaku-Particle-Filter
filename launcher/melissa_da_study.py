@@ -58,6 +58,7 @@ def run_melissa_da_study(
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
         n_validator=0,  # may be a function if the allowed runner amount may change over time
+        validator_config='',  # may be a function if the allowed runner amount may change over time
         runner_group_size=1,
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
@@ -96,6 +97,9 @@ def run_melissa_da_study(
 
     if server_may_restart:
         copyfile(config_fti_path, WORKDIR+"/config.fti")
+
+    if n_validator > 0:
+        copyfile(validator_config, WORKDIR+"/compression.json")
 
     os.chdir(WORKDIR)
 
