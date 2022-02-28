@@ -233,7 +233,8 @@ class FugakuCluster(cluster.Cluster):
         return tmpname
 
     def RemoveVcoordFile(self, name ):
-        os.remove( name )
+        print("do nothing")
+        #os.remove( name )
 
     def RemoveJob(self, job_pid ):
         for i in self.jobs[job_pid]['vcoords']:
