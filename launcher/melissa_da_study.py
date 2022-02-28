@@ -57,7 +57,7 @@ def run_melissa_da_study(
         procs_server=1,
         procs_runner=1,
         n_runners=1,  # may be a function if the allowed runner amount may change over time
-        n_validator=1,  # may be a function if the allowed runner amount may change over time
+        n_validator=0,  # may be a function if the allowed runner amount may change over time
         runner_group_size=1,
         local_ckpt_dir='../Local',
         global_ckpt_dir='../Global',
@@ -383,8 +383,10 @@ def run_melissa_da_study(
     init_sockets()
 
     runners = {}  # running runners
+    validators = {}  # running runners
     server = None
     next_runner_id = 0
+    next_validator_id = 0
     next_group_id = 0
     while running:
         time.sleep(0.1)  # chill down processor...
@@ -417,23 +419,18 @@ def run_melissa_da_study(
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
-                #vr = max_validators()
-                #active_validators = num_launched_validators()
-                #if active_validators < vr:  # TODO depend on check load here!
-                #    slots = vr - active_validators
-                #    runner_ids = list( range(next_runner_id, next_runner_id) )
-                #    next_runner_id += group_size
-                #    group_id = next_group_id
-                #    next_group_id += 1
-                #    runners[group_id] = Runner(group_id, runner_ids, server.node_name)
-                #    debug('Starting runner(s) %s' % runner_ids)
-                #else:
-                #    while num_launched_runners() > vr:
-                #        to_remove = random.choice(list(runners))
-                #        log("killing a runner-group (with id=%d) as too many runners are up" % to_remove)
-                #        runners[to_remove].remove()
-                #        del runners[to_remove]
-                #        # TODO: notify server!
+                vr = n_validator
+                if len(validators) < vr:  # TODO depend on check load here!
+                    validator_id = next_validator_id
+                    next_validator_id += 1
+                    debug('Starting validator %d' % validator_id)
+                    validators[validator_id] = Validator(validator_id)
+                else:
+                    while len(validators) > vr:
+                        to_remove = random.choice(list(validators))
+                        log("killing a validator (with id=%d) as too many validators are up" % to_remove)
+                        validators[to_remove].remove()
+                        del validators[to_remove]
 
 
             # Check if the server did not timeout!

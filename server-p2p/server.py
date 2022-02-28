@@ -502,6 +502,18 @@ def accept_prefetch(msg):
     send_message(gp_socket, reply)
     trigger(STOP_ACCEPT_PREFETCH, 0)
 
+def receive_message_blocking(socket):
+    msg = None
+    try:
+        msg = socket.recv()  # only polling
+        msg = parse(msg)
+
+    except zmq.error.Again:
+        # could not poll anything
+        pass
+
+    return msg
+
 def receive_message_nonblocking(socket):
     msg = None
     try:
@@ -806,6 +818,12 @@ def do_update_step():
             alpha[op] = 0
         alpha[op] += 1
 
+    #############################################################
+    #
+    #   HANDLE STATE VALIDATION
+    #
+    #############################################################
+
     pattern = os.path.dirname(os.getcwd()) + '/worker-*-ip.dat'
     worker_ip_files = glob.glob(pattern)
 
@@ -822,16 +840,28 @@ def do_update_step():
             worker_ids.append(id)
 
 
-
-    if validate_states != None:
-        request = cm.Message()
-        for s in validate_states:
-            request.validation_request.to_validate.append(s)
-        print("now sending states to workers...", request.validation_request.to_validate)
-        #send_message(validation_socket, request)
+    for idx, vsock in enumerate(validation_sockets):
+        print(f"[{idx}] waiting for worker message...")
+        receive_message_blocking( vsock )
+        print(f"[{idx}] received worker message!")
 
     validate_states = list(alpha.keys())
 
+    vid = 0
+    chunk_size = len(worker_ids)
+    for i in range(0, len(validate_states), chunk_size):
+        request = cm.Message()
+        for s in validate_states[i:i+chunk_size]:
+            request.validation_request.to_validate.append(s)
+        print("now sending states to workers...", request.validation_request.to_validate)
+        send_message(validation_sockets[vid], request)
+        vid += 1
+
+    #############################################################
+    #
+    #   CHECKPOINTING
+    #
+    #############################################################
 
     with open('checkpoint.bin.tmp', 'wb') as f:
         pickle.dump(alpha, f)
