@@ -850,7 +850,7 @@ def do_update_step():
         validate_states = list(alpha.keys())
 
         vid = 0
-        chunk_size = len(worker_ids)
+        chunk_size = int(len(validate_states) // len(worker_ids))
         for i in range(0, len(validate_states), chunk_size):
             request = cm.Message()
             for s in validate_states[i:i+chunk_size]:
