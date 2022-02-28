@@ -307,6 +307,9 @@ while True:
     request = parse(msg)
     print("received task... ", request)
 
+    if len(request) == 0:
+        continue
+
     states = []
     for item in request.validation_request.to_validate:
             states.append(item)
