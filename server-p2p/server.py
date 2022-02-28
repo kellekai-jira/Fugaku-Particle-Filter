@@ -840,22 +840,24 @@ def do_update_step():
             worker_ids.append(id)
 
 
-    for idx, vsock in enumerate(validation_sockets):
-        print(f"[{idx}] waiting for worker message...")
-        receive_message_blocking( vsock )
-        print(f"[{idx}] received worker message!")
 
-    validate_states = list(alpha.keys())
+    if len(worker_ids) > 0:
+        for idx, vsock in enumerate(validation_sockets):
+            print(f"[{idx}] waiting for worker message...")
+            receive_message_blocking( vsock )
+            print(f"[{idx}] received worker message!")
 
-    vid = 0
-    chunk_size = len(worker_ids)
-    for i in range(0, len(validate_states), chunk_size):
-        request = cm.Message()
-        for s in validate_states[i:i+chunk_size]:
-            request.validation_request.to_validate.append(s)
-        print("now sending states to workers...", request.validation_request.to_validate)
-        send_message(validation_sockets[vid], request)
-        vid += 1
+        validate_states = list(alpha.keys())
+
+        vid = 0
+        chunk_size = len(worker_ids)
+        for i in range(0, len(validate_states), chunk_size):
+            request = cm.Message()
+            for s in validate_states[i:i+chunk_size]:
+                request.validation_request.to_validate.append(s)
+            print("now sending states to workers...", request.validation_request.to_validate)
+            send_message(validation_sockets[vid], request)
+            vid += 1
 
     #############################################################
     #
