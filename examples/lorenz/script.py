@@ -73,6 +73,7 @@ __env_members = int(os.environ['MELISSA_LORENZ_MEMBERS'])
 __env_procs_runners = int(os.environ['MELISSA_LORENZ_PROCS_RUNNERS'])
 __env_nodes_runners = int(os.environ['MELISSA_LORENZ_NODES_RUNNERS'])
 __env_num_runners = int(os.environ['MELISSA_LORENZ_NUM_RUNNERS'])
+__env_num_validators = int(os.environ['MELISSA_LORENZ_NUM_VALIDATORS'])
 __env_state_size_elem = os.environ['MELISSA_LORENZ_STATE_DIMENSION']
 __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
 __env_write_trace = float(os.environ['MELISSA_LORENZ_TIMING_TRACE'])
@@ -95,7 +96,7 @@ run_melissa_da_study(
     nodes_runner=__env_nodes_runners,
     runner_group_size = __env_runner_group_size,
     n_runners=__env_num_runners,
-    n_validator=1,
+    n_validator=__env_num_validators,
     validator_config='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/compression.json',
     local_ckpt_dir=local_dir + '/melissa_cache',
     global_ckpt_dir=global_dir + '/Global',
