@@ -251,7 +251,10 @@ class Validator:
             t, id, pid = decode_state_id(sid)
             mode = self.m_meta[sid][pid][0]['mode']
             parameter = self.m_meta[sid][pid][0]['parameter']
-            sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'sigma' : sigma } )
+            size_compressed = float(self.m_meta[sid][pid][0]['size'])
+            size_original = float(self.m_meta[sid][pid][0]['count'] * 8)
+            rate = size_compressed / size_original
+            sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
