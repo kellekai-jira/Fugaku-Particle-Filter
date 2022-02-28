@@ -253,7 +253,7 @@ class Validator:
             parameter = self.m_meta[sid][pid][0]['parameter']
             size_compressed = float(self.m_meta[sid][pid][0]['size'])
             size_original = float(self.m_meta[sid][pid][0]['count'] * 8)
-            rate = size_compressed / size_original
+            rate = size_original / size_compressed
             sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
