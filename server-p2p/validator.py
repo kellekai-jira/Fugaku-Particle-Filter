@@ -246,11 +246,13 @@ class Validator:
 
         sigmas = []
         for sid in self.m_meta:
+            mode = self.m_meta[sid][0]['mode']
+            parameter = self.m_meta[sid][0]['parameter']
             results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
             sigma = self.m_reduce(results, self.m_state_dimension)
-            t, id, parameter = decode_state_id(sid)
-            sigmas.append( { 't' : t, 'id' : id, 'parameter' : parameter, 'sigma' : sigma } )
-            print(f"[t:{t}|id:{id}] sigma -> {sigma}")
+            t, id, pid = decode_state_id(sid)
+            sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'sigma' : sigma } )
+            print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
         df_file = experimentPath + f"validator{worker_id}-t{t}.csv"
