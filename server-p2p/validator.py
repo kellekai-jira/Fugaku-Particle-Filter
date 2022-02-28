@@ -307,7 +307,9 @@ while True:
     request = parse(msg)
     print("received task... ", request)
 
-    if len(request) == 0:
+    empty = cm.Message()
+    empty.validation_request.SetInParent()
+    if request == empty:
         continue
 
     states = []
