@@ -129,7 +129,6 @@ class Validator:
                     meta_item = {}
                     proc = 0
                     for idx, f in enumerate(meta_files):
-                        print(f"meta file: {f}")
                         fh = open(f)
                         fstring = fh.read()
                         fh.close()
