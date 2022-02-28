@@ -241,10 +241,11 @@ class Validator:
 
         sigmas = []
         for sid in self.m_meta:
+            parameter = list(self.m_meta[sid].keys())[1]
             results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
             sigma = self.m_reduce(results, self.m_state_dimension)
             t, id = elegantUnpair(sid)
-            sigmas.append( { 't' : t, 'id' : id, 'sigma' : sigma } )
+            sigmas.append( { 't' : t, 'id' : id, 'parameter' : parameter, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
