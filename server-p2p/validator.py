@@ -304,8 +304,8 @@ while True:
     send_message(socket, response)
     msg = socket.recv()
 
-    print("received task...")
     request = parse(msg)
+    print("received task... ", request)
 
     states = []
     for item in request.validation_request.to_validate:

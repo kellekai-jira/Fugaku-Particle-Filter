@@ -860,7 +860,8 @@ def do_update_step():
             vid += 1
         for empty_msg in range(vid,len(worker_ids)):
             request = cm.Message()
-            request.validation_request.to_validate.SetInParent()
+            empty_state = cm.StateId()
+            request.validation_request.SetInParent()
             print("sending empty message to worker id: ", vid)
             send_message(validation_sockets[vid], request)
             vid += 1
