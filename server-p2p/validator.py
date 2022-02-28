@@ -245,7 +245,7 @@ class Validator:
             sigma = self.m_reduce(results, self.m_state_dimension)
             t, id = elegantUnpair(sid)
             sigmas.append( { 't' : t, 'id' : id, 'sigma' : sigma } )
-            print(f"[t:{t}|id:{id}] sigma -> {sigmas[sid]}")
+            print(f"[t:{t}|id:{id}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
         df_file = experimentPath + f"dataframe-t{t}.csv"
