@@ -11,6 +11,8 @@ import pickle
 from enum import Enum
 import glob
 import re
+from anytree import Node, RenderTree
+from anytree.exporter import DotExporter
 
 from collections import OrderedDict
 
@@ -55,11 +57,10 @@ from melissa4py.message import JobDetails
 from melissa4py.message import Stop
 from melissa4py.message import SimulationStatusMessage
 from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to end timeout notifications!
-from anytree import Node, RenderTree
-from anytree.exporter import DotExporter
 
 initialize_nodes = True
-node_list = []
+root_node_list = []
+node_map = {}
 
 sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
 from utils import get_node_name
@@ -689,9 +690,10 @@ def handle_job_requests(launcher, nsteps):
             print("Scheduling", (job_id, parent_id))
             if initialize_nodes:
                 node = Node( job_id, display_name=f"t:{job_id.t}, id:{job_id.id}")
-                node_list.append(node)
+                root_node_list.append(node)
+                node_map[job_id] = node
             else:
-                Node( job_id, parent = parent_id, display_name=f"t:{job_id.t}, id:{job_id.id}")
+                Node( job_id, parent = node_map[parent_id], display_name=f"t:{job_id.t}, id:{job_id.id}")
             trigger(STOP_IDLE_RUNNER, runner_id)
             trigger(START_PROPAGATE_STATE, job_id.id)
             DueDates.add(runner_id, job_id, parent_id)
@@ -806,7 +808,7 @@ def do_update_step():
 
     initialize_nodes = False
 
-    for node in node_list:
+    for node in root_node_list:
         for pre, fill, cnode in RenderTree(node):
             print("%s%s" % (pre, cnode.name))
         graphfn = os.getcwd() + f'/graph{0}.png'
