@@ -329,7 +329,7 @@ class Validator:
             energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
             print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
 
-        df = pd.DataFrame(sigmas)
+        df = pd.DataFrame(energies)
         df_file = experimentPath + f"validator{worker_id}-evaluate-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
