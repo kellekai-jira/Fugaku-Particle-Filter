@@ -809,12 +809,12 @@ def do_update_step():
 
     initialize_nodes = False
 
-    for idx, node in enumerate(root_node_list):
-        for pre, fill, cnode in RenderTree(node):
-            print("%s%s" % (pre, cnode.name))
-        graphfn = os.getcwd() + f'/graph{idx}.png'
-        DotExporter(node,
-                    nodeattrfunc=lambda cnode: 'label="{}"'.format(cnode.display_name)).to_picture(graphfn)
+    #for idx, node in enumerate(root_node_list):
+    #    for pre, fill, cnode in RenderTree(node):
+    #        print("%s%s" % (pre, cnode.name))
+    #    graphfn = os.getcwd() + f'/graph{idx}.png'
+    #    DotExporter(node,
+    #                nodeattrfunc=lambda cnode: 'label="{}"'.format(cnode.display_name)).to_picture(graphfn)
 
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
 
