@@ -184,7 +184,7 @@ class Validator:
 
                     self.m_num_procs = proc
                     state_item[p] = meta_item
-                    if sid not in self.m_meta_evaluate[sid]:
+                    if sid not in self.m_meta_evaluate:
                         self.m_meta_evaluate[sid] = meta_item
 
                 self.m_meta_compare[sid] = state_item
