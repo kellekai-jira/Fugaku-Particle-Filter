@@ -693,7 +693,8 @@ def handle_job_requests(launcher, nsteps):
                 root_node_list.append(node)
                 node_map[job_id] = node
             else:
-                Node( job_id, parent = node_map[parent_id], display_name=f"t:{job_id.t}, id:{job_id.id}")
+                node = Node( job_id, parent = node_map[parent_id], display_name=f"t:{job_id.t}, id:{job_id.id}")
+                node_map[job_id] = node
             trigger(STOP_IDLE_RUNNER, runner_id)
             trigger(START_PROPAGATE_STATE, job_id.id)
             DueDates.add(runner_id, job_id, parent_id)
