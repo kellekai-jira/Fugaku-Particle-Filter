@@ -55,6 +55,11 @@ from melissa4py.message import JobDetails
 from melissa4py.message import Stop
 from melissa4py.message import SimulationStatusMessage
 from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to end timeout notifications!
+from anytree import Node, RenderTree
+from anytree.exporter import DotExporter
+
+initialize_nodes = True
+node_list = []
 
 sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
 from utils import get_node_name
@@ -682,6 +687,11 @@ def handle_job_requests(launcher, nsteps):
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
             print("Scheduling", (job_id, parent_id))
+            if initialize_nodes:
+                node = Node( job_id, display_name=f"t:{job_id.t}, id:{job_id.id}")
+                node_list.append(node)
+            else:
+                Node( job_id, parent = parent_id, display_name=f"t:{job_id.t}, id:{job_id.id}")
             trigger(STOP_IDLE_RUNNER, runner_id)
             trigger(START_PROPAGATE_STATE, job_id.id)
             DueDates.add(runner_id, job_id, parent_id)
@@ -788,15 +798,22 @@ class LauncherConnection:
 
 
 def do_update_step():
-    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache, validate_states
+    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache, validate_states, initialize_nodes
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
     print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
     state_loads = 0
     state_loads_wo_cache = 0
 
+    initialize_nodes = False
+
+    for node in node_list:
+        for pre, fill, cnode in RenderTree(node):
+            print("%s%s" % (pre, cnode.name))
+        graphfn = os.getcwd() + f'/graph{0}.png'
+        DotExporter(node,
+                    nodeattrfunc=lambda cnode: 'label="{}"'.format(cnode.display_name)).to_picture(graphfn)
+
     this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
-
-
 
     # normalize state weights and resample
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
