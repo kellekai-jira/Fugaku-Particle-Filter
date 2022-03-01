@@ -123,8 +123,6 @@ class Validator:
 
                 sid = encode_state_id(state.t, state.id, cpc.id)
 
-                print(sid)
-
                 state_item = {}
 
                 for p in [0,cpc.id]:
@@ -135,9 +133,6 @@ class Validator:
                     ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
                     meta_files = glob.glob(meta_pattern)
                     ckpt_files = glob.glob(ckpt_pattern)
-
-                    if p == cpc.id:
-                        print(meta_files)
 
                     meta_item = {}
                     proc = 0
@@ -187,7 +182,6 @@ class Validator:
 
                     cid = encode_state_id(state.t, state.id, p)
                     if cid not in self.m_meta_evaluate:
-                        print(f"adding sid: {cid} to meta_evaluate, ", meta_item)
                         self.m_meta_evaluate[cid] = meta_item
 
                 self.m_meta_compare[sid] = state_item
@@ -240,8 +234,6 @@ class Validator:
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
         t, id, mode = decode_state_id(sid)
-
-        print(f"sid: {sid}, id: {id}, t: {t}, mode: {mode}, meta: ", meta)
 
         if mode == 0:
             ckpt.seek(meta['offset'])
