@@ -231,13 +231,14 @@ class Validator:
 
         return np.sqrt(sigma / n)
 
-    def evaluate_state(self, proc, id):
+    def evaluate_state(self, proc, sid):
 
-        meta = self.m_meta_evaluate[id][proc]
+        meta = self.m_meta_evaluate[sid][proc]
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
+        t, id, mode = decode_state_id(sid)
 
-        t, id, mode = decode_state_id(id)
+        print(f"sid: {sid}, id: {id}, t: {t}, mode: {mode}, meta: ", meta)
 
         if mode == 0:
             ckpt.seek(meta['offset'])
