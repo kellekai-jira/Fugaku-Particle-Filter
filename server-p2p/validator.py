@@ -88,20 +88,27 @@ class Validator:
     # set global class values
     def __init__(
             self,
-            validation_function=None,
-            reduction_function=None,
+            evaluation_function=None,
+            evaluation_reduction=None,
+            compare_function=None,
+            compare_reduction=None,
             states = [],
             cpc = None
     ):
 
-        if validation_function == None:
-            self.m_func = self.sse
-        if reduction_function == None:
-            self.m_reduce = self.reduce_sse
+        if compare_function == None:
+            self.m_compare_function = self.sse
+        if compare_reduction == None:
+            self.m_compare_reduction = self.reduce_sse
+        if evaluation_function == None:
+            self.m_evaluation_function = self.energy
+        if evaluation_reduction == None:
+            self.m_evaluation_reduction = self.reduce_energy
         self.cpc = cpc
         assert( self.cpc != None )
         self.m_states = states
-        self.m_meta = {}
+        self.m_meta_compare = {}
+        self.m_meta_evaluate = {}
         self.m_num_procs = 0
 
         self.m_state_dimension = 0
@@ -177,12 +184,32 @@ class Validator:
 
                     self.m_num_procs = proc
                     state_item[p] = meta_item
+                    if sid not in self.m_meta_evaluate[sid]:
+                        self.m_meta_evaluate[sid] = meta_item
 
-                self.m_meta[sid] = state_item
+                self.m_meta_compare[sid] = state_item
 
     def info(self):
-        for m in self.m_meta:
-            print(self.m_meta[m])
+        for m in self.m_meta_compare:
+            print(self.m_meta_compare[m])
+
+    def energy(self, data):
+
+        energy_sum = 0
+
+        for val in data:
+            energy_sum += 0.5 * val ** 2
+
+        return energy_sum
+
+    def reduce_energy(self, parts, n):
+
+        energy_avg = 0
+
+        for part in parts:
+            energy_avg += part
+
+        return energy_avg / n
 
     def sse(self, data):
 
@@ -204,13 +231,45 @@ class Validator:
 
         return np.sqrt(sigma / n)
 
-    def compare_state(self, proc, id):
+    def evaluate_state(self, proc, id):
+
+        meta = self.m_meta_evaluate[id][proc]
+        ckpt_file = meta['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+
+        t, id, mode = decode_state_id(id)
+
+        if mode == 0:
+            ckpt.seek(meta['offset'])
+            bytes = ckpt.read(meta['size'])
+            data = array.array('d', bytes)
+
+        else:
+            data = []
+            n = meta['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(meta['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+        ckpt.close()
+
+        return self.m_evaluation_function(data)
+
+    def compare_states(self, proc, id):
 
         states = []
 
-        for state in self.m_meta[id]:
+        for state in self.m_meta_compare[id]:
 
-            meta = self.m_meta[id][state][proc]
+            meta = self.m_meta_compare[id][state][proc]
             ckpt_file = meta['ckpt_file']
             ckpt = open(ckpt_file, 'rb')
 
@@ -238,27 +297,44 @@ class Validator:
 
             ckpt.close()
 
-        return self.m_func(states)
+        return self.m_compare_function(states)
 
     def validate(self):
 
         pool = Pool()
 
         sigmas = []
-        for sid in self.m_meta:
-            results = pool.map(partial(self.compare_state, id=sid), range(self.m_num_procs))
-            sigma = self.m_reduce(results, self.m_state_dimension)
+        for sid in self.m_meta_compare:
+            results = pool.map(partial(self.compare_states, id=sid), range(self.m_num_procs))
+            sigma = self.m_compare_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
-            mode = self.m_meta[sid][pid][0]['mode']
-            parameter = self.m_meta[sid][pid][0]['parameter']
-            size_compressed = float(self.m_meta[sid][pid][0]['size'])
-            size_original = float(self.m_meta[sid][pid][0]['count'] * 8)
+            mode = self.m_meta_compare[sid][pid][0]['mode']
+            parameter = self.m_meta_compare[sid][pid][0]['parameter']
+            size_compressed = float(self.m_meta_compare[sid][pid][0]['size'])
+            size_original = float(self.m_meta_compare[sid][pid][0]['count'] * 8)
             rate = size_original / size_compressed
             sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
             print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
-        df_file = experimentPath + f"validator{worker_id}-t{t}.csv"
+        df_file = experimentPath + f"validator{worker_id}-compare-t{t}.csv"
+        df.to_csv(df_file, sep='\t', encoding='utf-8')
+
+        energies = []
+        for sid in self.m_meta_evaluate:
+            results = pool.map(partial(self.evaluate_state, id=sid), range(self.m_num_procs))
+            energy = self.m_evaluation_reduction(results, self.m_state_dimension)
+            t, id, pid = decode_state_id(sid)
+            mode = self.m_meta_evaluate[sid][pid][0]['mode']
+            parameter = self.m_meta_evaluate[sid][pid][0]['parameter']
+            size_compressed = float(self.m_meta_evaluate[sid][pid][0]['size'])
+            size_original = float(self.m_meta_evaluate[sid][pid][0]['count'] * 8)
+            rate = size_original / size_compressed
+            energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
+            print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
+
+        df = pd.DataFrame(sigmas)
+        df_file = experimentPath + f"validator{worker_id}-evaluate-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
 
