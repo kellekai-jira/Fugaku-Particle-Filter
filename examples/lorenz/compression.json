@@ -8,27 +8,6 @@
         "mode" : "fpzip",
         "type" : "accuracy",
         "parameter" : 34
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 36
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 38
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 40
       }
     ],
     "adapted" : [
