@@ -184,9 +184,11 @@ class Validator:
 
                     self.m_num_procs = proc
                     state_item[p] = meta_item
-                    if sid not in self.m_meta_evaluate:
-                        print(f"adding sid: {sid} to meta_evaluate, ", meta_item)
-                        self.m_meta_evaluate[sid] = meta_item
+
+                    cid = encode_state_id(state.t, state.id, p)
+                    if cid not in self.m_meta_evaluate:
+                        print(f"adding sid: {cid} to meta_evaluate, ", meta_item)
+                        self.m_meta_evaluate[cid] = meta_item
 
                 self.m_meta_compare[sid] = state_item
 
@@ -324,7 +326,7 @@ class Validator:
 
         energies = []
         for sid in self.m_meta_evaluate:
-            results = pool.map(partial(self.evaluate_state, id=sid), range(self.m_num_procs))
+            results = pool.map(partial(self.evaluate_state, sid=sid), range(self.m_num_procs))
             energy = self.m_evaluation_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
             mode = self.m_meta_evaluate[sid][0]['mode']
