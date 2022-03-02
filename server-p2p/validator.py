@@ -72,7 +72,7 @@ def reduce_sse(parts, n):
     return np.sqrt(sigma / n)
 
 
-def evaluate_state(self, proc, sid, meta_data, func):
+def evaluate_state(proc, sid, meta_data, func):
 
     meta = meta_data[sid][proc]
     ckpt_file = meta['ckpt_file']
@@ -103,7 +103,7 @@ def evaluate_state(self, proc, sid, meta_data, func):
 
     return func(data)
 
-def compare_states(self, proc, sid, meta_data, func):
+def compare_states(proc, sid, meta_data, func):
 
     states = []
 
