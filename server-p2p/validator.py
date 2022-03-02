@@ -388,7 +388,43 @@ class Validator:
                     print(item)
 
             self.create_metadata( states )
-            self.validate()
+
+            pool = Pool()
+
+            sigmas = []
+            for sid in self.m_meta_compare:
+                results = pool.map(partial(self.compare_states, id=sid), range(self.m_num_procs))
+                sigma = self.m_compare_reduction(results, self.m_state_dimension)
+                t, id, pid = decode_state_id(sid)
+                mode = self.m_meta_compare[sid][pid][0]['mode']
+                parameter = self.m_meta_compare[sid][pid][0]['parameter']
+                size_compressed = float(self.m_meta_compare[sid][pid][0]['size'])
+                size_original = float(self.m_meta_compare[sid][pid][0]['count'] * 8)
+                rate = size_original / size_compressed
+                sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
+                print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
+
+            df = pd.DataFrame(sigmas)
+            df_file = experimentPath + f"validator{self.m_validator_id}-compare-t{t}.csv"
+            df.to_csv(df_file, sep='\t', encoding='utf-8')
+
+            energies = []
+            for sid in self.m_meta_evaluate:
+                results = pool.map(partial(self.evaluate_state, sid=sid), range(self.m_num_procs))
+                energy = self.m_evaluation_reduction(results, self.m_state_dimension)
+                t, id, pid = decode_state_id(sid)
+                mode = self.m_meta_evaluate[sid][0]['mode']
+                parameter = self.m_meta_evaluate[sid][0]['parameter']
+                size_compressed = float(self.m_meta_evaluate[sid][0]['size'])
+                size_original = float(self.m_meta_evaluate[sid][0]['count'] * 8)
+                rate = size_original / size_compressed
+                energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
+                print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
+
+            df = pd.DataFrame(energies)
+            df_file = experimentPath + f"validator{self.m_validator_id}-evaluate-t{t}.csv"
+            df.to_csv(df_file, sep='\t', encoding='utf-8')
+            #self.validate()
 
 
 if __name__ == "__main__":
