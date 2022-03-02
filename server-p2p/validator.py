@@ -72,9 +72,9 @@ def reduce_sse(parts, n):
     return np.sqrt(sigma / n)
 
 
-def evaluate_state(proc, sid, meta_data, func):
+def evaluate_state(proc, sid, name, meta_data, func):
 
-    meta = meta_data[sid][proc]
+    meta = meta_data[sid][proc][name]
     ckpt_file = meta['ckpt_file']
     ckpt = open(ckpt_file, 'rb')
     t, id, mode = decode_state_id(sid)
@@ -103,15 +103,13 @@ def evaluate_state(proc, sid, meta_data, func):
 
     return func(data)
 
-def compare_states(proc, sid, meta_data, func):
+def compare_states(proc, sid, name, meta_data, func):
 
     states = []
 
     for state in meta_data[sid]:
-    #for state in meta_data:
 
-        meta = meta_data[sid][state][proc]
-        #meta = meta_data[state][proc]
+        meta = meta_data[sid][state][proc][name]
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
 
@@ -149,16 +147,17 @@ def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, e
     pool = Pool()
 
     for sid in meta_compare:
-        results = pool.map(partial(compare_states, sid=sid, meta_data=meta_compare, func=compare_function), range(num_procs_application))
-        sigma = compare_reduction(results, state_dimension)
         t, id, pid = decode_state_id(sid)
-        mode = meta_compare[sid][pid][0]['mode']
-        parameter = meta_compare[sid][pid][0]['parameter']
-        size_compressed = float(meta_compare[sid][pid][0]['size'])
-        size_original = float(meta_compare[sid][pid][0]['count'] * 8)
-        rate = size_original / size_compressed
-        sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
-        print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
+        for name in meta_compare[sid][pid][0]:
+            results = pool.map(partial(compare_states, sid=sid, name=name, meta_data=meta_compare, func=compare_function), range(num_procs_application))
+            sigma = compare_reduction(results, state_dimension)
+            mode = meta_compare[sid][pid][0]['mode']
+            parameter = meta_compare[sid][pid][0]['parameter']
+            size_compressed = float(meta_compare[sid][pid][0]['size'])
+            size_original = float(meta_compare[sid][pid][0]['count'] * 8)
+            rate = size_original / size_compressed
+            sigmas.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
+            print(f"[{name}|t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
     df = pd.DataFrame(sigmas)
     df_file = experimentPath + f"validator{validator_id}-compare-t{t}.csv"
@@ -168,16 +167,17 @@ def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, e
 
     energies = []
     for sid in meta_evaluate:
-        results = pool.map(partial(evaluate_state, sid=sid, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
-        energy = evaluate_reduction(results, state_dimension)
         t, id, pid = decode_state_id(sid)
-        mode = meta_evaluate[sid][0]['mode']
-        parameter = meta_evaluate[sid][0]['parameter']
-        size_compressed = float(meta_evaluate[sid][0]['size'])
-        size_original = float(meta_evaluate[sid][0]['count'] * 8)
-        rate = size_original / size_compressed
-        energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
-        print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
+        for name in meta_compare[sid][pid][0]:
+            results = pool.map(partial(evaluate_state, sid=sid, name=name, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
+            energy = evaluate_reduction(results, state_dimension)
+            mode = meta_evaluate[sid][0]['mode']
+            parameter = meta_evaluate[sid][0]['parameter']
+            size_compressed = float(meta_evaluate[sid][0]['size'])
+            size_original = float(meta_evaluate[sid][0]['count'] * 8)
+            rate = size_original / size_compressed
+            energies.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
+            print(f"[{name}|t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
 
     df = pd.DataFrame(energies)
     df_file = experimentPath + f"validator{validator_id}-evaluate-t{t}.csv"
@@ -260,6 +260,7 @@ class Validator:
         self.m_state_dimension = 0
         self.m_socket = None
         self.m_cpc_parameters = []
+        self.m_varnames = []
         self.m_num_cores = len(os.sched_getaffinity(0))
         self.init()
 
@@ -272,6 +273,8 @@ class Validator:
         assert(cpc_json['compression']['method'] == 'validate')
 
         for item in cpc_json['compression']['validate']:
+            if item['name'] not in self.m_varnames:
+                self.m_varnames.append(item['name'])
             self.m_cpc_parameters.append(cpc_t(
                 item['name'],
                 item['mode'],
@@ -343,22 +346,28 @@ class Validator:
                             config = configparser.ConfigParser()
                             config.read_string(meta_str)
 
-                            mode = int(config["0"]["var1_compression_mode"])
-                            type = int(config["0"]["var1_compression_type"])
-                            parameter = int(config["0"]["var1_compression_parameter"])
-                            offset = int(config["0"]["var1_pos"])
-                            size = int(config["0"]["var1_size"])
-                            count = int(config["0"]["var1_count"])
-                            meta_item[proc] = {
-                                "ckpt_file": ckpt_files[idx],
-                                "mode": mode,
-                                "type": type,
-                                "parameter": parameter,
-                                "offset": base + offset,
-                                "size": size,
-                                "count": count
-                            }
-                            base += size + offset
+                            vars = {}
+                            varid = 0
+                            while f'var{varid}_id' in config['0']:
+                                name = config['0'][f'var{varid}_idchar']
+                                mode = config['0'][f'var{varid}_compression_mode']
+                                type = config['0'][f'var{varid}_compression_type']
+                                parameter = config['0'][f'var{varid}_compression_parameter']
+                                size = config['0'][f'var{varid}_size']
+                                count = config['0'][f'var{varid}_count']
+                                if name in self.m_varnames:
+                                    vars[name] = {
+                                        "ckpt_file": ckpt_files[idx],
+                                        "mode": mode,
+                                        "type": type,
+                                        "parameter": parameter,
+                                        "offset": base,
+                                        "size": size,
+                                        "count": count
+                                    }
+                                base += size
+
+                            meta_item[proc] = vars
 
                             self.m_state_dimension += count
 
