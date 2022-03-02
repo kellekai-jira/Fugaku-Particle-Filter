@@ -50,9 +50,13 @@ def parmap(f, X, nprocs=len(os.sched_getaffinity(0))):
 
     proc = [multiprocessing.Process(target=fun, args=(f, q_in, q_out))
             for _ in range(nprocs)]
+
+    i = 0
     for p in proc:
+        print("starting process: ", i)
         p.daemon = True
         p.start()
+        i += 1
 
     sent = [q_in.put((i, x)) for i, x in enumerate(X)]
     [q_in.put((None, None)) for _ in range(nprocs)]
