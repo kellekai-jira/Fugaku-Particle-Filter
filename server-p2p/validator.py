@@ -149,7 +149,7 @@ class Validator:
 
     def create_metadata( self, states ):
 
-        for state in self.m_states:
+        for state in states:
 
             for cpc in self.m_cpc_parameters:
 
