@@ -333,6 +333,9 @@ class Validator:
         pool = Pool()
 
         sigmas = []
+
+        print(self.m_num_procs)
+
         for sid in self.m_meta_compare:
             results = pool.map(partial(self.compare_states, id=sid), range(self.m_num_procs))
             sigma = self.m_compare_reduction(results, self.m_state_dimension)
