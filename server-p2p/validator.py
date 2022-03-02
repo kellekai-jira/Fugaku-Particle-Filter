@@ -281,6 +281,8 @@ class Validator:
                 item['parameter']
             ))
 
+        print(self.m_varnames)
+
         for cpc in self.m_cpc_parameters:
             print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
 
@@ -349,21 +351,21 @@ class Validator:
                             vars = {}
                             varid = 0
                             while f'var{varid}_id' in config['0']:
-                                name = config['0'][f'var{varid}_idchar']
-                                mode = config['0'][f'var{varid}_compression_mode']
-                                type = config['0'][f'var{varid}_compression_type']
-                                parameter = config['0'][f'var{varid}_compression_parameter']
-                                size = config['0'][f'var{varid}_size']
-                                count = config['0'][f'var{varid}_count']
+                                name        = config['0'][f'var{varid}_idchar']
+                                mode        = config['0'][f'var{varid}_compression_mode']
+                                type        = config['0'][f'var{varid}_compression_type']
+                                parameter   = config['0'][f'var{varid}_compression_parameter']
+                                size        = config['0'][f'var{varid}_size']
+                                count       = config['0'][f'var{varid}_count']
                                 if name in self.m_varnames:
                                     vars[name] = {
-                                        "ckpt_file": ckpt_files[idx],
-                                        "mode": mode,
-                                        "type": type,
-                                        "parameter": parameter,
-                                        "offset": base,
-                                        "size": size,
-                                        "count": count
+                                        "ckpt_file" : ckpt_files[idx],
+                                        "mode"      : mode,
+                                        "type"      : type,
+                                        "parameter" : parameter,
+                                        "offset"    : base,
+                                        "size"      : size,
+                                        "count"     : count
                                     }
                                 base += size
 
