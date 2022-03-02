@@ -41,7 +41,9 @@ def fun(f, q_in, q_out):
         q_out.put((i, f(x)))
 
 
-def parmap(f, X, nprocs=multiprocessing.cpu_count()):
+def parmap(f, X, nprocs=multiprocessing.cpu_count()-2):
+
+    print("number of procs: ", nprocs)
 
     q_in = multiprocessing.Queue(1)
     q_out = multiprocessing.Queue()
@@ -423,7 +425,7 @@ class Validator:
 
 
 if __name__ == "__main__":
-    nprocs=multiprocessing.cpu_count()
+    nprocs=multiprocessing.cpu_count() - 2
     print("nprocs: ", nprocs)
     print("++ EXECUTING WITH DEFAULT VALIDATOR ++")
     __default_validator = Validator()
