@@ -41,9 +41,9 @@ def fun(f, q_in, q_out):
         q_out.put((i, f(x)))
 
 
-def parmap(f, X, nprocs=multiprocessing.cpu_count()-2):
+def parmap(f, X, nprocs=len(os.sched_getaffinity(0))):
 
-    print("number of procs: ", nprocs)
+    print("number of cores: ", nprocs)
 
     q_in = multiprocessing.Queue(1)
     q_out = multiprocessing.Queue()
