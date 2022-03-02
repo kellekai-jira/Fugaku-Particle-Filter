@@ -22,7 +22,6 @@ checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 print(f"experimentPath: {experimentPath}")
 print(f"checkpointPath: {checkpointPath}")
 
-
 FTI_CPC_MODE_NONE   = 0
 FTI_CPC_FPZIP       = 1
 FTI_CPC_ZFP         = 2
@@ -83,6 +82,7 @@ class cpc_t:
     def num_parameters(self):
         return self.__items
 
+
 class Validator:
 
     # set global class values
@@ -92,8 +92,6 @@ class Validator:
             evaluation_reduction=None,
             compare_function=None,
             compare_reduction=None,
-            states = [],
-            cpc = None
     ):
 
         if compare_function == None:
@@ -104,22 +102,56 @@ class Validator:
             self.m_evaluation_function = self.energy
         if evaluation_reduction == None:
             self.m_evaluation_reduction = self.reduce_energy
-        self.cpc = cpc
-        assert( self.cpc != None )
-        self.m_states = states
         self.m_meta_compare = {}
         self.m_meta_evaluate = {}
         self.m_num_procs = 0
-
+        self.m_validator_id = 0
         self.m_state_dimension = 0
+        self.m_socket = None
+        self.m_cpc_parameters = []
         self.init()
 
     # initialize validator
     def init(self):
 
+        with open( experimentPath + 'compression.json') as fp:
+            cpc_json = json.load(fp)
+
+        assert(cpc_json['compression']['method'] == 'validate')
+
+        for item in cpc_json['compression']['validate']:
+            self.m_cpc_parameters.append(cpc_t(
+                item['name'],
+                item['mode'],
+                item['parameter']
+            ))
+
+        for cpc in self.m_cpc_parameters:
+            print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
+
+        context = zmq.Context()
+        context.setsockopt(zmq.LINGER, 0)
+        addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
+
+        self.m_socket, port_socket = \
+                bind_socket(context, zmq.REQ, addr)
+
+
+        assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
+
+        self.m_validator_id = os.getenv('MELISSA_DA_WORKER_ID')
+
+        host = get_node_name()
+
+        with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
+            f.write(host)
+
+
+    def create_metadata( self, states ):
+
         for state in self.m_states:
 
-            for cpc in self.cpc:
+            for cpc in self.m_cpc_parameters:
 
                 sid = encode_state_id(state.t, state.id, cpc.id)
 
@@ -313,7 +345,7 @@ class Validator:
             print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
 
         df = pd.DataFrame(sigmas)
-        df_file = experimentPath + f"validator{worker_id}-compare-t{t}.csv"
+        df_file = experimentPath + f"validator{self.m_validator_id}-compare-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
         energies = []
@@ -330,74 +362,36 @@ class Validator:
             print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
 
         df = pd.DataFrame(energies)
-        df_file = experimentPath + f"validator{worker_id}-evaluate-t{t}.csv"
+        df_file = experimentPath + f"validator{self.m_validator_id}-evaluate-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
 
-# main
+    # main
+    def run(self):
 
-with open( experimentPath + 'compression.json') as fp:
-    cpc_json = json.load(fp)
+        while True:
+            response = cm.Message()
+            send_message(self.m_socket, response)
+            msg = self.m_socket.recv()
 
-assert(cpc_json['compression']['method'] == 'validate')
+            request = parse(msg)
+            print("received task... ", request)
 
+            empty = cm.Message()
+            empty.validation_request.SetInParent()
+            if request == empty:
+                continue
 
-cpc_parameters = []
-for item in cpc_json['compression']['validate']:
-    cpc_parameters.append(cpc_t(
-        item['name'],
-        item['mode'],
-        item['parameter']
-    ))
+            states = []
+            for item in request.validation_request.to_validate:
+                    states.append(item)
+                    print(item)
 
-for cpc in cpc_parameters:
-    print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
-
-context = zmq.Context()
-context.setsockopt(zmq.LINGER, 0)
-addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
-
-socket, port_socket = \
-        bind_socket(context, zmq.REQ, addr)
+            self.create_metadata( states )
+            self.validate()
 
 
-assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
+if __name__ == "__main__":
 
-worker_id = os.getenv('MELISSA_DA_WORKER_ID')
-
-host = get_node_name()
-
-with open(experimentPath + f'worker-{worker_id}-ip.dat', 'w') as f:
-    f.write(host)
-
-
-while True:
-    response = cm.Message()
-    send_message(socket, response)
-    msg = socket.recv()
-
-    request = parse(msg)
-    print("received task... ", request)
-
-    empty = cm.Message()
-    empty.validation_request.SetInParent()
-    if request == empty:
-        continue
-
-    states = []
-    for item in request.validation_request.to_validate:
-            states.append(item)
-            print(item)
-
-    test = Validator(states=states, cpc=cpc_parameters)
-    test.validate()
-
-
-    #test = Validator(experiments=experiments)
-
-    #t0 = time.time()
-    #result = test.validate(1, range(4))
-    #t1 = time.time()
-    #te = t1 - t0
-
-    #print(f"result from validation function (stddev) is : {result} [elapsed time: {te} seconds]")
+            __default_validator = Validator()
+            __default_validator.run()
