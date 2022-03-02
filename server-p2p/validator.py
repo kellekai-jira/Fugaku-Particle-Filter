@@ -1,4 +1,5 @@
-from multiprocessing import Pool
+#from multiprocessing import Pool
+from pathos.multiprocessing import ProcessingPool as Pool
 import numpy as np
 import configparser
 import p2p_pb2 as cm
@@ -394,6 +395,8 @@ class Validator:
             self.create_metadata( states )
 
             pool = Pool()
+
+            print(self.m_num_procs)
 
             sigmas = []
             for sid in self.m_meta_compare:
