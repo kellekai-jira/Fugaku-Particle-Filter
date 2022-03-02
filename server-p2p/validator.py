@@ -151,10 +151,10 @@ def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, e
         for name in meta_compare[sid][pid][0]:
             results = pool.map(partial(compare_states, sid=sid, name=name, meta_data=meta_compare, func=compare_function), range(num_procs_application))
             sigma = compare_reduction(results, state_dimension)
-            mode = meta_compare[sid][pid][0]['mode']
-            parameter = meta_compare[sid][pid][0]['parameter']
-            size_compressed = float(meta_compare[sid][pid][0]['size'])
-            size_original = float(meta_compare[sid][pid][0]['count'] * 8)
+            mode = meta_compare[sid][pid][name][0]['mode']
+            parameter = meta_compare[sid][pid][name][0]['parameter']
+            size_compressed = float(meta_compare[sid][pid][name][0]['size'])
+            size_original = float(meta_compare[sid][pid][0][name]['count'] * 8)
             rate = size_original / size_compressed
             sigmas.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
             print(f"[{name}|t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
@@ -171,10 +171,10 @@ def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, e
         for name in meta_compare[sid][pid][0]:
             results = pool.map(partial(evaluate_state, sid=sid, name=name, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
             energy = evaluate_reduction(results, state_dimension)
-            mode = meta_evaluate[sid][0]['mode']
-            parameter = meta_evaluate[sid][0]['parameter']
-            size_compressed = float(meta_evaluate[sid][0]['size'])
-            size_original = float(meta_evaluate[sid][0]['count'] * 8)
+            mode = meta_evaluate[sid][0][name]['mode']
+            parameter = meta_evaluate[sid][0][name]['parameter']
+            size_compressed = float(meta_evaluate[sid][name][0]['size'])
+            size_original = float(meta_evaluate[sid][name][0]['count'] * 8)
             rate = size_original / size_compressed
             energies.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
             print(f"[{name}|t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
