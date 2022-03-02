@@ -352,11 +352,11 @@ class Validator:
                             varid = 0
                             while f'var{varid}_id' in config['0']:
                                 name        = config['0'][f'var{varid}_idchar']
-                                mode        = config['0'][f'var{varid}_compression_mode']
-                                type        = config['0'][f'var{varid}_compression_type']
-                                parameter   = config['0'][f'var{varid}_compression_parameter']
-                                size        = config['0'][f'var{varid}_size']
-                                count       = config['0'][f'var{varid}_count']
+                                mode        = int(config['0'][f'var{varid}_compression_mode'])
+                                type        = int(config['0'][f'var{varid}_compression_type'])
+                                parameter   = int(config['0'][f'var{varid}_compression_parameter'])
+                                size        = int(config['0'][f'var{varid}_size'])
+                                count       = int(config['0'][f'var{varid}_count'])
                                 if name in self.m_varnames:
                                     vars[name] = {
                                         "ckpt_file" : ckpt_files[idx],
