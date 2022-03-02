@@ -87,9 +87,8 @@ int FtiController::protect( std::string name, void* buffer, size_t size, io_type
   //variable.zip = zip;
   
   if(m_var_id_map.find(name) == m_var_id_map.end()) { 
-    variable.id = m_id_counter; 
+    variable.id = FTI_setIDFromString( name.c_str() ); 
     m_var_id_map.insert( std::pair<std::string,io_var_t>( name, variable ) );
-    m_id_counter++;
   } else {
     m_var_id_map[name].data = variable.data;
     m_var_id_map[name].size = variable.size;
@@ -208,7 +207,6 @@ void FtiController::init_core() {
   m_dict_string.insert( std::pair<std::string,std::string>( "exec_id", m_kernel.exec->id ) );
   m_zip_controller.init();
   MDBG("[num_parameters:%d] FTI CONTROLLER", get_num_parameters());
-  m_id_counter = 0;
 }
 
 void FtiController::sendrecv( const void* send_buffer, void* recv_buffer, int send_size, int recv_size, io_tag_t tag, io_msg_t message_type  ) {

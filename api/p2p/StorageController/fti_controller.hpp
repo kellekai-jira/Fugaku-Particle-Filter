@@ -86,7 +86,7 @@ class FtiController : public IoController {
     std::map<std::string, io_var_t> m_var_id_map;
     //std::map<std::string, io_zip_t> m_var_zip_map;
     int m_next_garbage_coll;
-    io_id_t m_id_counter;  
+    //io_id_t m_id_counter;  
     int m_last_cycle;
     FTI::Kernel m_kernel;
     ZipController m_zip_controller;
