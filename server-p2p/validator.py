@@ -33,6 +33,45 @@ FTI_CPC_ACCURACY    = 1
 FTI_CPC_PRECISION   = 2
 
 
+def energy(data):
+
+    energy_sum = 0
+
+    for val in data:
+        energy_sum += 0.5 * val ** 2
+
+    return energy_sum
+
+def reduce_energy(parts, n):
+
+    energy_avg = 0
+
+    for part in parts:
+        energy_avg += part
+
+    return energy_avg / n
+
+def sse(data):
+
+    sigma = 0
+    a1 = data[0]
+    a2 = data[1]
+
+    assert(len(a1) == len(a2))
+
+    for i in range(len(a1)):
+        sigma += (a1[i] - a2[i]) ** 2
+
+    return sigma
+
+def reduce_sse(parts, n):
+    sigma = 0
+    for part in parts:
+        sigma += part
+
+    return np.sqrt(sigma / n)
+
+
 def evaluate_state(self, proc, sid, meta_data, func):
 
     meta = meta_data[sid][proc]
@@ -103,6 +142,48 @@ def compare_states(self, proc, sid, meta_data, func):
     return func(states)
 
 
+def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function, evaluate_reduction, state_dimension, num_procs_application, validator_id):
+
+    sigmas = []
+
+    pool = Pool()
+
+    for sid in meta_compare:
+        results = pool.map(partial(compare_states, sid=sid, meta_data=meta_compare, func=compare_function), range(num_procs_application))
+        sigma = compare_reduction(results, state_dimension)
+        t, id, pid = decode_state_id(sid)
+        mode = meta_compare[sid][pid][0]['mode']
+        parameter = meta_compare[sid][pid][0]['parameter']
+        size_compressed = float(meta_compare[sid][pid][0]['size'])
+        size_original = float(meta_compare[sid][pid][0]['count'] * 8)
+        rate = size_original / size_compressed
+        sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
+        print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
+
+    df = pd.DataFrame(sigmas)
+    df_file = experimentPath + f"validator{validator_id}-compare-t{t}.csv"
+    df.to_csv(df_file, sep='\t', encoding='utf-8')
+
+    pool = Pool()
+
+    energies = []
+    for sid in meta_evaluate:
+        results = pool.map(partial(evaluate_state, sid=sid, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
+        energy = evaluate_reduction(results, state_dimension)
+        t, id, pid = decode_state_id(sid)
+        mode = meta_evaluate[sid][0]['mode']
+        parameter = meta_evaluate[sid][0]['parameter']
+        size_compressed = float(meta_evaluate[sid][0]['size'])
+        size_original = float(meta_evaluate[sid][0]['count'] * 8)
+        rate = size_original / size_compressed
+        energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
+        print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
+
+    df = pd.DataFrame(energies)
+    df_file = experimentPath + f"validator{validator_id}-evaluate-t{t}.csv"
+    df.to_csv(df_file, sep='\t', encoding='utf-8')
+
+
 def send_message(socket, data):
     socket.send(data.SerializeToString())
 
@@ -165,13 +246,13 @@ class Validator:
     ):
 
         if compare_function == None:
-            self.m_compare_function = self.sse
+            self.m_compare_function = sse
         if compare_reduction == None:
-            self.m_compare_reduction = self.reduce_sse
+            self.m_compare_reduction = reduce_sse
         if evaluation_function == None:
-            self.m_evaluation_function = self.energy
+            self.m_evaluation_function = energy
         if evaluation_reduction == None:
-            self.m_evaluation_reduction = self.reduce_energy
+            self.m_evaluation_reduction = reduce_energy
         self.m_meta_compare = {}
         self.m_meta_evaluate = {}
         self.m_num_procs = 0
@@ -293,90 +374,6 @@ class Validator:
         for m in self.m_meta_compare:
             print(self.m_meta_compare[m])
 
-    def energy(self, data):
-
-        energy_sum = 0
-
-        for val in data:
-            energy_sum += 0.5 * val ** 2
-
-        return energy_sum
-
-    def reduce_energy(self, parts, n):
-
-        energy_avg = 0
-
-        for part in parts:
-            energy_avg += part
-
-        return energy_avg / n
-
-    def sse(self, data):
-
-        sigma = 0
-        a1 = data[0]
-        a2 = data[1]
-
-        assert(len(a1) == len(a2))
-
-        for i in range(len(a1)):
-            sigma += (a1[i] - a2[i]) ** 2
-
-        return sigma
-
-    def reduce_sse(self, parts, n):
-        sigma = 0
-        for part in parts:
-            sigma += part
-
-        return np.sqrt(sigma / n)
-
-
-    def validate(self):
-
-        sigmas = []
-
-        print("num cores: ", self.m_num_cores)
-
-        pool = Pool()
-
-        for sid in self.m_meta_compare:
-            #results = parmap(partial(self.compare_states, id=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
-            results = pool.map(partial(compare_states, sid=sid, meta_data=self.m_meta_compare, func=self.m_compare_function), range(self.m_num_procs))
-            sigma = self.m_compare_reduction(results, self.m_state_dimension)
-            t, id, pid = decode_state_id(sid)
-            mode = self.m_meta_compare[sid][pid][0]['mode']
-            parameter = self.m_meta_compare[sid][pid][0]['parameter']
-            size_compressed = float(self.m_meta_compare[sid][pid][0]['size'])
-            size_original = float(self.m_meta_compare[sid][pid][0]['count'] * 8)
-            rate = size_original / size_compressed
-            sigmas.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
-            print(f"[t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
-
-        df = pd.DataFrame(sigmas)
-        df_file = experimentPath + f"validator{self.m_validator_id}-compare-t{t}.csv"
-        df.to_csv(df_file, sep='\t', encoding='utf-8')
-
-        pool = Pool()
-
-        energies = []
-        for sid in self.m_meta_evaluate:
-            #results = parmap(partial(self.evaluate_state, sid=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
-            results = pool.map(partial(evaluate_state, sid=sid, meta_data=self.m_meta_evaluate, func=self.m_evaluation_function), range(self.m_num_procs))
-            energy = self.m_evaluation_reduction(results, self.m_state_dimension)
-            t, id, pid = decode_state_id(sid)
-            mode = self.m_meta_evaluate[sid][0]['mode']
-            parameter = self.m_meta_evaluate[sid][0]['parameter']
-            size_compressed = float(self.m_meta_evaluate[sid][0]['size'])
-            size_original = float(self.m_meta_evaluate[sid][0]['count'] * 8)
-            rate = size_original / size_compressed
-            energies.append( { 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
-            print(f"[t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
-
-        df = pd.DataFrame(energies)
-        df_file = experimentPath + f"validator{self.m_validator_id}-evaluate-t{t}.csv"
-        df.to_csv(df_file, sep='\t', encoding='utf-8')
-
 
     # main
     def run(self):
@@ -400,7 +397,18 @@ class Validator:
                     print(item)
 
             self.create_metadata( states )
-            self.validate()
+
+            validate(
+                self.m_meta_compare,
+                self.m_compare_function,
+                self.m_compare_reduction,
+                self.m_meta_evaluate,
+                self.m_evaluation_function,
+                self.m_evaluation_reduction,
+                self.m_state_dimension,
+                self.m_num_procs,
+                self.m_validator_id
+                )
 
 
 if __name__ == "__main__":
