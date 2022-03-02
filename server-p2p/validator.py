@@ -168,7 +168,7 @@ def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, e
     energies = []
     for sid in meta_evaluate:
         t, id, pid = decode_state_id(sid)
-        for name in meta_compare[sid][pid][0]:
+        for name in meta_evaluate[sid][pid][0]:
             results = pool.map(partial(evaluate_state, sid=sid, name=name, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
             energy = evaluate_reduction(results, state_dimension)
             mode = meta_evaluate[sid][0][name]['mode']
