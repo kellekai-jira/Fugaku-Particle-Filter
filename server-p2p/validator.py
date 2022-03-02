@@ -368,6 +368,7 @@ class Validator:
                                         "count"     : count
                                     }
                                 base += size
+                                varid += 1
 
                             meta_item[proc] = vars
 
