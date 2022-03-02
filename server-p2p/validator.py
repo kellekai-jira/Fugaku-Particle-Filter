@@ -1,4 +1,4 @@
-import multiprocessing
+from multiprocessing import Pool
 import numpy as np
 import configparser
 import p2p_pb2 as cm
@@ -33,38 +33,74 @@ FTI_CPC_ACCURACY    = 1
 FTI_CPC_PRECISION   = 2
 
 
-def fun(f, q_in, q_out):
-    while True:
-        i, x = q_in.get()
-        if i is None:
-            break
-        q_out.put((i, f(x)))
+def evaluate_state(self, proc, sid, meta_data, func):
 
+    meta = meta_data[sid][proc]
+    ckpt_file = meta['ckpt_file']
+    ckpt = open(ckpt_file, 'rb')
+    t, id, mode = decode_state_id(sid)
 
-def parmap(f, X, nprocs=len(os.sched_getaffinity(0))):
+    if mode == 0:
+        ckpt.seek(meta['offset'])
+        bytes = ckpt.read(meta['size'])
+        data = array.array('d', bytes)
 
-    print("number of cores: ", nprocs)
+    else:
+        data = []
+        n = meta['count']
+        bs = 1024 * 1024
+        nb = n // bs + (1 if n % bs != 0 else 0)
 
-    q_in = multiprocessing.Queue(1)
-    q_out = multiprocessing.Queue()
+        ckpt.seek(meta['offset'])
 
-    proc = [multiprocessing.Process(target=fun, args=(f, q_in, q_out))
-            for _ in range(nprocs)]
+        for b in range(nb):
+            bytes = ckpt.read(8)
+            bs = int.from_bytes(bytes, byteorder='little')
+            bytes = ckpt.read(bs)
+            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+            data = [*data, *block]
 
-    i = 0
-    for p in proc:
-        print("starting process: ", i)
-        p.daemon = True
-        p.start()
-        i += 1
+    ckpt.close()
 
-    sent = [q_in.put((i, x)) for i, x in enumerate(X)]
-    [q_in.put((None, None)) for _ in range(nprocs)]
-    res = [q_out.get() for _ in range(len(sent))]
+    return func(data)
 
-    [p.join() for p in proc]
+def compare_states(self, proc, sid, meta_data, func):
 
-    return [x for i, x in sorted(res)]
+    states = []
+
+    for state in meta_data[sid]:
+    #for state in meta_data:
+
+        meta = meta_data[sid][state][proc]
+        #meta = meta_data[state][proc]
+        ckpt_file = meta['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+
+        if state == 0:
+            ckpt.seek(meta['offset'])
+            bytes = ckpt.read(meta['size'])
+            states.append(array.array('d', bytes))
+
+        else:
+            data = []
+            n = meta['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(meta['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+            states.append(data)
+
+        ckpt.close()
+
+    return func(states)
 
 
 def send_message(socket, data):
@@ -295,72 +331,6 @@ class Validator:
 
         return np.sqrt(sigma / n)
 
-    def evaluate_state(self, proc, sid):
-
-        meta = self.m_meta_evaluate[sid][proc]
-        ckpt_file = meta['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
-        t, id, mode = decode_state_id(sid)
-
-        if mode == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
-            data = array.array('d', bytes)
-
-        else:
-            data = []
-            n = meta['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(meta['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-        ckpt.close()
-
-        return self.m_evaluation_function(data)
-
-    def compare_states(self, proc, id):
-
-        states = []
-
-        for state in self.m_meta_compare[id]:
-
-            meta = self.m_meta_compare[id][state][proc]
-            ckpt_file = meta['ckpt_file']
-            ckpt = open(ckpt_file, 'rb')
-
-            if state == 0:
-                ckpt.seek(meta['offset'])
-                bytes = ckpt.read(meta['size'])
-                states.append(array.array('d', bytes))
-
-            else:
-                data = []
-                n = meta['count']
-                bs = 1024 * 1024
-                nb = n // bs + (1 if n % bs != 0 else 0)
-
-                ckpt.seek(meta['offset'])
-
-                for b in range(nb):
-                    bytes = ckpt.read(8)
-                    bs = int.from_bytes(bytes, byteorder='little')
-                    bytes = ckpt.read(bs)
-                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                    data = [*data, *block]
-
-                states.append(data)
-
-            ckpt.close()
-
-        return self.m_compare_function(states)
 
     def validate(self):
 
@@ -368,9 +338,11 @@ class Validator:
 
         print("num cores: ", self.m_num_cores)
 
+        pool = Pool()
+
         for sid in self.m_meta_compare:
-            results = parmap(partial(self.compare_states, id=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
-            #results = pool.map(partial(self.compare_states, id=sid), range(self.m_num_procs))
+            #results = parmap(partial(self.compare_states, id=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
+            results = pool.map(partial(compare_states, sid=sid, meta_data=self.m_meta_compare, func=self.m_compare_function), range(self.m_num_procs))
             sigma = self.m_compare_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
             mode = self.m_meta_compare[sid][pid][0]['mode']
@@ -385,10 +357,12 @@ class Validator:
         df_file = experimentPath + f"validator{self.m_validator_id}-compare-t{t}.csv"
         df.to_csv(df_file, sep='\t', encoding='utf-8')
 
+        pool = Pool()
+
         energies = []
         for sid in self.m_meta_evaluate:
-            results = parmap(partial(self.evaluate_state, sid=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
-            #results = pool.map(partial(self.evaluate_state, sid=sid), range(self.m_num_procs))
+            #results = parmap(partial(self.evaluate_state, sid=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
+            results = pool.map(partial(evaluate_state, sid=sid, meta_data=self.m_meta_evaluate, func=self.m_evaluation_function), range(self.m_num_procs))
             energy = self.m_evaluation_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
             mode = self.m_meta_evaluate[sid][0]['mode']
