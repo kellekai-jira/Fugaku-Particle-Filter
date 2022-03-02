@@ -422,6 +422,6 @@ class Validator:
 
 
 if __name__ == "__main__":
-
-            __default_validator = Validator()
-            __default_validator.run()
+    print("++ EXECUTING WITH DEFAULT VALIDATOR ++")
+    __default_validator = Validator()
+    __default_validator.run()
