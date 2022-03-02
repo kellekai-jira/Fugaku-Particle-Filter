@@ -139,6 +139,7 @@ class Validator:
         self.m_state_dimension = 0
         self.m_socket = None
         self.m_cpc_parameters = []
+        self.m_num_cores = len(os.sched_getaffinity(0))
         self.init()
 
     # initialize validator
@@ -361,10 +362,10 @@ class Validator:
 
         sigmas = []
 
-        print(self.m_num_procs)
+        print("num cores: ", self.m_num_cores)
 
         for sid in self.m_meta_compare:
-            results = parmap(partial(self.compare_states, id=sid), range(self.m_num_procs))
+            results = parmap(partial(self.compare_states, id=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
             #results = pool.map(partial(self.compare_states, id=sid), range(self.m_num_procs))
             sigma = self.m_compare_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
@@ -382,7 +383,7 @@ class Validator:
 
         energies = []
         for sid in self.m_meta_evaluate:
-            results = parmap(partial(self.evaluate_state, sid=sid), range(self.m_num_procs))
+            results = parmap(partial(self.evaluate_state, sid=sid), range(self.m_num_procs), nprocs = self.m_num_cores)
             #results = pool.map(partial(self.evaluate_state, sid=sid), range(self.m_num_procs))
             energy = self.m_evaluation_reduction(results, self.m_state_dimension)
             t, id, pid = decode_state_id(sid)
@@ -425,8 +426,8 @@ class Validator:
 
 
 if __name__ == "__main__":
-    nprocs=multiprocessing.cpu_count() - 2
-    print("nprocs: ", nprocs)
+    nprocs = len(os.sched_getaffinity(0))
+    print("number of cores: ", nprocs)
     print("++ EXECUTING WITH DEFAULT VALIDATOR ++")
     __default_validator = Validator()
     __default_validator.run()
