@@ -301,6 +301,10 @@ class Validator:
 
     def create_metadata( self, states ):
 
+        # remove old meta data
+        self.m_meta_evaluate.clear()
+        self.m_meta_compare.clear()
+
         for state in states:
 
             for cpc in self.m_cpc_parameters:
