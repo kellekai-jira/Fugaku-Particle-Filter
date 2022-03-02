@@ -320,44 +320,41 @@ class Validator:
 
     def compare_states(self, proc, id):
 
-        return proc + id
-        #states = []
+        states = []
 
-        #for state in self.m_meta_compare[id]:
+        for state in self.m_meta_compare[id]:
 
-        #    meta = self.m_meta_compare[id][state][proc]
-        #    ckpt_file = meta['ckpt_file']
-        #    ckpt = open(ckpt_file, 'rb')
+            meta = self.m_meta_compare[id][state][proc]
+            ckpt_file = meta['ckpt_file']
+            ckpt = open(ckpt_file, 'rb')
 
-        #    if state == 0:
-        #        ckpt.seek(meta['offset'])
-        #        bytes = ckpt.read(meta['size'])
-        #        states.append(array.array('d', bytes))
+            if state == 0:
+                ckpt.seek(meta['offset'])
+                bytes = ckpt.read(meta['size'])
+                states.append(array.array('d', bytes))
 
-        #    else:
-        #        data = []
-        #        n = meta['count']
-        #        bs = 1024 * 1024
-        #        nb = n // bs + (1 if n % bs != 0 else 0)
+            else:
+                data = []
+                n = meta['count']
+                bs = 1024 * 1024
+                nb = n // bs + (1 if n % bs != 0 else 0)
 
-        #        ckpt.seek(meta['offset'])
+                ckpt.seek(meta['offset'])
 
-        #        for b in range(nb):
-        #            bytes = ckpt.read(8)
-        #            bs = int.from_bytes(bytes, byteorder='little')
-        #            bytes = ckpt.read(bs)
-        #            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-        #            data = [*data, *block]
+                for b in range(nb):
+                    bytes = ckpt.read(8)
+                    bs = int.from_bytes(bytes, byteorder='little')
+                    bytes = ckpt.read(bs)
+                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                    data = [*data, *block]
 
-        #        states.append(data)
+                states.append(data)
 
-        #    ckpt.close()
+            ckpt.close()
 
-        #return self.m_compare_function(states)
+        return self.m_compare_function(states)
 
     def validate(self):
-
-        #pool = Pool()
 
         sigmas = []
 
