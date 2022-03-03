@@ -32,6 +32,7 @@ std::string stream_as_string( std::istream& stm ) // #include <iterator>
 { return { std::istreambuf_iterator<char>(stm), std::istreambuf_iterator<char>{} } ; }
 
 bool ZipController::to_validate() {
+  if ( m_mode = melissa::zip::MODE_ADAPT ) return false;
   MDBG("to_validate: %d {m_parameter_id:%d | m_num_parameters:%d}", m_validate_phase, m_parameter_id, m_num_parameters);
   return m_validate_phase;
 }
@@ -40,8 +41,6 @@ void ZipController::init() {
 
   m_num_parameters = 1;
   m_parameter_id = 0;
-  m_validate_phase = true;
-  m_case = FTI_CPC_CASE_NONE;
 
   m_is_first = true;
 
@@ -59,6 +58,10 @@ void ZipController::init() {
   std::string method = root["method"].as_string().c_str(); str_to_lower(method);
   
   if ( method == "adapt" ) {
+    
+    m_mode = melissa::zip::MODE_ADAPT;
+
+    m_validate_phase = false;
     
     /****************************************************************************
      *
@@ -81,10 +84,12 @@ void ZipController::init() {
 
     }
 
-    m_case = FTI_CPC_ADAPT;
-
   } else if ( method == "validate" ) {
     
+    m_validate_phase = true;
+    
+    m_mode = melissa::zip::MODE_VALIDATE;
+
     /****************************************************************************
      *
      *    store the parameters for the validate case
@@ -105,8 +110,6 @@ void ZipController::init() {
       m_num_parameters++;
       MDBG("num parameters init zip: %d", m_num_parameters);
     }
-    
-    m_case = FTI_CPC_VALIDATE;
     
   } else {
     MWRN("no method defined! skip compression.");
@@ -448,6 +451,7 @@ std::vector<melissa::zip::zip_params_t> melissa::zip::intersection (const std::v
 }
   
 void ZipController::advance_validate() { 
+  if ( m_mode == melissa::zip::MODE_ADAPT ) return;
   static int count = 0;
   if( (m_parameter_id + 1) == m_num_parameters ) {
     m_validate_phase = false;

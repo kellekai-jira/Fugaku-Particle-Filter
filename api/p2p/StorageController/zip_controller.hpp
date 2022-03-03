@@ -20,6 +20,11 @@ namespace melissa {
     FTIT_CPC_TYPE string2type( std::string str );
     FTIT_CPC_CASE string2case( std::string str );
     
+    enum MODE {
+      MODE_ADAPT = 0,
+      MODE_VALIDATE
+    };
+
     struct zip_t {
       
       zip_t() :
@@ -84,8 +89,8 @@ class ZipController {
    
   void init();
   int get_num_parameters() { return m_num_parameters; }
-  bool is_adapt() { return m_case == FTI_CPC_ADAPT; }
-  bool is_validate() { return m_case == FTI_CPC_VALIDATE; }
+  bool is_adapt() { return m_mode == melissa::zip::MODE_ADAPT; }
+  bool is_validate() { return m_mode == melissa::zip::MODE_VALIDATE; }
   int get_parameter_id() { return m_num_parameters - (m_parameter_id+1); }
   bool to_validate();
   
@@ -109,11 +114,12 @@ class ZipController {
   bool m_is_first;
   bool m_validate_phase;
 
-  FTIT_CPC_CASE m_case;
-
   void select_parameters ( FTI::data_t* data, std::string name, double* original );
   void minimize ( FTI::data_t* data, std::string name, double* original );
   
+  // adapt or validate
+  int m_mode;
+
   FTI::Kernel m_kernel;
 
 };
