@@ -455,6 +455,8 @@ def run_melissa_da_study(
 
             # Check if we need to give a live sign to the server?
             if (time.time() - server.last_msg_to) > 10:
+                cmd = 'echo "[LAUNCHER INFO] number of open file descriptors: $(ls -l /proc/self/fd/ | wc -l)"'
+                os.system(cmd)
                 melissa_comm4py.send_hello()
                 # send nonblocking? use defer()... but actually zmq_send only queues the message... so even if it cannot be send directly this should not pose any problems. This might fix random bugs when it deadlocks because the server tries to send a message and the launcher tries to send a message to the server at the same time?
                 debug('ping to server after %d s' % (time.time() - server.last_msg_to))
