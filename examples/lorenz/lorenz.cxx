@@ -382,7 +382,7 @@ double calculate_weight( int cycle )  {
 
   double sum_err_all;
   MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
-  double num_obs_tot;
+  int64_t num_obs_tot;
   MPI_Allreduce( &dim_obs_p, &num_obs_tot, 1, MPI_INT64_T, MPI_SUM, comm ); 
   double sigma = sqrt(sum_err_all/num_obs_tot);
   double weight = exp( -1*sigma );
