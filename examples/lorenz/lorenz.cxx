@@ -203,7 +203,7 @@ int main() {
   init_parallel();
 
   //stddev = sqrt(0.0001/NG);
-  stddev = 10e-5;
+  stddev = 10e-2;
 
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
@@ -382,10 +382,13 @@ double calculate_weight( int cycle )  {
 
   double sum_err_all;
   MPI_Allreduce( &sum_err, &sum_err_all, 1, MPI_DOUBLE, MPI_SUM, comm ); 
-  double weight = exp( -1*sum_err_all );
+  double num_obs_tot;
+  MPI_Allreduce( &dim_obs_p, &num_obs_tot, 1, MPI_INT64_T, MPI_SUM, comm ); 
+  double sigma = sqrt(sum_err_all/num_obs_tot);
+  double weight = exp( -1*sigma );
 
-  std::cout << "SUM ERROR ALL: " << sum_err_all << " (cycle: '"<<cycle<<"')" << std::endl;
-  std::cout << "CALCULATED WEIGHT: " << weight << " (cycle: '"<<cycle<<"')" << std::endl;
+  std::cout << "[CALC WEIGHT INFO] sigma:   " << sigma << " (cycle: '"<<cycle<<"')" << std::endl;
+  std::cout << "[CALC WEIGHT INFO] weight:  " << weight << " (cycle: '"<<cycle<<"')" << std::endl;
   fflush(stdout);
 
   return weight;
