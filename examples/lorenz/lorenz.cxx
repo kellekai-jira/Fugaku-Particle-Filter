@@ -36,7 +36,7 @@ double calculate_weight( int cycle );
 
 const double F = 6;
 const double dt = 0.001;
-const double DT = 0.01;
+const double DT = 0.1;
 const double PI = 3.141592653589793238463;
 
 static int64_t NG;
@@ -202,7 +202,8 @@ int main() {
 
   init_parallel();
 
-  stddev = sqrt(0.0001/NG);
+  //stddev = sqrt(0.0001/NG);
+  stddev = 10e-5;
 
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
