@@ -367,8 +367,11 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
         field.current_state_id = runner_id; // We are beginning like this...
     }
 
-
-    io_state_id_t current_state = { field.current_step, field.current_state_id, storage.m_io->get_parameter_id() };
+    io_state_id_t current_state = { field.current_step, field.current_state_id, 0 };
+    
+    if ( storage.is_validate() ) {
+      current_state.param = storage.m_io->get_parameter_id();
+    }
     
     double weight;
     
