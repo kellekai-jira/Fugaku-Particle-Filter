@@ -59,6 +59,8 @@ void ZipController::init() {
   
   if ( method == "adapt" ) {
     
+    MPRT("zip mode -> ADAPT");
+    
     m_mode = melissa::zip::MODE_ADAPT;
 
     m_validate_phase = false;
@@ -86,6 +88,8 @@ void ZipController::init() {
 
   } else if ( method == "validate" ) {
     
+    MPRT("zip mode -> VALIDATE");
+
     m_validate_phase = true;
     
     m_mode = melissa::zip::MODE_VALIDATE;
