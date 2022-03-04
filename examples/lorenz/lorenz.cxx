@@ -60,9 +60,24 @@ double stddev;
 
 template<typename F>
 void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
-    for (auto& x : data) {
-        x = x + dist(generator);
-    }
+  
+  // FIXME REMOVE FOR PRODUCTION RUN
+  // (PROVIDE A NOISE FUNCTION IN MELISSA MAYBE)
+  uint64_t seed;
+  uint64_t idl = static_cast<uint64_t>(melissa_da_get_runner_id());
+  uint64_t idr = static_cast<uint64_t>(comm_rank);
+
+  seed = (idl << 32) | idr;
+  
+  std::mt19937 const_generator(seed);
+  auto const_dist = std::bind(std::normal_distribution<double>{mean, stddev}, const_generator);
+  // FIXME UNTIL HERE
+
+  for (auto& x : data) {
+    // FIXME RENAME const_dist TO dist AGAIN
+    x = x + const_dist(generator);
+  }
+
 }
 
 void init_parallel() {
@@ -204,7 +219,7 @@ int main() {
 
   //stddev = sqrt(0.0001/NG);
   stddev = 10e-3;
-
+     
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
                               std::mt19937(std::random_device{}()));

@@ -50,6 +50,9 @@ std::map<int, std::unique_ptr<ServerRankConnection> > ServerRanks::ranks;
 
 
 
+int melissa_da_get_runner_id() {
+  return runner_id;
+}
 
 Field field;
 
