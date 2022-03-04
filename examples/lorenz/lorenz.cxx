@@ -65,10 +65,11 @@ void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
   // (PROVIDE A NOISE FUNCTION IN MELISSA MAYBE)
   uint64_t seed;
   uint64_t idl = static_cast<uint64_t>(melissa_da_get_runner_id());
-  uint64_t idm = static_cast<uint64_t>(melissa_get_current_step());
-  uint64_t idr = static_cast<uint64_t>(comm_rank);
+  uint64_t idm1 = static_cast<uint64_t>(melissa_get_current_step());
+  uint64_t idm2 = static_cast<uint64_t>(comm_rank);
+  uint64_t idr = static_cast<uint64_t>(melissa_get_current_state_id());
 
-  seed = (idl << 32) | (idm << 16) | idr;
+  seed = (idl << 48) | (idm1 << 32) | (idm2 << 16) | idr;
   
   std::mt19937 const_generator(seed);
   auto const_dist = std::bind(std::normal_distribution<double>{mean, stddev}, const_generator);
