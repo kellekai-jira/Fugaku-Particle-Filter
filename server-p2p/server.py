@@ -8,19 +8,25 @@ import p2p_pb2 as cm
 import numpy as np
 import math
 import pickle
-from enum import Enum
+import copy
+from dict_helpers import dict_append, dict_remove
+from StateCache import StateCache
+import scheduling_policy
 import glob
 import re
 
+
 from collections import OrderedDict
+
+from LauncherConnection import LauncherConnection
+
 
 validate_states = None
 validation_sockets = []
 worker_ids = []
 
+
 # Configuration:
-LAUNCHER_PING_INTERVAL = 8  # seconds
-LAUNCHER_TIMEOUT = 6000  # seconds
 
 CYCLES = int(sys.argv[1])
 PARTICLES = int(sys.argv[2])
@@ -29,7 +35,19 @@ RUNNER_TIMEOUT = int(sys.argv[4])
 # 5 Server slowdown factor
 LAUNCHER_NODE_NAME = sys.argv[6]
 
+IS_SPECULATIVE = False
+
+# jobs that are not yet scheduled or running this cycle
 stealable_jobs = PARTICLES
+
+import builtins as __builtin__
+print_start_time = time.time()
+def print(*args, **kwargs):
+    # Add timestampt to each print
+    return __builtin__.print("[ %.3f" % (time.time() - print_start_time), "]", *args, **kwargs)
+
+sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
+from utils import get_node_name
 
 # define stepsize of assimilation window
 # warmup stepsize is set below...
@@ -57,7 +75,6 @@ from melissa4py.message import SimulationStatusMessage
 from melissa4py.fault_tolerance import Simulation  #, SimulationStatus  we redefine simulation Status here to be able to end timeout notifications!
 
 sys.path.append('%s/launcher' % os.getenv('MELISSA_DA_SOURCE_PATH'))
-from utils import get_node_name
 
 context = zmq.Context()
 context.setsockopt(zmq.LINGER, 0)
@@ -82,15 +99,12 @@ class Alive:
 # https://groups.google.com/g/protobuf/c/0p0EMmEWiKQ?pli=1
 cm.StateId.__hash__ = lambda x : (x.t, x.id).__hash__()
 
-class SimulationStatus(Enum):
-    CONNECTED = 0
-    RUNNING = 1
-    FINISHED = 2
-    TIMEOUT = 4
+from SimulationStatus import SimulationStatus
 
 
 from common import *
 
+# REM: particles produced in cycle n will have an as timestep of their job id relying on parentstates with t=n-1
 assimilation_cycle = 1
 """List of runner ids that are considered faulty. If they send data it is ignored."""
 faulty_runners = set()
@@ -107,6 +121,14 @@ Example:
     {StateId: 1023, StateId: 512}
 """
 state_weights = {}
+
+"""
+Contains information which job id corresponds to which parent id
+
+Example:
+    {Job_id: parent_id}
+"""
+job_to_parent_map = {}
 
 class DueDates:
     due_dates = OrderedDict()
@@ -156,13 +178,14 @@ class DueDates:
 
     @staticmethod
     def get_by_runner(runner_id):
+        # list first all job_id's and then all parent_id's this runner is concerned with
         res = [apr[1] for apr in DueDates.all_per_runner[runner_id]] + [apr[2] for apr in DueDates.all_per_runner[runner_id]]
         return res
 
     @staticmethod
     def check_violations():
         """ Check if runner has problems to finish a task and notifies launcher to kill it in this case"""
-        global stealable_jobs
+        global stealable_jobs, len_alpha, runners_last
 
         now = int(time.time())
         if DueDates.last_check == now:
@@ -179,23 +202,31 @@ class DueDates:
                     if rid not in faulty_runners:
                         launcher.notify(rid, SimulationStatus.TIMEOUT)
                         faulty_runners.add(rid)
-                        del runners_last[rid]
+                        if rid in runners_last:
+                            del runners_last[rid]
 
                         print("Due date passed for runner id %d" % rid)
 
                     if rid in scheduled_jobs:
                         del scheduled_jobs[rid]
-                    else:
+                    # job was already scheduled or running.
+                    # scheduled, running or finished jobs are not stealable. so now it is stealable again...
+                    # REM: at the moment there is no *stealing* but the name is still kept
+                    if jid.t == assimilation_cycle:  # don't remove jobs from alpha that were only speculative! (we calculate alpha newly all the time anyway...
                         stealable_jobs += 1
+                        len_alpha += 1
+                        # stealable jobs could also be calculated from all jobs that are in the alpha list ;)
 
-                    if pid not in alpha:
-                        alpha[pid] = 0
-                    alpha[pid] += 1
 
                     dict_remove(DueDates.rpp, pid, rid)  # remove from rpp
                     dict_remove(DueDates.all_per_runner, rid, (dd, jid, pid))
+                    print('Canceled was the job', jid, 'from parent', pid)
 
                 del DueDates.due_dates[dd]  # remove from due dates
+
+    @staticmethod
+    def count_running_jobs(t):
+        """Count jobs that are running..."""
 
     @staticmethod
     def runners_per_parent(parent_id):
@@ -204,60 +235,6 @@ class DueDates:
         else:
             return 0
 
-"""
-Contains all runners and which states they have prefetched
-
-Format (by state):
-    {state_id: list(runner_id,...)}
-"""
-class StateCache:
-    c = {} # FIXME: might be faster with [] as inner container!
-    cr = {}
-
-    @staticmethod
-    def add_runner(state_id, runner_id):
-        dict_append(StateCache.c, state_id, runner_id)
-        dict_append(StateCache.cr, runner_id, state_id)
-
-
-    @staticmethod
-    def remove_runner(state_id, runner_id):
-        dict_remove(StateCache.c, state_id, runner_id)
-        dict_remove(StateCache.cr, runner_id, state_id)
-
-    @staticmethod
-    def get_runners(state_id):
-        if state_id in StateCache.c:
-            return [x for x in StateCache.c[state_id] if x not in faulty_runners]
-        else:
-            return []
-
-    @staticmethod
-    def get_by_runner(runner_id):
-        if runner_id in StateCache.cr:
-            return StateCache.cr[runner_id]
-        else:
-            return []
-
-    @staticmethod
-    def update(msg, runner_id):
-        # Update knowledge about state caches of runners:
-        # This is the operation probably quite often and it is freaking slow!
-        for s in StateCache.cr[runner_id]:
-            dict_remove(StateCache.c, s, runner_id)
-        StateCache.cr[runner_id] = msg.cached_states
-        for state_id in msg.cached_states:
-            dict_append(StateCache.c, state_id, runner_id)
-
-def dict_append(d, where, what):
-    if where not in d:
-        d[where] = []
-    d[where].append(what)
-
-def dict_remove(d, where, what):
-    d[where].remove(what)
-    if len(d[where]) == 0:
-        del d[where]
 
 # Socket for job requests
 addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
@@ -266,19 +243,23 @@ job_socket, port_job_socket = \
         bind_socket(context, zmq.REP, addr)
 
 # Socket for general purpose requests
-gp_socket = None
 addr = "tcp://*:4001"
 print('binding to', addr)
 gp_socket, port_gp_socket = \
         bind_socket(context, zmq.REP, addr)
 print('general purpose port:', port_gp_socket)
 
-weights_this_cycle = 0
-
 print('Server up now')
 
 def send_message(socket, data):
     socket.send(data.SerializeToString())
+
+def inner_sum(a):
+    s = 0
+    for _, n in a.items():
+        s += n
+    return s
+
 
 def maybe_update():
     """
@@ -287,9 +268,9 @@ def maybe_update():
     called always after a weight arrived.
 
     """
-    global weights_this_cycle, stealable_jobs
-    print(f"Can we do an update? Weights_this_cycle={weights_this_cycle}, len(unscheduled_jobs)={len(alpha)}, stealable_jobs={stealable_jobs})")
-    if weights_this_cycle == PARTICLES and len(alpha) == 0 and stealable_jobs == 0:
+    global alpha_weights, stealable_jobs
+    print(f"Can we do an update? len(alpha_weights)={len(alpha_weights)}, sum={inner_sum(alpha_weights)}, {len_alpha}!=len(unscheduled_jobs)={len(alpha)}, sum={inner_sum(alpha)}, stealable_jobs={stealable_jobs})")
+    if master_jobs_first_cycle == PARTICLES and len(alpha_weights) == 0 and len(alpha) == 0 and stealable_jobs == 0:
         # will populate unscheduled jobs
         trigger(START_FILTER_UPDATE, assimilation_cycle)
         old_assimilation_cycle = assimilation_cycle
@@ -330,14 +311,18 @@ def accept_weight(msg):
         DueDates.remove(runner_id, state_id)  # this fails if we get a weight that was never a due date added for!
 
         # store result
-        global weights_this_cycle
-        weights_this_cycle += 1
         state_weights[state_id] = weight
+
+        parent_id = job_to_parent_map[state_id]
+        if parent_id in alpha_weights:
+            alpha_weights[parent_id] -= 1
+            if alpha_weights[parent_id] == 0:
+                del alpha_weights[parent_id]
 
     gp_socket.send(b'')  # send an empty ack.
 
     # Update knowledge on cached states:
-    StateCache.add_runner(state_id, runner_id)
+    StateCache.add(state_id, runner_id)
 
     trigger(STOP_ACCEPT_WEIGHT, 0)
 
@@ -353,10 +338,13 @@ Fromat:
 """
 runners = {}
 def accept_runner_request(msg):
+    global runners_last
     trigger(START_ACCEPT_RUNNER_REQUEST, 0)
     # store request
     runner_id = msg.runner_id
+
     launcher.notify_runner_connect(runner_id)
+
     head_rank = msg.runner_request.head_rank
     if not runner_id in runners:
         runners[runner_id] = {}
@@ -367,7 +355,7 @@ def accept_runner_request(msg):
     reply.runner_response.SetInParent()
 
     state_id = msg.runner_request.searched_state_id
-    shuffeled_runners = StateCache.get_runners(state_id)
+    shuffeled_runners = [x for x in StateCache.get_runners(state_id) if x not in faulty_runners]
     if shuffeled_runners:
         # shuffle inplace
         random.shuffle(shuffeled_runners)
@@ -394,8 +382,9 @@ def accept_delete(msg):
     Deletes
     1. old stuff
     2. a state no further jobs depend on
-    3. a job from the next assimilation cycle with lowest weight
-    4. a random job that is  neither scheduled nor running
+    3. a job from the afternext assimilation cycle with lowest weight (that was started specultively)
+    4. a job from the next assimilation cycle with lowest weight
+    5. a random job that is  neither scheduled nor running
     """
     trigger(START_ACCEPT_DELETE, 0)
 
@@ -405,60 +394,22 @@ def accept_delete(msg):
 
     delete_from = msg.delete_request.cached_states
 
-    # don't delete what is scheduled
+    # Don't delete what is scheduled
     # Don't delete working stuff (stuff that is about to be written + stuff that is about to be calculated.... see running_jobs
     blacklist = DueDates.get_by_runner(runner_id)
-    if runner_id in scheduled_jobs:
-        blacklist.append(scheduled_jobs[runner_id][1])
+    # No need to check the scheduled_jobs dict since they are stored as duedate too
     if assimilation_cycle == 1:
-        # never delete the base state in the first iteration:
-        # print('blacklist before:', blacklist)
-        blacklist = blacklist + [ s for s in delete_from if s.t == 0]
-        # print('blacklist after:', blacklist)
+        # Never delete the base state in the first iteration:
+        blacklist = blacklist + [ s for s in delete_from if s.t == 0 and s.id == runner_id]
     delete_from = [s for s in delete_from if s not in blacklist]
 
-    too_old = []    # delete state that is too old --> O(#state cache)
-    not_important = []  # delete state that is not important for any job this iteration anymore --> O(#state cache * #unscheduled jobs) , hashmaps might help?
-    too_new = []  # delete state that is too new --> O(#state cache)
-
-    for s in delete_from:
-        if s.t < assimilation_cycle - 1:
-            too_old.append(s)
-            break
-
-        elif s.t == assimilation_cycle - 1 and s not in alpha:
-            not_important.append(s)
-
-        elif s.t == assimilation_cycle:
-            too_new.append(s)
-
-
-    all_lists = too_old + not_important
-
-
-    if len(all_lists) == 0:
-        if len(too_new) != 0:
-            # delete new state with lowest weight
-            to_delete = too_new[0]
-            lowest_weight = state_weights[to_delete]
-            for tn in too_new[1:]:
-                w = state_weights[tn]
-                if w < lowest_weight:
-                    to_delete = tn
-                    lowest_weight = w
-
-        else:
-            # delete something randomly
-            # to_delete = np.random.choice(delete_from)
-            to_delete = delete_from[0]
-    else:
-        to_delete = all_lists[0]  # take first possible...
+    to_delete = scheduling_policy.select_evict(delete_from, alpha, state_weights, assimilation_cycle)
 
     reply = cm.Message()
     reply.delete_response.to_delete.CopyFrom(to_delete)
 
     print("Deleting", reply.delete_response.to_delete, "on runner", runner_id)
-    StateCache.remove_runner(to_delete, runner_id)
+    StateCache.remove(to_delete, runner_id)
 
 
     send_message(gp_socket, reply)
@@ -468,6 +419,8 @@ def accept_delete(msg):
 def accept_prefetch(msg):
     trigger(START_ACCEPT_PREFETCH, 0)
 
+    global stealable_jobs
+
     runner_id = msg.runner_id
     StateCache.update(msg.prefetch_request, runner_id)
     reply = cm.Message()
@@ -476,31 +429,36 @@ def accept_prefetch(msg):
     if assimilation_cycle > 1:  # never prefetch in iteration 1!
         if runner_id not in scheduled_jobs:
 
-            if runners_last[runner_id] in alpha:
-                parent_id = runners_last[runner_id]
-            else:
-                parent_id = select_good_new_parent(runner_id)
+            parent_id, cachehit = select_parent(runner_id, alpha, StateCache, len(runners_last))
 
             if parent_id:
-                job_id = generate_job_id()
+                trigger_select(runner_id, parent_id, cachehit)
+                job_id = generate_job_id(parent_id.t + 1)
+                job_to_parent_map[job_id] = parent_id
                 scheduled_jobs[runner_id] = (job_id, parent_id)
 
-                alpha[parent_id] -= 1
-                if alpha[parent_id] == 0:
-                    del alpha[parent_id]
+                if parent_id.t == assimilation_cycle-1:  # filter out speculative particles
+                    alpha[parent_id] -= 1
+                    if alpha[parent_id] == 0:
+                        del alpha[parent_id]
+
+                if parent_id.t == assimilation_cycle-1:
+                    stealable_jobs -= 1
 
                 DueDates.add(runner_id, job_id, parent_id)
 
         if runner_id in scheduled_jobs:
-            if runner_id in StateCache.get_runners(scheduled_jobs[runner_id][1]):
+            possible_prefetch = scheduled_jobs[runner_id][1]
+            if runner_id in StateCache.get_runners(possible_prefetch):
                 # This runner does not need to prefetch anything
                 pass
             else:
                 # This runner should prefetch this parent state
-                reply.prefetch_response.pull_states.append(scheduled_jobs[runner_id][1])
+                reply.prefetch_response.pull_states.append(possible_prefetch)
 
     send_message(gp_socket, reply)
     trigger(STOP_ACCEPT_PREFETCH, 0)
+
 
 def receive_message_blocking(socket):
     msg = None
@@ -513,6 +471,7 @@ def receive_message_blocking(socket):
         pass
 
     return msg
+
 
 def receive_message_nonblocking(socket):
     msg = None
@@ -552,13 +511,16 @@ def handle_general_purpose():
 
 runners_last = {}
 alpha = {}
+alpha_weights = {}  # copy of alpha that is decremented as soon as a weight is there. This must be empty to fullfill the all weights received criteria
+alpha_master = {}  # copy of alpha that is used to remember which weights to resample from for the next iteration, is autofilled for 0th iteration!
+master_jobs_first_cycle = 0
 scheduled_jobs = {}
 
 
 def trigger_select(runner_id, state_id, was_cached):
     if trigger.enabled:
         now = time.time() - trigger.null_time
-        trigger_select.evts.append((now, runner_id, assimilation_cycle-1, state_id, was_cached))
+        trigger_select.evts.append((now, runner_id, state_id.t, state_id.id, was_cached))
 trigger_select.evts = []
 
 
@@ -573,68 +535,140 @@ def write_trigger_select_events():
             f.write("\n")
 
 
-def needs_runner(parent_id, Q):
-    return math.ceil(alpha[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1
+def needs_runner(alpha_, parent_id, Q):
+    return math.ceil(alpha_[parent_id] / Q) - DueDates.runners_per_parent(parent_id) >= 1
 
 # for stats:
 state_loads = 0
 state_loads_wo_cache = 0
+speculative_state_loads = 0
+speculative_state_loads_wo_cache = 0
+
+len_alpha = PARTICLES
 last_P = PARTICLES
-def select_good_new_parent(runner_id):
-    global state_loads, state_loads_wo_cache
-    # global assimilation_cycle
-    if assimilation_cycle == 1:
-        parent_id = cm.StateId()
-        parent_id.t = 0
-        parent_id.id = runner_id
-        if parent_id not in alpha:
-            alpha[parent_id] = 0
-        alpha[parent_id] += 1
-        state_loads += 1
-        state_loads_wo_cache += 1
-        trigger_select(runner_id, parent_id.id, False)
-        return parent_id
-    else:
-        M = count_members(alpha)
-        if M == 0:
-            return
-        R = len(runners_last)
-        Q = M / R
-        for parent_id in StateCache.get_by_runner(runner_id):
-            if parent_id in alpha:
-                state_loads_wo_cache += 1
-                trigger_select(runner_id, parent_id.id, True)
-                return parent_id
+def select_parent(runner_id, alpha, StateCache, R):
+    """Selects either a state from this cycle or if not possible from the next cycle"""
+    global state_loads, state_loads_wo_cache, speculative_state_loads, speculative_state_loads_wo_cache, len_alpha, runners_last, master_jobs_first_cycle
+    if stealable_jobs > 0:
+        if assimilation_cycle == 1 and master_jobs_first_cycle < PARTICLES:
+            master_jobs_first_cycle += 1  # autogenerate some jobs from existing particles...
+            parent_id = cm.StateId()
+            parent_id.t = 0
+            parent_id.id = runner_id
 
+            if parent_id not in alpha:
+                alpha[parent_id] = 0
+            alpha[parent_id] += 1
+            if parent_id not in alpha_master:
+                alpha_master[parent_id] = 0
+            alpha_master[parent_id] += 1
+            if parent_id not in alpha_weights:
+                alpha_weights[parent_id] = 0
+            alpha_weights[parent_id] += 1
+            print(f"inc_alpha_weights sum={inner_sum(alpha_weights)}")
 
-        # FIXME: start counting at offset!
-        for parent_id in alpha:
-            if needs_runner(parent_id, Q):
-                state_loads_wo_cache += 1
+            state_loads += 1
+            state_loads_wo_cache += 1
+            cachehit = False
+        else:
+            parent_id, cachehit = scheduling_policy.select_parent(runner_id, alpha, len_alpha, StateCache, R)
+
+        if parent_id:
+            len_alpha -= 1
+            # Stat counting
+            if not cachehit:
                 state_loads += 1
-                trigger_select(runner_id, parent_id.id, False)
-                return parent_id
-        assert False  # should never arrive here!
+                if runner_id in runners_last and parent_id != runners_last[runner_id]:
+                    state_loads_wo_cache += 1
+    else:
+        if IS_SPECULATIVE:
+            alpha_2, _ = resample(assimilation_cycle)
+            alpha_2, _ = remove_weighted_particles(alpha_2)
+            alpha_2, _ = remove_duedate_particles(alpha_2)
 
-        # todo: cache the 2 of them in numpy arrays to be faster!:
-        # parent_ids = list(alpha)
-        # importances = [alpha[pid]/(DueDates.runners_per_parent(pid) + 1/PARTICLES) for pid in parent_ids]
-        # if len(importances) > 0:
-            # index = np.argmax(importances)
-            # state_loads += 1
-            # return parent_ids[index]
+            P = len(alpha_2)
+            if P == 0:
+                return None, None
+
+            len_alpha_2 = count_members(alpha_2)
+            strategy = '1c'  # normal strategy
+            # strategy = '1b'  # take highest weight, disregard cache.
+            # strategy = '1d'  # schedule most important where one is sure...
+            # normal strategy 1c - just use the same strategy again...:
+            if strategy == '1c':
+                parent_id, cachehit = scheduling_policy.select_parent(runner_id, alpha_2, len_alpha_2, StateCache, R)
+            elif strategy == '1b':
+                # lets do max weight scheduling... schedule the particle that is the most probable
+                # to be necessary...
+                parent_id = max(alpha_2, key=alpha_2.get) # .. take the particle that need to be propagated the most of the times = argmax(alpha_2)
+                if parent_id:
+                    cachehit = parent_id in StateCache.get_by_runner(runner_id)
+            elif strategy == '1d':
+                parent_id = max(alpha_2, key=alpha_2.get) # .. take the particle that need to be propagated the most of the times = argmax(alpha_2)
+                if parent_id:
+                    if alpha_2[parent_id] > 1:
+                        cachehit = parent_id in StateCache.get_by_runner(runner_id)
+                    else:
+                        return None, None
+
+
+            if parent_id:
+                # Stat counting
+                if not cachehit:
+                    speculative_state_loads += 1
+                    if runner_id in runners_last and parent_id != runners_last[runner_id]:
+                        speculative_state_loads_wo_cache += 1
+        else:
+            return None, None
+
+    runners_last[runner_id] = parent_id
+
+    return parent_id, cachehit
+
+def remove_weighted_particles(alpha_):
+    number_removed = 0
+    out = copy.copy(alpha_)
+
+    # Remove already done particles
+    for w in state_weights:
+        parent_id = job_to_parent_map[w]
+        if parent_id.t == assimilation_cycle and parent_id in out:
+            number_removed += 1
+            out[parent_id] -= 1
+            if out[parent_id] == 0:
+                del out[parent_id]
+
+    print(f"Removed {number_removed} particles as they have weights already.")
+    return out, number_removed
+
+def remove_duedate_particles(alpha_):
+    # removes particles that have already a due date and are thus scheduled
+    number_removed = 0
+    out = copy.copy(alpha_)
+
+    # Remove already scheduled particles
+    for _, entries in DueDates.due_dates.items():
+        for _, _, parent_id in entries:
+            if parent_id.t == assimilation_cycle and parent_id in out:
+                number_removed += 1
+                out[parent_id] -= 1
+                if out[parent_id] == 0:
+                    del out[parent_id]
+
+    print(f"Removed {number_removed} particles as they are scheduled/running already.")
+    return out, number_removed
 
 next_job_id = 0
-def generate_job_id():
+def generate_job_id(t):
     global next_job_id
     job_id = cm.StateId()
-    job_id.t = assimilation_cycle
+    job_id.t = t
     job_id.id = next_job_id
     next_job_id += 1
     return job_id
 
 def handle_job_requests(launcher, nsteps):
-    """take a job from unscheduled jobs and send it back to the runner. take one that is
+    """take a job from unscheduled jobs and send it back to the runner. Take one that is
     maybe already cached."""
     global stealable_jobs
 
@@ -657,166 +691,154 @@ def handle_job_requests(launcher, nsteps):
         remove_from_alpha = True
 
         if runner_id in scheduled_jobs:
+            # already something scheduled. Go ahead with it.
             job_id, parent_id = scheduled_jobs[runner_id]
             del scheduled_jobs[runner_id]
             # in this case we remove the duedate for the scheduled state:
             DueDates.remove(runner_id, job_id)
             remove_from_alpha = False
-        elif runners_last[runner_id] in alpha:
-            parent_id = runners_last[runner_id]
+            cachehit = True
         else:
-            parent_id = select_good_new_parent(runner_id)
+            parent_id, cachehit = select_parent(runner_id, alpha, StateCache, len(runners_last))
 
         if parent_id:
+            trigger_select(runner_id, parent_id, cachehit)
             # bookkeeping
-            if remove_from_alpha:
+            if remove_from_alpha and \
+                    parent_id.t == assimilation_cycle-1:  # filter out speculative particles
                 alpha[parent_id] -= 1
                 if alpha[parent_id] == 0:
                     del alpha[parent_id]
-            runners_last[runner_id] = parent_id
 
-            stealable_jobs -= 1
+                stealable_jobs -= 1
 
-            job_id = generate_job_id()
+
+            job_id = generate_job_id(parent_id.t + 1)
+            job_to_parent_map[job_id] = parent_id
 
             reply.job_response.job.CopyFrom(job_id)
             reply.job_response.parent.CopyFrom(parent_id)
-            print("Scheduling", (job_id, parent_id))
+            print("Running", (job_id, parent_id), "on", runner_id)
             trigger(STOP_IDLE_RUNNER, runner_id)
             trigger(START_PROPAGATE_STATE, job_id.id)
             DueDates.add(runner_id, job_id, parent_id)
 
+        # REM: it is totally fine to send messages without a parent_id/job_id set. In
+        # this case the runner will just try again in some ms (see app_core.cxx)
         reply.job_response.nsteps = nsteps
         send_message(job_socket, reply)
         trigger(STOP_HANDLE_JOB_REQ, 0)
 
 
-class LauncherConnection:
-    def __init__(self, context, server_node_name, launcher_node_name):
-        self.update_launcher_due_date()
-        self.linger = 10000
-        self.launcher_node_name = launcher_node_name
+def resample(parent_t, alpha_master_=None):
+    trigger(START_RESAMPLE, parent_t)
+    # get all weights from where to resample
+    # TODO: this is unclean: this means that for speculative resampling we use all weights we have when the iteration is not yet finished
 
-        if server_node_name == self.launcher_node_name:
-            self.launcher_node_name = '127.0.0.1'
+    print("len state_weights:", len(state_weights))
+    this_cycle = [sw for sw in state_weights if sw.t == parent_t]
+    print("len(this_cycle)", len(this_cycle))
 
-        self.text_pull_port = 5556
-        self.text_push_port = 5555
-        self.text_request_port = 5554
+    if alpha_master_ is not None:
+        assert len(this_cycle) >= PARTICLES
+        print("alpha_master", alpha_master_, f"sum={inner_sum(alpha_master_)}")
+        am = copy.copy(alpha_master_)
+        b = this_cycle
+        this_cycle = []
+        for sw in b:
+            pid = job_to_parent_map[sw]
+            if pid in am:
+                am[pid] -= 1
+                if am[pid] == 0:
+                    del am[pid]
 
-        # Launcher (PUB) -> Server (SUB)
-        self.text_puller = context.socket(zmq.SUB)
-        self.text_puller.setsockopt(zmq.SUBSCRIBE, b"")
-        self.text_puller.setsockopt(zmq.LINGER, self.linger)
-        self.text_puller_port_name = "tcp://{}:{}".format(
-            self.launcher_node_name, self.text_pull_port)
-        self.text_puller.connect(self.text_puller_port_name)
+                this_cycle.append(sw)
 
-        # Server (PUSH) -> Launcher (PULL)
-        self.text_pusher = context.socket(zmq.PUSH)
-        self.text_pusher.setsockopt(zmq.LINGER, self.linger)
-        addr = "tcp://{}:{}".format(self.launcher_node_name,
-                                    self.text_push_port)
-        self.text_pusher.connect(addr)
-        # Server (REQ) <-> Launcher (REP)
-        self.text_requester = context.socket(zmq.REQ)
-        self.text_requester.setsockopt(zmq.LINGER, self.linger)
-        self.text_requester.connect("tcp://{}:{}".format(
-            self.launcher_node_name, self.text_request_port))
+        assert len(am) == 0
 
-        # Send node name to the launcher, get options and recover if necesary
-        msg = ServerNodeName(0, server_node_name)
-        self.text_pusher.send(msg.encode())
-        self.update_next_message_due_date()
-        self.connection_request = None
-        print('Setup launcher connection, server node name:', server_node_name)
+    sum_weights = np.sum([state_weights[x] for x in this_cycle])
+    state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
+    print("---- Resampling from particles with t=%d ----" % parent_t)
+    # print('normalized weights:', state_weights_normalized)
 
-        self.known_runners = set()
+    method = 'residual'
+    if method == 'multinomal':
+        # Resampling ?multinomal? TODO: compare with paper which version it is...
+        # normalize state weights and resample
+        out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
+        # if parent_t < 4:  # don't do anything interesting in the first 4 hours
+            # out_particles = this_cycle  # keep all particles...
+    elif method == 'residual':
 
-    def update_next_message_due_date(self):
-        self.next_message_date_to_launcher = time.time(
-        ) + LAUNCHER_PING_INTERVAL
+        out_particles = []
+        rest_pids = []
+        rest_probs = []
+        for pid, normalized_weight in zip(this_cycle, state_weights_normalized):
+            ww = normalized_weight * len(state_weights_normalized)
+            if ww >= 1:
+                out_particles = np.concatenate([out_particles, [pid]*int(ww)])
+            if ww % 1 > 0:
+                 rest_pids.append(pid)
+                 rest_probs.append(ww % 1)
 
-    def __del__(self):
-        print("Sending Stop Message to Launcher")
-        self.text_pusher.send(Stop().encode())
+        # print('out_particles', out_particles)
+        # print('rest_probs', rest_probs)
+        # draw rest particle multinomial if necessary
+        if len(rest_pids) > 0:
+            np.random.seed(42)
+            number_rest_pids = len(state_weights_normalized)-len(out_particles)
+            print('Drawing %d particles by chance' % number_rest_pids)
+            rest_particles = np.random.choice(rest_pids, size=number_rest_pids, p=np.array(rest_probs) / np.sum(rest_probs))
+            out_particles = np.concatenate([out_particles, rest_particles])
 
-    def update_launcher_due_date(self):
-        self.due_date_launcher = time.time() + LAUNCHER_TIMEOUT
+    else:
+        assert False  # Method unimplemented!
 
-    def check_launcher_due_date(self):
-        return time.time() < self.due_date_launcher
+    print('out_parts', out_particles)
 
-    def receive_text(self):
-        msg = None
-        try:
-            msg = self.text_puller.recv(flags=zmq.NOBLOCK)
-        except zmq.error.Again:
-            # could not poll anything
-            return False
-        if msg:
-            print("Launcher message recieved %s" % msg)
-            self.update_launcher_due_date()
-            return True
-            # ATM We do not care what the launcher sends us. We only check if it is still alive
-
-    def update_launcher_next_message_date(self):
-        self.next_message_date_to_launcher = time.time(
-        ) + LAUNCHER_PING_INTERVAL
-
-    def ping(self):
-        if time.time() > self.next_message_date_to_launcher:
-            msg = Alive()
-            print('send alive')
-            self.text_pusher.send(msg.encode())
-            self.update_launcher_next_message_date()
-
-    def notify(self, runner_id, status):
-        msg = SimulationStatusMessage(runner_id, status)
-        print("notify launcher about runner", runner_id, ":", status)
-        self.text_pusher.send(msg.encode())
-
-    def notify_runner_connect(self, runner_id):
-        if not runner_id in self.known_runners:
-            self.notify(runner_id,
-                        SimulationStatus.RUNNING)  # notify that running
-            self.known_runners.add(runner_id)
-            print("Server registering Runner ID %d" % runner_id)
-            runners_last[runner_id] = None
+    alpha_ = {}
+    number_jobs = len(out_particles)
+    for op in out_particles:
+        if op not in alpha_:
+            alpha_[op] = 1
+        else:
+            alpha_[op] += 1
 
 
+    trigger(STOP_RESAMPLE, parent_t)
+    return alpha_, number_jobs
+
+
+# invariant: amount of duedates per cycle + amount of state_weights per cycle finished + len(alpha) per cycle == PARTICLES
 
 
 def do_update_step():
-    global assimilation_cycle, weights_this_cycle, next_job_id, alpha, stealable_jobs, last_P, state_loads, state_loads_wo_cache, validate_states
+    global assimilation_cycle, next_job_id, alpha, alpha_weights, alpha_master, stealable_jobs, last_P, state_loads, state_loads_wo_cache, speculative_state_loads, speculative_state_loads_wo_cache, len_alpha, validate_states
     print("======= Performing update step after cycle %d ========" % assimilation_cycle)
     print(f"State load performance(R={len(runners_last)}: min=P={last_P}, real state loads={state_loads}, state loads wo cache={state_loads_wo_cache}, max={last_P+len(runners_last)-1}")
-    state_loads = 0
-    state_loads_wo_cache = 0
+    state_loads = speculative_state_loads
+    state_loads_wo_cache = speculative_state_loads_wo_cache
+    speculative_state_loads = 0
+    speculative_state_loads_wo_cache = 0
 
-    this_cycle = [sw for sw in state_weights if sw.t == assimilation_cycle]
-
-
-
-    # normalize state weights and resample
-    sum_weights = np.sum([state_weights[x] for x in this_cycle])
-    state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
-    out_particles = np.random.choice(this_cycle, size=len(this_cycle), p=state_weights_normalized)
-    # if assimilation_cycle < 4:  # don't do anything interesting in the first 4 hours
-        # out_particles = this_cycle  # keep all particles...
 
     assert stealable_jobs == 0
-    stealable_jobs = PARTICLES
 
-    assimilation_cycle += 1
-    next_job_id = 0
-    weights_this_cycle = 0
+    alpha_master, stealable_jobs = resample(assimilation_cycle, alpha_master)
 
-    for op in out_particles:
-        parent_id = op
-        if op not in alpha:
-            alpha[op] = 0
-        alpha[op] += 1
+    alpha = copy.copy(alpha_master)  # remember which weights will be important!
+
+    print("Stealable jobs:", stealable_jobs)
+    assert(stealable_jobs == PARTICLES)
+
+
+    # remove from alpha things that were preexecuted...
+    alpha_weights, removed_jobs = remove_weighted_particles(alpha_master)
+    stealable_jobs -= removed_jobs
+    alpha, removed_jobs = remove_duedate_particles(alpha_weights)
+    stealable_jobs -= removed_jobs
+
+    print(f'len(alpha_weights), sum={inner_sum(alpha_weights)}, stealable_jobs', len(alpha_weights), stealable_jobs)
 
     #############################################################
     #
@@ -873,11 +895,17 @@ def do_update_step():
     #
     #############################################################
 
+
+    # Checkpoint server
     with open('checkpoint.bin.tmp', 'wb') as f:
-        pickle.dump(alpha, f)
+        pickle.dump(alpha_master, f)
     os.rename('checkpoint.bin.tmp', f'checkpoint.bin.{assimilation_cycle}')
 
-    last_P = len(alpha)
+    last_P = len(alpha_master)
+
+    assimilation_cycle += 1
+
+    len_alpha = PARTICLES
 
     print(f"we got P={last_P} different particles!")
 
@@ -899,6 +927,8 @@ if __name__ == '__main__':
     else:
         nsteps = 1
 
+    IS_SPECULATIVE = os.getenv("MELISSA_DA_PARTICLE_FILTER_SPECULATIVE") == '1'
+
     # check if we can restart the server
     is_restart = False
     for last_assimilation_cycle in range(1, CYCLES):
@@ -911,7 +941,10 @@ if __name__ == '__main__':
         checkpoint_file_name = f'checkpoint.bin.{last_assimilation_cycle}'
         print(f'Restarting from {checkpoint_file_name} ...')
         with open(checkpoint_file_name, 'rb') as f:
-            alpha = pickle.load(f)
+            # FIXME: test if checkpointing still works. Have a testcase for this!
+            alpha_master = pickle.load(f)
+            alpha_weights = copy.copy(alpha_master)
+            alpha = copy.copy(alpha_master)
             assimilation_cycle = last_assimilation_cycle
 
 
@@ -930,8 +963,7 @@ if __name__ == '__main__':
 
         # REM: maybe_update is called only after a weight arrived in handle_general_purpose()
 
-        if stealable_jobs > 0:
-            handle_job_requests(launcher, nsteps)
+        handle_job_requests(launcher, nsteps)
 
         if not launcher.receive_text():
             if not launcher.check_launcher_due_date():

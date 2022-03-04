@@ -45,6 +45,8 @@ START_HANDLE_JOB_REQ              =  108
 STOP_HANDLE_JOB_REQ               =  109
 START_CALC_PAR_STATE_IMPORTANCE   =  111
 STOP_CALC_PAR_STATE_IMPORTANCE    =  110
+START_RESAMPLE                    =  112
+STOP_RESAMPLE                     =  113
 
 def trigger(what, parameter):
     if trigger.enabled:
@@ -53,7 +55,7 @@ def trigger(what, parameter):
 
 trigger.events = []
 # null_time in seconds
-trigger.null_time = int(os.getenv("MELISSA_TIMING_NULL")) // 1000
+trigger.null_time = int(os.getenv("MELISSA_TIMING_NULL")) / 1000
 trigger.enabled = True
 
 
@@ -74,6 +76,7 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
             (START_ACCEPT_PREFETCH             , STOP_ACCEPT_PREFETCH              , '_ACCEPT_PREFETCH'),
             (START_HANDLE_JOB_REQ              , STOP_HANDLE_JOB_REQ               , '_HANDLE_JOB_REQ'),
             (START_CALC_PAR_STATE_IMPORTANCE   , STOP_CALC_PAR_STATE_IMPORTANCE    , '_CALC_PAR_STATE_IMPORTANCE'),
+            (START_RESAMPLE                    , STOP_RESAMPLE                     , '_RESAMPLE'),
             ]
 
     # copied from write regions in TimingEvent
