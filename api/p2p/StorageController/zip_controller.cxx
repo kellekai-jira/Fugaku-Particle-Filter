@@ -228,6 +228,8 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
   
   if ( is_adapt() ) {
     
+    MDBG("THIS MESSAGE SHOULD NOT BE PRINTED is_adapt() -> %d, is_validate() -> %d!", is_adapt(), is_validate());
+
     double* original = (double*) data->ptr;
 
     if( m_is_first ) {
