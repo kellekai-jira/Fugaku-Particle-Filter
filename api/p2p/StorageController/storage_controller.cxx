@@ -620,6 +620,7 @@ void StorageController::Server::prefetch_request( StorageController* storage ) {
       MDBG("[num_parameters:%d] removing the state t=%d, id=%d, parameter:%d  from the cache", storage->m_io->get_num_parameters(), state.t, state.id, state.param);
       storage->m_io->remove( state, IO_STORAGE_L1 );
       storage->state_pool--;
+      if( storage->is_adapt() ) break;
     }
   }
   
@@ -668,7 +669,7 @@ void StorageController::Server::delete_request( StorageController* storage ) {
   
 
   for( int i=0; i<storage->m_io->get_num_parameters(); i++) {
-    
+     
     io_state_id_t state_id( t, id, i );
     
     MDBG("removing the state t=%d, id=%d, parameter:%d/%d  from the cache", state_id.t, state_id.id, state_id.param, storage->m_io->get_num_parameters());
@@ -696,6 +697,8 @@ void StorageController::Server::delete_request( StorageController* storage ) {
 
     M_TRIGGER(STOP_DELETE,to_ckpt_id(state_id));
     M_TRIGGER(STATE_LOCAL_DELETE,to_ckpt_id(state_id));
+
+    if ( storage->is_adapt() ) break;
   }
 
 }
@@ -720,6 +723,8 @@ void StorageController::m_push_weight_to_server(const Message & m ) {
   // its good, we can give it free for delete...
   for(int i=0; i<m_io->get_num_parameters(); i++) { 
     m_io->m_state_dump_requests.push(io_state_id_t(t, id, i));
+    
+    if ( is_adapt() ) break;
   }
 
   M_TRIGGER(STOP_PUSH_WEIGHT_TO_SERVER, id);
