@@ -283,7 +283,6 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
     data_train.compression.parameter = zip.parameter;
     data_train.compression.type = zip.type;
 
-    std::cout << "[BEFORE TRANSFORM]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     double t0 = MPI_Wtime();
     try {
       m_kernel.transform( &data_train );
@@ -291,7 +290,6 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       MDBG("%s", e.what() );
       continue;
     }
-    std::cout << "[AFTER TRANSFORM]: memory available: " << static_cast<double>(get_mem_total())/(1024*1024) << " GB" << std::endl;
     double t1 = MPI_Wtime();
     
     double* compressed = (double*) data_train.ptr;
@@ -307,9 +305,13 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
       }
       if ( error > maxErrorTrain ) maxErrorTrain = error;
     }
-
-    zip.rate = ((double)data->size) / data_train.compression.size;
-     
+    
+    if ( zip.mode == 0 ) {
+      zip.rate = 0;
+    } else {
+      zip.rate = ((double)data->size) / data_train.compression.size;
+    }
+    
     if( inBound ) {
       std::cout << "[add parameter (sigma="<<zip.sigma<<")    ]";
       std::cout << " mode: " << std::setw(2) << zip.mode;
