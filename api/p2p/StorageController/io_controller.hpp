@@ -18,6 +18,8 @@ class IoController {
       virtual bool to_validate() = 0;
       virtual int get_parameter_id() = 0;
       virtual int get_num_parameters() = 0;
+      virtual bool is_adapt() = 0;
+      virtual bool is_validate() = 0;
       virtual void advance_validate() = 0;
       virtual bool is_global( io_state_id_t state_id ) = 0;
       virtual void remove( io_state_id_t state_id, io_level_t level ) = 0;

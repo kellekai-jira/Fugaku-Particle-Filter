@@ -43,6 +43,8 @@ class FtiController : public IoController {
     void init_core();
     void fini();
     int protect( std::string name, void* buffer, size_t size, io_type_t type );
+    bool is_adapt() { return m_zip_controller.is_adapt(); }
+    bool is_validate() { return m_zip_controller.is_validate(); }
     int reprotect_all();
     bool load( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
     void store( io_state_id_t state_id, io_level_t level = IO_STORAGE_L1 );
