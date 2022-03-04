@@ -384,12 +384,14 @@ void StorageController::m_request_post() {
   m_io->stage( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
   //m_ckpted_states.insert( std::pair<io_id_t, io_state_id_t>( ckpt_id, state_id ) );
-   
-  if( storage.m_io->get_parameter_id() > 0 ) {
+  
+  if( storage.is_validate() ) {
+    if( storage.m_io->get_parameter_id() > 0 ) {
+      storage.advance_validate();
+      return;
+    }
     storage.advance_validate();
-    return;
   }
-  storage.advance_validate();
   
   m_push_weight_to_server( weight_message );
   
