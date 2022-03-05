@@ -171,6 +171,13 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
 
         // To do good logging
         comm_rank = mpi.rank();
+        
+        if ( comm_rank == 0 ) {
+          std::stringstream hostinfo_file;
+          hostinfo_file << c_cwd << "/runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
+          print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
+        }
+
 #ifdef REPORT_TIMING
 
 #ifndef REPORT_TIMING_ALL_RANKS
@@ -348,9 +355,6 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     if ( is_first ) {
         M_TRIGGER(STOP_INIT, 0);
         is_first = false;
-        std::stringstream hostinfo_file;
-        hostinfo_file << "runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
-        print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
     }
 
 #ifdef REPORT_TIMING
