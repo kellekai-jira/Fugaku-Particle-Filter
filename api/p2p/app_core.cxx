@@ -172,7 +172,9 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         // To do good logging
         comm_rank = mpi.rank();
         
+        MDBG("before writing hostfile hostfile")
         if ( comm_rank == 0 ) {
+          MDBG("writing hostfile")
           std::stringstream hostinfo_file;
           hostinfo_file << c_cwd << "/runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
           print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
