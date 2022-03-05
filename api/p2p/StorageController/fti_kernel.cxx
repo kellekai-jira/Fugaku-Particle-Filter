@@ -1,17 +1,17 @@
 #include "fti_kernel.hpp"
 #include "io_controller.hpp"
 
-void FTI::Kernel::update_ckpt_metadata( int ckptId, int level ) {
+void FTI::Kernel::update_ckpt_metadata( int64_t ckptId, int level ) {
   IO_TRY( FTI_UpdateCkptMetaData(conf, exec, topo, ckptId, level, 
         false, false, 0 ), FTI_SCES, "failed to update checkpoint metadata");
 }
 
-void FTI::Kernel::load_ckpt_meta_proc( int id, int proc, int64_t* fs, std::string mfn ) {
+void FTI::Kernel::load_ckpt_meta_proc( int64_t id, int proc, int64_t* fs, std::string mfn ) {
   IO_TRY( FTI_LoadCkptMetaProc( topo, ckpt, mfn.c_str(), id, proc, fs )
       , FTI_SCES, "failed to load the checkpoint filesize");
 }
 
-void FTI::Kernel::remove_ckpt_metadata( int ckptId, int level ) {
+void FTI::Kernel::remove_ckpt_metadata( int64_t ckptId, int level ) {
   // TODO make FTI_RemoveCkptMetaData collective and blocking
   IO_TRY( FTI_RemoveCkptMetaData(topo, conf, ckptId, level ), FTI_SCES, "failed to remove checkpoint metadata");
 }

@@ -19,9 +19,9 @@ namespace FTI {
     private:
 
       // API
-      void remove_ckpt_metadata( int ckptId, int level );
-      void update_ckpt_metadata( int ckptId, int level );
-      void load_ckpt_meta_proc( int ckptId, int proc, int64_t* fs, std::string mfn );
+      void remove_ckpt_metadata( int64_t ckptId, int level );
+      void update_ckpt_metadata( int64_t ckptId, int level );
+      void load_ckpt_meta_proc( int64_t ckptId, int proc, int64_t* fs, std::string mfn );
       void file_copy( std::string from,  std::string to );
       void print( std::string msg, int priority );
       
