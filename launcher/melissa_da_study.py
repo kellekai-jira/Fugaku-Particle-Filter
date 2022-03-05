@@ -101,6 +101,8 @@ def run_melissa_da_study(
     if n_validator > 0:
         copyfile(validator_config, WORKDIR+"/compression.json")
 
+    copyfile(melissa_da_datadir + '/usage_limits.sh', WORKDIR+"/usage_limits.sh")
+
     os.chdir(WORKDIR)
 
     start_logging(WORKDIR)
@@ -510,7 +512,8 @@ def run_melissa_da_study(
                     runners[group_id].server_knows_it[msg['runner_id']] = True
                     cluster.UpdateJob(runners[group_id].job_id)
                 elif msg['type'] == MSG_PING:
-                    cmd = 'echo "[LAUNCHER INFO] number of open file descriptors: $(ls -l /proc/self/fd/ | wc -l)"'
+                    #cmd = 'echo "[LAUNCHER INFO] number of open file descriptors: $(ls -l /proc/self/fd/ | wc -l)"'
+                    cmd = 'bash ' + WORKDIR + '/usage_limits.sh'
                     os.system(cmd)
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
