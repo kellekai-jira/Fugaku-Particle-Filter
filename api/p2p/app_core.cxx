@@ -148,6 +148,9 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
    			    perror("getcwd() error");
    			    return 1;
    			}
+        
+        std::stringstream hostinfo_file;
+        hostinfo_file << c_cwd << "/runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
 
         std::stringstream runner_dir;
         runner_dir << c_cwd << "/runner-"  << std::setw(3) << std::setfill('0') << runner_id;
@@ -173,8 +176,6 @@ MPI_Fint melissa_comm_init_f(const MPI_Fint *old_comm_fortran)
         comm_rank = mpi.rank();
         
         if ( comm_rank == 0 ) {
-          std::stringstream hostinfo_file;
-          hostinfo_file << c_cwd << "/runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
           MDBG("writing hostfile '%s'", hostinfo_file.str().c_str() );
           print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
         }
