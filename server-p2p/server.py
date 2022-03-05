@@ -957,6 +957,8 @@ if __name__ == '__main__':
             last_second = int(time.time()) + 4
             print('server loops last 5 second: %d' % server_loops_last_second)
             server_loops_last_second = 0
+            cmd = 'echo "[SERVER INFO] number of open file descriptors: $(ls -l /proc/self/fd/ | wc -l)"'
+            os.system(cmd)
 
         # maybe for testing purpose call launcehr loop here (but only the part that does no comm  with the server...
         handle_general_purpose()
