@@ -385,6 +385,9 @@ void StorageController::m_request_post() {
   io_id_t ckpt_id = to_ckpt_id( state_id );
 
   m_io->update_metadata( state_id, IO_STORAGE_L1 );
+  if( !m_io->is_local(state_id) ) {
+    MDBG("state has not been found locally! state_id.t -> %ld, state_id.id: %ld, ckpt_id: %ld", state_id.t, state_id.id, ckpt_id);
+  }
   assert( m_io->is_local(state_id) && "state should be local");
   m_io->stage( state_id, IO_STORAGE_L1, IO_STORAGE_L2 );
 
