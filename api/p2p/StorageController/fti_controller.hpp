@@ -18,22 +18,21 @@ inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return !(lhs == rhs);
 }
 
-int64_t elegantPair( int64_t x, int64_t y );
-
-std::pair<int64_t,int64_t> elegantUnpair(int64_t);
-
 inline io_state_id_t to_state_id(const int64_t ckpt_id) {
-  // this should work for up to 100000 members!
-  std::pair<int64_t,int64_t> m_tid = elegantUnpair( ckpt_id );
-  std::pair<int64_t,int64_t> tid = elegantUnpair( m_tid.second );
-  return { tid.first, tid.second, m_tid.first };
+  int64_t mask_param  = 0xFF;
+  int64_t mask_t      = 0xFFFFFF;
+  int64_t mask_id     = 0xFFFFFFFF;
+  int64_t id          = ckpt_id & mask_id;
+  int64_t t           = (ckpt_id >> 32) & mask_t;
+  int64_t param       = (ckpt_id >> 56) & mask_param;
+  return { t, id, param };
 }
 
 inline int64_t to_ckpt_id(io_state_id_t state_id) {
-  // this should work for up to 100000 members!
-  int64_t hash = elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
-  io_state_id_t state = to_state_id( hash );
-  return elegantPair( state_id.param, elegantPair( state_id.t, state_id.id ) );
+  int64_t ckpt_id = state_id.param;
+  ckpt_id = (ckpt_id << 24) | state_id.t;
+  ckpt_id = (ckpt_id << 32) | state_id.id;
+  return ckpt_id;
 }
 
 
