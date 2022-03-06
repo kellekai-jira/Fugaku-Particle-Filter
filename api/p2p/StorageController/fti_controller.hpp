@@ -18,6 +18,12 @@ inline bool operator!=(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return !(lhs == rhs);
 }
 
+/*
+ * state encoding and decoding
+ * id: 32 bits, t:24 bits, param: 8 bits
+ * max state_id: 4294967295, max t: 16777215, max p: 255
+ *
+ */
 inline io_state_id_t to_state_id(const int64_t ckpt_id) {
   int64_t mask_param  = 0xFF;
   int64_t mask_t      = 0xFFFFFF;
