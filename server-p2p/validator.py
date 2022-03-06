@@ -188,26 +188,20 @@ def send_message(socket, data):
     socket.send(data.SerializeToString())
 
 
-def elegantPair( x, y ):
-    return  (x * x + x + y) if (x >= y) else (y * y + x)
-
-
-def elegantUnpair( z ) -> (int, int):
-    sqrtz = int(np.floor(np.sqrt(z)))
-    sqz = int(sqrtz ** 2)
-    if ((z - sqz) >= sqrtz):
-        return sqrtz, z - sqz - sqrtz
-    else:
-        return z - sqz, sqrtz
-
-
 def encode_state_id( t, id, mode ):
-    return elegantPair( mode, elegantPair( t, id ) )
+    hash        = mode
+    hash        = (hash << 24)  | t
+    hash        = (hash << 32) | id
+    return hash
 
 
 def decode_state_id( hash ):
-    mode, tid = elegantUnpair( hash )
-    t, id = elegantUnpair( tid )
+    mask_mode   = 0xFF
+    mask_t      = 0xFFFFFF
+    mask_id     = 0xFFFFFFFF
+    id          = hash & mask_id
+    t           = (hash >> 32) & mask_t
+    mode        = (hash >> 56) & mask_mode
     return t, id, mode
 
 
