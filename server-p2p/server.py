@@ -862,12 +862,39 @@ def do_update_step():
             worker_ids.append(id)
 
 
-
     if len(worker_ids) > 0:
         for idx, vsock in enumerate(validation_sockets):
             print(f"[{idx}] waiting for worker message...")
             receive_message_blocking( vsock )
             print(f"[{idx}] received worker message!")
+
+        ensemble_states = list(alpha.keys())
+
+        for vs in validation_sockets:
+            request = cm.Message()
+
+            for s in ensemble_states:
+                weight = cm.Weight()
+                weight.state_id = s
+                weight.weight = state_weights[s]
+                request.statistic_request.weights.append(s)
+
+            send_message(vs, request)
+
+        # block until statistical analysis is done
+        for idx, vsock in enumerate(validation_sockets):
+            print(f"[{idx}] waiting for worker answer from statistic request...")
+            receive_message_blocking( vsock )
+            print(f"[{idx}] received statistic response!")
+
+        chunk_size = int(np.ceil(float(len(ensemble_states)) / len(worker_ids)))
+        for i in range(0, len(ensemble_states), chunk_size):
+            request = cm.Message()
+            for s in ensemble_states[i:i+chunk_size]:
+                request.validation_request.to_validate.append(s)
+            print("now sending states to workers...", request.validation_request.to_validate)
+            send_message(validation_sockets[vid], request)
+            vid += 1
 
         validate_states = list(alpha.keys())
 
@@ -887,6 +914,7 @@ def do_update_step():
             print("sending empty message to worker id: ", vid)
             send_message(validation_sockets[vid], request)
             vid += 1
+
 
 
     #############################################################
