@@ -877,7 +877,7 @@ def do_update_step():
                 weight = cm.Weight()
                 weight.state_id.CopyFrom(s)
                 weight.weight = state_weights[s]
-                request.statistic_request.weights.append(s)
+                request.statistic_request.weights.append(weight)
 
             send_message(vs, request)
 
