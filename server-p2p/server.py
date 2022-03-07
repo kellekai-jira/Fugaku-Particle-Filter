@@ -785,7 +785,7 @@ def resample(parent_t, alpha_master_=None):
             print(f"[{id}] received worker message!")
 
         validate_states = []
-        for idx, s in enumerate(list(this_cycle.keys())):
+        for idx, s in enumerate(this_cycle):
             weight = cm.Weight()
             weight.weight = state_weights_normalized[idx]
             weight.state_id.CopyFrom(s)
