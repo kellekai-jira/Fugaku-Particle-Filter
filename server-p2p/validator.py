@@ -199,7 +199,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
         worker_ids = {}
-        validation_sockets = {}
+        validation_sockets = []
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
             id = int(p.search(os.path.basename(fn)).group(1))
