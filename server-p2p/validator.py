@@ -185,11 +185,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
 
     pool = Pool()
 
-    print(meta_statistic)
     sids = list(meta_statistic.keys())
     names = list(meta_statistic[sids[0]][0].keys())
-    print(names)
-    print(sids)
     for name in names:
         results = pool.map(partial(ensemble_mean, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
         for d in results:
@@ -198,6 +195,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     pattern = os.getcwd() + '/worker-*-ip.dat'
     worker_ip_files = glob.glob(pattern)
 
+    print(pattern)
     if validator_id == 0:
         worker_ids = {}
         validation_sockets = {}
