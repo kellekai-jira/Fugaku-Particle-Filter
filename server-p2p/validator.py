@@ -369,7 +369,7 @@ class Validator:
 
         assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
 
-        self.m_validator_id = os.getenv('MELISSA_DA_WORKER_ID')
+        self.m_validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
 
         host = get_node_name()
 
