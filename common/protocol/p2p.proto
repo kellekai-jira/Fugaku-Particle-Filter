@@ -126,7 +126,7 @@ message StopStudy {
 }
 
 message ValidationRequest {
-    repeated StateId to_validate = 1; 
+    repeated Weight to_validate = 1;
 }
 
 message ValidationResponse {

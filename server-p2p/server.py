@@ -868,28 +868,33 @@ def do_update_step():
             receive_message_blocking( vsock )
             print(f"[{idx}] received worker message!")
 
-        ensemble_states = list(alpha.keys())
+        #ensemble_states = list(alpha.keys())
 
-        for vs in validation_sockets:
-            request = cm.Message()
+        #for vs in validation_sockets:
+        #    request = cm.Message()
 
-            for s in ensemble_states:
-                weight = cm.Weight()
-                weight.state_id.CopyFrom(s)
-                weight.weight = state_weights[s]
-                request.statistic_request.weights.append(weight)
+        #    for s in ensemble_states:
+        #        weight = cm.Weight()
+        #        weight.state_id.CopyFrom(s)
+        #        weight.weight = state_weights[s]
+        #        request.statistic_request.weights.append(weight)
 
-            request.statistic_request.num_validators = len(validation_sockets)
+        #    request.statistic_request.num_validators = len(validation_sockets)
 
-            send_message(vs, request)
+        #    send_message(vs, request)
 
         # block until statistical analysis is done
-        for idx, vsock in enumerate(validation_sockets):
-            print(f"[{idx}] waiting for worker answer from statistic request...")
-            receive_message_blocking( vsock )
-            print(f"[{idx}] received statistic response!")
+        #for idx, vsock in enumerate(validation_sockets):
+        #    print(f"[{idx}] waiting for worker answer from statistic request...")
+        #    receive_message_blocking( vsock )
+        #    print(f"[{idx}] received statistic response!")
 
-        validate_states = list(alpha.keys())
+        validate_states = []
+        for s in list(alpha.keys()):
+            weight = cm.Weight()
+            weight.weight = state_weights[s]
+            weight.state_id.CopyFrom(s)
+            validate_states.append(weight)
 
         vid = 0
         chunk_size = int(np.ceil(float(len(validate_states)) / len(worker_ids)))
@@ -902,7 +907,6 @@ def do_update_step():
             vid += 1
         for empty_msg in range(vid,len(worker_ids)):
             request = cm.Message()
-            empty_state = cm.StateId()
             request.validation_request.SetInParent()
             print("sending empty message to worker id: ", vid)
             send_message(validation_sockets[vid], request)

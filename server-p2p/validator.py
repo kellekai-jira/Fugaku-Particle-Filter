@@ -490,13 +490,13 @@ class Validator:
 
             for cpc in self.m_cpc_parameters:
 
-                sid = encode_state_id(state.t, state.id, cpc.id)
+                sid = encode_state_id(state.state_id.t, state.state_id.id, cpc.id)
 
                 state_item = {}
 
                 for p in [0,cpc.id]:
 
-                    path = checkpointPath + str(encode_state_id(state.t, state.id, p))
+                    path = checkpointPath + str(encode_state_id(state.state_id.t, state.state_id.id, p))
 
                     meta_pattern = path + '/Meta*-worker*-serialized.fti'
                     ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
@@ -557,7 +557,7 @@ class Validator:
                     self.m_num_procs = proc
                     state_item[p] = meta_item
 
-                    cid = encode_state_id(state.t, state.id, p)
+                    cid = encode_state_id(state.state_id.t, state.state_id.id, p)
                     if cid not in self.m_meta_evaluate:
                         self.m_meta_evaluate[cid] = meta_item
 
