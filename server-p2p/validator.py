@@ -183,10 +183,10 @@ def ensemble_mean(meta_statistic):
     #pool = Pool()
 
     print(meta_statistic)
-    #names = list(list(meta_statistic.keys())[0].keys())
-    #sids = list(meta_statistic.keys())
-    #print(names)
-    #print(sids)
+    sids = list(meta_statistic.keys())
+    names = list(meta_statistic[sids[0]][0].keys())
+    print(names)
+    print(sids)
     #for name in names:
     #    results = pool.map(partial(sum_states, sid=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
 
