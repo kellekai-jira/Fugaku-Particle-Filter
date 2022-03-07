@@ -757,6 +757,10 @@ def resample(parent_t, alpha_master_=None):
 
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
+
+    print("normalized weights: ", state_weights_normalized)
+    print("unnormalized weights: ", state_weights)
+
     print("---- Resampling from particles with t=%d ----" % parent_t)
     # print('normalized weights:', state_weights_normalized)
 
