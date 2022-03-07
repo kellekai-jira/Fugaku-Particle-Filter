@@ -22,8 +22,7 @@ from LauncherConnection import LauncherConnection
 
 
 validate_states = None
-validation_sockets = []
-worker_ids = []
+validation_sockets = {}
 
 
 # Configuration:
@@ -852,21 +851,19 @@ def do_update_step():
     p = re.compile("worker-(.*)-ip.dat")
     for fn in worker_ip_files:
         id = int(p.search(os.path.basename(fn)).group(1))
-        if id not in worker_ids:
+        if id not in validation_sockets:
             with open(fn, 'r') as file:
                 ip = file.read().rstrip()
             addr = "tcp://" + ip + ":4000"
             so = context.socket(zmq.REP)
             so.connect(addr)
-            validation_sockets.append(so)
-            worker_ids.append(id)
+            validation_sockets[id] = so
 
-
-    if len(worker_ids) > 0:
-        for idx, vsock in enumerate(validation_sockets):
-            print(f"[{idx}] waiting for worker message...")
-            receive_message_blocking( vsock )
-            print(f"[{idx}] received worker message!")
+    if len(validation_sockets) > 0:
+        for id in validation_sockets:
+            print(f"[{id}] waiting for worker message...")
+            receive_message_blocking( validation_sockets[id] )
+            print(f"[{id}] received worker message!")
 
         validate_states = []
         for s in list(alpha.keys()):
@@ -876,9 +873,9 @@ def do_update_step():
             validate_states.append(weight)
 
         vid = 0
-        chunk_size = int(np.ceil(float(len(validate_states)) / len(worker_ids)))
+        chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
         if chunk_size >= 1:
-            validator_ids = range(1,len(worker_ids))
+            validator_ids = range(1,len(validation_sockets))
         else:
             validator_ids = range(1,len(validate_states))
         for i in range(0, len(validate_states), chunk_size):
@@ -889,7 +886,7 @@ def do_update_step():
             print("now sending states to workers...", request.validation_request.to_validate)
             send_message(validation_sockets[vid], request)
             vid += 1
-        for empty_msg in range(vid,len(worker_ids)):
+        for empty_msg in range(vid,len(validation_sockets)):
             request = cm.Message()
             request.validation_request.SetInParent()
             print("sending empty message to worker id: ", vid)
