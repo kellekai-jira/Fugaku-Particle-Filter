@@ -249,6 +249,7 @@ class Validator:
             self.m_evaluation_reduction = reduce_energy
         self.m_meta_compare = {}
         self.m_meta_evaluate = {}
+        self.m_meta_statistic = {}
         self.m_num_procs = 0
         self.m_validator_id = 0
         self.m_state_dimension = 0
@@ -296,6 +297,78 @@ class Validator:
 
         with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
             f.write(host)
+
+
+    def create_metadata_statistic( self, states ):
+
+        # remove old meta data
+        self.m_meta_statistic.clear()
+
+        for state in states:
+
+            sid = encode_state_id(state.state_id.t, state.state_id.id, 0)
+
+            path = checkpointPath + str(sid)
+
+            meta_pattern = path + '/Meta*-worker*-serialized.fti'
+            ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
+            meta_files = glob.glob(meta_pattern)
+            ckpt_files = glob.glob(ckpt_pattern)
+
+            meta_item = {}
+            proc = 0
+            for idx, f in enumerate(meta_files):
+                fh = open(f)
+                fstring = fh.read()
+                fh.close()
+
+                procs_per_node = 0
+                buf = io.StringIO(fstring)
+
+                base = 0
+
+                self.m_state_dimension = 0
+                for line in iter(lambda: buf.readline(), ""):
+                    nb_lines = int(line.replace("\n", ""))
+                    meta_str = ""
+                    for i in range(nb_lines):
+                        meta_str = meta_str + buf.readline()
+                    config = configparser.ConfigParser()
+                    config.read_string(meta_str)
+
+                    vars = {}
+                    varid = 0
+                    count = 0
+                    while f'var{varid}_id' in config['0']:
+                        name        = config['0'][f'var{varid}_idchar']
+                        mode        = int(config['0'][f'var{varid}_compression_mode'])
+                        type        = int(config['0'][f'var{varid}_compression_type'])
+                        parameter   = int(config['0'][f'var{varid}_compression_parameter'])
+                        size        = int(config['0'][f'var{varid}_size'])
+                        count       = int(config['0'][f'var{varid}_count'])
+                        if name in self.m_varnames:
+                            vars[name] = {
+                                "ckpt_file" : ckpt_files[idx],
+                                "mode"      : mode,
+                                "type"      : type,
+                                "parameter" : parameter,
+                                "offset"    : base,
+                                "size"      : size,
+                                "count"     : count
+                            }
+                        base += size
+                        varid += 1
+
+                    meta_item[proc] = vars
+
+                    self.m_state_dimension += count
+
+                    proc += 1
+                    procs_per_node += 1
+
+            self.m_num_procs = proc
+
+            self.m_meta_statistic[sid] = meta_item
 
 
     def create_metadata( self, states ):
@@ -409,6 +482,12 @@ class Validator:
 
     def handle_statistic_request( self, request ):
         print("received statistic request")
+
+        states = []
+        for item in request.statistic_request.weights:
+            states.append(item)
+
+        self.create_metadata_statistic(states)
 
 
     # main
