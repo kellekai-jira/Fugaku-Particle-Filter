@@ -11,10 +11,13 @@ import json
 import os
 import zmq
 import pandas as pd
+import glob
+import re
 
 from utils import get_node_name
 from common import bind_socket, parse
 
+context = zmq.Context()
 
 experimentPath = os.getcwd() + '/'
 checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
@@ -178,7 +181,7 @@ def compare_states(proc, sid, name, meta_data, func):
     return func(states)
 
 
-def ensemble_statistics(meta_statistic, num_procs_application):
+def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
 
     pool = Pool()
 
@@ -191,6 +194,26 @@ def ensemble_statistics(meta_statistic, num_procs_application):
         results = pool.map(partial(ensemble_mean, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
         for d in results:
             print(len(d))
+
+    pattern = os.getcwd() + '/worker-*-ip.dat'
+    worker_ip_files = glob.glob(pattern)
+
+    if validator_id == 0:
+        worker_ids = {}
+        validation_sockets = {}
+        p = re.compile("worker-(.*)-ip.dat")
+        for fn in worker_ip_files:
+            id = int(p.search(os.path.basename(fn)).group(1))
+            if id == 0: continue
+            if id not in worker_ids:
+                with open(fn, 'r') as file:
+                    ip = file.read().rstrip()
+                addr = "tcp://" + ip + ":4000"
+                so = context.socket(zmq.REP)
+                so.connect(addr)
+                validation_sockets.append(so)
+                worker_ids.append(id)
+                print(f"connected to validator: {id} with addr: {addr}")
 
 
 
@@ -335,7 +358,6 @@ class Validator:
         for cpc in self.m_cpc_parameters:
             print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
 
-        context = zmq.Context()
         context.setsockopt(zmq.LINGER, 0)
         addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
 
@@ -547,7 +569,7 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
         print(f"num_validators: {self.m_num_validators}")
 
-        ensemble_statistics(self.m_meta_statistic, self.m_num_procs)
+        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
 
 
 
