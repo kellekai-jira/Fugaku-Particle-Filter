@@ -133,6 +133,14 @@ message ValidationResponse {
     StateId is_validated = 1; 
 }
 
+message StatisticRequest {
+    repeated Weight weights = 1; 
+}
+
+message StatisticResponse {
+    Weight done = 1; 
+}
+
 // Wrapper message
 
 message Message {
