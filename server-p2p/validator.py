@@ -196,6 +196,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     worker_ip_files = glob.glob(pattern)
 
     print(worker_ip_files)
+    print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
         worker_ids = {}
         validation_sockets = {}
