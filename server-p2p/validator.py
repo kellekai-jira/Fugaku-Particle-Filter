@@ -188,7 +188,7 @@ def ensemble_mean(meta_statistic, num_procs_application):
     print(names)
     print(sids)
     for name in names:
-        results = pool.map(partial(sum_states, sid=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
+        results = pool.map(partial(sum_states, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
     for d in results:
         print(len(d))
 
