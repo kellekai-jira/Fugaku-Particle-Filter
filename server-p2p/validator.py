@@ -178,17 +178,19 @@ def compare_states(proc, sid, name, meta_data, func):
     return func(states)
 
 
-def ensemble_mean(meta_statistic):
+def ensemble_mean(meta_statistic, num_procs_application):
 
-    #pool = Pool()
+    pool = Pool()
 
     print(meta_statistic)
     sids = list(meta_statistic.keys())
     names = list(meta_statistic[sids[0]][0].keys())
     print(names)
     print(sids)
-    #for name in names:
-    #    results = pool.map(partial(sum_states, sid=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
+    for name in names:
+        results = pool.map(partial(sum_states, sid=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
+    for d in results:
+        print(len(d))
 
 
 
@@ -545,7 +547,7 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
         print(f"num_validators: {self.m_num_validators}")
 
-        ensemble_mean(self.m_meta_statistic)
+        ensemble_mean(self.m_meta_statistic, self.m_num_procs)
 
 
 
