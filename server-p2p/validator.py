@@ -4,7 +4,6 @@ import configparser
 import p2p_pb2 as cm
 import io
 import fpzip
-import struct
 from functools import partial
 import array
 import json
@@ -209,7 +208,6 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
     print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
         validator_ids = request.validation_request.validator_ids
-        validator_ids.append(0)
         worker_ids = []
         validation_sockets = []
         p = re.compile("worker-(.*)-ip.dat")
