@@ -217,6 +217,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
                 addr = "tcp://" + ip + ":4001"
+                print(f"my ip: {get_node_name()}, worker-{id} ip: {addr}")
                 so = context.socket(zmq.REP)
                 so.connect(addr)
                 validation_sockets.append(so)
@@ -227,6 +228,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
                 print(f"[{worker_ids[idx]}] waiting for worker message...")
                 msg = vsock.recv()# only polling
                 data = parse(msg)
+                response = cm.Message()
+                send_message(vsock, response)
                 print(f"received data : {data.variables[0].ranks[0].data[0:3]}")
                 print(f"[{worker_ids[idx]}] received worker message!")
     else:
@@ -237,7 +240,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
             bind_socket(context, zmq.REQ, addr)
 
         send_message(socket, wrapper)
-        print("message sendt")
+        socket.recv()
+        print("message sent")
         socket.close()
 
 
