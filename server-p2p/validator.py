@@ -197,7 +197,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
             data = cm.StatisticData()
             data.data.extend(result)
             var.ranks.append(data)
-        wrapper.append(var)
+        wrapper.variables.append(var)
 
 
     pattern = os.getcwd() + '/worker-*-ip.dat'
