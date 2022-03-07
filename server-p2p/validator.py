@@ -72,6 +72,44 @@ def reduce_sse(parts, n):
     return np.sqrt(sigma / n)
 
 
+def sum_states(proc, sids, name, meta_data):
+
+    x_avg = None
+    for sid in sids:
+        meta = meta_data[sid][proc][name]
+        ckpt_file = meta['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+        t, id, mode = decode_state_id(sid)
+
+        if mode == 0:
+            ckpt.seek(meta['offset'])
+            bytes = ckpt.read(meta['size'])
+            data = array.array('d', bytes)
+
+        else:
+            data = []
+            n = meta['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(meta['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+        ckpt.close()
+        if x_avg == None:
+            x_avg = np.array(data)
+        else:
+            x_avg += np.array(data)
+
+    return x_avg
+
+
 def evaluate_state(proc, sid, name, meta_data, func):
 
     meta = meta_data[sid][proc][name]
@@ -138,6 +176,19 @@ def compare_states(proc, sid, name, meta_data, func):
         ckpt.close()
 
     return func(states)
+
+
+def ensemble_mean(meta_statistic):
+
+    #pool = Pool()
+
+    names = list(list(meta_statistic.keys())[0].keys())
+    sids = list(meta_statistic.keys())
+    print(names)
+    print(sids)
+    #for name in names:
+    #    results = pool.map(partial(sum_states, sid=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
+
 
 
 def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function, evaluate_reduction, state_dimension, num_procs_application, validator_id):
@@ -492,6 +543,9 @@ class Validator:
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
         print(f"num_validators: {self.m_num_validators}")
+
+        ensemble_mean(self.m_meta_statistic)
+
 
 
     # main
