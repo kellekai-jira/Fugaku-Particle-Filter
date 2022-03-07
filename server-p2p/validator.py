@@ -72,9 +72,9 @@ def reduce_sse(parts, n):
     return np.sqrt(sigma / n)
 
 
-def sum_states(proc, sids, name, meta_data):
+def ensemble_mean(proc, sids, name, meta_data):
 
-    x_avg = None
+    x_avg = np.array([])
     for sid in sids:
         meta = meta_data[sid][proc][name]
         ckpt_file = meta['ckpt_file']
@@ -102,7 +102,7 @@ def sum_states(proc, sids, name, meta_data):
                 data = [*data, *block]
 
         ckpt.close()
-        if x_avg == None:
+        if x_avg.size == 0:
             x_avg = np.array(data)
         else:
             x_avg += np.array(data)
@@ -178,7 +178,7 @@ def compare_states(proc, sid, name, meta_data, func):
     return func(states)
 
 
-def ensemble_mean(meta_statistic, num_procs_application):
+def ensemble_statistics(meta_statistic, num_procs_application):
 
     pool = Pool()
 
@@ -188,9 +188,9 @@ def ensemble_mean(meta_statistic, num_procs_application):
     print(names)
     print(sids)
     for name in names:
-        results = pool.map(partial(sum_states, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
-    for d in results:
-        print(len(d))
+        results = pool.map(partial(ensemble_mean, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
+        for d in results:
+            print(len(d))
 
 
 
@@ -547,7 +547,7 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
         print(f"num_validators: {self.m_num_validators}")
 
-        ensemble_mean(self.m_meta_statistic, self.m_num_procs)
+        ensemble_statistics(self.m_meta_statistic, self.m_num_procs)
 
 
 
