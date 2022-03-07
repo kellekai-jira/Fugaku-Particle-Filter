@@ -875,8 +875,8 @@ def do_update_step():
 
             for s in ensemble_states:
                 weight = cm.Weight()
-                weight.state_id = s
-                weight.weight = state_weights[s]
+                weight.state_id.CopyFrom(s)
+                weight.weight.CopyFrom(state_weights[s])
                 request.statistic_request.weights.append(s)
 
             send_message(vs, request)
