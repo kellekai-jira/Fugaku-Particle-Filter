@@ -874,7 +874,7 @@ def do_update_step():
 
         vid = 0
         chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
-        if chunk_size >= 1:
+        if (len(validate_states) / len(validation_sockets)) >= 1.0:
             validator_ids = range(1,len(validation_sockets))
         else:
             validator_ids = range(1,len(validate_states))
