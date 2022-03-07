@@ -877,9 +877,13 @@ def do_update_step():
 
         vid = 0
         chunk_size = int(np.ceil(float(len(validate_states)) / len(worker_ids)))
+        if chunk_size >= 1:
+            validator_ids = range(1,len(worker_ids))
+        else:
+            validator_ids = range(1,len(validate_states))
         for i in range(0, len(validate_states), chunk_size):
             request = cm.Message()
-            request.validation_request.validator_ids.append(vid)
+            request.validation_request.validator_ids.extend(validator_ids)
             for s in validate_states[i:i+chunk_size]:
                 request.validation_request.to_validate.append(s)
             print("now sending states to workers...", request.validation_request.to_validate)
