@@ -876,7 +876,7 @@ def do_update_step():
             for s in ensemble_states:
                 weight = cm.Weight()
                 weight.state_id.CopyFrom(s)
-                weight.weight.CopyFrom(state_weights[s])
+                weight.weight = state_weights[s]
                 request.statistic_request.weights.append(s)
 
             send_message(vs, request)
@@ -886,15 +886,6 @@ def do_update_step():
             print(f"[{idx}] waiting for worker answer from statistic request...")
             receive_message_blocking( vsock )
             print(f"[{idx}] received statistic response!")
-
-        chunk_size = int(np.ceil(float(len(ensemble_states)) / len(worker_ids)))
-        for i in range(0, len(ensemble_states), chunk_size):
-            request = cm.Message()
-            for s in ensemble_states[i:i+chunk_size]:
-                request.validation_request.to_validate.append(s)
-            print("now sending states to workers...", request.validation_request.to_validate)
-            send_message(validation_sockets[vid], request)
-            vid += 1
 
         validate_states = list(alpha.keys())
 
