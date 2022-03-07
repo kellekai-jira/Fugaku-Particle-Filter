@@ -879,6 +879,8 @@ def do_update_step():
                 weight.weight = state_weights[s]
                 request.statistic_request.weights.append(weight)
 
+            request.statistic_request.num_validators = len(validation_sockets)
+
             send_message(vs, request)
 
         # block until statistical analysis is done

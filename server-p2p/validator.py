@@ -487,7 +487,11 @@ class Validator:
         for item in request.statistic_request.weights:
             states.append(item)
 
+        self.m_num_validators = request.statistic_request.num_validators
         self.create_metadata_statistic(states)
+        print(f"state_dimension: {self.m_state_dimension}")
+        print(f"num_procs: {self.m_num_procs}")
+        print(f"num_validators: {self.m_num_validators}")
 
 
     # main

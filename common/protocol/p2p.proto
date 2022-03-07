@@ -134,7 +134,8 @@ message ValidationResponse {
 }
 
 message StatisticRequest {
-    repeated Weight weights = 1; 
+    repeated Weight weights = 1;
+    int32 num_validators = 2;
 }
 
 message StatisticResponse {
