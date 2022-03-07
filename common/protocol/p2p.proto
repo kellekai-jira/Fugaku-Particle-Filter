@@ -138,6 +138,19 @@ message StatisticRequest {
     int32 num_validators = 2;
 }
 
+message StatisticData {
+    repeated double data = 1;
+}
+
+message StatisticVariable {
+    string name = 1;
+    repeated StatisticData ranks = 2;
+}
+
+message StatisticWrapper {
+    repeated StatisticVariable variables = 1;
+}
+
 message StatisticResponse {
     Weight done = 1; 
 }

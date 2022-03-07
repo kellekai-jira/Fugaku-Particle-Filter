@@ -187,10 +187,18 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
 
     sids = list(meta_statistic.keys())
     names = list(meta_statistic[sids[0]][0].keys())
+
+    wrapper = cm.StatisticWrapper()
     for name in names:
+        var = cm.StatisticVariable()
+        var.name = name
         results = pool.map(partial(ensemble_mean, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
-        for d in results:
-            print(len(d))
+        for result in results:
+            data = cm.StatisticData()
+            data.data.extend(result)
+            var.ranks.append(data)
+        wrapper.append(var)
+
 
     pattern = os.getcwd() + '/worker-*-ip.dat'
     worker_ip_files = glob.glob(pattern)
@@ -218,17 +226,16 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
             for idx, vsock in enumerate(validation_sockets):
                 print(f"[{worker_ids[idx]}] waiting for worker message...")
                 msg = vsock.recv()# only polling
-                data = struct.unpack('d', msg)
-                print(f"received data : {data}")
+                data = parse(msg)
+                print(f"received data : {data.variables[0].ranks[0].data[0:3]}")
                 print(f"[{worker_ids[idx]}] received worker message!")
     else:
         addr = "tcp://*:4001"
 
         socket, port_socket = \
             bind_socket(context, zmq.REQ, addr)
-        data = [1.0,1.2,1.3]
-        d = struct.pack('d',data)
-        socket.send(d)
+
+        send_message(socket, wrapper)
         socket.close()
 
 
