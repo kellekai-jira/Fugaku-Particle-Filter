@@ -195,13 +195,14 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     pattern = os.getcwd() + '/worker-*-ip.dat'
     worker_ip_files = glob.glob(pattern)
 
-    print(pattern)
+    print(worker_ip_files)
     if validator_id == 0:
         worker_ids = {}
         validation_sockets = {}
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
             id = int(p.search(os.path.basename(fn)).group(1))
+            print(f"id: {id},  id == 0: {id == 0}")
             if id == 0: continue
             if id not in worker_ids:
                 with open(fn, 'r') as file:
