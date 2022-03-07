@@ -758,8 +758,60 @@ def resample(parent_t, alpha_master_=None):
     sum_weights = np.sum([state_weights[x] for x in this_cycle])
     state_weights_normalized = [state_weights[x] / sum_weights for x in this_cycle]
 
-    print("normalized weights: ", state_weights_normalized)
-    print("unnormalized weights: ", state_weights)
+    #############################################################
+    #
+    #   HANDLE STATE VALIDATION
+    #
+    #############################################################
+
+    pattern = os.getcwd() + '/worker-*-ip.dat'
+    worker_ip_files = glob.glob(pattern)
+
+    p = re.compile("worker-(.*)-ip.dat")
+    for fn in worker_ip_files:
+        id = int(p.search(os.path.basename(fn)).group(1))
+        if id not in validation_sockets:
+            with open(fn, 'r') as file:
+                ip = file.read().rstrip()
+            addr = "tcp://" + ip + ":4000"
+            so = context.socket(zmq.REP)
+            so.connect(addr)
+            validation_sockets[id] = so
+
+    if len(validation_sockets) > 0:
+        for id in validation_sockets:
+            print(f"[{id}] waiting for worker message...")
+            receive_message_blocking( validation_sockets[id] )
+            print(f"[{id}] received worker message!")
+
+        validate_states = []
+        for idx, s in enumerate(list(this_cycle.keys())):
+            weight = cm.Weight()
+            weight.weight = state_weights_normalized[idx]
+            weight.state_id.CopyFrom(s)
+            validate_states.append(weight)
+
+        vid = 0
+        chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
+        if (len(validate_states) / len(validation_sockets)) >= 1.0:
+            validator_ids = range(1,len(validation_sockets))
+        else:
+            validator_ids = range(1,len(validate_states))
+        for i in range(0, len(validate_states), chunk_size):
+            request = cm.Message()
+            request.validation_request.validator_ids.extend(validator_ids)
+            for s in validate_states[i:i+chunk_size]:
+                request.validation_request.to_validate.append(s)
+            print("now sending states to workers...", request.validation_request.to_validate)
+            send_message(validation_sockets[vid], request)
+            vid += 1
+        for empty_msg in range(vid,len(validation_sockets)):
+            request = cm.Message()
+            request.validation_request.SetInParent()
+            print("sending empty message to worker id: ", vid)
+            send_message(validation_sockets[vid], request)
+            vid += 1
+
 
     print("---- Resampling from particles with t=%d ----" % parent_t)
     # print('normalized weights:', state_weights_normalized)
@@ -842,62 +894,6 @@ def do_update_step():
     stealable_jobs -= removed_jobs
 
     print(f'len(alpha_weights), sum={inner_sum(alpha_weights)}, stealable_jobs', len(alpha_weights), stealable_jobs)
-
-    #############################################################
-    #
-    #   HANDLE STATE VALIDATION
-    #
-    #############################################################
-
-    pattern = os.getcwd() + '/worker-*-ip.dat'
-    worker_ip_files = glob.glob(pattern)
-
-    p = re.compile("worker-(.*)-ip.dat")
-    for fn in worker_ip_files:
-        id = int(p.search(os.path.basename(fn)).group(1))
-        if id not in validation_sockets:
-            with open(fn, 'r') as file:
-                ip = file.read().rstrip()
-            addr = "tcp://" + ip + ":4000"
-            so = context.socket(zmq.REP)
-            so.connect(addr)
-            validation_sockets[id] = so
-
-    if len(validation_sockets) > 0:
-        for id in validation_sockets:
-            print(f"[{id}] waiting for worker message...")
-            receive_message_blocking( validation_sockets[id] )
-            print(f"[{id}] received worker message!")
-
-        validate_states = []
-        for s in list(alpha.keys()):
-            weight = cm.Weight()
-            weight.weight = state_weights[s]
-            weight.state_id.CopyFrom(s)
-            validate_states.append(weight)
-
-        vid = 0
-        chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
-        if (len(validate_states) / len(validation_sockets)) >= 1.0:
-            validator_ids = range(1,len(validation_sockets))
-        else:
-            validator_ids = range(1,len(validate_states))
-        for i in range(0, len(validate_states), chunk_size):
-            request = cm.Message()
-            request.validation_request.validator_ids.extend(validator_ids)
-            for s in validate_states[i:i+chunk_size]:
-                request.validation_request.to_validate.append(s)
-            print("now sending states to workers...", request.validation_request.to_validate)
-            send_message(validation_sockets[vid], request)
-            vid += 1
-        for empty_msg in range(vid,len(validation_sockets)):
-            request = cm.Message()
-            request.validation_request.SetInParent()
-            print("sending empty message to worker id: ", vid)
-            send_message(validation_sockets[vid], request)
-            vid += 1
-
-
 
     #############################################################
     #
