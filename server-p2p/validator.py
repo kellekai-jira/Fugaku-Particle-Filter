@@ -79,6 +79,8 @@ def ensemble_mean(proc, sids, name, meta_data):
 
     x_avg = np.array([])
     for sid in sids:
+        weight = meta_data[sid]['weight']
+        print(f"state weight: {weight}")
         meta = meta_data[sid][proc][name]
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
@@ -106,9 +108,9 @@ def ensemble_mean(proc, sids, name, meta_data):
 
         ckpt.close()
         if x_avg.size == 0:
-            x_avg = np.array(data)
+            x_avg = weight * np.array(data)
         else:
-            x_avg += np.array(data)
+            x_avg += weight * np.array(data)
 
     return x_avg
 
@@ -181,7 +183,7 @@ def compare_states(proc, sid, name, meta_data, func):
     return func(states)
 
 
-def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
+def ensemble_statistics(meta_statistic, num_procs_application, validator_id, request):
 
     pool = Pool()
 
@@ -206,13 +208,15 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     print(worker_ip_files)
     print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
+        validator_ids = request.validation_request.validator_ids
+        validator_ids.append(0)
         worker_ids = []
         validation_sockets = []
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
             id = int(p.search(os.path.basename(fn)).group(1))
             print(f"id: {id},  id == 0: {id == 0}")
-            if id == 0: continue
+            if id not in validator_ids: continue
             if id not in worker_ids:
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
@@ -425,6 +429,9 @@ class Validator:
             ckpt_files = glob.glob(ckpt_pattern)
 
             meta_item = {}
+
+            meta_item["weight"] = state.weight
+
             proc = 0
             for idx, f in enumerate(meta_files):
                 fh = open(f)
@@ -575,11 +582,12 @@ class Validator:
             print(item)
 
         self.create_metadata_statistic(states)
+
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
         print(f"validator_id: {self.m_validator_id}")
 
-        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
+        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id, request)
 
         self.create_metadata(states)
 

@@ -126,7 +126,8 @@ message StopStudy {
 }
 
 message ValidationRequest {
-    repeated Weight to_validate = 1;
+    repeated int32 validator_ids = 1;
+    repeated Weight to_validate = 2;
 }
 
 message ValidationResponse {
