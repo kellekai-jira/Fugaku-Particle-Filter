@@ -4,7 +4,7 @@ import configparser
 import p2p_pb2 as cm
 import io
 import fpzip
-import glob
+import struct
 from functools import partial
 import array
 import json
@@ -198,7 +198,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     print(worker_ip_files)
     print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
-        worker_ids = {}
+        worker_ids = []
         validation_sockets = []
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
@@ -208,12 +208,30 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
             if id not in worker_ids:
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
-                addr = "tcp://" + ip + ":4000"
+                addr = "tcp://" + ip + ":4001"
                 so = context.socket(zmq.REP)
-                #so.connect(addr)
+                so.connect(addr)
                 validation_sockets.append(so)
                 worker_ids.append(id)
                 print(f"connected to validator: {id} with addr: {addr}")
+        if len(worker_ids) > 0:
+            for idx, vsock in enumerate(validation_sockets):
+                print(f"[{worker_ids[idx]}] waiting for worker message...")
+                msg = vsock.recv()# only polling
+                data = struct.unpack('d', msg)
+                print(f"received data : {data}")
+                print(f"[{worker_ids[idx]}] received worker message!")
+    else:
+        addr = "tcp://*:4001"
+
+        socket, port_socket = \
+            bind_socket(context, zmq.REQ, addr)
+        data = [1.0,1.2,1.3]
+        d = struct.pack('d',data)
+        socket.send(d)
+        socket.close()
+
+
 
 
 
@@ -365,7 +383,6 @@ class Validator:
 
         self.m_socket, port_socket = \
                 bind_socket(context, zmq.REQ, addr)
-
 
         assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
 
