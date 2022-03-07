@@ -217,6 +217,7 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
 
 
 
+
 def validate(meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function, evaluate_reduction, state_dimension, num_procs_application, validator_id):
 
     sigmas = []
@@ -568,6 +569,7 @@ class Validator:
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
         print(f"num_validators: {self.m_num_validators}")
+        print(f"validator_id: {self.m_validator_id}")
 
         ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
 
