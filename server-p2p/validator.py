@@ -344,6 +344,7 @@ class Validator:
 
                             vars = {}
                             varid = 0
+                            count = 0
                             while f'var{varid}_id' in config['0']:
                                 name        = config['0'][f'var{varid}_idchar']
                                 mode        = int(config['0'][f'var{varid}_compression_mode'])
@@ -385,14 +386,39 @@ class Validator:
             print(self.m_meta_compare[m])
 
 
+    def handle_validation_request( self, request ):
+        states = []
+        for item in request.validation_request.to_validate:
+            states.append(item)
+            print(item)
+
+        self.create_metadata(states)
+
+        validate(
+            self.m_meta_compare,
+            self.m_compare_function,
+            self.m_compare_reduction,
+            self.m_meta_evaluate,
+            self.m_evaluation_function,
+            self.m_evaluation_reduction,
+            self.m_state_dimension,
+            self.m_num_procs,
+            self.m_validator_id
+        )
+
+
+    def handle_statistic_request( self, request ):
+        print("received statistic request")
+
+
     # main
     def run(self):
 
         while True:
             response = cm.Message()
             send_message(self.m_socket, response)
-            msg = self.m_socket.recv()
 
+            msg = self.m_socket.recv()
             request = parse(msg)
             print("received task... ", request)
 
@@ -401,24 +427,15 @@ class Validator:
             if request == empty:
                 continue
 
-            states = []
-            for item in request.validation_request.to_validate:
-                    states.append(item)
-                    print(item)
+            ty = request.WhichOneof('content')
+            if ty == 'validation_request':
+                self.handle_validation_request(request)
+            elif ty == 'statistic_request':
+                self.handle_statistic_request(request)
+            else:
+                print("Wrong message type received!")
+                assert False
 
-            self.create_metadata( states )
-
-            validate(
-                self.m_meta_compare,
-                self.m_compare_function,
-                self.m_compare_reduction,
-                self.m_meta_evaluate,
-                self.m_evaluation_function,
-                self.m_evaluation_reduction,
-                self.m_state_dimension,
-                self.m_num_procs,
-                self.m_validator_id
-                )
 
 
 if __name__ == "__main__":
