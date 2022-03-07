@@ -232,10 +232,12 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
     else:
         addr = "tcp://*:4001"
 
+        print("sending message...")
         socket, port_socket = \
             bind_socket(context, zmq.REQ, addr)
 
         send_message(socket, wrapper)
+        print("message sendt")
         socket.close()
 
 
