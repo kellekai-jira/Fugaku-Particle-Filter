@@ -574,6 +574,13 @@ class Validator:
             states.append(item)
             print(item)
 
+        self.create_metadata_statistic(states)
+        print(f"state_dimension: {self.m_state_dimension}")
+        print(f"num_procs: {self.m_num_procs}")
+        print(f"validator_id: {self.m_validator_id}")
+
+        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
+
         self.create_metadata(states)
 
         validate(
@@ -596,11 +603,9 @@ class Validator:
         for item in request.statistic_request.weights:
             states.append(item)
 
-        self.m_num_validators = request.statistic_request.num_validators
         self.create_metadata_statistic(states)
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
-        print(f"num_validators: {self.m_num_validators}")
         print(f"validator_id: {self.m_validator_id}")
 
         ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
