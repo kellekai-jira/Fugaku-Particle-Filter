@@ -227,7 +227,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
             for idx, vsock in enumerate(validation_sockets):
                 print(f"[{worker_ids[idx]}] waiting for worker message...")
                 msg = vsock.recv()# only polling
-                data = parse(msg)
+                data = cm.StatisticWrapper()
+                data.ParseFromString(msg)
                 response = cm.Message()
                 send_message(vsock, response)
                 print(f"received data : {data.variables[0].ranks[0].data[0:3]}")
