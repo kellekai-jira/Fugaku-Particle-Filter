@@ -209,10 +209,11 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id):
                     ip = file.read().rstrip()
                 addr = "tcp://" + ip + ":4000"
                 so = context.socket(zmq.REP)
-                so.connect(addr)
+                #so.connect(addr)
                 validation_sockets.append(so)
                 worker_ids.append(id)
                 print(f"connected to validator: {id} with addr: {addr}")
+
 
 
 
