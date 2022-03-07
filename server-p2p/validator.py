@@ -79,7 +79,6 @@ def ensemble_mean(proc, sids, name, meta_data):
     x_avg = np.array([])
     for sid in sids:
         weight = meta_data[sid]['weight']
-        print(f"state weight: {weight}")
         meta = meta_data[sid][proc][name]
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
@@ -226,14 +225,23 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 worker_ids.append(id)
                 print(f"connected to validator: {id} with addr: {addr}")
         if len(worker_ids) > 0:
+            average = {}
+            for idv, variable in enumerate(wrapper.variables):
+                average[variable.name] = {}
+                for idr, rank in enumerate(variable.ranks):
+                    average[variable.name][idr] = np.array(rank.data)
             for idx, vsock in enumerate(validation_sockets):
                 print(f"[{worker_ids[idx]}] waiting for worker message...")
                 msg = vsock.recv()# only polling
-                data = cm.StatisticWrapper()
-                data.ParseFromString(msg)
+                data_wrapper = cm.StatisticWrapper()
+                data_wrapper.ParseFromString(msg)
+                for idv, variable in enumerate(data_wrapper.variables):
+                    for idr, rank in enumerate(variable.ranks):
+                        average[variable.name][idr] += rank.data
                 response = cm.Message()
                 send_message(vsock, response)
-                print(f"received data : {data.variables[0].ranks[0].data[0:3]}")
+                for key in average:
+                    print(f"average variable '{key}': {average[key][0][0:5]}")
                 print(f"[{worker_ids[idx]}] received worker message!")
     else:
         addr = "tcp://*:4001"
