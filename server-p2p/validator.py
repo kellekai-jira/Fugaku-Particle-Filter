@@ -48,7 +48,7 @@ def write_lorenz(average, stddev, cycle, num_procs, state_dims):
             stddev_var[:] = stddev[name][rank]
     for name in average:
         for rank in average[name]:
-            ncfiles[name][rank].close()
+            ncfiles[rank].close()
 
 
 
