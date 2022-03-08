@@ -129,7 +129,7 @@ def dict2wrapper( dct ):
         variable.name = name
         for data in dct[name]:
             rank = cm.StatisticData()
-            rank.data = dct[name][data]
+            rank.data.extend(dct[name][data])
             variable.ranks.append(rank)
         wrapper.variables.append(variable)
     return wrapper
