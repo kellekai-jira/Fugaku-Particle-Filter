@@ -29,7 +29,7 @@ def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     ncfiles = {}
     for rank in range(num_procs):
         fn = experimentPath + f"lorenz_analysis_c{cycle}p{rank}.nc"
-        ncfiles[rank] = netCDF4.Dataset(fn, mode='w', format='NETCDF4_CLASSIC')
+        ncfiles[rank] = netCDF4.Dataset(fn, mode='w', format='NETCDF4')
         ncfiles[rank].createDimension('x', state_dims[rank])
         ncfiles[rank].title = 'lorenz best state estimate'
         x_dim = ncfiles[rank].createVariable('x', np.int64, ('x',))
