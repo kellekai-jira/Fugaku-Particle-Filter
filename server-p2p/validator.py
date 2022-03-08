@@ -170,6 +170,9 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
             x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+            print(f"x_stddev[0:3]: {x_stddev[0:3]}")
+            print(f"np.array(data)[0:3]: {np.array(data)[0:3]}")
+            print(f"avg_dict[name][proc][0:3]: {avg_dict[name][proc][0:3]}")
 
     return x_stddev
 
