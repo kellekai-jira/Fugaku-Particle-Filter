@@ -82,7 +82,7 @@ def ensemble_mean(proc, sids, name, meta_data):
         meta = meta_data[sid][proc][name]
         ckpt_file = meta['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
-        t, id, mode = decode_state_id(sid)
+        mode = meta['mode']
 
         if mode == 0:
             ckpt.seek(meta['offset'])
