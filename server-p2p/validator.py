@@ -489,6 +489,7 @@ class Validator:
         self.m_socket = None
         self.m_cpc_parameters = []
         self.m_varnames = []
+        self.m_varnames_cpc = []
         self.m_num_cores = len(os.sched_getaffinity(0))
         self.init()
 
@@ -513,20 +514,22 @@ class Validator:
         with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
             f.write(host)
 
+        self.m_varnames = cpc_json['variables']
+
+        print(self.m_varnames)
+
         if cpc_json['compression']['method'] == 'adapt': return
 
         assert(cpc_json['compression']['method'] == 'validate')
 
         for item in cpc_json['compression']['validate']:
-            if item['name'] not in self.m_varnames:
-                self.m_varnames.append(item['name'])
+            if item['name'] not in self.m_varnames_cpc:
+                self.m_varnames_cpc.append(item['name'])
             self.m_cpc_parameters.append(cpc_t(
                 item['name'],
                 item['mode'],
                 item['parameter']
             ))
-
-        print(self.m_varnames)
 
         for cpc in self.m_cpc_parameters:
             print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
@@ -661,7 +664,7 @@ class Validator:
                                 parameter   = int(config['0'][f'var{varid}_compression_parameter'])
                                 size        = int(config['0'][f'var{varid}_size'])
                                 count       = int(config['0'][f'var{varid}_count'])
-                                if name in self.m_varnames:
+                                if name in self.m_varnames_cpc:
                                     vars[name] = {
                                         "ckpt_file" : ckpt_files[idx],
                                         "mode"      : mode,
