@@ -332,6 +332,9 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 response = cm.Message()
                 send_message(vsock, response)
                 print(f"[{worker_ids[idx]}] sent stddev to worker!")
+            for name in stddev:
+                for rank, data in enumerate(stddev[name]):
+                    stddev[name][rank] = np.sqrt(data)
             for key in stddev:
                 print(f"stddev variable '{key}': {stddev[key][0][0:5]}")
 
