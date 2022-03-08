@@ -122,6 +122,17 @@ def wrapper2dict( wrapper ):
     return d
 
 
+def dict2wrapper( dct ):
+    wrapper = cm.StatisticWrapper()
+    for name in dct:
+        variable = cm.StatisticVariable()
+        variable.name = name
+        for data in dct[name]:
+            variable.ranks.append(data)
+        wrapper.append(variable)
+    return wrapper
+
+
 def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
 
     x_stddev = np.array([])
@@ -288,7 +299,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 for idv, variable in enumerate(avg_wrapper.variables):
                     for idr, rank in enumerate(variable.ranks):
                         average[variable.name][idr] += rank.data
-                send_message(vsock, avg_wrapper)
+                average_wrapper = dict2wrapper( average )
+                send_message(vsock, average_wrapper)
                 print(f"[{worker_ids[idx]}] sent average to worker!")
             for key in average:
                 print(f"average variable '{key}': {average[key][0][0:5]}")
