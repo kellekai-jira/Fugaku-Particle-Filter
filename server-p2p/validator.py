@@ -301,7 +301,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 for idv, variable in enumerate(avg_wrapper.variables):
                     for idr, rank in enumerate(variable.ranks):
                         average[variable.name][idr] += rank.data
-                average_wrapper = dict2wrapper( average )
+            average_wrapper = dict2wrapper( average )
+            for idx, vsock in enumerate(validation_sockets):
                 send_message(vsock, average_wrapper)
                 print(f"[{worker_ids[idx]}] sent average to worker!")
             for key in average:
