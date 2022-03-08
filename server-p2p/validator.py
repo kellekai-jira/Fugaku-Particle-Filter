@@ -129,7 +129,7 @@ def dict2wrapper( dct ):
         variable.name = name
         for data in dct[name]:
             variable.ranks.append(data)
-        wrapper.append(variable)
+        wrapper.variables.append(variable)
     return wrapper
 
 
