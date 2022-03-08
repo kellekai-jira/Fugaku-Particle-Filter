@@ -12,6 +12,7 @@ import zmq
 import pandas as pd
 import glob
 import re
+import netCDF4
 
 from utils import get_node_name
 from common import bind_socket, parse
@@ -23,6 +24,33 @@ checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 
 print(f"experimentPath: {experimentPath}")
 print(f"checkpointPath: {checkpointPath}")
+
+def write_lorenz(average, stddev, cycle, num_procs, state_dims):
+    ncfiles = {}
+    for rank in range(num_procs):
+        fn = experimentPath + f"lorenz_analysis_c{cycle}p{rank}.nc"
+        ncfiles[rank] = netCDF4.Dataset(fn, mode='w', format='NETCDF4_CLASSIC')
+        ncfiles[rank].createDimension('x', state_dims[rank])
+        ncfiles[rank].title = 'lorenz best state estimate'
+        x_dim = ncfiles[rank].createVariable('x', np.int64, ('x',))
+        x_dim.units = 'cm'
+        x_dim.long_name = 'position x in cm'
+        x_dim[:] = range(state_dims[rank])
+    for name in average:
+        for rank in average[name]:
+            avg_var = ncfiles[rank].createVariable( name, np.float64, ('x',))
+            avg_var.units = 'm/s'
+            avg_var.standard_name = 'lorenz velocity'
+            avg_var[:] = average[name][rank]
+            stddev_var = ncfiles[rank].createVariable( name + " stddev", np.float64, ('x',))
+            stddev_var.units = 'm/s'
+            stddev_var.standard_name = 'lorenz velocity standard deviation'
+            stddev_var[:] = stddev[name][rank]
+    for name in average:
+        for rank in average[name]:
+            ncfiles[name][rank].close()
+
+
 
 FTI_CPC_MODE_NONE   = 0
 FTI_CPC_FPZIP       = 1
@@ -241,7 +269,7 @@ def compare_states(proc, sid, name, meta_data, func):
     return func(states)
 
 
-def ensemble_statistics(meta_statistic, num_procs_application, validator_id, request):
+def ensemble_statistics(cycle, meta_statistic, num_procs_application, validator_id, request):
 
     pool = Pool()
 
@@ -265,6 +293,8 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
 
     print(worker_ip_files)
     if validator_id == 0:
+        stddev = {}
+        average = {}
         validator_ids = request.validation_request.validator_ids
         worker_ids = []
         validation_sockets = []
@@ -282,7 +312,6 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 worker_ids.append(id)
                 print(f"connected to validator: {id} with addr: {addr}")
         if len(worker_ids) > 0:
-            average = {}
             for idv, variable in enumerate(wrapper.variables):
                 average[variable.name] = {}
                 for idr, rank in enumerate(variable.ranks):
@@ -313,7 +342,6 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                     data.data.extend(result)
                     var.ranks.append(data)
                 wrapper_stddev.variables.append(var)
-            stddev = {}
             for idv, variable in enumerate(wrapper_stddev.variables):
                 stddev[variable.name] = {}
                 for idr, rank in enumerate(variable.ranks):
@@ -330,12 +358,16 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
                 send_message(vsock, response)
                 print(f"[{worker_ids[idx]}] sent stddev to worker!")
             for name in stddev:
+                num_procs = 0
+                state_dims = []
                 for rank in stddev[name]:
                     stddev[name][rank] = np.sqrt(stddev[name][rank])
+                    num_procs += 1
+                    state_dims.append(len(stddev[name][rank]))
             for key in stddev:
                 print(f"stddev variable '{key}': {stddev[key][0][0:5]}")
 
-
+        write_lorenz(average, stddev, cycle, num_procs, state_dims)
 
     else:
         addr = "tcp://*:4001"
@@ -491,6 +523,7 @@ class Validator:
         self.m_cpc_parameters = []
         self.m_varnames = []
         self.m_varnames_cpc = []
+        self.m_cycle = []
         self.m_num_cores = len(os.sched_getaffinity(0))
         self.init()
 
@@ -546,6 +579,8 @@ class Validator:
         for state in states:
 
             sid = encode_state_id(state.state_id.t, state.state_id.id, 0)
+
+            self.m_cycle = state.state_id.t
 
             path = checkpointPath + str(sid)
 
@@ -624,6 +659,8 @@ class Validator:
             for cpc in self.m_cpc_parameters:
 
                 sid = encode_state_id(state.state_id.t, state.state_id.id, cpc.id)
+
+                self.m_cycle = state.state_id.t
 
                 state_item = {}
 
@@ -713,7 +750,7 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
         print(f"validator_id: {self.m_validator_id}")
 
-        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id, request)
+        ensemble_statistics(self.m_cycle, self.m_meta_statistic, self.m_num_procs, self.m_validator_id, request)
 
         if self.m_is_validate:
             self.create_metadata(states)
