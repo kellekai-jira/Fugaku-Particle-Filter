@@ -170,9 +170,6 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
             x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
-            print(f"x_stddev[0:3]: {x_stddev[0:3]}")
-            print(f"np.array(data)[0:3]: {np.array(data)[0:3]}")
-            print(f"avg_dict[name][proc][0:3]: {avg_dict[name][proc][0:3]}")
 
     return x_stddev
 
@@ -267,7 +264,6 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
     worker_ip_files = glob.glob(pattern)
 
     print(worker_ip_files)
-    print(f"validator_id: {validator_id},  id == 0: {validator_id == 0}")
     if validator_id == 0:
         validator_ids = request.validation_request.validator_ids
         worker_ids = []
@@ -275,13 +271,11 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
             id = int(p.search(os.path.basename(fn)).group(1))
-            print(f"id: {id},  id == 0: {id == 0}")
             if id not in validator_ids: continue
             if id not in worker_ids:
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
                 addr = "tcp://" + ip + ":4001"
-                print(f"my ip: {get_node_name()}, worker-{id} ip: {addr}")
                 so = context.socket(zmq.REP)
                 so.connect(addr)
                 validation_sockets.append(so)
