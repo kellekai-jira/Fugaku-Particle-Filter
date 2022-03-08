@@ -128,7 +128,9 @@ def dict2wrapper( dct ):
         variable = cm.StatisticVariable()
         variable.name = name
         for data in dct[name]:
-            variable.ranks.append(dct[name][data])
+            rank = cm.StatisticData()
+            rank.data = dct[name][data]
+            variable.ranks.append(rank)
         wrapper.variables.append(variable)
     return wrapper
 
@@ -501,6 +503,23 @@ class Validator:
         with open( experimentPath + 'compression.json') as fp:
             cpc_json = json.load(fp)
 
+        context.setsockopt(zmq.LINGER, 0)
+        addr = "tcp://*:4000"
+
+        self.m_socket, port_socket = \
+            bind_socket(context, zmq.REQ, addr)
+
+        assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
+
+        self.m_validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
+
+        host = get_node_name()
+
+        with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
+            f.write(host)
+
+        if cpc_json['compression']['method'] == 'adapt': return
+
         assert(cpc_json['compression']['method'] == 'validate')
 
         for item in cpc_json['compression']['validate']:
@@ -516,21 +535,6 @@ class Validator:
 
         for cpc in self.m_cpc_parameters:
             print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
-
-        context.setsockopt(zmq.LINGER, 0)
-        addr = "tcp://*:4000"  # TODO: make ports changeable, maybe even select them automatically!
-
-        self.m_socket, port_socket = \
-                bind_socket(context, zmq.REQ, addr)
-
-        assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
-
-        self.m_validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
-
-        host = get_node_name()
-
-        with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
-            f.write(host)
 
 
     def create_metadata_statistic( self, states ):
