@@ -481,6 +481,7 @@ class Validator:
         if evaluation_reduction == None:
             self.m_evaluation_reduction = reduce_energy
         self.m_meta_compare = {}
+        self.m_is_validate = False
         self.m_meta_evaluate = {}
         self.m_meta_statistic = {}
         self.m_num_procs = 0
@@ -530,6 +531,8 @@ class Validator:
                 item['mode'],
                 item['parameter']
             ))
+
+        self.m_is_validate = True
 
         for cpc in self.m_cpc_parameters:
             print(f'[{cpc.id}] name: {cpc.name} mode: {cpc.mode}, parameter: {cpc.parameter}')
@@ -712,19 +715,20 @@ class Validator:
 
         ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id, request)
 
-        self.create_metadata(states)
+        if self.m_is_validate:
+            self.create_metadata(states)
 
-        validate(
-            self.m_meta_compare,
-            self.m_compare_function,
-            self.m_compare_reduction,
-            self.m_meta_evaluate,
-            self.m_evaluation_function,
-            self.m_evaluation_reduction,
-            self.m_state_dimension,
-            self.m_num_procs,
-            self.m_validator_id
-        )
+            validate(
+                self.m_meta_compare,
+                self.m_compare_function,
+                self.m_compare_reduction,
+                self.m_meta_evaluate,
+                self.m_evaluation_function,
+                self.m_evaluation_reduction,
+                self.m_state_dimension,
+                self.m_num_procs,
+                self.m_validator_id
+            )
 
 
     def handle_statistic_request( self, request ):
