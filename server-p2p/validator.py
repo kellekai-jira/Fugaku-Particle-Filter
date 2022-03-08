@@ -116,9 +116,9 @@ def ensemble_mean(proc, sids, name, meta_data):
 def wrapper2dict( wrapper ):
     d = {}
     for variable in wrapper.variables:
-        d[variable.name] = []
-        for rank in variable.ranks:
-            d[variable.name].append(rank.data)
+        d[variable.name] = {}
+        for idx, rank in enumerate(variable.ranks):
+            d[variable.name][idx] = rank.data
     return d
 
 
@@ -128,7 +128,7 @@ def dict2wrapper( dct ):
         variable = cm.StatisticVariable()
         variable.name = name
         for data in dct[name]:
-            variable.ranks.append(data)
+            variable.ranks.append(dct[name][data])
         wrapper.variables.append(variable)
     return wrapper
 
