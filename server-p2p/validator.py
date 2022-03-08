@@ -113,6 +113,53 @@ def ensemble_mean(proc, sids, name, meta_data):
     return x_avg
 
 
+def wrapper2dict( wrapper ):
+    d = {}
+    for variable in wrapper.variables:
+        d[variable.name] = []
+        for rank in variable.ranks:
+            d[variable.name].append(rank.data)
+    return d
+
+
+def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
+
+    x_stddev = np.array([])
+    for sid in sids:
+        weight = meta_data[sid]['weight']
+        meta = meta_data[sid][proc][name]
+        ckpt_file = meta['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+        t, id, mode = decode_state_id(sid)
+
+        if mode == 0:
+            ckpt.seek(meta['offset'])
+            bytes = ckpt.read(meta['size'])
+            data = array.array('d', bytes)
+
+        else:
+            data = []
+            n = meta['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(meta['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+        ckpt.close()
+        if x_stddev.size == 0:
+            x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+        else:
+            x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+
+    return x_stddev
+
 def evaluate_state(proc, sid, name, meta_data, func):
 
     meta = meta_data[sid][proc][name]
@@ -233,16 +280,48 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
             for idx, vsock in enumerate(validation_sockets):
                 print(f"[{worker_ids[idx]}] waiting for worker message...")
                 msg = vsock.recv()# only polling
-                data_wrapper = cm.StatisticWrapper()
-                data_wrapper.ParseFromString(msg)
-                for idv, variable in enumerate(data_wrapper.variables):
+                avg_wrapper = cm.StatisticWrapper()
+                avg_wrapper.ParseFromString(msg)
+                for idv, variable in enumerate(avg_wrapper.variables):
                     for idr, rank in enumerate(variable.ranks):
                         average[variable.name][idr] += rank.data
+                send_message(vsock, avg_wrapper)
+                print(f"[{worker_ids[idx]}] sent average to worker!")
+            for key in average:
+                print(f"average variable '{key}': {average[key][0][0:5]}")
+            pool = Pool()
+            wrapper_stddev = cm.StatisticWrapper()
+            for name in names:
+                var = cm.StatisticVariable()
+                var.name = name
+                results = pool.map(partial(ensemble_stddev, sids=sids, name=name, meta_data=meta_statistic, avg_dict=average), \
+                                   range(num_procs_application))
+                for result in results:
+                    data = cm.StatisticData()
+                    data.data.extend(result)
+                    var.ranks.append(data)
+                wrapper_stddev.variables.append(var)
+            stddev = {}
+            for idv, variable in enumerate(wrapper_stddev.variables):
+                stddev[variable.name] = {}
+                for idr, rank in enumerate(variable.ranks):
+                    stddev[variable.name][idr] = np.array(rank.data)
+            for idx, vsock in enumerate(validation_sockets):
+                print(f"[{worker_ids[idx]}] waiting for worker message...")
+                msg = vsock.recv()# only polling
+                std_wrapper = cm.StatisticWrapper()
+                std_wrapper.ParseFromString(msg)
+                for idv, variable in enumerate(std_wrapper.variables):
+                    for idr, rank in enumerate(variable.ranks):
+                        stddev[variable.name][idr] += rank.data
                 response = cm.Message()
                 send_message(vsock, response)
-                for key in average:
-                    print(f"average variable '{key}': {average[key][0][0:5]}")
-                print(f"[{worker_ids[idx]}] received worker message!")
+                print(f"[{worker_ids[idx]}] sent stddev to worker!")
+            for key in stddev:
+                print(f"stddev variable '{key}': {stddev[key][0][0:5]}")
+
+
+
     else:
         addr = "tcp://*:4001"
 
@@ -251,8 +330,26 @@ def ensemble_statistics(meta_statistic, num_procs_application, validator_id, req
             bind_socket(context, zmq.REQ, addr)
 
         send_message(socket, wrapper)
-        socket.recv()
-        print("message sent")
+        msg = socket.recv()  # only polling
+        avg_wrapper = cm.StatisticWrapper()
+        avg_wrapper.ParseFromString(msg)
+        average = wrapper2dict( avg_wrapper )
+        pool = Pool()
+        wrapper_stddev = cm.StatisticWrapper()
+        for name in names:
+            var = cm.StatisticVariable()
+            var.name = name
+            results = pool.map(
+                partial(ensemble_stddev, sids=sids, name=name, meta_data=meta_statistic, avg_dict=average), \
+                range(num_procs_application))
+            for result in results:
+                data = cm.StatisticData()
+                data.data.extend(result)
+                var.ranks.append(data)
+            wrapper_stddev.variables.append(var)
+        send_message(socket, wrapper_stddev)
+        msg = socket.recv()  # only polling
+        print("received average from master validator!")
         socket.close()
 
 
