@@ -491,7 +491,6 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
             'rate_original' : rate_original,
             'rate_compared' : rate_compared
         } )
-        print(reduced[-1])
 
     return pd.DataFrame(dfl)
 
