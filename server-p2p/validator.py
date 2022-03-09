@@ -505,26 +505,26 @@ def reduce_dict( validators, dct ):
             var.name = name
             for rank in dct[name]:
                 rdata = cm.StatisticData()
-                rdata.data.extend( dct[name][rank] )
+                rdata.data.extend( rank )
             wrapper.variables.append(var)
         send_message(validator_socket, wrapper)
 
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
-             evaluate_reduction, state_dimension, num_procs_application, variables, cpc, state_ids, validators):
+             evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, validators):
 
     # compute the RSME
     df_compare = pd.DataFrame()
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
-        df_vmax = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, maximum, reduce_maximum, 'maximum', cpc)
-        df_vmin = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, minimum, reduce_minimum, 'minimum', cpc)
+        df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
+        df_vmin = evaluate_wrapper(variables, original, ndims, nprocs, meta, minimum, reduce_minimum, 'minimum', cpc)
         df_evaluate = df_evaluate.append( pd.concat( [df_vmin, df_vmax], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
-            df_rmse = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-            df_emax = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, pme, reduce_pme, 'PE_max', cpc)
+            df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
+            df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
 
     print(df_compare)
@@ -534,7 +534,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
 
-    ensemble_wrapper(variables, sids, num_procs_application, meta, ensemble_mean, validators)
+    ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
 
 
 class cpc_t:
