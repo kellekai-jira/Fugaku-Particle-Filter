@@ -371,7 +371,7 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_mean(proc, sids, name, meta, extra):
+def ensemble_mean(proc, sids, name, meta):
 
     x_avg = np.array([])
     for sid in sids:
@@ -432,7 +432,9 @@ def dict2wrapper( dct ):
     return wrapper
 
 
-def ensemble_stddev(proc, sids, name, meta, extra):
+def ensemble_stddev(proc, sids, name, meta):
+
+    global average
 
     x_stddev = np.array([])
     for sid in sids:
@@ -464,19 +466,19 @@ def ensemble_stddev(proc, sids, name, meta, extra):
 
         ckpt.close()
         if x_stddev.size == 0:
-            x_stddev = weight * ( (np.array(data) - extra[name][proc]) ** 2 )
+            x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
-            x_stddev += weight * ( (np.array(data) - extra[name][proc]) ** 2 )
+            x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
 
     return x_stddev
 
 
-def ensemble_wrapper( variables, sids, nprocs, meta, func, validators, extra ):
+def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
     pool = Pool()
 
     dct = {}
     for name in variables:
-        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta, extra=extra), range(nprocs))
+        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
 
     reduce_dict( validators, dct )
 
@@ -528,6 +530,8 @@ def reduce_dict( validators, dct ):
 def validate(meta, compare_function, compare_reduction, evaluate_function,
              evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, validators):
 
+    global average, stddev
+
     # compute the RSME
     df_compare = pd.DataFrame()
     df_evaluate = pd.DataFrame()
@@ -549,11 +553,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
 
-    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators, None)
+    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
     for name in average:
         print(f"ensemble average: {average[name][0][0:3]}")
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators, average)
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators)
     for name in stddev:
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
