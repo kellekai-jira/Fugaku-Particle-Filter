@@ -371,7 +371,7 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_mean(proc, sids, name, meta):
+def ensemble_mean(proc, sids, name, meta, extra):
 
     x_avg = np.array([])
     for sid in sids:
@@ -426,7 +426,7 @@ def dict2wrapper( dct ):
         variable.name = name
         for data in dct[name]:
             rank = cm.StatisticData()
-            rank.data.extend(dct[name][data])
+            rank.data.extend(data)
             variable.ranks.append(rank)
         wrapper.variables.append(variable)
     return wrapper
@@ -471,12 +471,12 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
     return x_stddev
 
 
-def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
+def ensemble_wrapper( variables, sids, nprocs, meta, func, validators, extra = None ):
     pool = Pool()
 
     dct = {}
     for name in variables:
-        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
+        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta, extra=extra), range(nprocs))
 
     reduce_dict( validators, dct )
 
