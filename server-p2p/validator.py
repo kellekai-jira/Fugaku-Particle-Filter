@@ -432,28 +432,28 @@ def dict2wrapper( dct ):
     return wrapper
 
 
-def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
+def ensemble_stddev(proc, sids, name, meta, average):
 
     x_stddev = np.array([])
     for sid in sids:
-        weight = meta_data[sid]['weight']
-        meta = meta_data[sid][proc][name]
-        ckpt_file = meta['ckpt_file']
+        weight = meta[sid]['weight']
+        item = meta[sid][proc][name]
+        ckpt_file = item['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
-        mode = meta['mode']
+        mode = item['mode']
 
         if mode == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
             data = array.array('d', bytes)
 
         else:
             data = []
-            n = meta['count']
+            n = item['count']
             bs = 1024 * 1024
             nb = n // bs + (1 if n % bs != 0 else 0)
 
-            ckpt.seek(meta['offset'])
+            ckpt.seek(item['offset'])
 
             for b in range(nb):
                 bytes = ckpt.read(8)
@@ -464,9 +464,9 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
 
         ckpt.close()
         if x_stddev.size == 0:
-            x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+            x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
-            x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+            x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
 
     return x_stddev
 
@@ -496,13 +496,10 @@ def bcast_dict( validators, dct ):
     if validator_id == 0:
         wrapper = dict2wrapper( dct )
         for id in validators:
-            validator_socket[id].recv()
             send_message(validator_socket[id], wrapper)
 
     else:
         dct.clear()
-        msg = cm.Message()
-        send_message(validator_socket, msg)
         wrapper = receive_wrapper(validator_socket)
         dct = wrapper2dict(wrapper)
 
