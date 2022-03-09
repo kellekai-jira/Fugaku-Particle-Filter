@@ -33,13 +33,50 @@ z-score (see Baker et al, 2014)
 from utils import get_node_name
 from common import bind_socket, parse
 
-context = zmq.Context()
+assert (os.environ.get('MELISSA_DA_WORKER_ID') is not None)
+validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
 
+# connect sockets
+context = zmq.Context()
+context.setsockopt(zmq.LINGER, 0)
+
+# server socket
+addr = "tcp://*:4000"
+server_socket, port_socket = \
+    bind_socket(context, zmq.REQ, addr)
+
+
+# validator socket
+def connect_validator_sockets():
+    global validator_socket
+
+    # validator master
+    if validator_id == 0:
+        validator_socket = {}
+        pattern = os.getcwd() + '/worker-*-ip.dat'
+        worker_ip_files = glob.glob(pattern)
+        p = re.compile("worker-(.*)-ip.dat")
+        for fn in worker_ip_files:
+            id = int(p.search(os.path.basename(fn)).group(1))
+            if id != 0:
+                with open(fn, 'r') as file:
+                    ip = file.read().rstrip()
+                addr = "tcp://" + ip + ":4001"
+                so = context.socket(zmq.REP)
+                so.connect(addr)
+                validator_socket[id] = so
+                print(f"Validator master connected to validator: {id} at ip: {addr}")
+
+    # validator slaves
+    else:
+        addr = "tcp://*:4001"
+        validator_socket, port_socket = \
+            bind_socket(context, zmq.REQ, addr)
+
+# set paths
 experimentPath = os.getcwd() + '/'
 checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 
-print(f"experimentPath: {experimentPath}")
-print(f"checkpointPath: {checkpointPath}")
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     ncfiles = {}
@@ -77,6 +114,27 @@ FTI_CPC_STRIP       = 5
 FTI_CPC_TYPE_NONE   = 0
 FTI_CPC_ACCURACY    = 1
 FTI_CPC_PRECISION   = 2
+
+
+def send_message(socket, data):
+    socket.send(data.SerializeToString())
+
+
+def encode_state_id( t, id, mode ):
+    hash        = mode
+    hash        = (hash << 24)  | t
+    hash        = (hash << 32) | id
+    return hash
+
+
+def decode_state_id( hash ):
+    mask_mode   = 0xFF
+    mask_t      = 0xFFFFFF
+    mask_id     = 0xFFFFFFFF
+    id          = hash & mask_id
+    t           = (hash >> 32) & mask_t
+    mode        = (hash >> 56) & mask_mode
+    return t, id, mode
 
 
 def energy(data):
@@ -279,138 +337,6 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
     return x_stddev
 
 
-def ensemble_statistics(cycle, meta_statistic, num_procs_application, validator_id, request):
-
-    pool = Pool()
-
-    sids = list(meta_statistic.keys())
-    names = list(meta_statistic[sids[0]][0].keys())
-
-    wrapper = cm.StatisticWrapper()
-    for name in names:
-        var = cm.StatisticVariable()
-        var.name = name
-        results = pool.map(partial(ensemble_mean, sids=sids, name=name, meta_data=meta_statistic), range(num_procs_application))
-        for result in results:
-            data = cm.StatisticData()
-            data.data.extend(result)
-            var.ranks.append(data)
-        wrapper.variables.append(var)
-
-
-    pattern = os.getcwd() + '/worker-*-ip.dat'
-    worker_ip_files = glob.glob(pattern)
-
-    print(worker_ip_files)
-    if validator_id == 0:
-        stddev = {}
-        average = {}
-        validator_ids = request.validation_request.validator_ids
-        worker_ids = []
-        validation_sockets = []
-        p = re.compile("worker-(.*)-ip.dat")
-        for fn in worker_ip_files:
-            id = int(p.search(os.path.basename(fn)).group(1))
-            if id not in validator_ids: continue
-            if id not in worker_ids:
-                with open(fn, 'r') as file:
-                    ip = file.read().rstrip()
-                addr = "tcp://" + ip + ":4001"
-                so = context.socket(zmq.REP)
-                so.connect(addr)
-                validation_sockets.append(so)
-                worker_ids.append(id)
-                print(f"connected to validator: {id} with addr: {addr}")
-        if len(worker_ids) > 0:
-            for idv, variable in enumerate(wrapper.variables):
-                average[variable.name] = {}
-                for idr, rank in enumerate(variable.ranks):
-                    average[variable.name][idr] = np.array(rank.data)
-            for idx, vsock in enumerate(validation_sockets):
-                print(f"[{worker_ids[idx]}] waiting for worker message...")
-                msg = vsock.recv()# only polling
-                avg_wrapper = cm.StatisticWrapper()
-                avg_wrapper.ParseFromString(msg)
-                for idv, variable in enumerate(avg_wrapper.variables):
-                    for idr, rank in enumerate(variable.ranks):
-                        average[variable.name][idr] += rank.data
-            average_wrapper = dict2wrapper( average )
-            for idx, vsock in enumerate(validation_sockets):
-                send_message(vsock, average_wrapper)
-                print(f"[{worker_ids[idx]}] sent average to worker!")
-            for key in average:
-                print(f"average variable '{key}': {average[key][0][0:5]}")
-            pool = Pool()
-            wrapper_stddev = cm.StatisticWrapper()
-            for name in names:
-                var = cm.StatisticVariable()
-                var.name = name
-                results = pool.map(partial(ensemble_stddev, sids=sids, name=name, meta_data=meta_statistic, avg_dict=average), \
-                                   range(num_procs_application))
-                for result in results:
-                    data = cm.StatisticData()
-                    data.data.extend(result)
-                    var.ranks.append(data)
-                wrapper_stddev.variables.append(var)
-            for idv, variable in enumerate(wrapper_stddev.variables):
-                stddev[variable.name] = {}
-                for idr, rank in enumerate(variable.ranks):
-                    stddev[variable.name][idr] = np.array(rank.data)
-            for idx, vsock in enumerate(validation_sockets):
-                print(f"[{worker_ids[idx]}] waiting for worker message...")
-                msg = vsock.recv()# only polling
-                std_wrapper = cm.StatisticWrapper()
-                std_wrapper.ParseFromString(msg)
-                for idv, variable in enumerate(std_wrapper.variables):
-                    for idr, rank in enumerate(variable.ranks):
-                        stddev[variable.name][idr] += rank.data
-                response = cm.Message()
-                send_message(vsock, response)
-                print(f"[{worker_ids[idx]}] sent stddev to worker!")
-            for name in stddev:
-                num_procs = 0
-                state_dims = []
-                for rank in stddev[name]:
-                    stddev[name][rank] = np.sqrt(stddev[name][rank])
-                    num_procs += 1
-                    state_dims.append(len(stddev[name][rank]))
-            for key in stddev:
-                print(f"stddev variable '{key}': {stddev[key][0][0:5]}")
-
-        write_lorenz(average, stddev, cycle, num_procs, state_dims)
-
-    else:
-        addr = "tcp://*:4001"
-
-        print("sending message...")
-        socket, port_socket = \
-            bind_socket(context, zmq.REQ, addr)
-
-        send_message(socket, wrapper)
-        msg = socket.recv()  # only polling
-        avg_wrapper = cm.StatisticWrapper()
-        avg_wrapper.ParseFromString(msg)
-        average = wrapper2dict( avg_wrapper )
-        pool = Pool()
-        wrapper_stddev = cm.StatisticWrapper()
-        for name in names:
-            var = cm.StatisticVariable()
-            var.name = name
-            results = pool.map(
-                partial(ensemble_stddev, sids=sids, name=name, meta_data=meta_statistic, avg_dict=average), \
-                range(num_procs_application))
-            for result in results:
-                data = cm.StatisticData()
-                data.data.extend(result)
-                var.ranks.append(data)
-            wrapper_stddev.variables.append(var)
-        send_message(socket, wrapper_stddev)
-        msg = socket.recv()  # only polling
-        print("received average from master validator!")
-        socket.close()
-
-
-
 def compare(proc, sids, name, meta, func):
 
     states = []
@@ -545,8 +471,33 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def validate(meta, meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function,
-             evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
+def receive_wrapper( socket ):
+    msg = socket.recv()  # only polling
+    wrapper = cm.StatisticWrapper()
+    wrapper.ParseFromString(msg)
+    return wrapper
+
+def reduce_dict( validators, dct ):
+    if validator_id == 0:
+        for id in validators:
+            wrapper = receive_wrapper( validator_socket[id] )
+            for variable in wrapper.variables:
+                for idr, rank in enumerate(variable.ranks):
+                    dct[variable.name][idr] += rank.data
+    else:
+        wrapper = cm.StatisticWrapper()
+        for name in dct:
+            var = cm.StatisticVariable()
+            var.name = name
+            for rank in dct[name]:
+                rdata = cm.StatisticData()
+                rdata.data.extend( dct[name][rank] )
+            wrapper.variables.append(var)
+        send_message(validator_socket, wrapper)
+
+
+def validate(meta, compare_function, compare_reduction, evaluate_function,
+             evaluate_reduction, state_dimension, num_procs_application, variables, cpc, state_ids):
 
     # compute the RSME
     df_compare = pd.DataFrame()
@@ -564,27 +515,6 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
 
     print(df_compare)
     print(df_evaluate)
-
-
-def send_message(socket, data):
-    socket.send(data.SerializeToString())
-
-
-def encode_state_id( t, id, mode ):
-    hash        = mode
-    hash        = (hash << 24)  | t
-    hash        = (hash << 32) | id
-    return hash
-
-
-def decode_state_id( hash ):
-    mask_mode   = 0xFF
-    mask_t      = 0xFFFFFF
-    mask_id     = 0xFFFFFFFF
-    id          = hash & mask_id
-    t           = (hash >> 32) & mask_t
-    mode        = (hash >> 56) & mask_mode
-    return t, id, mode
 
 
 class cpc_t:
@@ -635,35 +565,26 @@ class Validator:
         self.m_meta_evaluate = {}
         self.m_meta_statistic = {}
         self.m_num_procs = 0
-        self.m_validator_id = 0
         self.m_state_dimension = 0
-        self.m_socket = None
         self.m_cpc_parameters = []
         self.m_varnames = []
         self.m_varnames_cpc = []
         self.m_cycle = []
         self.m_num_cores = len(os.sched_getaffinity(0))
+        self.m_first = True
+        self.m_state_ids = []
         self.init()
 
     # initialize validator
     def init(self):
+        global server_socket, validator_socket, validator_id
 
         with open( experimentPath + 'compression.json') as fp:
             cpc_json = json.load(fp)
 
-        context.setsockopt(zmq.LINGER, 0)
-        addr = "tcp://*:4000"
-
-        self.m_socket, port_socket = \
-            bind_socket(context, zmq.REQ, addr)
-
-        assert( os.environ.get('MELISSA_DA_WORKER_ID') is not None )
-
-        self.m_validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
-
         host = get_node_name()
 
-        with open(experimentPath + f'worker-{self.m_validator_id}-ip.dat', 'w') as f:
+        with open(experimentPath + f'worker-{validator_id}-ip.dat', 'w') as f:
             f.write(host)
 
         self.m_varnames = cpc_json['variables']
@@ -772,7 +693,7 @@ class Validator:
                 self.m_meta[sid] = meta_item
 
 
-    def handle_validation_request( self, request ):
+    def handle_request( self, request ):
         states = []
         self.m_state_ids = []
         for item in request.validation_request.to_validate:
@@ -781,75 +702,47 @@ class Validator:
             print(item)
 
         self.populate_meta(states, self.m_cpc_parameters)
-        #self.create_metadata_statistic(states)
 
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
-        print(f"validator_id: {self.m_validator_id}")
-
-        #ensemble_statistics(self.m_cycle, self.m_meta_statistic, self.m_num_procs, self.m_validator_id, request)
 
         if self.m_is_validate:
-            #self.create_metadata(states)
 
             validate(
                 self.m_meta,
-                self.m_meta_compare,
                 self.m_compare_function,
                 self.m_compare_reduction,
-                self.m_meta_evaluate,
                 self.m_evaluation_function,
                 self.m_evaluation_reduction,
                 self.m_state_dimension,
                 self.m_num_procs,
-                self.m_validator_id,
                 self.m_varnames,
                 self.m_cpc_parameters,
                 self.m_state_ids
             )
 
 
-    def handle_statistic_request( self, request ):
-        print("received statistic request")
-
-        states = []
-        for item in request.statistic_request.weights:
-            states.append(item)
-
-        self.create_metadata_statistic(states)
-        print(f"state_dimension: {self.m_state_dimension}")
-        print(f"num_procs: {self.m_num_procs}")
-        print(f"validator_id: {self.m_validator_id}")
-
-        ensemble_statistics(self.m_meta_statistic, self.m_num_procs, self.m_validator_id)
-
-
-
     # main
     def run(self):
+        empty = cm.Message()
+        empty.validation_request.SetInParent()
 
         while True:
+            # server communication
             response = cm.Message()
-            send_message(self.m_socket, response)
-
-            msg = self.m_socket.recv()
+            send_message(server_socket, response)
+            msg = server_socket.recv()
             request = parse(msg)
-            print("received task... ", request)
 
-            empty = cm.Message()
-            empty.validation_request.SetInParent()
+            if self.m_first:
+                connect_validator_sockets()
+                self.m_first = False
+
+            print("received task... ", request)
             if request == empty:
                 continue
 
-            ty = request.WhichOneof('content')
-            if ty == 'validation_request':
-                self.handle_validation_request(request)
-            elif ty == 'statistic_request':
-                self.handle_statistic_request(request)
-            else:
-                print("Wrong message type received!")
-                assert False
-
+            self.handle_request( request )
 
 
 if __name__ == "__main__":
