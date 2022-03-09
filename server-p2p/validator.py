@@ -474,6 +474,7 @@ def ensemble_stddev(proc, sids, name, meta, extra):
 def ensemble_wrapper( variables, sids, nprocs, meta, func, validators, extra = None ):
     pool = Pool()
 
+    print(extra)
     dct = {}
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta, extra=extra), range(nprocs))
@@ -553,7 +554,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     bcast_dict( validators, average )
     for name in average:
         print(f"ensemble average: {average[name][0][0:3]}")
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators, extra=average)
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators, average)
     for name in stddev:
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
