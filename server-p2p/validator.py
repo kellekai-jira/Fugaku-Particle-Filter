@@ -499,11 +499,13 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
 def validate(meta, meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function,
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
-
+    print(meta.keys())
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
+        print(f"original id: {original}")
         for p in cpc:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
+            print(f"compared id: {compared}")
             test_df = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
             print(test_df)
     #sigmas = []
