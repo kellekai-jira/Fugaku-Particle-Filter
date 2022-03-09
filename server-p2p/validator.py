@@ -928,7 +928,7 @@ class Validator:
             self.m_state_ids.append(item.state_id)
             print(item)
 
-        self.populate_meta(states)
+        self.populate_meta(states, self.m_cpc_parameters)
         #self.create_metadata_statistic(states)
 
         print(f"state_dimension: {self.m_state_dimension}")
