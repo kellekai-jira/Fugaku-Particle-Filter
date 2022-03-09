@@ -117,13 +117,47 @@ def sse(data):
     return sigma
 
 
+def reduce_sse(parts, n):
+    sigma = 0
+    for part in parts:
+        sigma += part
+
+    return np.sqrt(sigma / n)
+
+
+def maximum(data):
+    """
+        computes the maximum value
+        data[0] <- first state
+        data[1] <- second state
+    """
+    maximum_temp = 0
+
+    for value in data:
+        norm = abs(value)
+        if norm > maximum_temp:
+            maximum_temp = norm
+
+    return maximum_temp
+
+
+def reduce_maximum(maxima, n):
+    maximum_temp = 0
+
+    for value in maxima:
+        norm = abs(value)
+        if norm > maximum_temp:
+            maximum_temp = norm
+
+    return maximum_temp
+
+
 def pme(data):
     """
         computes the pointwise maximum error between 2 states
         data[0] <- first state
         data[1] <- second state
     """
-
     max_error = 0
     a1 = data[0]
     a2 = data[1]
@@ -145,14 +179,6 @@ def reduce_pme(max_errors, n):
             max_error = error
 
     return max_error
-
-
-def reduce_sse(parts, n):
-    sigma = 0
-    for part in parts:
-        sigma += part
-
-    return np.sqrt(sigma / n)
 
 
 def ensemble_mean(proc, sids, name, meta_data):
@@ -491,7 +517,7 @@ def compare(proc, sids, name, meta, func):
     return func(states)
 
 
-def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
+def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
     pool = Pool()
 
     dfl = []
@@ -526,21 +552,86 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
     return pd.DataFrame(dfl)
 
 
+def evaluate(proc, sid, name, meta, func):
+
+    item = meta[sid][proc][name]
+    ckpt_file = item['ckpt_file']
+    ckpt = open(ckpt_file, 'rb')
+    t, id, p = decode_state_id(sid)
+
+    if item['mode'] == 0:
+        ckpt.seek(item['offset'])
+        bytes = ckpt.read(item['size'])
+        data = array.array('d', bytes)
+
+    else:
+        data = []
+        n = item['count']
+        bs = 1024 * 1024
+        nb = n // bs + (1 if n % bs != 0 else 0)
+
+        ckpt.seek(item['offset'])
+
+        for b in range(nb):
+            bytes = ckpt.read(8)
+            bs = int.from_bytes(bytes, byteorder='little')
+            bytes = ckpt.read(bs)
+            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+            data = [*data, *block]
+
+    ckpt.close()
+
+    return func(data)
+
+def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
+    pool = Pool()
+
+    dfl = []
+    for name in variables:
+        t, id, p = decode_state_id( sid )
+        data_size = 0
+        size_original = 0
+        size_compared = 0
+        for proc in range(nprocs):
+            data_size += float(meta[sid][proc][name]['count'] * 8)
+            size_original += float(meta[sid][proc][name]['size'])
+            size_compared += float(meta[sid][proc][name]['size'])
+        rate_original = data_size / size_original
+        rate_compared = data_size / size_compared
+        results = pool.map(partial(evaluate, sid=sid, name=name, meta=meta, func=func), range(nprocs))
+        reduced = reduce_func(results, ndim)
+        dfl.append( {
+            'variable' : name,
+            'operation' : operation,
+            'value' : reduced,
+            'mode' : cpc[p].mode,
+            'parameter': cpc[p].parameter,
+            't' : t,
+            'id' : id,
+            'rate' : rate_original,
+        } )
+
+    return pd.DataFrame(dfl)
+
 
 def validate(meta, meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function,
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
     # compute the RSME
-    df = pd.DataFrame()
+    df_compare = pd.DataFrame()
+    df_evaluate = pd.DataFrame()
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
+        df_emax = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, maximum, reduce_maximum, 'max_val', cpc)
+        df_evaluate.append( df_emax, ignore_index=True )
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
-            df_rmse = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-            df_emax = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, pme, reduce_pme, 'PE_max', cpc)
-            df = pd.concat( [df, df_rmse, df_emax], ignore_index=True )
+            df_rmse = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+            df_emax = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, pme, reduce_pme, 'PE_max', cpc)
+            df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
 
-    print(df)
+    print(df_compare)
+    print(df_evaluate)
 
     ## compute the pointwise maximum error
     #df = pd.DataFrame()
@@ -548,7 +639,7 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
     #    original = encode_state_id(state_id.t, state_id.id, 0)
     #    for p in cpc[1:]:
     #        compared = encode_state_id( state_id.t, state_id.id, p.id )
-    #        dfp = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+    #        dfp = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
     #        df = pd.concat( [df, dfp], ignore_index=True )
     #print(df)
 
