@@ -510,15 +510,13 @@ def bcast_dict( validators, dct ):
 
 def reduce_dict( validators, dct ):
     if validator_id == 0:
-        msg = cm.Message()
         for id in validators:
-            send_message(validator_socket[id], msg)
+            validator_socket[id].recv()
             wrapper = receive_wrapper( validator_socket[id] )
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
                     dct[variable.name][idr] += rank.data
     else:
-        validator_socket.recv()
         wrapper = cm.StatisticWrapper()
         for name in dct:
             var = cm.StatisticVariable()
@@ -556,6 +554,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     sids = []
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
+
+    if validator_id != 0:
+        msg = cm.Message()
+        send_message(validator_socket[id], msg)
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
