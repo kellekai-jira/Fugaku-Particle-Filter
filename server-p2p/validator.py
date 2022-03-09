@@ -98,12 +98,12 @@ def reduce_energy(parts, n):
     return energy_avg / n
 
 
-'''
-    computes the sum of squared differences between two states
-    data[0] <- first state
-    data[1] <- second state
-'''
 def sse(data):
+    """
+        computes the sum of squared differences between two states
+        data[0] <- first state
+        data[1] <- second state
+    """
 
     sigma = 0
     a1 = data[0]
@@ -115,6 +115,37 @@ def sse(data):
         sigma += (a1[i] - a2[i]) ** 2
 
     return sigma
+
+
+def pme(data):
+    """
+        computes the pointwise maximum error between 2 states
+        data[0] <- first state
+        data[1] <- second state
+    """
+
+    max_error = 0
+    a1 = data[0]
+    a2 = data[1]
+
+    assert(len(a1) == len(a2))
+
+    for i in range(len(a1)):
+        error = abs(a1[i] - a2[i])
+        if error > max_error:
+            max_error = error
+
+    return max_error
+
+
+def reduce_pme(max_errors, n):
+    max_error = 0
+    for error in max_errors:
+        if error > max_error:
+            max_error = error
+
+    return max_error
+
 
 def reduce_sse(parts, n):
     sigma = 0
@@ -499,15 +530,27 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
 def validate(meta, meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function,
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
-    # compute the RSME and pointwise maximum error
+    # compute the RSME
     df = pd.DataFrame()
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
-            dfp = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-            df = pd.concat( [df, dfp], ignore_index=True )
+            df_rmse = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+            df_emax = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, pme, reduce_pme, 'PE_max', cpc)
+            df = pd.concat( [df, df_rmse, df_emax], ignore_index=True )
+
     print(df)
+
+    ## compute the pointwise maximum error
+    #df = pd.DataFrame()
+    #for state_id in state_ids:
+    #    original = encode_state_id(state_id.t, state_id.id, 0)
+    #    for p in cpc[1:]:
+    #        compared = encode_state_id( state_id.t, state_id.id, p.id )
+    #        dfp = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+    #        df = pd.concat( [df, dfp], ignore_index=True )
+    #print(df)
 
     #sigmas = []
 
