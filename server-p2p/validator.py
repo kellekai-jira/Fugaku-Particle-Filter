@@ -14,6 +14,22 @@ import glob
 import re
 import netCDF4
 
+'''
+(from Baker et al, 2014)
+
+* CHARACTERIZING THE ORIGINAL DATA
+
+CR(F) compressed size/original size         <- rate
+e_max   = max( |compressed_i - original_i| )  <- pointwise maximum error 
+RMSE    = sqrt( 1/N * sum( sq(e_i) ) ), e_i = compressed_i - original_i
+PSNR    = 20 log10( max( original_i ) / RMSE ) <- peak signal to noise error
+rho     = ( sum( (orig_i - mean(orig)) * (compr_i - mean(compr)) ) ) \  # => cov(orig,compr)/(s_orig*s_compr) !> 0.99999
+        / sqrt( sum( sq(orig_i - mean(orig)) ) * sum( sq(compr_i - mean(compr)) ) )  <- pearson correlation coefficient
+
+'''
+
+
+
 from utils import get_node_name
 from common import bind_socket, parse
 
