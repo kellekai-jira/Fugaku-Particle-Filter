@@ -477,6 +477,7 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
     dct = {}
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
+        print(f"ensemble average part: {dct[name][0][0:3]}")
 
     reduce_dict( validators, dct )
 
