@@ -479,6 +479,7 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
         print(f"ensemble average part: {dct[name][0][0:3]}")
 
+    print(f"validators: {validators}")
     reduce_dict( validators, dct )
 
     if validator_id == 0:
@@ -490,6 +491,7 @@ def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
     wrapper = cm.StatisticWrapper()
     wrapper.ParseFromString(msg)
+    print(wrapper)
     return wrapper
 
 def reduce_dict( validators, dct ):
