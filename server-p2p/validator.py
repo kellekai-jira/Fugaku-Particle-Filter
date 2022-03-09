@@ -552,12 +552,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         sids.append(encode_state_id(s.t, s.id, 0))
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
-
-    if validator_id == 0:
-        for name in average:
-            print(f"ensemble average: {average[name][0][0:3]}")
-
     bcast_dict( validators, average )
+    for name in average:
+        print(f"ensemble average: {average[name][0][0:3]}")
 
 
 class cpc_t:
