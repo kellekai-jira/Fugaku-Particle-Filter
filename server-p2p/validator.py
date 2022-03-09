@@ -500,6 +500,7 @@ def reduce_dict( validators, dct ):
             print(f"[{id}] received wrapper")
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
+                    print(f"adding: {rank.data[0:3]}")
                     dct[variable.name][idr] += rank.data
     else:
         wrapper = cm.StatisticWrapper()
