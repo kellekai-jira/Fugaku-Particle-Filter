@@ -623,12 +623,12 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
         df_emax = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, maximum, reduce_maximum, 'max_val', cpc)
-        df_evaluate.append( df_emax, ignore_index=True )
+        df_evaluate = df_evaluate.append( df_emax, ignore_index=True )
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             df_rmse = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, pme, reduce_pme, 'PE_max', cpc)
-            df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
+            df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
 
     print(df_compare)
     print(df_evaluate)
