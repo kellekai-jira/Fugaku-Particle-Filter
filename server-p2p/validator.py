@@ -500,11 +500,12 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
 
-    for original in state_ids:
+    for state_id in state_ids:
+        original = encode_state_id(state_id.t, state_id.id, 0)
         for p in cpc:
-            compared = encode_state_id( original.t, original.id, p.id )
-            testdf = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-            print(testdf)
+            compared = encode_state_id( state_id.t, state_id.id, p.id )
+            test_df = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+            print(test_df)
     #sigmas = []
 
     #pool = Pool()
