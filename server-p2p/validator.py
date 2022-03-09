@@ -478,9 +478,10 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
         rate_compared = size_compared / data_size
         results = pool.map(partial(compare, sids=sids, name=name, meta=meta, func=func), range(nprocs))
         reduced = reduce_func(results, ndim)
-        reduced.append( {
+        dfl.append( {
             'variable' : name,
             'operation' : operation,
+            'value' : reduced,
             'mode_original' : cpc[original[2]]['mode'],
             'mode_compared' : cpc[compared[2]]['mode'],
             'parameter_original': cpc[original[2]]['parameter'],
