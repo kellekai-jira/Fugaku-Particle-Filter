@@ -1,4 +1,5 @@
 {
+  "variables" : [ "state1" ],
   "compression" : {
     "method"    : "validate",
     "validate" : [ 
