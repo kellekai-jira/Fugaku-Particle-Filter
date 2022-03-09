@@ -429,22 +429,22 @@ def compare(proc, sids, name, meta, func):
 
     for sid in sids:
 
-        meta = meta[sid][proc][name]
-        ckpt_file = meta['ckpt_file']
+        item = meta[sid][proc][name]
+        ckpt_file = item['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
 
-        if meta['mode'] == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
+        if item['mode'] == 0:
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
             states.append(array.array('d', bytes))
 
         else:
             data = []
-            n = meta['count']
+            n = item['count']
             bs = 1024 * 1024
             nb = n // bs + (1 if n % bs != 0 else 0)
 
-            ckpt.seek(meta['offset'])
+            ckpt.seek(item['offset'])
 
             for b in range(nb):
                 bytes = ckpt.read(8)
@@ -503,7 +503,7 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f"original id: {original}")
-        for p in cpc:
+        for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             print(f"compared id: {compared}")
             test_df = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
