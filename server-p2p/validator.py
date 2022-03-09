@@ -474,8 +474,8 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
             data_size += float(meta[sids[0]][proc][name]['count'] * 8)
             size_original += float(meta[sids[0]][proc][name]['size'])
             size_compared += float(meta[sids[1]][proc][name]['size'])
-        rate_original = size_original / data_size
-        rate_compared = size_compared / data_size
+        rate_original = data_size / size_original
+        rate_compared = data_size / size_compared
         results = pool.map(partial(compare, sids=sids, name=name, meta=meta, func=func), range(nprocs))
         reduced = reduce_func(results, ndim)
         dfl.append( {
@@ -500,12 +500,15 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
     # compute the RSME and pointwise maximum error
+    df = pd.DataFrame()
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
-            test_df = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-            print(test_df)
+            dfp = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
+            df = pd.concat( [df, dfp], ignore_index=True )
+    print(df)
+
     #sigmas = []
 
     #pool = Pool()
