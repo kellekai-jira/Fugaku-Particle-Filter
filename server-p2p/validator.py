@@ -237,106 +237,6 @@ def reduce_pme(max_errors, n):
     return max_error
 
 
-def ensemble_mean(proc, sids, name, meta_data):
-
-    x_avg = np.array([])
-    for sid in sids:
-        weight = meta_data[sid]['weight']
-        meta = meta_data[sid][proc][name]
-        ckpt_file = meta['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
-        mode = meta['mode']
-
-        if mode == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
-            data = array.array('d', bytes)
-
-        else:
-            data = []
-            n = meta['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(meta['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-        ckpt.close()
-        if x_avg.size == 0:
-            x_avg = weight * np.array(data)
-        else:
-            x_avg += weight * np.array(data)
-
-    return x_avg
-
-
-def wrapper2dict( wrapper ):
-    d = {}
-    for variable in wrapper.variables:
-        d[variable.name] = {}
-        for idx, rank in enumerate(variable.ranks):
-            d[variable.name][idx] = rank.data
-    return d
-
-
-def dict2wrapper( dct ):
-    wrapper = cm.StatisticWrapper()
-    for name in dct:
-        variable = cm.StatisticVariable()
-        variable.name = name
-        for data in dct[name]:
-            rank = cm.StatisticData()
-            rank.data.extend(dct[name][data])
-            variable.ranks.append(rank)
-        wrapper.variables.append(variable)
-    return wrapper
-
-
-def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
-
-    x_stddev = np.array([])
-    for sid in sids:
-        weight = meta_data[sid]['weight']
-        meta = meta_data[sid][proc][name]
-        ckpt_file = meta['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
-        mode = meta['mode']
-
-        if mode == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
-            data = array.array('d', bytes)
-
-        else:
-            data = []
-            n = meta['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(meta['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-        ckpt.close()
-        if x_stddev.size == 0:
-            x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
-        else:
-            x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
-
-    return x_stddev
-
-
 def compare(proc, sids, name, meta, func):
 
     states = []
@@ -471,6 +371,119 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
+def ensemble_mean(proc, sids, name, meta):
+
+    x_avg = np.array([])
+    for sid in sids:
+        weight = meta[sid]['weight']
+        item = meta[sid][proc][name]
+        ckpt_file = item['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+        mode = item['mode']
+
+        if mode == 0:
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
+            data = array.array('d', bytes)
+
+        else:
+            data = []
+            n = item['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(item['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+        ckpt.close()
+        if x_avg.size == 0:
+            x_avg = weight * np.array(data)
+        else:
+            x_avg += weight * np.array(data)
+
+    return x_avg
+
+
+def wrapper2dict( wrapper ):
+    d = {}
+    for variable in wrapper.variables:
+        d[variable.name] = {}
+        for idx, rank in enumerate(variable.ranks):
+            d[variable.name][idx] = rank.data
+    return d
+
+
+def dict2wrapper( dct ):
+    wrapper = cm.StatisticWrapper()
+    for name in dct:
+        variable = cm.StatisticVariable()
+        variable.name = name
+        for data in dct[name]:
+            rank = cm.StatisticData()
+            rank.data.extend(dct[name][data])
+            variable.ranks.append(rank)
+        wrapper.variables.append(variable)
+    return wrapper
+
+
+def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
+
+    x_stddev = np.array([])
+    for sid in sids:
+        weight = meta_data[sid]['weight']
+        meta = meta_data[sid][proc][name]
+        ckpt_file = meta['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+        mode = meta['mode']
+
+        if mode == 0:
+            ckpt.seek(meta['offset'])
+            bytes = ckpt.read(meta['size'])
+            data = array.array('d', bytes)
+
+        else:
+            data = []
+            n = meta['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(meta['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+        ckpt.close()
+        if x_stddev.size == 0:
+            x_stddev = weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+        else:
+            x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
+
+    return x_stddev
+
+
+def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
+    pool = Pool()
+
+    dct = {}
+    for name in variables:
+        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
+
+    reduce_dict( validators, dct )
+
+    if validator_id == 0:
+        for name in dct:
+            print(f"ensemble average: {dct[name][0][0:3]}")
+
 def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
     wrapper = cm.StatisticWrapper()
@@ -516,6 +529,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
+    average
 
 class cpc_t:
     __items = 0
