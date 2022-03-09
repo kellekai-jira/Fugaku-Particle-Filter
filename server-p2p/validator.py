@@ -482,10 +482,10 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
             'variable' : name,
             'operation' : operation,
             'value' : reduced,
-            'mode_original' : cpc[original[2]]['mode'],
-            'mode_compared' : cpc[compared[2]]['mode'],
-            'parameter_original': cpc[original[2]]['parameter'],
-            'parameter_compared': cpc[compared[2]]['parameter'],
+            'mode_original' : cpc[original[2]].mode,
+            'mode_compared' : cpc[compared[2]].mode,
+            'parameter_original': cpc[original[2]].parameter,
+            'parameter_compared': cpc[compared[2]].parameter,
             't' : original[0],
             'id' : original[1],
             'rate_original' : rate_original,
@@ -499,13 +499,11 @@ def compare_states_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_fu
 def validate(meta, meta_compare, compare_function, compare_reduction, meta_evaluate, evaluate_function,
              evaluate_reduction, state_dimension, num_procs_application, validator_id, variables, cpc, state_ids):
 
-    print(meta.keys())
+    # compute the RSME and pointwise maximum error
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
-        print(f"original id: {original}")
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
-            print(f"compared id: {compared}")
             test_df = compare_states_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
             print(test_df)
     #sigmas = []
