@@ -477,15 +477,10 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
     dct = {}
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
-        print(f"ensemble average part: {dct[name][0][0:3]}")
 
-    print(f"validators: {validators}")
     reduce_dict( validators, dct )
 
-    if validator_id == 0:
-        for name in dct:
-            print(f"ensemble average: {dct[name][0][0:3]}")
-
+    return dct
 
 def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
@@ -493,15 +488,31 @@ def receive_wrapper( socket ):
     wrapper.ParseFromString(msg)
     return wrapper
 
+
+def bcast_dict( validators, dct ):
+
+    global validator_socket
+
+    if validator_id == 0:
+        wrapper = dict2wrapper( dct )
+        for id in validators:
+            validator_socket[id].recv()
+            send_message(validator_socket[id], wrapper)
+
+    else:
+        dct.clear()
+        msg = cm.Message()
+        send_message(validator_socket, msg)
+        wrapper = receive_wrapper(validator_socket)
+        dct = wrapper2dict(wrapper)
+
+
 def reduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
-            print(f"[{id}] waiting for wrapper...")
             wrapper = receive_wrapper( validator_socket[id] )
-            print(f"[{id}] received wrapper")
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
-                    print(f"adding: {rank.data[0:3]}")
                     dct[variable.name][idr] += rank.data
     else:
         wrapper = cm.StatisticWrapper()
@@ -540,7 +551,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
 
-    ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
+    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
+
+    if validator_id == 0:
+        for name in average:
+            print(f"ensemble average: {average[name][0][0:3]}")
+
+    bcast_dict( validators, average )
 
 
 class cpc_t:
