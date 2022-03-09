@@ -653,7 +653,7 @@ class Validator:
 
         # required to unify the meta data creation
         for name in self.m_varnames:
-            self.m_cpc_parameters.append(cpc_t(name, -1, -1))
+            self.m_cpc_parameters.append(cpc_t(name, 'none', 0))
 
         if cpc_json['compression']['method'] == 'adapt': return
 
