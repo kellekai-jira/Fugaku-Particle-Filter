@@ -484,6 +484,7 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
         for name in dct:
             print(f"ensemble average: {dct[name][0][0:3]}")
 
+
 def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
     wrapper = cm.StatisticWrapper()
@@ -510,7 +511,7 @@ def reduce_dict( validators, dct ):
 
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
-             evaluate_reduction, state_dimension, num_procs_application, variables, cpc, state_ids):
+             evaluate_reduction, state_dimension, num_procs_application, variables, cpc, state_ids, validators):
 
     # compute the RSME
     df_compare = pd.DataFrame()
@@ -529,7 +530,12 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
-    average
+    sids = []
+    for s in state_ids:
+        sids.append(encode_state_id(s.t, s.id, 0))
+
+    ensemble_wrapper(variables, sids, num_procs_application, meta, ensemble_mean, validators)
+
 
 class cpc_t:
     __items = 0
@@ -715,6 +721,8 @@ class Validator:
             self.m_state_ids.append(item.state_id)
             print(item)
 
+        validators = request.validation_request.validator_ids
+
         self.populate_meta(states, self.m_cpc_parameters)
 
         print(f"state_dimension: {self.m_state_dimension}")
@@ -732,7 +740,8 @@ class Validator:
                 self.m_num_procs,
                 self.m_varnames,
                 self.m_cpc_parameters,
-                self.m_state_ids
+                self.m_state_ids,
+                validators
             )
 
 
