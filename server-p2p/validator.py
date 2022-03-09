@@ -494,7 +494,9 @@ def receive_wrapper( socket ):
 def reduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
+            print(f"[{id}] waiting for wrapper...")
             wrapper = receive_wrapper( validator_socket[id] )
+            print(f"[{id}] received wrapper")
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
                     dct[variable.name][idr] += rank.data
