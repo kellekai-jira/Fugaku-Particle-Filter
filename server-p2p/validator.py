@@ -434,8 +434,6 @@ def dict2wrapper( dct ):
 
 def ensemble_stddev(proc, sids, name, meta, extra):
 
-    print(extra)
-
     x_stddev = np.array([])
     for sid in sids:
         weight = meta[sid]['weight']
@@ -501,9 +499,10 @@ def bcast_dict( validators, dct ):
             send_message(validator_socket[id], wrapper)
 
     else:
-        dct.clear()
         wrapper = receive_wrapper(validator_socket)
-        dct = wrapper2dict(wrapper)
+        for variable in wrapper.variables:
+            for idx, rank in enumerate(variable.ranks):
+                dct[variable.name][idx] = rank.data
 
 
 def reduce_dict( validators, dct ):
