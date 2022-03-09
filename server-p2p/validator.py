@@ -434,6 +434,8 @@ def dict2wrapper( dct ):
 
 def ensemble_stddev(proc, sids, name, meta, extra):
 
+    print(extra)
+
     x_stddev = np.array([])
     for sid in sids:
         weight = meta[sid]['weight']
@@ -550,9 +552,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators, average)
     for name in average:
         print(f"ensemble average: {average[name][0][0:3]}")
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators, extra=average)
+    for name in stddev:
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
