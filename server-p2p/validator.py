@@ -557,7 +557,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     if validator_id != 0:
         msg = cm.Message()
-        send_message(validator_socket[id], msg)
+        send_message(validator_socket, msg)
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
