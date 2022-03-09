@@ -432,7 +432,7 @@ def dict2wrapper( dct ):
     return wrapper
 
 
-def ensemble_stddev(proc, sids, name, meta, average):
+def ensemble_stddev(proc, sids, name, meta, extra):
 
     x_stddev = np.array([])
     for sid in sids:
@@ -464,9 +464,9 @@ def ensemble_stddev(proc, sids, name, meta, average):
 
         ckpt.close()
         if x_stddev.size == 0:
-            x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
+            x_stddev = weight * ( (np.array(data) - extra[name][proc]) ** 2 )
         else:
-            x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
+            x_stddev += weight * ( (np.array(data) - extra[name][proc]) ** 2 )
 
     return x_stddev
 
