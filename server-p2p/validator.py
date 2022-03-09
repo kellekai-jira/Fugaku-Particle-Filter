@@ -423,11 +423,11 @@ def ensemble_statistics(cycle, meta_statistic, num_procs_application, validator_
 
 
 
-def compare(proc, stateIds, name, meta, func):
+def compare(proc, sids, name, meta, func):
 
     states = []
 
-    for sid in stateIds:
+    for sid in sids:
 
         meta = meta[sid][proc][name]
         ckpt_file = meta['ckpt_file']
