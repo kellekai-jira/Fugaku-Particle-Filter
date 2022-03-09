@@ -491,7 +491,6 @@ def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
     wrapper = cm.StatisticWrapper()
     wrapper.ParseFromString(msg)
-    print(wrapper)
     return wrapper
 
 def reduce_dict( validators, dct ):
@@ -510,8 +509,9 @@ def reduce_dict( validators, dct ):
             var = cm.StatisticVariable()
             var.name = name
             for rank in dct[name]:
-                rdata = cm.StatisticData()
-                rdata.data.extend( rank )
+                data = cm.StatisticData()
+                data.data.extend( rank )
+                var.ranks.append(data)
             wrapper.variables.append(var)
         send_message(validator_socket, wrapper)
 
