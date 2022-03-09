@@ -326,14 +326,14 @@ void FtiController::remove( io_state_id_t state_id, io_level_t level ) {
   } else if ( level == IO_STORAGE_L2 ) {
     M_TRIGGER(START_DELETE_PFS,0);
     if( m_dict_bool["master_global"] ) {
-      int ckpt_id = to_ckpt_id( state_id );
+      int64_t ckpt_id = to_ckpt_id( state_id );
       char ckpt_id_c_str[256];
-      snprintf(ckpt_id_c_str, 256, "%d", ckpt_id);
+      snprintf(ckpt_id_c_str, 256, "%ld", ckpt_id);
       std::string ckpt_id_str(ckpt_id_c_str);
       std::string g_path_string = m_dict_string["global_dir"] + "/" + ckpt_id_str;
       MDBG("path to delete -> '%s'", g_path_string.c_str());
 			if( nftw(g_path_string.c_str(), rm, FOPEN_MAX, FTW_DEPTH) == -1 ){ 
-        MERR("failed to remove checkpoint path ''", g_path_string.c_str());
+        MERR("failed to remove checkpoint path '%s'", g_path_string.c_str());
       }
       m_kernel.remove_ckpt_metadata( to_ckpt_id( state_id ), m_io_level_map[level] );
       mpi.barrier();
