@@ -478,6 +478,8 @@ def establish_communication( validators ):
         msg = cm.Message()
         for id in validators:
             send_message(validator_socket[id], msg)
+    else:
+        validator_socket.recv()
 
 def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
 
@@ -524,7 +526,6 @@ def reduce_dict( validators, dct ):
                 for idr, rank in enumerate(variable.ranks):
                     dct[variable.name][idr] += rank.data
     else:
-        validator_socket.recv()
         wrapper = cm.StatisticWrapper()
         for name in dct:
             var = cm.StatisticVariable()
