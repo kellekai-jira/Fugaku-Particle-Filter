@@ -131,25 +131,23 @@ def maximum(data):
         data[0] <- first state
         data[1] <- second state
     """
-    maximum_temp = 0
+    return max(data)
 
-    for value in data:
-        norm = abs(value)
-        if norm > maximum_temp:
-            maximum_temp = norm
-
-    return maximum_temp
+def minimum(data):
+    """
+        computes the maximum value
+        data[0] <- first state
+        data[1] <- second state
+    """
+    return min(data)
 
 
 def reduce_maximum(maxima, n):
-    maximum_temp = 0
+    return max(maxima)
 
-    for value in maxima:
-        norm = abs(value)
-        if norm > maximum_temp:
-            maximum_temp = norm
 
-    return maximum_temp
+def reduce_minimum(minima, n):
+    return min(minima)
 
 
 def pme(data):
@@ -279,73 +277,6 @@ def ensemble_stddev(proc, sids, name, meta_data, avg_dict):
             x_stddev += weight * ( (np.array(data) - avg_dict[name][proc]) ** 2 )
 
     return x_stddev
-
-def evaluate_state(proc, sid, name, meta_data, func):
-
-    meta = meta_data[sid][proc][name]
-    ckpt_file = meta['ckpt_file']
-    ckpt = open(ckpt_file, 'rb')
-    t, id, mode = decode_state_id(sid)
-
-    if mode == 0:
-        ckpt.seek(meta['offset'])
-        bytes = ckpt.read(meta['size'])
-        data = array.array('d', bytes)
-
-    else:
-        data = []
-        n = meta['count']
-        bs = 1024 * 1024
-        nb = n // bs + (1 if n % bs != 0 else 0)
-
-        ckpt.seek(meta['offset'])
-
-        for b in range(nb):
-            bytes = ckpt.read(8)
-            bs = int.from_bytes(bytes, byteorder='little')
-            bytes = ckpt.read(bs)
-            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-            data = [*data, *block]
-
-    ckpt.close()
-
-    return func(data)
-
-def compare_states(proc, sid, name, meta_data, func):
-
-    states = []
-
-    for state in meta_data[sid]:
-
-        meta = meta_data[sid][state][proc][name]
-        ckpt_file = meta['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
-
-        if state == 0:
-            ckpt.seek(meta['offset'])
-            bytes = ckpt.read(meta['size'])
-            states.append(array.array('d', bytes))
-
-        else:
-            data = []
-            n = meta['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(meta['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-            states.append(data)
-
-        ckpt.close()
-
-    return func(states)
 
 
 def ensemble_statistics(cycle, meta_statistic, num_procs_application, validator_id, request):
@@ -622,8 +553,9 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
         original = encode_state_id(state_id.t, state_id.id, 0)
-        df_emax = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, maximum, reduce_maximum, 'max_val', cpc)
-        df_evaluate = df_evaluate.append( df_emax, ignore_index=True )
+        df_vmax = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, maximum, reduce_maximum, 'maximum', cpc)
+        df_vmin = evaluate_wrapper(variables, original, state_dimension, num_procs_application, meta, minimum, reduce_minimum, 'minimum', cpc)
+        df_evaluate = df_evaluate.append( pd.concat( [df_vmin, df_vmax], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             df_rmse = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
@@ -632,57 +564,6 @@ def validate(meta, meta_compare, compare_function, compare_reduction, meta_evalu
 
     print(df_compare)
     print(df_evaluate)
-
-    ## compute the pointwise maximum error
-    #df = pd.DataFrame()
-    #for state_id in state_ids:
-    #    original = encode_state_id(state_id.t, state_id.id, 0)
-    #    for p in cpc[1:]:
-    #        compared = encode_state_id( state_id.t, state_id.id, p.id )
-    #        dfp = compare_wrapper( variables, [original, compared], state_dimension, num_procs_application, meta, sse, reduce_sse, 'RMSE', cpc)
-    #        df = pd.concat( [df, dfp], ignore_index=True )
-    #print(df)
-
-    #sigmas = []
-
-    #pool = Pool()
-
-    #for sid in meta_compare:
-    #    t, id, pid = decode_state_id(sid)
-    #    for name in meta_compare[sid][pid][0]:
-    #        results = pool.map(partial(compare_states, sid=sid, name=name, meta_data=meta_compare, func=compare_function), range(num_procs_application))
-    #        sigma = compare_reduction(results, state_dimension)
-    #        mode = meta_compare[sid][pid][0][name]['mode']
-    #        parameter = meta_compare[sid][pid][0][name]['parameter']
-    #        size_compressed = float(meta_compare[sid][pid][0][name]['size'])
-    #        size_original = float(meta_compare[sid][pid][0][name]['count'] * 8)
-    #        rate = size_original / size_compressed
-    #        sigmas.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'sigma' : sigma } )
-    #        print(f"[{name}|t:{t}|id:{id}|pid:{pid}] sigma -> {sigma}")
-
-    #df = pd.DataFrame(sigmas)
-    #df_file = experimentPath + f"validator{validator_id}-compare-t{t}.csv"
-    #df.to_csv(df_file, sep='\t', encoding='utf-8')
-
-    #pool = Pool()
-
-    #energies = []
-    #for sid in meta_evaluate:
-    #    t, id, pid = decode_state_id(sid)
-    #    for name in meta_evaluate[sid][0]:
-    #        results = pool.map(partial(evaluate_state, sid=sid, name=name, meta_data=meta_evaluate, func=evaluate_function), range(num_procs_application))
-    #        energy = evaluate_reduction(results, state_dimension)
-    #        mode = meta_evaluate[sid][0][name]['mode']
-    #        parameter = meta_evaluate[sid][0][name]['parameter']
-    #        size_compressed = float(meta_evaluate[sid][0][name]['size'])
-    #        size_original = float(meta_evaluate[sid][0][name]['count'] * 8)
-    #        rate = size_original / size_compressed
-    #        energies.append( { 'variable' : name, 't' : t, 'id' : id, 'mode' : mode, 'parameter' : parameter, 'rate' : rate, 'energy' : energy } )
-    #        print(f"[{name}|t:{t}|id:{id}|pid:{pid}] energy -> {energy}")
-
-    #df = pd.DataFrame(energies)
-    #df_file = experimentPath + f"validator{validator_id}-evaluate-t{t}.csv"
-    #df.to_csv(df_file, sep='\t', encoding='utf-8')
 
 
 def send_message(socket, data):
@@ -889,173 +770,6 @@ class Validator:
                 self.m_num_procs = proc
 
                 self.m_meta[sid] = meta_item
-
-
-    def create_metadata_statistic( self, states ):
-
-        # remove old meta data
-        self.m_meta_statistic.clear()
-
-        for state in states:
-
-            sid = encode_state_id(state.state_id.t, state.state_id.id, 0)
-
-            self.m_cycle = state.state_id.t
-
-            path = checkpointPath + str(sid)
-
-            meta_pattern = path + '/Meta*-worker*-serialized.fti'
-            ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
-            meta_files = glob.glob(meta_pattern)
-            ckpt_files = glob.glob(ckpt_pattern)
-
-            meta_item = {}
-
-            meta_item["weight"] = state.weight
-
-            proc = 0
-            for idx, f in enumerate(meta_files):
-                fh = open(f)
-                fstring = fh.read()
-                fh.close()
-
-                procs_per_node = 0
-                buf = io.StringIO(fstring)
-
-                base = 0
-
-                self.m_state_dimension = 0
-                for line in iter(lambda: buf.readline(), ""):
-                    nb_lines = int(line.replace("\n", ""))
-                    meta_str = ""
-                    for i in range(nb_lines):
-                        meta_str = meta_str + buf.readline()
-                    config = configparser.ConfigParser()
-                    config.read_string(meta_str)
-
-                    vars = {}
-                    varid = 0
-                    count = 0
-                    while f'var{varid}_id' in config['0']:
-                        name        = config['0'][f'var{varid}_idchar']
-                        mode        = int(config['0'][f'var{varid}_compression_mode'])
-                        type        = int(config['0'][f'var{varid}_compression_type'])
-                        parameter   = int(config['0'][f'var{varid}_compression_parameter'])
-                        size        = int(config['0'][f'var{varid}_size'])
-                        count       = int(config['0'][f'var{varid}_count'])
-                        if name in self.m_varnames:
-                            vars[name] = {
-                                "ckpt_file" : ckpt_files[idx],
-                                "mode"      : mode,
-                                "type"      : type,
-                                "parameter" : parameter,
-                                "offset"    : base,
-                                "size"      : size,
-                                "count"     : count
-                            }
-                        base += size
-                        varid += 1
-
-                    meta_item[proc] = vars
-
-                    self.m_state_dimension += count
-
-                    proc += 1
-                    procs_per_node += 1
-
-            self.m_num_procs = proc
-
-            self.m_meta_statistic[sid] = meta_item
-
-
-    def create_metadata( self, states ):
-
-        # remove old meta data
-        self.m_meta_evaluate.clear()
-        self.m_meta_compare.clear()
-
-        for state in states:
-
-            for cpc in self.m_cpc_parameters:
-
-                sid = encode_state_id(state.state_id.t, state.state_id.id, cpc.id)
-
-                self.m_cycle = state.state_id.t
-
-                state_item = {}
-
-                for p in [0,cpc.id]:
-
-                    path = checkpointPath + str(encode_state_id(state.state_id.t, state.state_id.id, p))
-
-                    meta_pattern = path + '/Meta*-worker*-serialized.fti'
-                    ckpt_pattern = path + '/Ckpt*-worker*-serialized.fti'
-                    meta_files = glob.glob(meta_pattern)
-                    ckpt_files = glob.glob(ckpt_pattern)
-
-                    meta_item = {}
-                    proc = 0
-                    for idx, f in enumerate(meta_files):
-                        fh = open(f)
-                        fstring = fh.read()
-                        fh.close()
-
-                        procs_per_node = 0
-                        buf = io.StringIO(fstring)
-
-                        base = 0
-
-                        self.m_state_dimension = 0
-                        for line in iter(lambda: buf.readline(), ""):
-                            nb_lines = int(line.replace("\n", ""))
-                            meta_str = ""
-                            for i in range(nb_lines):
-                                meta_str = meta_str + buf.readline()
-                            config = configparser.ConfigParser()
-                            config.read_string(meta_str)
-
-                            vars = {}
-                            varid = 0
-                            count = 0
-                            while f'var{varid}_id' in config['0']:
-                                name        = config['0'][f'var{varid}_idchar']
-                                mode        = int(config['0'][f'var{varid}_compression_mode'])
-                                type        = int(config['0'][f'var{varid}_compression_type'])
-                                parameter   = int(config['0'][f'var{varid}_compression_parameter'])
-                                size        = int(config['0'][f'var{varid}_size'])
-                                count       = int(config['0'][f'var{varid}_count'])
-                                if name in self.m_varnames_cpc:
-                                    vars[name] = {
-                                        "ckpt_file" : ckpt_files[idx],
-                                        "mode"      : mode,
-                                        "type"      : type,
-                                        "parameter" : parameter,
-                                        "offset"    : base,
-                                        "size"      : size,
-                                        "count"     : count
-                                    }
-                                base += size
-                                varid += 1
-
-                            meta_item[proc] = vars
-
-                            self.m_state_dimension += count
-
-                            proc += 1
-                            procs_per_node += 1
-
-                    self.m_num_procs = proc
-                    state_item[p] = meta_item
-
-                    cid = encode_state_id(state.state_id.t, state.state_id.id, p)
-                    if cid not in self.m_meta_evaluate:
-                        self.m_meta_evaluate[cid] = meta_item
-
-                self.m_meta_compare[sid] = state_item
-
-    def info(self):
-        for m in self.m_meta_compare:
-            print(self.m_meta_compare[m])
 
 
     def handle_validation_request( self, request ):
