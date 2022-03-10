@@ -417,7 +417,7 @@ def wrapper2dict( wrapper ):
     for variable in wrapper.variables:
         d[variable.name] = []
         for idx, rank in enumerate(variable.ranks):
-            d[variable.name].append(rank.data)
+            d[variable.name].append(np.array(rank.data))
     return d
 
 
@@ -651,16 +651,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     for i in range(len(global_weights)):
         sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids if s != global_weights[i].state_id]
-        #ex_weight = global_weights[i].state_id
-        #ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         weights_M = [w for w in global_weights if w != global_weights[i]]
         weight_norm = 0
         for w in weights_M:
             weight_norm += w.weight
-        #try:
-        #    sids_M.remove(ex_sid)
-        #except:
-        #    pass
         average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
         print(average)
