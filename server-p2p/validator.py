@@ -657,6 +657,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         weight_norm = 0
         for w in weights_M:
             weight_norm += w.weight
+        print(weights_M)
+        print(weight_norm)
+        print(sids_M)
         #try:
         #    sids_M.remove(ex_sid)
         #except:
