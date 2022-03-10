@@ -807,13 +807,13 @@ def resample(parent_t, alpha_master_=None):
             for s in validate_states[i:i+chunk_size]:
                 request.validation_request.to_validate.append(s)
             print("now sending states to workers...", request.validation_request.to_validate)
-            send_message(validation_sockets[vid], request)
+            send_message(validation_sockets[validators[vid]], request)
             vid += 1
         for empty_msg in range(vid,len(validation_sockets)):
             request = cm.Message()
             request.validation_request.SetInParent()
             print("sending empty message to worker id: ", vid)
-            send_message(validation_sockets[vid], request)
+            send_message(validation_sockets[validators[vid]], request)
             vid += 1
 
 
