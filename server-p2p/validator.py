@@ -637,8 +637,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
 
-    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, reduce_dict, validators)
-    bcast_dict( validators, average )
+    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
+    #bcast_dict( validators, average )
     stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, reduce_dict, validators)
     for name in stddev:
         for idx, data in enumerate(stddev[name]):
