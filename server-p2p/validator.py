@@ -590,7 +590,7 @@ def receive_weights(socket):
     return wrapper.weights
 
 
-def reduce_weights( validators, weights ):
+def allreduce_weights( validators, weights ):
     """
     reduce double from slave to master validators
     ping and pong ensure the alternating send/recv and
@@ -602,10 +602,18 @@ def reduce_weights( validators, weights ):
         for id in validators:
             ping(validator_socket[id])
             weights.extend( receive_weights(validator_socket[id]) )
+        for id in validators:
+            send_weights(validator_socket[id], weights)
+            pong(validator_socket[id])
+
 
     else:
         pong(validator_socket)
         send_weights(validator_socket, weights)
+        weigths = receive_weights(validator_socket)
+        ping(validator_socket)
+
+    return weights
 
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
@@ -614,7 +622,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     global average, stddev
 
     local_weights = weights[:]
-    global_weights = weights
 
     # compute the RSME
     df_compare = pd.DataFrame()
@@ -633,16 +640,15 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
-    reduce_weights( validators, global_weights )
+    global_weights = allreduce_weights( validators, weights )
     print(global_weights)
 
     for i in range(len(global_weights)):
         sids = [encode_state_id(s.t, s.id, 0) for s in state_ids]
-        #sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
-        ex = global_weights[i].state_id
-        ex_id = encode_state_id(ex.t, ex.id,0)
+        ex_weight = global_weights[i].state_id
+        ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         try:
-            sids.remove(ex_id)
+            sids.remove(ex_sid)
         except:
             pass
         print(sids)
