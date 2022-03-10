@@ -627,8 +627,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     global average, stddev
 
-    local_weights = weights[:]
-
     # compute the RSME
     df_compare = pd.DataFrame()
     df_evaluate = pd.DataFrame()
@@ -647,7 +645,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_evaluate)
 
     global_weights = allreduce_weights( validators, weights )
-    print(global_weights)
 
     for i in range(len(global_weights)):
         sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids if s != global_weights[i].state_id]
@@ -660,13 +657,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in average:
             for rank, data in enumerate(average[name]):
                 average[name][rank] /= weight_norm
-                print(f"ensemble average: {average[name][0][0:3]}")
+            print(f"ensemble average: {average[name][0][0:3]}")
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
         # correct normalization and take root
         for name in stddev:
             for rank, data in enumerate(stddev[name]):
                 stddev[name][rank] = np.sqrt(data/weight_norm)
-                print(f"ensemble stddev: {stddev[name][0][0:3]}")
+            print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
 class cpc_t:
