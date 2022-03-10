@@ -633,23 +633,23 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
-    sids = []
-    for s in state_ids:
-        sids.append(encode_state_id(s.t, s.id, 0))
-
-    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
-    # take root
-    for name in stddev:
-        for idx, data in enumerate(stddev[name]):
-            stddev[name][idx] = np.sqrt(data)
-
-    for name in stddev:
-        print(f"ensemble average: {average[name][0][0:3]}")
-        print(f"ensemble stddev: {stddev[name][0][0:3]}")
-
     reduce_weights( validators, global_weights )
     print(global_weights)
+
+    for i in range(len(global_weights)):
+        sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
+        print(sids)
+        #average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
+        #stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+        ## take root
+        #for name in stddev:
+        #    for idx, data in enumerate(stddev[name]):
+        #        stddev[name][idx] = np.sqrt(data)
+
+        #for name in stddev:
+        #    print(f"ensemble average: {average[name][0][0:3]}")
+        #    print(f"ensemble stddev: {stddev[name][0][0:3]}")
+
 
 
 
