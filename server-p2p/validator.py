@@ -62,7 +62,7 @@ def connect_validator_sockets():
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
                 addr = "tcp://" + ip + ":4001"
-                so = context.socket(zmq.REP)
+                so = context.socket(zmq.REQ)
                 so.connect(addr)
                 validator_socket[id] = so
                 print(f"Validator master connected to validator: {id} at ip: {addr}")
@@ -71,7 +71,7 @@ def connect_validator_sockets():
     else:
         addr = "tcp://*:4001"
         validator_socket, port_socket = \
-            bind_socket(context, zmq.REQ, addr)
+            bind_socket(context, zmq.REP, addr)
 
 # set paths
 experimentPath = os.getcwd() + '/'
@@ -502,7 +502,11 @@ def pong( socket ):
 
 
 def bcast_dict( validators, dct ):
-
+    """
+    broadcast dictionary from master to slave validators
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
     global validator_socket
 
     if validator_id == 0:
@@ -519,8 +523,43 @@ def bcast_dict( validators, dct ):
                 dct[variable.name][idx] = rank.data
 
 
-def reduce_dict( validators, dct ):
+def allreduce_dict( validators, dct ):
+    """
+    reduce dictionary from slave to master validators
+    and broadcast back the reduced dictionary to the slaves
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
+    global validator_socket
 
+    if validator_id == 0:
+        for id in validators:
+            ping(validator_socket[id])
+            validator_socket[id].recv()
+            wrapper_recv = receive_wrapper( validator_socket[id] )
+            for variable in wrapper_recv.variables:
+                for idr, rank in enumerate(variable.ranks):
+                    dct[variable.name][idr] += rank.data
+            wrapper_send = dict2wrapper( dct )
+            send_message(validator_socket[id], wrapper_send)
+            pong(validator_socket[id])
+    else:
+        pong(validator_socket)
+        wrapper_send = dict2wrapper( dct )
+        send_message(validator_socket, wrapper_send)
+        wrapper_recv = receive_wrapper(validator_socket[id])
+        ping(validator_socket)
+        dct = wrapper2dict(wrapper_recv)
+
+    return dct
+
+
+def reduce_dict( validators, dct ):
+    """
+    reduce dictionary from slave to master validators
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
     global validator_socket
 
     if validator_id == 0:
@@ -533,15 +572,16 @@ def reduce_dict( validators, dct ):
                     dct[variable.name][idr] += rank.data
     else:
         pong(validator_socket)
-        wrapper = cm.StatisticWrapper()
-        for name in dct:
-            var = cm.StatisticVariable()
-            var.name = name
-            for rank in dct[name]:
-                data = cm.StatisticData()
-                data.data.extend( rank )
-                var.ranks.append(data)
-            wrapper.variables.append(var)
+        wrapper = dict2wrapper( dct )
+        #wrapper = cm.StatisticWrapper()
+        #for name in dct:
+        #    var = cm.StatisticVariable()
+        #    var.name = name
+        #    for rank in dct[name]:
+        #        data = cm.StatisticData()
+        #        data.data.extend( rank )
+        #        var.ranks.append(data)
+        #    wrapper.variables.append(var)
         send_message(validator_socket, wrapper)
 
 
