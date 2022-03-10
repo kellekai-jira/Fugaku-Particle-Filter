@@ -817,6 +817,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     df_evaluate = df_evaluate.append( df_zval, ignore_index=True )
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
+    # TODO get cycle in a better way
+    cycle=state_ids[0].t
+    df_compare.to_csv(experimentPath + f'validation_comp_{cycle}_csv', sep=",")
+    df_evaluate.to_csv(experimentPath + f'validation_eval_{cycle}_csv', sep=",")
+
     print(df_evaluate)
 
 
