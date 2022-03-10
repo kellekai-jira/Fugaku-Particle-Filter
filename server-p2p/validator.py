@@ -572,15 +572,6 @@ def reduce_dict( validators, dct ):
     else:
         pong(validator_socket)
         wrapper = dict2wrapper( dct )
-        #wrapper = cm.StatisticWrapper()
-        #for name in dct:
-        #    var = cm.StatisticVariable()
-        #    var.name = name
-        #    for rank in dct[name]:
-        #        data = cm.StatisticData()
-        #        data.data.extend( rank )
-        #        var.ranks.append(data)
-        #    wrapper.variables.append(var)
         send_message(validator_socket, wrapper)
 
 
@@ -612,10 +603,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
-    for name in average:
-        print(f"ensemble average: {average[name][0][0:3]}")
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators)
+    stddev = np.sqrt(ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators))
     for name in stddev:
+        print(f"ensemble average: {average[name][0][0:3]}")
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
