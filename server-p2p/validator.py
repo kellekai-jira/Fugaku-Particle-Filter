@@ -852,6 +852,7 @@ class Validator:
             print(item)
 
         validators = request.validation_request.validator_ids
+        validators.remove(0)
 
         self.populate_meta(self.m_weights, self.m_cpc_parameters)
 

@@ -798,9 +798,9 @@ def resample(parent_t, alpha_master_=None):
         vid = 0
         chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
         if (len(validate_states) / len(validation_sockets)) >= 1.0:
-            validators = [id for id in validator_ids if id != 0]
+            validators = [id for id in validator_ids]
         else:
-            validators = [id for id in validator_ids if id != 0][:len(validate_states)]
+            validators = [id for id in validator_ids][:len(validate_states)]
         for i in range(0, len(validate_states), chunk_size):
             request = cm.Message()
             request.validation_request.validator_ids.extend(validators)
