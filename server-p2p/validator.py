@@ -38,6 +38,8 @@ from common import bind_socket, parse
 assert (os.environ.get('MELISSA_DA_WORKER_ID') is not None)
 validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
 
+print(f"My ID is: {validator_id}")
+
 # connect sockets
 context = zmq.Context()
 context.setsockopt(zmq.LINGER, 0)
