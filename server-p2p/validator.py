@@ -141,7 +141,7 @@ def decode_state_id( hash ):
     return t, id, mode
 
 
-def energy(data):
+def energy(data, proc, name):
 
     energy_sum = 0
 
@@ -160,7 +160,7 @@ def reduce_energy(parts, n):
     return energy_avg / n
 
 
-def sse(data):
+def sse(data, proc, name):
     """
         computes the sum of squared differences between two states
         data[0] <- first state
@@ -187,7 +187,7 @@ def reduce_sse(parts, n):
     return np.sqrt(sigma / n)
 
 
-def maximum(data):
+def maximum(data, proc, name):
     """
         computes the maximum value
         data[0] <- first state
@@ -195,7 +195,7 @@ def maximum(data):
     """
     return max(data)
 
-def minimum(data):
+def minimum(data, proc, name):
     """
         computes the maximum value
         data[0] <- first state
@@ -212,7 +212,7 @@ def reduce_minimum(minima, n):
     return min(minima)
 
 
-def pme(data):
+def pme(data, proc, name):
     """
         computes the pointwise maximum error between 2 states
         data[0] <- first state
@@ -275,7 +275,7 @@ def compare(proc, sids, name, meta, func):
 
         ckpt.close()
 
-    return func(states)
+    return func(states, proc, name)
 
 
 def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
@@ -342,7 +342,7 @@ def evaluate(proc, sid, name, meta, func):
 
     ckpt.close()
 
-    return func(data)
+    return func(data, proc, name)
 
 def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
     pool = Pool()
@@ -648,6 +648,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     global_weights = allreduce_weights( validators, weights )
 
+    z_value = {}
+    for name in variables:
+        z_value[name] = np.array([])
     for i in range(len(global_weights)):
         sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids if s != global_weights[i].state_id]
         weights_M = [w for w in global_weights if w != global_weights[i]]
@@ -666,6 +669,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for rank, data in enumerate(stddev[name]):
                 stddev[name][rank] = np.sqrt(data/weight_norm)
             print(f"ensemble stddev: {stddev[name][0][0:3]}")
+        sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
+        df_vmin = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_zval, 'z_value', cpc)
+
 
 
 class cpc_t:

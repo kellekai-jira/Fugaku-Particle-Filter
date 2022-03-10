@@ -817,20 +817,6 @@ def resample(parent_t, alpha_master_=None):
             send_message(validation_sockets[id], request)
             start = end
 
-        #vid = 0
-        #chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
-        #if (len(validate_states) / chunk_size) >= 1.0:
-        #    validators = validator_ids
-        #else:
-        #    validators = [id for id in validator_ids][:len(validate_states)]
-        #for i in range(0, len(validate_states), chunk_size):
-        #    request = cm.Message()
-        #    request.validation_request.validator_ids.extend(validators)
-        #    for s in validate_states[i:i+chunk_size]:
-        #        request.validation_request.to_validate.append(s)
-        #    print(f"now sending states to worker {validators[vid]}", request.validation_request.to_validate)
-        #    send_message(validation_sockets[validators[vid]], request)
-        #    vid += 1
         for id in validator_ids:
             if id not in validators:
                 request = cm.Message()
