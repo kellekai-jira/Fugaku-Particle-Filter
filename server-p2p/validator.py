@@ -610,7 +610,7 @@ def allreduce_weights( validators, weights ):
     else:
         pong(validator_socket)
         send_weights(validator_socket, weights)
-        weigths = receive_weights(validator_socket)
+        weights = receive_weights(validator_socket)
         ping(validator_socket)
 
     return weights
