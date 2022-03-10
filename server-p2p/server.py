@@ -808,7 +808,7 @@ def resample(parent_t, alpha_master_=None):
 
         start = 0
         for idx, id in enumerate(validators):
-            end = start + chunk_size + 1 if idx < iter_mod else 0
+            end = start + chunk_size + (1 if idx < iter_mod else 0)
             request = cm.Message()
             request.validation_request.validator_ids.extend(validators)
             for s in validate_states[start:end]:
