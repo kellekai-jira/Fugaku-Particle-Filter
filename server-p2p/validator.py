@@ -507,6 +507,44 @@ def receive_wrapper( socket ):
     return wrapper
 
 
+def wrapper2df( df ):
+    dfl = []
+    for item in wrapper.items:
+        dfl.append({
+            'variable': item.variable,
+            'operation': item.operation,
+            'value': item.value,
+            'mode': item.mode,
+            'parameter': item.parameter,
+            't': item.t,
+            'id': item.id,
+            'rate': item.rate,
+        })
+    return pd.DataFrame(dfl)
+
+
+def df2wrapper( df ):
+    wrapper = cm.EvaluateDfList()
+    for _, row in df.iterrows():
+        edfi = cm.EvaluateDf()
+        edfi.variable = row['variable']
+        edfi.operation = row['operation']
+        edfi.value = row['value']
+        edfi.mode = row['mode']
+        edfi.parameter = row['parameter']
+        edfi.t = row['t']
+        edfi.id = row['id']
+        edfi.rate = row['rate']
+        wrapper.items.append(edfi)
+
+
+def receive_evaluate_df( socket ):
+    msg = socket.recv()  # only polling
+    wrapper = cm.EvaluateDfList()
+    wrapper.ParseFromString(msg)
+    return wrapper2df(wrapper)
+
+
 def ping( socket ):
     msg = cm.Message()
     send_message( socket, msg )
@@ -597,6 +635,27 @@ def reduce_dict( validators, dct ):
     return dct
 
 
+def reduce_evaluate_df( validators, df ):
+    """
+    reduce dictionary from slave to master validators
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
+    global validator_socket
+
+    if validator_id == 0:
+        for id in validators:
+            ping(validator_socket[id])
+            df_validator = receive_evaluate_df( validator_socket[id] )
+            df = df.append(df_validator)
+    else:
+        pong(validator_socket)
+        wrapper = df2wrapper(df)
+        send_message(validator_socket, wrapper)
+
+    return df
+
+
 def send_weights( socket, weights ):
     wrapper = cm.StatisticWeights()
     wrapper.weights.extend( weights )
@@ -655,9 +714,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
 
-    print(df_compare)
-    print(df_evaluate)
-
     global_weights = allreduce_weights( validators, weights )
 
     z_value = {}
@@ -684,8 +740,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         if global_weights[i].state_id in state_ids:
             sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
             df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
-            print(df_zval)
 
+    df_evaluate = df_evaluate.append( df_zval, ignore_index=True )
+    df_evaluate = reduce_evaluate_df(validators, df_evaluate)
+
+    print(df_evaluate)
 
 
 class cpc_t:
