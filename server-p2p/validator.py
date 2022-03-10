@@ -657,21 +657,20 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         weight_norm = 0
         for w in weights_M:
             weight_norm += w.weight
-        print(weights_M)
-        print(weight_norm)
-        print(sids_M)
         #try:
         #    sids_M.remove(ex_sid)
         #except:
         #    pass
         average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+        print(average)
+        print(stddev)
         # take root
         for name in stddev:
             for idx, data in enumerate(stddev[name]):
                 average[name][idx] /= weight_norm
                 stddev[name][idx] = np.sqrt(data/weight_norm)
-            print(f"ensemble average: {average[name][0][0:3]/weight_norm}")
+            print(f"ensemble average: {average[name][0][0:3]}")
             print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
