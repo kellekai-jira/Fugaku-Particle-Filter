@@ -640,7 +640,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         sids = [encode_state_id(s.t, s.id, 0) for s in state_ids]
         #sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
         ex = global_weights[0].state_id
-        ex_id = encode_state_id(ex.state_id.t, ex.state_id.id,0)
+        ex_id = encode_state_id(ex.t, ex.id,0)
         try:
             sids.remove(ex_id)
         except:
