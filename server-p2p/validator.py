@@ -539,6 +539,7 @@ def allreduce_dict( validators, dct ):
             for variable in wrapper_recv.variables:
                 for idr, rank in enumerate(variable.ranks):
                     dct[variable.name][idr] += rank.data
+        for id in validators:
             wrapper_send = dict2wrapper( dct )
             send_message(validator_socket[id], wrapper_send)
             pong(validator_socket[id])
@@ -638,9 +639,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
     stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+    # take root
     for name in stddev:
         for idx, data in enumerate(stddev[name]):
             stddev[name][idx] = np.sqrt(data)
+
     for name in stddev:
         print(f"ensemble average: {average[name][0][0:3]}")
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
