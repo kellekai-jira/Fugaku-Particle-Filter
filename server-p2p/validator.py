@@ -654,7 +654,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         ex_weight = global_weights[i].state_id
         ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         weights_M = [w for w in global_weights if w != global_weights[i]]
-        weight_norm = py_reduce(lambda xi,xj: xi.weight+xj.weight, weights_M)
+        weight_norm = 0
+        for w in weights_M:
+            weight_norm += w.weight
         try:
             sids_M.remove(ex_sid)
         except:
@@ -664,7 +666,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         # take root
         for name in stddev:
             for idx, data in enumerate(stddev[name]):
-                stddev[name][idx] = np.sqrt(data)
+                stddev[name][idx] = np.sqrt(data/weight_norm)
 
         for name in stddev:
             print(f"ensemble average: {average[name][0][0:3]/weight_norm}")
