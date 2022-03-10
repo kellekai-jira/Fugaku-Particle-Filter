@@ -47,7 +47,7 @@ message CompareDf {
 }
 
 message CompareDfList {
-    repeated EvaluateDf items = 1;
+    repeated CompareDf items = 1;
 }
 
 message EvaluateDf {
