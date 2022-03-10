@@ -544,7 +544,7 @@ def allreduce_dict( validators, dct ):
                     else:
                         data = np.array(rank.data)
                         if data.size > 0:
-                            dct[variable.name][idr] += rank.data
+                            dct[variable.name][idr] += data
         for id in validators:
             wrapper_send = dict2wrapper( dct )
             send_message(validator_socket[id], wrapper_send)
@@ -650,29 +650,26 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(global_weights)
 
     for i in range(len(global_weights)):
-        sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids]
-        ex_weight = global_weights[i].state_id
-        ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
+        sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids if s != global_weights[i].state_id]
+        #ex_weight = global_weights[i].state_id
+        #ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         weights_M = [w for w in global_weights if w != global_weights[i]]
         weight_norm = 0
         for w in weights_M:
             weight_norm += w.weight
-        try:
-            sids_M.remove(ex_sid)
-        except:
-            pass
+        #try:
+        #    sids_M.remove(ex_sid)
+        #except:
+        #    pass
         average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
         # take root
         for name in stddev:
             for idx, data in enumerate(stddev[name]):
+                average[name][idx] /= weight_norm
                 stddev[name][idx] = np.sqrt(data/weight_norm)
-
-        for name in stddev:
             print(f"ensemble average: {average[name][0][0:3]/weight_norm}")
             print(f"ensemble stddev: {stddev[name][0][0:3]}")
-
-
 
 
 class cpc_t:
