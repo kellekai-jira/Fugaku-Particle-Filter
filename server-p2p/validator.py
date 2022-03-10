@@ -535,7 +535,6 @@ def allreduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            validator_socket[id].recv()
             wrapper_recv = receive_wrapper( validator_socket[id] )
             for variable in wrapper_recv.variables:
                 for idr, rank in enumerate(variable.ranks):
@@ -638,8 +637,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         sids.append(encode_state_id(s.t, s.id, 0))
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
-    #bcast_dict( validators, average )
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, reduce_dict, validators)
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
     for name in stddev:
         for idx, data in enumerate(stddev[name]):
             stddev[name][idx] = np.sqrt(data)
