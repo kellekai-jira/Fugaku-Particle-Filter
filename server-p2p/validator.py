@@ -639,7 +639,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for i in range(len(global_weights)):
         sids = [encode_state_id(s.t, s.id, 0) for s in state_ids]
         #sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
-        ex = global_weights[0].state_id
+        ex = global_weights[i].state_id
         ex_id = encode_state_id(ex.t, ex.id,0)
         try:
             sids.remove(ex_id)
