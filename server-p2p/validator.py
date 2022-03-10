@@ -565,7 +565,6 @@ def reduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            validator_socket[id].recv()
             wrapper = receive_wrapper( validator_socket[id] )
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
