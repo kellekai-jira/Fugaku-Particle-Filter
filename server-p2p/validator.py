@@ -539,7 +539,7 @@ def allreduce_dict( validators, dct ):
             for variable in wrapper_recv.variables:
                 for idr, rank in enumerate(variable.ranks):
                     if dct[variable.name][idr].size == 0:
-                        dct[variable.name][idr] = rank.data
+                        dct[variable.name][idr] = np.array(rank.data)
                     else:
                         dct[variable.name][idr] += rank.data
         for id in validators:
