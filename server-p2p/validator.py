@@ -492,6 +492,15 @@ def receive_wrapper( socket ):
     return wrapper
 
 
+def ping( socket ):
+    msg = cm.Message()
+    send_message( socket, msg )
+
+
+def pong( socket ):
+    socket.recv()
+
+
 def bcast_dict( validators, dct ):
 
     global validator_socket
@@ -500,23 +509,30 @@ def bcast_dict( validators, dct ):
         wrapper = dict2wrapper( dct )
         for id in validators:
             send_message(validator_socket[id], wrapper)
+            pong(validator_socket[id])
 
     else:
         wrapper = receive_wrapper(validator_socket)
+        ping(validator_socket)
         for variable in wrapper.variables:
             for idx, rank in enumerate(variable.ranks):
                 dct[variable.name][idx] = rank.data
 
 
 def reduce_dict( validators, dct ):
+
+    global validator_socket
+
     if validator_id == 0:
         for id in validators:
+            ping(validator_socket[id])
             validator_socket[id].recv()
             wrapper = receive_wrapper( validator_socket[id] )
             for variable in wrapper.variables:
                 for idr, rank in enumerate(variable.ranks):
                     dct[variable.name][idr] += rank.data
     else:
+        pong(validator_socket)
         wrapper = cm.StatisticWrapper()
         for name in dct:
             var = cm.StatisticVariable()
@@ -554,10 +570,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     sids = []
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
-
-    if validator_id != 0:
-        msg = cm.Message()
-        send_message(validator_socket, msg)
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
