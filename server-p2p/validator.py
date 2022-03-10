@@ -474,7 +474,7 @@ def ensemble_stddev(proc, sids, name, meta):
     return x_stddev
 
 
-def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
+def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validators ):
 
     pool = Pool()
 
@@ -482,9 +482,8 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, validators ):
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
 
-    reduce_dict( validators, dct )
+    return reduce_func( validators, dct )
 
-    return dct
 
 def receive_wrapper( socket ):
     msg = socket.recv()  # only polling
@@ -575,6 +574,8 @@ def reduce_dict( validators, dct ):
         wrapper = dict2wrapper( dct )
         send_message(validator_socket, wrapper)
 
+    return dct
+
 
 def send_weights( socket, weights ):
     wrapper = cm.StatisticWeights()
@@ -636,9 +637,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for s in state_ids:
         sids.append(encode_state_id(s.t, s.id, 0))
 
-    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
+    average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, reduce_dict, validators)
     bcast_dict( validators, average )
-    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators)
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, reduce_dict, validators)
     for name in stddev:
         for idx, data in enumerate(stddev[name]):
             stddev[name][idx] = np.sqrt(data)
