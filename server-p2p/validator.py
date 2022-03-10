@@ -576,20 +576,20 @@ def reduce_dict( validators, dct ):
         send_message(validator_socket, wrapper)
 
 
-def send_data( socket, data ):
-    data_wrapper = cm.StatisticData()
-    data_wrapper.data.extend( data )
-    send_message( socket, data )
+def send_weights( socket, weights ):
+    wrapper = cm.StatisticWeights()
+    wrapper.weights.extend( weights )
+    send_message( socket, wrapper )
 
 
-def receive_data(socket):
+def receive_weights(socket):
     msg = socket.recv()  # only polling
-    data_wrapper = cm.StatisticData()
-    data_wrapper.ParseFromString(msg)
-    return data_wrapper.data
+    wrapper = cm.StatisticWeights()
+    wrapper.ParseFromString(msg)
+    return wrapper.weights
 
 
-def reduce_data( validators, data ):
+def reduce_weights( validators, weights ):
     """
     reduce double from slave to master validators
     ping and pong ensure the alternating send/recv and
@@ -600,17 +600,20 @@ def reduce_data( validators, data ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            data += receive_data( validator_socket[id] )
+            weights.extend( receive_weights(validator_socket[id]) )
 
     else:
         pong(validator_socket)
-        send_data(validator_socket, data)
+        send_weights(validator_socket, weights)
 
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
-             evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, validators):
+             evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, weights, validators):
 
     global average, stddev
+
+    local_weights = weights[:]
+    global_weights = weights
 
     # compute the RSME
     df_compare = pd.DataFrame()
@@ -642,6 +645,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for name in stddev:
         print(f"ensemble average: {average[name][0][0:3]}")
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
+
+    reduce_weights( validators, global_weights )
+    print(global_weights)
+
 
 
 class cpc_t:
@@ -700,6 +707,7 @@ class Validator:
         self.m_num_cores = len(os.sched_getaffinity(0))
         self.m_first = True
         self.m_state_ids = []
+        self.m_weights = []
         self.init()
 
     # initialize validator
@@ -821,16 +829,16 @@ class Validator:
 
 
     def handle_request( self, request ):
-        states = []
+        self.m_weights = []
         self.m_state_ids = []
         for item in request.validation_request.to_validate:
-            states.append(item)
+            self.m_weights.append(item)
             self.m_state_ids.append(item.state_id)
             print(item)
 
         validators = request.validation_request.validator_ids
 
-        self.populate_meta(states, self.m_cpc_parameters)
+        self.populate_meta(self.m_weights, self.m_cpc_parameters)
 
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
@@ -848,6 +856,7 @@ class Validator:
                 self.m_varnames,
                 self.m_cpc_parameters,
                 self.m_state_ids,
+                self.m_weights,
                 validators
             )
 
