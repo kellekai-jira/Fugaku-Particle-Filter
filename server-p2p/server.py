@@ -806,7 +806,7 @@ def resample(parent_t, alpha_master_=None):
             request.validation_request.validator_ids.extend(validators)
             for s in validate_states[i:i+chunk_size]:
                 request.validation_request.to_validate.append(s)
-            print("now sending states to workers...", request.validation_request.to_validate)
+            print(f"now sending states to worker {validators[vid]}", request.validation_request.to_validate)
             send_message(validation_sockets[validators[vid]], request)
             vid += 1
         for id in validator_ids:
