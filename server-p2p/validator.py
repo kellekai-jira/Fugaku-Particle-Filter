@@ -546,7 +546,7 @@ def allreduce_dict( validators, dct ):
         pong(validator_socket)
         wrapper_send = dict2wrapper( dct )
         send_message(validator_socket, wrapper_send)
-        wrapper_recv = receive_wrapper(validator_socket[id])
+        wrapper_recv = receive_wrapper(validator_socket)
         ping(validator_socket)
         dct = wrapper2dict(wrapper_recv)
 
