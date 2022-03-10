@@ -656,16 +656,17 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for w in weights_M:
             weight_norm += w.weight
         average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
+        # correct normalization
+        for name in average:
+            for rank, data in enumerate(average[name]):
+                average[name][rank] /= weight_norm
+                print(f"ensemble average: {average[name][0][0:3]}")
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
-        print(average)
-        print(stddev)
-        # take root
+        # correct normalization and take root
         for name in stddev:
-            for idx, data in enumerate(stddev[name]):
-                average[name][idx] /= weight_norm
-                stddev[name][idx] = np.sqrt(data/weight_norm)
-            print(f"ensemble average: {average[name][0][0:3]}")
-            print(f"ensemble stddev: {stddev[name][0][0:3]}")
+            for rank, data in enumerate(stddev[name]):
+                stddev[name][rank] = np.sqrt(data/weight_norm)
+                print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
 class cpc_t:
