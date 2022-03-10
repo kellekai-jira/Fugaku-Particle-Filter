@@ -507,7 +507,7 @@ def receive_wrapper( socket ):
     return wrapper
 
 
-def wrapper2df( df ):
+def wrapper2df( wrapper ):
     dfl = []
     for item in wrapper.items:
         dfl.append({
