@@ -14,6 +14,7 @@ import pandas as pd
 import glob
 import re
 import netCDF4
+from functools import reduce as py_reduce
 
 '''
 (from Baker et al, 2014)
