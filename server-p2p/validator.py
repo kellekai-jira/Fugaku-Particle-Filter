@@ -541,7 +541,9 @@ def allreduce_dict( validators, dct ):
                     if dct[variable.name][idr].size == 0:
                         dct[variable.name][idr] = np.array(rank.data)
                     else:
-                        dct[variable.name][idr] += rank.data
+                        data = np.array(rank.data)
+                        if data.size > 0:
+                            dct[variable.name][idr] += rank.data
         for id in validators:
             wrapper_send = dict2wrapper( dct )
             send_message(validator_socket[id], wrapper_send)
