@@ -575,6 +575,27 @@ def reduce_dict( validators, dct ):
         send_message(validator_socket, wrapper)
 
 
+def reduce_dict( validators, dct ):
+    """
+    reduce dictionary from slave to master validators
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
+    global validator_socket
+
+    if validator_id == 0:
+        for id in validators:
+            ping(validator_socket[id])
+            wrapper = receive_wrapper( validator_socket[id] )
+            for variable in wrapper.variables:
+                for idr, rank in enumerate(variable.ranks):
+                    dct[variable.name][idr] += rank.data
+    else:
+        pong(validator_socket)
+        wrapper = dict2wrapper( dct )
+        send_message(validator_socket, wrapper)
+
+
 def validate(meta, compare_function, compare_reduction, evaluate_function,
              evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, validators):
 
@@ -603,7 +624,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, validators)
     bcast_dict( validators, average )
-    stddev = np.sqrt(ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators))
+    stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators)
+    for name in stddev:
+        stddev[name] = np.sqrt(stddev[name])
     for name in stddev:
         print(f"ensemble average: {average[name][0][0:3]}")
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
