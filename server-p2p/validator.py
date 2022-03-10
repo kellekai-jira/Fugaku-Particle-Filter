@@ -654,23 +654,21 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         ex_weight = global_weights[i].state_id
         ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         weights_M = [w for w in global_weights if w != global_weights[i]]
-        weight_norm = py_reduce(lambda xi,xj: xi.weight+xj.weight, weights_M)
+        weight_norm = py_reduce(lambda xi,xj: xi+xj, weights_M)
         try:
             sids_M.remove(ex_sid)
         except:
             pass
         average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
-        for name in average:
-            print(f"ensemble average: {average[name][0][0:3]/weight_norm}")
-        #stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
-        ## take root
-        #for name in stddev:
-        #    for idx, data in enumerate(stddev[name]):
-        #        stddev[name][idx] = np.sqrt(data)
+        stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+        # take root
+        for name in stddev:
+            for idx, data in enumerate(stddev[name]):
+                stddev[name][idx] = np.sqrt(data)
 
-        #for name in stddev:
-        #    print(f"ensemble average: {average[name][0][0:3]}")
-        #    print(f"ensemble stddev: {stddev[name][0][0:3]}")
+        for name in stddev:
+            print(f"ensemble average: {average[name][0][0:3]/weight_norm}")
+            print(f"ensemble stddev: {stddev[name][0][0:3]}")
 
 
 
