@@ -143,6 +143,15 @@ message StatisticWeights {
     repeated Weight weights = 1;
 }
 
+message ValidatorWeights {
+    int32 vid = 1;
+    repeated Weight weights = 2;
+}
+
+message StatisticWeightDict {
+    repeated ValidatorWeights validators = 1;
+}
+
 message StatisticData {
     repeated double data = 1;
 }

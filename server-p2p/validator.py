@@ -583,6 +583,26 @@ def send_weights( socket, weights ):
     send_message( socket, wrapper )
 
 
+def send_weight_dict( socket, dct ):
+    wrapper = cm.StatisticWeightDict()
+    for id in dct:
+        item = cm.ValidatorWeights()
+        item.vid = id
+        item.weights.extend(dct[id])
+        wrapper.validators.append(item)
+    send_message( socket, wrapper )
+
+
+def recv_weight_dict( socket ):
+    msg = socket.recv()
+    wrapper = cm.StatisticWeightDict()
+    wrapper.ParseFromString(msg)
+    dct = {}
+    for validator in wrapper.validators:
+        dct[validator.vid] = validator.weights
+    return dct
+
+
 def receive_weights(socket):
     msg = socket.recv()  # only polling
     wrapper = cm.StatisticWeights()
@@ -599,22 +619,26 @@ def reduce_weights( validators, weights ):
     global validator_socket
 
     if validator_id == 0:
+        dct = {}
         for id in validators:
             ping(validator_socket[id])
-            weights.extend( receive_weights(validator_socket[id]) )
+            dct[id] = receive_weights(validator_socket[id])
+        for id in validators:
+            send_weight_dict(validator_socket[id], dct)
+            pong(validator_socket[id])
 
     else:
         pong(validator_socket)
         send_weights(validator_socket, weights)
+        dct = recv_weight_dict(validator_socket)
+        ping(validator_socket)
 
+    return dct
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
              evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, weights, validators):
 
     global average, stddev
-
-    local_weights = weights[:]
-    global_weights = weights
 
     # compute the RSME
     df_compare = pd.DataFrame()
@@ -633,12 +657,12 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
-    reduce_weights( validators, global_weights )
+    global_weights = reduce_weights( validators, weights )
     print(global_weights)
 
-    for i in range(len(global_weights)):
-        sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
-        print(sids)
+    #for i in range(len(global_weights)):
+    #    sids = [encode_state_id(w.state_id.t, w.state_id.id, 0) for idx, w in enumerate(global_weights) if idx != i]
+    #    print(sids)
         #average = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_mean, allreduce_dict, validators)
         #stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
         ## take root
