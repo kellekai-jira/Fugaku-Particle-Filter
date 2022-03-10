@@ -654,7 +654,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         ex_weight = global_weights[i].state_id
         ex_sid = encode_state_id(ex_weight.t, ex_weight.id,0)
         weights_M = [w for w in global_weights if w != global_weights[i]]
-        weight_norm = py_reduce(lambda xi,xj: xi+xj, weights_M)
+        weight_norm = py_reduce(lambda xi,xj: xi.weight+xj.weight, weights_M)
         try:
             sids_M.remove(ex_sid)
         except:
