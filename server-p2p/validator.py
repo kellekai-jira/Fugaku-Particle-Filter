@@ -1,3 +1,4 @@
+import struct
 from multiprocessing import Pool
 import numpy as np
 import configparser
@@ -575,9 +576,22 @@ def reduce_dict( validators, dct ):
         send_message(validator_socket, wrapper)
 
 
-def reduce_dict( validators, dct ):
+def send_data( socket, data ):
+    data_wrapper = cm.StatisticData()
+    data_wrapper.data.extend( data )
+    send_message( socket, data )
+
+
+def receive_data(socket):
+    msg = socket.recv()  # only polling
+    data_wrapper = cm.StatisticData()
+    data_wrapper.ParseFromString(msg)
+    return data_wrapper.data
+
+
+def reduce_data( validators, data ):
     """
-    reduce dictionary from slave to master validators
+    reduce double from slave to master validators
     ping and pong ensure the alternating send/recv and
     recv/send pattern vor master and slaves
     """
@@ -586,14 +600,11 @@ def reduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            wrapper = receive_wrapper( validator_socket[id] )
-            for variable in wrapper.variables:
-                for idr, rank in enumerate(variable.ranks):
-                    dct[variable.name][idr] += rank.data
+            data += receive_data( validator_socket[id] )
+
     else:
         pong(validator_socket)
-        wrapper = dict2wrapper( dct )
-        send_message(validator_socket, wrapper)
+        send_data(validator_socket, data)
 
 
 def validate(meta, compare_function, compare_reduction, evaluate_function,
@@ -626,7 +637,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     bcast_dict( validators, average )
     stddev = ensemble_wrapper(variables, sids, nprocs, meta, ensemble_stddev, validators)
     for name in stddev:
-        stddev[name] = np.sqrt(stddev[name])
+        for idx, data in enumerate(stddev[name]):
+            stddev[name][idx] = np.sqrt(data)
     for name in stddev:
         print(f"ensemble average: {average[name][0][0:3]}")
         print(f"ensemble stddev: {stddev[name][0][0:3]}")
