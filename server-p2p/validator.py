@@ -610,7 +610,7 @@ def receive_weights(socket):
     return wrapper.weights
 
 
-def reduce_weights( validators, weights ):
+def allreduce_weights( validators, weights ):
     """
     reduce double from slave to master validators
     ping and pong ensure the alternating send/recv and
@@ -657,7 +657,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print(df_compare)
     print(df_evaluate)
 
-    global_weights = reduce_weights( validators, weights )
+    validator_weights = allreduce_weights( validators, weights )
     print(global_weights)
 
     #for i in range(len(global_weights)):
