@@ -23,7 +23,7 @@ from LauncherConnection import LauncherConnection
 
 validate_states = None
 validation_sockets = {}
-
+validator_ids = []
 
 # Configuration:
 
@@ -730,6 +730,9 @@ def handle_job_requests(launcher, nsteps):
 
 
 def resample(parent_t, alpha_master_=None):
+
+    global validator_ids, validation_sockets
+
     trigger(START_RESAMPLE, parent_t)
     # get all weights from where to resample
     # TODO: this is unclean: this means that for speculative resampling we use all weights we have when the iteration is not yet finished
@@ -771,6 +774,7 @@ def resample(parent_t, alpha_master_=None):
     for fn in worker_ip_files:
         id = int(p.search(os.path.basename(fn)).group(1))
         if id not in validation_sockets:
+            validator_ids.append(id)
             with open(fn, 'r') as file:
                 ip = file.read().rstrip()
             addr = "tcp://" + ip + ":4000"
@@ -794,12 +798,12 @@ def resample(parent_t, alpha_master_=None):
         vid = 0
         chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
         if (len(validate_states) / len(validation_sockets)) >= 1.0:
-            validator_ids = range(1,len(validation_sockets))
+            validators = [id for id in validator_ids if id != 0]
         else:
-            validator_ids = range(1,len(validate_states))
+            validators = [id for id in validator_ids if id != 0][:len(validate_states)]
         for i in range(0, len(validate_states), chunk_size):
             request = cm.Message()
-            request.validation_request.validator_ids.extend(validator_ids)
+            request.validation_request.validator_ids.extend(validators)
             for s in validate_states[i:i+chunk_size]:
                 request.validation_request.to_validate.append(s)
             print("now sending states to workers...", request.validation_request.to_validate)
