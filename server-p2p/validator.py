@@ -681,9 +681,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for rank, data in enumerate(stddev[name]):
                 stddev[name][rank] = np.sqrt(data/weight_norm)
             print(f"ensemble stddev: {stddev[name][0][0:3]}")
-        sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
-        df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
-        print(df_zval)
+        if global_weights[i].state_id in state_ids:
+            sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
+            df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+            print(df_zval)
 
 
 
