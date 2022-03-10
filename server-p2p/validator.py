@@ -507,7 +507,7 @@ def receive_wrapper( socket ):
     return wrapper
 
 
-def wrapper2df( wrapper ):
+def wrapper2dfeval( wrapper ):
     dfl = []
     for item in wrapper.items:
         dfl.append({
@@ -523,7 +523,45 @@ def wrapper2df( wrapper ):
     return pd.DataFrame(dfl)
 
 
-def df2wrapper( df ):
+def wrapper2dfcomp( wrapper ):
+    dfl = []
+    for item in wrapper.items:
+        dfl.append({
+            'variable': item.variable,
+            'operation': item.operation,
+            'value': item.value,
+            'mode_original': item.mode_original,
+            'mode_compared': item.mode_compared,
+            'parameter_original': item.parameter_original,
+            'parameter_compared': item.parameter_compared,
+            't': item.t,
+            'id': item.id,
+            'rate_original': item.rate_original,
+            'rate_compared': item.rate_compared
+        })
+    return pd.DataFrame(dfl)
+
+
+def dfcomp2wrapper( df ):
+    wrapper = cm.CompareDfList()
+    for _, row in df.iterrows():
+        edfi = cm.CompareDf()
+        edfi.variable = row['variable']
+        edfi.operation = row['operation']
+        edfi.value = row['value']
+        edfi.mode_original = row['mode_original']
+        edfi.mode_compared = row['mode_compared']
+        edfi.parameter_original = row['parameter_original']
+        edfi.parameter_compared = row['parameter_compared']
+        edfi.t = row['t']
+        edfi.id = row['id']
+        edfi.rate_original = row['rate_original']
+        edfi.rate_compared = row['rate_compared']
+        wrapper.items.append(edfi)
+    return(wrapper)
+
+
+def dfeval2wrapper( df ):
     wrapper = cm.EvaluateDfList()
     for _, row in df.iterrows():
         edfi = cm.EvaluateDf()
@@ -543,7 +581,14 @@ def receive_evaluate_df( socket ):
     msg = socket.recv()  # only polling
     wrapper = cm.EvaluateDfList()
     wrapper.ParseFromString(msg)
-    return wrapper2df(wrapper)
+    return wrapper2dfeval(wrapper)
+
+
+def receive_compare_df( socket ):
+    msg = socket.recv()  # only polling
+    wrapper = cm.CompareDfList()
+    wrapper.ParseFromString(msg)
+    return wrapper2dfcomp(wrapper)
 
 
 def ping( socket ):
@@ -636,6 +681,27 @@ def reduce_dict( validators, dct ):
     return dct
 
 
+def reduce_compare_df( validators, df ):
+    """
+    reduce dictionary from slave to master validators
+    ping and pong ensure the alternating send/recv and
+    recv/send pattern vor master and slaves
+    """
+    global validator_socket
+
+    if validator_id == 0:
+        for id in validators:
+            ping(validator_socket[id])
+            df_validator = receive_compare_df( validator_socket[id] )
+            df = df.append(df_validator)
+    else:
+        pong(validator_socket)
+        wrapper = dfcomp2wrapper(df)
+        send_message(validator_socket, wrapper)
+
+    return df
+
+
 def reduce_evaluate_df( validators, df ):
     """
     reduce dictionary from slave to master validators
@@ -651,7 +717,7 @@ def reduce_evaluate_df( validators, df ):
             df = df.append(df_validator)
     else:
         pong(validator_socket)
-        wrapper = df2wrapper(df)
+        wrapper = dfeval2wrapper(df)
         send_message(validator_socket, wrapper)
 
     return df
@@ -702,6 +768,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     global average, stddev
 
     # compute the RSME
+    # TODO write reduce_df_compare
     df_compare = pd.DataFrame()
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
@@ -715,8 +782,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
 
+    df_compare = reduce_compare_df(validators, df_compare)
+    print(df_compare)
+
     global_weights = allreduce_weights( validators, weights )
 
+    # TODO compute ensemble average and stddev for full ensemble states
+    # TODO iterate through cpc parameters
     z_value = {}
     for name in variables:
         z_value[name] = np.array([])
@@ -731,13 +803,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in average:
             for rank, data in enumerate(average[name]):
                 average[name][rank] /= weight_norm
-            print(f"ensemble average: {average[name][0][0:3]}")
+            #print(f"ensemble average: {average[name][0][0:3]}")
         stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
         # correct normalization and take root
         for name in stddev:
             for rank, data in enumerate(stddev[name]):
                 stddev[name][rank] = np.sqrt(data/weight_norm)
-            print(f"ensemble stddev: {stddev[name][0][0:3]}")
+            #print(f"ensemble stddev: {stddev[name][0][0:3]}")
         if global_weights[i].state_id in state_ids:
             sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
             df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
