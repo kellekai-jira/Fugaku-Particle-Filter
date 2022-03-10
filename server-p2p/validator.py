@@ -171,6 +171,7 @@ def zval(data, proc, name):
 
     return ssz
 
+
 def sse(data, proc, name):
     """
         computes the sum of squared differences between two states
@@ -681,7 +682,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 stddev[name][rank] = np.sqrt(data/weight_norm)
             print(f"ensemble stddev: {stddev[name][0][0:3]}")
         sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
-        df_vmin = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_zval, 'z_value', cpc)
+        df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+        print(df_zval)
 
 
 
