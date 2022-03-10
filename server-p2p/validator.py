@@ -160,6 +160,17 @@ def reduce_energy(parts, n):
     return energy_avg / n
 
 
+def zval(data, proc, name):
+    """
+        computes the sum of squared z values for
+        variable 'name' and rank 'proc'
+    """
+    ssz = 0
+    for i, x in enumerate(data):
+        ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
+
+    return ssz
+
 def sse(data, proc, name):
     """
         computes the sum of squared differences between two states
