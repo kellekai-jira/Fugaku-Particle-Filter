@@ -536,6 +536,7 @@ def df2wrapper( df ):
         edfi.id = row['id']
         edfi.rate = row['rate']
         wrapper.items.append(edfi)
+    return(wrapper)
 
 
 def receive_evaluate_df( socket ):
