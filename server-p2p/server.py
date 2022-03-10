@@ -795,20 +795,41 @@ def resample(parent_t, alpha_master_=None):
             weight.state_id.CopyFrom(s)
             validate_states.append(weight)
 
-        vid = 0
-        chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
-        if (len(validate_states) / len(validation_sockets)) >= 1.0:
-            validators = [id for id in validator_ids]
+        num_states = len(validate_states)
+        validators_avail = len(validation_sockets)
+
+        chunk_size = num_states // validators_avail
+        iter_mod = num_states % validators_avail
+        if chunk_size > 0:
+            validators = validator_ids
         else:
-            validators = [id for id in validator_ids][:len(validate_states)]
-        for i in range(0, len(validate_states), chunk_size):
+            validators = validator_ids[:iter_mod]
+
+        start = 0
+        for idx, id in enumerate(validators):
+            end = start + chunk_size + 1 if idx < iter_mod else 0
             request = cm.Message()
             request.validation_request.validator_ids.extend(validators)
-            for s in validate_states[i:i+chunk_size]:
+            for s in validate_states[start:end]:
                 request.validation_request.to_validate.append(s)
-            print(f"now sending states to worker {validators[vid]}", request.validation_request.to_validate)
-            send_message(validation_sockets[validators[vid]], request)
-            vid += 1
+            print(f"now sending states to worker {id}", request.validation_request.to_validate)
+            send_message(validation_sockets[id], request)
+            start = end
+
+        #vid = 0
+        #chunk_size = int(np.ceil(float(len(validate_states)) / len(validation_sockets)))
+        #if (len(validate_states) / chunk_size) >= 1.0:
+        #    validators = validator_ids
+        #else:
+        #    validators = [id for id in validator_ids][:len(validate_states)]
+        #for i in range(0, len(validate_states), chunk_size):
+        #    request = cm.Message()
+        #    request.validation_request.validator_ids.extend(validators)
+        #    for s in validate_states[i:i+chunk_size]:
+        #        request.validation_request.to_validate.append(s)
+        #    print(f"now sending states to worker {validators[vid]}", request.validation_request.to_validate)
+        #    send_message(validation_sockets[validators[vid]], request)
+        #    vid += 1
         for id in validator_ids:
             if id not in validators:
                 request = cm.Message()
