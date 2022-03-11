@@ -882,7 +882,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-                #print(f"ensemble stddev: {stddev[name][0][0:3]}")
+                    print(f"ensemble stddev: {stddev[name][rank][0:3]}")
             if global_weights[i].state_id in state_ids:
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
                 df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
