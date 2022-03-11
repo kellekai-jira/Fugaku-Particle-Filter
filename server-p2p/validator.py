@@ -545,8 +545,9 @@ def ensemble_stddev(proc, sids, name, meta):
             x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
-        if proc == 5:
-            print(f"x_stddev[957]: {x_stddev[957]}, weight: {weight}, data[957]: {data[957]}, average[{name}][{proc}][957]: {average[name][proc][957]}")
+        aa = [ii for ii, ee in enumerate(x_stddev) if ee == 0]
+        for aaa in aa:
+            print(f"x_stddev[{aaa}]: {x_stddev[aaa]}, weight: {weight}, data[{aaa}]: {data[aaa]}, average[{name}][{proc}][{aaa}]: {average[name][proc][aaa]}")
     return x_stddev
 
 
