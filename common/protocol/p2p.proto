@@ -32,25 +32,7 @@ message Ping { }
 
 message Pong { }
 
-message CompareDf {
-    string variable = 1;
-    string operation = 2;
-    double value = 3;
-    int32 mode_original = 4;
-    int32 mode_compared = 9;
-    int32 parameter_original = 5;
-    int32 parameter_compared = 10;
-    int32 t = 6;
-    int32 id = 7;
-    double rate_original = 8;
-    double rate_compared = 11;
-}
-
-message CompareDfList {
-    repeated CompareDf items = 1;
-}
-
-message EvaluateDf {
+message Df {
     string variable = 1;
     string operation = 2;
     double value = 3;
@@ -61,8 +43,8 @@ message EvaluateDf {
     double rate = 8;
 }
 
-message EvaluateDfList {
-    repeated EvaluateDf items = 1;
+message DfList {
+    repeated Df items = 1;
 }
 
 message Weight {

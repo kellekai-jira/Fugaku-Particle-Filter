@@ -362,13 +362,10 @@ def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, ope
         original = decode_state_id( sids[0] )
         compared = decode_state_id( sids[1] )
         data_size = 0
-        size_original = 0
         size_compared = 0
         for proc in range(nprocs):
             data_size += float(meta[sids[0]][proc][name]['count'] * 8)
-            size_original += float(meta[sids[0]][proc][name]['size'])
             size_compared += float(meta[sids[1]][proc][name]['size'])
-        rate_original = data_size / size_original
         rate_compared = data_size / size_compared
         results = pool.map(partial(compare, sids=sids, name=name, meta=meta, func=func), range(nprocs))
         reduced = reduce_func(results, ndim)
@@ -376,14 +373,11 @@ def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, ope
             'variable' : name,
             'operation' : operation,
             'value' : reduced,
-            'mode_original' : cpc[original[2]].mode,
-            'mode_compared' : cpc[compared[2]].mode,
-            'parameter_original': cpc[original[2]].parameter,
-            'parameter_compared': cpc[compared[2]].parameter,
+            'mode' : cpc[compared[2]].mode,
+            'parameter': cpc[compared[2]].parameter,
             't' : original[0],
             'id' : original[1],
-            'rate_original' : rate_original,
-            'rate_compared' : rate_compared
+            'rate' : rate_compared
         } )
 
     return pd.DataFrame(dfl)
@@ -570,7 +564,7 @@ def receive_wrapper( socket ):
     return wrapper
 
 
-def wrapper2dfeval( wrapper ):
+def wrapper2df( wrapper ):
     dfl = []
     for item in wrapper.items:
         dfl.append({
@@ -586,48 +580,10 @@ def wrapper2dfeval( wrapper ):
     return pd.DataFrame(dfl)
 
 
-def wrapper2dfcomp( wrapper ):
-    dfl = []
-    for item in wrapper.items:
-        dfl.append({
-            'variable': item.variable,
-            'operation': item.operation,
-            'value': item.value,
-            'mode_original': int(item.mode_original),
-            'mode_compared': int(item.mode_compared),
-            'parameter_original': int(item.parameter_original),
-            'parameter_compared': int(item.parameter_compared),
-            't': int(item.t),
-            'id': int(item.id),
-            'rate_original': item.rate_original,
-            'rate_compared': item.rate_compared
-        })
-    return pd.DataFrame(dfl)
-
-
-def dfcomp2wrapper( df ):
-    wrapper = cm.CompareDfList()
+def df2wrapper( df ):
+    wrapper = cm.DfList()
     for _, row in df.iterrows():
-        edfi = cm.CompareDf()
-        edfi.variable = row['variable']
-        edfi.operation = row['operation']
-        edfi.value = row['value']
-        edfi.mode_original = int(row['mode_original'])
-        edfi.mode_compared = int(row['mode_compared'])
-        edfi.parameter_original = int(row['parameter_original'])
-        edfi.parameter_compared = int(row['parameter_compared'])
-        edfi.t = int(row['t'])
-        edfi.id = int(row['id'])
-        edfi.rate_original = row['rate_original']
-        edfi.rate_compared = row['rate_compared']
-        wrapper.items.append(edfi)
-    return(wrapper)
-
-
-def dfeval2wrapper( df ):
-    wrapper = cm.EvaluateDfList()
-    for _, row in df.iterrows():
-        edfi = cm.EvaluateDf()
+        edfi = cm.Df()
         edfi.variable = row['variable']
         edfi.operation = row['operation']
         edfi.value = row['value']
@@ -642,16 +598,16 @@ def dfeval2wrapper( df ):
 
 def receive_evaluate_df( socket ):
     msg = socket.recv()  # only polling
-    wrapper = cm.EvaluateDfList()
+    wrapper = cm.DfList()
     wrapper.ParseFromString(msg)
-    return wrapper2dfeval(wrapper)
+    return wrapper2df(wrapper)
 
 
 def receive_compare_df( socket ):
     msg = socket.recv()  # only polling
-    wrapper = cm.CompareDfList()
+    wrapper = cm.DfList()
     wrapper.ParseFromString(msg)
-    return wrapper2dfcomp(wrapper)
+    return wrapper2df(wrapper)
 
 
 def ping( socket ):
@@ -759,7 +715,7 @@ def reduce_compare_df( validators, df ):
             df = df.append(df_validator)
     else:
         pong(validator_socket)
-        wrapper = dfcomp2wrapper(df)
+        wrapper = df2wrapper(df)
         send_message(validator_socket, wrapper)
 
     return df
@@ -780,7 +736,7 @@ def reduce_evaluate_df( validators, df ):
             df = df.append(df_validator)
     else:
         pong(validator_socket)
-        wrapper = dfeval2wrapper(df)
+        wrapper = df2wrapper(df)
         send_message(validator_socket, wrapper)
 
     return df
