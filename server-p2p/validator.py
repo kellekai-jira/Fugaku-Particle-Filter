@@ -622,7 +622,6 @@ def dfcomp2wrapper( df ):
 
 
 def dfeval2wrapper( df ):
-    print("dfeval2wrapper - df: ", df)
     wrapper = cm.EvaluateDfList()
     for _, row in df.iterrows():
         edfi = cm.EvaluateDf()
@@ -852,11 +851,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_rho_denumerator_right.at[0, 'value'] = rho
             df_rho_denumerator_right.at[0, 'operation'] = 'rho'
             df_rho = df_rho.append(df_rho_denumerator_right, ignore_index=True)
-            print(df_rho)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
         dfle = [df_vmin, df_vmax, df_rho, df_avg, df_avg_compared]
+        print(df_rho)
         df_evaluate = df_evaluate.append( pd.concat( dfle, ignore_index=True ), ignore_index=True )
 
     print(df_compare)
@@ -886,7 +885,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-                    print(f"ensemble stddev[{p.id},{name},{rank}]: {stddev[name][rank][0:3]}")
+                    zeroitems = [i for i, e in enumerate(stddev[name][rank]) if e == 0]
+                    for i in zeroitems:
+                        print(f"stddev[{name}][{rank}][{i}] is zero for avg: {average[name][rank][i]}")
+                    #print(f"ensemble stddev[{p.id},{name},{rank}]: {stddev[name][rank][0:3]}")
             if global_weights[i].state_id in state_ids:
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
                 df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
