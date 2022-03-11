@@ -797,7 +797,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f'|     -> computing max value')
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
-        print(f"|          x_max: {df_vmax['value'][-1]}")
+        print(f"|          x_max: {df_vmax['value'].iloc[-1]}")
         print(f'|     -> computing min value')
         df_vmin = evaluate_wrapper(variables, original, ndims, nprocs, meta, minimum, reduce_minimum, 'minimum', cpc)
         print(f'|     -> computing avg value')
@@ -826,7 +826,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_emax] , ignore_index=True ), ignore_index=True )
 
     global_weights = allreduce_weights( validators, weights )
-
+    
     # TODO compute ensemble average and stddev for full ensemble states
     for p in cpc:
         z_value = {}
