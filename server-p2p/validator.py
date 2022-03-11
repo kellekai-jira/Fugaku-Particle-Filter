@@ -1051,7 +1051,6 @@ class Validator:
         for item in request.validation_request.to_validate:
             self.m_weights.append(item)
             self.m_state_ids.append(item.state_id)
-            print(item)
 
         validators = request.validation_request.validator_ids
         validators.remove(0)
@@ -1095,7 +1094,7 @@ class Validator:
                 connect_validator_sockets()
                 self.m_first = False
 
-            print("received task... ", request)
+            print("received task... ")
             if request == empty:
                 continue
 
