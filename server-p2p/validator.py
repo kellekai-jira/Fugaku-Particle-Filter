@@ -329,6 +329,10 @@ def compare(proc, sids, name, meta, func):
 
         if sid not in state_buffer:
 
+            state_buffer[sid] = {}
+
+        if proc not in state_buffer[sid]:
+
             item = meta[sid][proc][name]
             ckpt_file = item['ckpt_file']
             ckpt = open(ckpt_file, 'rb')
@@ -336,7 +340,7 @@ def compare(proc, sids, name, meta, func):
             if item['mode'] == 0:
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
-                state_buffer[sid] = array.array('d', bytes)
+                state_buffer[sid][proc] = array.array('d', bytes)
 
             else:
                 data = []
@@ -353,11 +357,11 @@ def compare(proc, sids, name, meta, func):
                     block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                     data = [*data, *block]
 
-                state_buffer[sid] = data
+                state_buffer[sid][proc] = data
 
             ckpt.close()
 
-        states.append(state_buffer[sid])
+        states.append(state_buffer[sid][proc])
 
     return func(states, proc, name)
 
@@ -402,11 +406,15 @@ def evaluate(proc, sid, name, meta, func):
 
     if sid not in state_buffer:
 
+        state_buffer[sid] = {}
+
+    if proc not in state_buffer[sid]:
+
         if item['mode'] == 0:
             ckpt.seek(item['offset'])
             bytes = ckpt.read(item['size'])
 
-            state_buffer[sid] = array.array('d', bytes)
+            state_buffer[sid][proc] = array.array('d', bytes)
 
         else:
             data = []
@@ -423,11 +431,11 @@ def evaluate(proc, sid, name, meta, func):
                 block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                 data = [*data, *block]
 
-            state_buffer[sid] = data
+            state_buffer[sid][proc] = data
 
         ckpt.close()
 
-    return func(state_buffer[sid], proc, name)
+    return func(state_buffer[sid][proc], proc, name)
 
 def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
     pool = Pool()
@@ -1065,6 +1073,7 @@ class Validator:
     def handle_request( self, request ):
 
         global state_buffer
+
         # remove states from before
         state_buffer.clear()
 
