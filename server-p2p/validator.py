@@ -14,8 +14,6 @@ import pandas as pd
 import glob
 import re
 import netCDF4
-import os
-term_size = os.get_terminal_size()
 from functools import reduce as py_reduce
 
 '''
