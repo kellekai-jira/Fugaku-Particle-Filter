@@ -850,7 +850,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
             df_rho_denumerator_right.at[0, 'value'] = rho
-            df_rho = df_rho.append(df_rho_denumerator_right)
+            df_rho_denumerator_right.at[0, 'operation'] = 'rho'
+            df_rho = df_rho.append(df_rho_denumerator_right, ignore_index=True)
             print(df_rho)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
@@ -885,7 +886,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-                    print(f"ensemble stddev: {stddev[name][rank][0:3]}")
+                    print(f"ensemble stddev[{p.id},{name},{rank}]: {stddev[name][rank][0:3]}")
             if global_weights[i].state_id in state_ids:
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
                 df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
