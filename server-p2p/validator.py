@@ -869,7 +869,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in variables:
             z_value[name] = np.array([])
         for i in range(len(global_weights)):
-            sids_M = [encode_state_id(s.t, s.id, p.parameter) for s in state_ids if s != global_weights[i].state_id]
+            sids_M = [encode_state_id(s.t, s.id, p.id) for s in state_ids if s != global_weights[i].state_id]
             weights_M = [w for w in global_weights if w != global_weights[i]]
             weight_norm = 0
             for w in weights_M:
@@ -887,7 +887,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                     stddev[name][rank] = np.sqrt(data/weight_norm)
                 #print(f"ensemble stddev: {stddev[name][0][0:3]}")
             if global_weights[i].state_id in state_ids:
-                sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.parameter)
+                sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
                 df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
         df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
         print(df_zval)
