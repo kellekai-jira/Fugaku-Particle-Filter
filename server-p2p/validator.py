@@ -205,7 +205,7 @@ def rho_denumerator_left(data, proc, name):
     rhod = 0
 
     for i in range(len(data)):
-        rhod += (data[i] - average_x[0])
+        rhod += (data[i] - average_x[0])**2
 
     return rhod
 
@@ -220,7 +220,7 @@ def rho_denumerator_right(data, proc, name):
     rhod = 0
 
     for i in range(len(data)):
-        rhod += (data[i] - average_x[1])
+        rhod += (data[i] - average_x[1])**2
 
     return rhod
 
@@ -244,7 +244,7 @@ def sse(data, proc, name):
     return sigma
 
 
-def avg_x(data):
+def avg_x(data, proc, name):
     return sum(data)
 
 
@@ -846,6 +846,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_avg = df_avg.append(df_avg_compared, ignore_index=True)
             average_x.append(df_avg_compared['value'])
             print(f"[{compared}] average x compared: {average_x[1]}")
+            df_rho_nominator = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, rho_nominator, reduce_sum, 'rho_nominator', cpc)
+            df_rho_denumerator_left = evaluate_wrapper(variables, original, ndims, nprocs, meta, rho_denumerator_left, reduce_sum, 'df_rho_denumerator_left', cpc)
+            df_rho_denumerator_right = evaluate_wrapper(variables, compared, ndims, nprocs, meta, rho_denumerator_right, reduce_sum, 'df_rho_denumerator_right', cpc)
+            rho = df_rho_nominator['value'] / np.sqrt( df_rho_denumerator_left['value'] * df_rho_denumerator_right['value'])
+            print(f"[{compared}] pearson correlation coefficient: {rho}")
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
