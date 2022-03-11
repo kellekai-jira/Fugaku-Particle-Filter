@@ -171,6 +171,8 @@ def zval(data, proc, name):
     """
     ssz = 0
     for i, x in enumerate(data):
+        if stddev[name][proc][i] == 0:
+            print("zero exception: ", name, x, average[name][proc][i], i, proc)
         ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
 
     return ssz
