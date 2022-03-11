@@ -40,6 +40,8 @@ validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
 
 print(f"My ID is: {validator_id}")
 
+state_buffer = {}
+
 # connect sockets
 context = zmq.Context()
 context.setsockopt(zmq.LINGER, 0)
@@ -319,37 +321,43 @@ def reduce_pme(max_errors, n):
 
 def compare(proc, sids, name, meta, func):
 
+    global state_buffer
+
     states = []
 
     for sid in sids:
 
-        item = meta[sid][proc][name]
-        ckpt_file = item['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
+        if sid not in state_buffer:
 
-        if item['mode'] == 0:
-            ckpt.seek(item['offset'])
-            bytes = ckpt.read(item['size'])
-            states.append(array.array('d', bytes))
+            item = meta[sid][proc][name]
+            ckpt_file = item['ckpt_file']
+            ckpt = open(ckpt_file, 'rb')
 
-        else:
-            data = []
-            n = item['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
+            if item['mode'] == 0:
+                ckpt.seek(item['offset'])
+                bytes = ckpt.read(item['size'])
+                state_buffer[sid] = array.array('d', bytes)
 
-            ckpt.seek(item['offset'])
+            else:
+                data = []
+                n = item['count']
+                bs = 1024 * 1024
+                nb = n // bs + (1 if n % bs != 0 else 0)
 
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
+                ckpt.seek(item['offset'])
 
-            states.append(data)
+                for b in range(nb):
+                    bytes = ckpt.read(8)
+                    bs = int.from_bytes(bytes, byteorder='little')
+                    bytes = ckpt.read(bs)
+                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                    data = [*data, *block]
 
-        ckpt.close()
+                state_buffer[sid] = data
+
+            ckpt.close()
+
+        states.append(state_buffer[sid])
 
     return func(states, proc, name)
 
@@ -385,34 +393,41 @@ def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, ope
 
 def evaluate(proc, sid, name, meta, func):
 
+    global state_buffer
+
     item = meta[sid][proc][name]
     ckpt_file = item['ckpt_file']
     ckpt = open(ckpt_file, 'rb')
     t, id, p = decode_state_id(sid)
 
-    if item['mode'] == 0:
-        ckpt.seek(item['offset'])
-        bytes = ckpt.read(item['size'])
-        data = array.array('d', bytes)
+    if sid not in state_buffer:
 
-    else:
-        data = []
-        n = item['count']
-        bs = 1024 * 1024
-        nb = n // bs + (1 if n % bs != 0 else 0)
+        if item['mode'] == 0:
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
 
-        ckpt.seek(item['offset'])
+            state_buffer[sid] = array.array('d', bytes)
 
-        for b in range(nb):
-            bytes = ckpt.read(8)
-            bs = int.from_bytes(bytes, byteorder='little')
-            bytes = ckpt.read(bs)
-            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-            data = [*data, *block]
+        else:
+            data = []
+            n = item['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
 
-    ckpt.close()
+            ckpt.seek(item['offset'])
 
-    return func(data, proc, name)
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
+
+            state_buffer[sid] = data
+
+        ckpt.close()
+
+    return func(state_buffer[sid], proc, name)
 
 def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
     pool = Pool()
@@ -1048,6 +1063,11 @@ class Validator:
 
 
     def handle_request( self, request ):
+
+        global state_buffer
+        # remove states from before
+        state_buffer.clear()
+
         self.m_weights = []
         self.m_state_ids = []
         for item in request.validation_request.to_validate:
