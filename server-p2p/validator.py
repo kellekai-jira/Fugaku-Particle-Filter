@@ -425,23 +425,20 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
         t, id, p = decode_state_id( sid )
         data_size = 0
         size_original = 0
-        size_compared = 0
         for proc in range(nprocs):
             data_size += float(meta[sid][proc][name]['count'] * 8)
             size_original += float(meta[sid][proc][name]['size'])
-            size_compared += float(meta[sid][proc][name]['size'])
         rate_original = data_size / size_original
-        rate_compared = data_size / size_compared
         results = pool.map(partial(evaluate, sid=sid, name=name, meta=meta, func=func), range(nprocs))
         reduced = reduce_func(results, ndim)
         dfl.append( {
             'variable' : name,
             'operation' : operation,
             'value' : reduced,
-            'mode' : cpc[p].mode,
-            'parameter': cpc[p].parameter,
-            't' : t,
-            'id' : id,
+            'mode' : int(cpc[p].mode),
+            'parameter': int(cpc[p].parameter),
+            't' : int(t),
+            'id' : int(id),
             'rate' : rate_original,
         } )
 
@@ -456,7 +453,7 @@ def ensemble_mean(proc, sids, name, meta):
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
-        mode = item['mode']
+        mode = int(item['mode'])
 
         if mode == 0:
             ckpt.seek(item['offset'])
@@ -519,7 +516,7 @@ def ensemble_stddev(proc, sids, name, meta):
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
-        mode = item['mode']
+        mode = int(item['mode'])
 
         if mode == 0:
             ckpt.seek(item['offset'])
@@ -575,10 +572,10 @@ def wrapper2dfeval( wrapper ):
             'variable': item.variable,
             'operation': item.operation,
             'value': item.value,
-            'mode': item.mode,
-            'parameter': item.parameter,
-            't': item.t,
-            'id': item.id,
+            'mode': int(item.mode),
+            'parameter': int(item.parameter),
+            't': int(item.t),
+            'id': int(item.id),
             'rate': item.rate,
         })
     return pd.DataFrame(dfl)
@@ -591,12 +588,12 @@ def wrapper2dfcomp( wrapper ):
             'variable': item.variable,
             'operation': item.operation,
             'value': item.value,
-            'mode_original': item.mode_original,
-            'mode_compared': item.mode_compared,
-            'parameter_original': item.parameter_original,
-            'parameter_compared': item.parameter_compared,
-            't': item.t,
-            'id': item.id,
+            'mode_original': int(item.mode_original),
+            'mode_compared': int(item.mode_compared),
+            'parameter_original': int(item.parameter_original),
+            'parameter_compared': int(item.parameter_compared),
+            't': int(item.t),
+            'id': int(item.id),
             'rate_original': item.rate_original,
             'rate_compared': item.rate_compared
         })
@@ -610,12 +607,12 @@ def dfcomp2wrapper( df ):
         edfi.variable = row['variable']
         edfi.operation = row['operation']
         edfi.value = row['value']
-        edfi.mode_original = row['mode_original']
-        edfi.mode_compared = row['mode_compared']
-        edfi.parameter_original = row['parameter_original']
-        edfi.parameter_compared = row['parameter_compared']
-        edfi.t = row['t']
-        edfi.id = row['id']
+        edfi.mode_original = int(row['mode_original'])
+        edfi.mode_compared = int(row['mode_compared'])
+        edfi.parameter_original = int(row['parameter_original'])
+        edfi.parameter_compared = int(row['parameter_compared'])
+        edfi.t = int(row['t'])
+        edfi.id = int(row['id'])
         edfi.rate_original = row['rate_original']
         edfi.rate_compared = row['rate_compared']
         wrapper.items.append(edfi)
@@ -629,10 +626,10 @@ def dfeval2wrapper( df ):
         edfi.variable = row['variable']
         edfi.operation = row['operation']
         edfi.value = row['value']
-        edfi.mode = row['mode']
-        edfi.parameter = row['parameter']
-        edfi.t = row['t']
-        edfi.id = row['id']
+        edfi.mode = int(row['mode'])
+        edfi.parameter = int(row['parameter'])
+        edfi.t = int(row['t'])
+        edfi.id = int(row['id'])
         edfi.rate = row['rate']
         wrapper.items.append(edfi)
     return(wrapper)
@@ -906,7 +903,7 @@ class cpc_t:
     __items = 0
     def __init__(self, name, mode, parameter):
         self.name = name
-        self.mode = None
+        self.mode = int(0)
         if mode == 'none':
             self.mode = FTI_CPC_MODE_NONE
         if mode == 'fpzip':
@@ -918,8 +915,8 @@ class cpc_t:
         if mode == 'half' or mode == 'hp':
             self.mode = FTI_CPC_HALF
         assert( self.mode != None )
-        self.parameter = parameter
-        self.id = cpc_t.__items
+        self.parameter = int(parameter)
+        self.id = int(cpc_t.__items)
         cpc_t.__items += 1
     def num_parameters(self):
         return self.__items
