@@ -843,19 +843,21 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
-            df_avg = df_avg.append(df_avg_compared, ignore_index=True)
             average_x.append(df_avg_compared['value'][0])
             print(f"[{compared}] average x compared: {average_x[1]}")
             df_rho_nominator = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, rho_nominator, reduce_sum, 'rho_nominator', cpc)
             df_rho_denumerator_left = evaluate_wrapper(variables, original, ndims, nprocs, meta, rho_denumerator_left, reduce_sum, 'df_rho_denumerator_left', cpc)
             df_rho_denumerator_right = evaluate_wrapper(variables, compared, ndims, nprocs, meta, rho_denumerator_right, reduce_sum, 'df_rho_denumerator_right', cpc)
-            print(f"df_rho_nominator: {df_rho_nominator['value'][0]}, df_rho_denumerator_left: {df_rho_denumerator_left['value'][0]}, df_rho_denumerator_right: {df_rho_denumerator_right['value'][0]}")
-            rho = df_rho_nominator['value'] / np.sqrt( df_rho_denumerator_left['value'] * df_rho_denumerator_right['value'])
+            # TODO write function and iterate over variable names to assign rho
+            rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
+            df_rho = df_rho_nominator.copy()
+            df_rho['value'][0] = rho
             print(f"[{compared}] pearson correlation coefficient: {rho}")
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
-        df_evaluate = df_evaluate.append( pd.concat( [df_vmin, df_vmax], ignore_index=True ), ignore_index=True )
+        dfle = [df_vmin, df_vmax, df_rho, df_avg, df_avg_compared]
+        df_evaluate = df_evaluate.append( pd.concat( dfle, ignore_index=True ), ignore_index=True )
 
     df_compare = reduce_compare_df(validators, df_compare)
     print(df_compare)
@@ -863,33 +865,33 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     global_weights = allreduce_weights( validators, weights )
 
     # TODO compute ensemble average and stddev for full ensemble states
-    # TODO iterate through cpc parameters
-    z_value = {}
-    for name in variables:
-        z_value[name] = np.array([])
-    for i in range(len(global_weights)):
-        sids_M = [encode_state_id(s.t, s.id, 0) for s in state_ids if s != global_weights[i].state_id]
-        weights_M = [w for w in global_weights if w != global_weights[i]]
-        weight_norm = 0
-        for w in weights_M:
-            weight_norm += w.weight
-        average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
-        # correct normalization
-        for name in average:
-            for rank, data in enumerate(average[name]):
-                average[name][rank] /= weight_norm
-            #print(f"ensemble average: {average[name][0][0:3]}")
-        stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
-        # correct normalization and take root
-        for name in stddev:
-            for rank, data in enumerate(stddev[name]):
-                stddev[name][rank] = np.sqrt(data/weight_norm)
-            #print(f"ensemble stddev: {stddev[name][0][0:3]}")
-        if global_weights[i].state_id in state_ids:
-            sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
-            df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+    for p in cpc:
+        z_value = {}
+        for name in variables:
+            z_value[name] = np.array([])
+        for i in range(len(global_weights)):
+            sids_M = [encode_state_id(s.t, s.id, p) for s in state_ids if s != global_weights[i].state_id]
+            weights_M = [w for w in global_weights if w != global_weights[i]]
+            weight_norm = 0
+            for w in weights_M:
+                weight_norm += w.weight
+            average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
+            # correct normalization
+            for name in average:
+                for rank, data in enumerate(average[name]):
+                    average[name][rank] /= weight_norm
+                #print(f"ensemble average: {average[name][0][0:3]}")
+            stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+            # correct normalization and take root
+            for name in stddev:
+                for rank, data in enumerate(stddev[name]):
+                    stddev[name][rank] = np.sqrt(data/weight_norm)
+                #print(f"ensemble stddev: {stddev[name][0][0:3]}")
+            if global_weights[i].state_id in state_ids:
+                sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p)
+                df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+        df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
 
-    df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
     # TODO get cycle in a better way
