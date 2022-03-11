@@ -814,9 +814,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     print('## Compute single state statistics')
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
-        print('=' * term_size.columns)
+        print('─' * 100)
         print(f'|>  t: {state_id.t}, id: {state_id.id}')
-        print('=' * term_size.columns)
+        print('─' * 100)
         average_x = []
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f'|   -> computing max value')
@@ -837,9 +837,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         average_x.append(df_avg['value'][0])
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
-            print('=' * term_size.columns)
+            print('─' * 100)
             print(f'|>  parameter-id: {p.id}')
-            print('=' * term_size.columns)
+            print('─' * 100)
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             print(f'|   -> computing avg value of compressed state')
             df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
@@ -875,7 +875,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     
     # TODO compute ensemble average and stddev for full ensemble states
     for p in cpc:
-        print('=' * term_size.columns)
+        print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id}')
         z_value = {}
@@ -883,7 +883,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             z_value[name] = np.array([])
         for i in range(len(global_weights)):
             print(f'|>  t: {global_weights[i].state_id.t}, id: {global_weights[i].state_id.id}')
-            print('=' * term_size.columns)
+            print('─' * 100)
             sids_M = [encode_state_id(s.t, s.id, p.id) for s in state_ids if s != global_weights[i].state_id]
             weights_M = [w for w in global_weights if w != global_weights[i]]
             weight_norm = 0
