@@ -172,7 +172,7 @@ def zval(data, proc, name):
     ssz = 0
     for i, x in enumerate(data):
         if stddev[name][proc][i] == 0:
-            print("zero exception: ", name, x, average[name][proc][i], i, proc)
+            print("zero exception: ", name, x, average[name][proc][i], stddev[name][proc][i-1], i, proc)
         ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
 
     return ssz
@@ -849,8 +849,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_rho_denumerator_right = evaluate_wrapper(variables, compared, ndims, nprocs, meta, rho_denumerator_right, reduce_sum, 'df_rho_denumerator_right', cpc)
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
-            df_rho_nominator.at[0, 'value'] = rho
-            df_rho = df_rho.append(df_rho_nominator)
+            df_rho_denumerator_right.at[0, 'value'] = rho
+            df_rho = df_rho.append(df_rho_denumerator_right)
             print(df_rho)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
