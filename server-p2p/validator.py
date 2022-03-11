@@ -850,7 +850,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
             df_rho_nominator.at[0, 'value'] = rho
-            df_rho.append(df_rho_nominator)
+            df_rho = df_rho.append(df_rho_nominator)
             print(df_rho)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
@@ -858,8 +858,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         dfle = [df_vmin, df_vmax, df_rho, df_avg, df_avg_compared]
         df_evaluate = df_evaluate.append( pd.concat( dfle, ignore_index=True ), ignore_index=True )
 
-    df_compare = reduce_compare_df(validators, df_compare)
     print(df_compare)
+    df_compare = reduce_compare_df(validators, df_compare)
 
     global_weights = allreduce_weights( validators, weights )
 
