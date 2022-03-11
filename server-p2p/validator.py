@@ -160,6 +160,10 @@ def reduce_energy(parts, n):
     return energy_avg / n
 
 
+def reduce_sum(parts, n):
+    return sum(parts)
+
+
 def zval(data, proc, name):
     """
         computes the sum of squared z values for
@@ -170,6 +174,55 @@ def zval(data, proc, name):
         ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
 
     return ssz
+
+
+def rho_nominator(data, proc, name):
+    """
+        computes the sum of squared differences between two states
+        data[0] <- first state
+        data[1] <- second state
+    """
+
+    rhon = 0
+    d1 = data[0]
+    d2 = data[1]
+
+    assert(len(d1) == len(d2))
+
+    for i in range(len(d1)):
+        rhon += (d1[i] - average_x[0]) * (d2[i] - average_x[1])
+
+    return rhon
+
+
+def rho_denumerator_left(data, proc, name):
+    """
+        computes the sum of squared differences between two states
+        data[0] <- first state
+        data[1] <- second state
+    """
+
+    rhod = 0
+
+    for i in range(len(data)):
+        rhod += (data[i] - average_x[0])
+
+    return rhod
+
+
+def rho_denumerator_right(data, proc, name):
+    """
+        computes the sum of squared differences between two states
+        data[0] <- first state
+        data[1] <- second state
+    """
+
+    rhod = 0
+
+    for i in range(len(data)):
+        rhod += (data[i] - average_x[1])
+
+    return rhod
 
 
 def sse(data, proc, name):
@@ -189,6 +242,14 @@ def sse(data, proc, name):
         sigma += (a1[i] - a2[i]) ** 2
 
     return sigma
+
+
+def avg_x(data):
+    return sum(data)
+
+
+def reduce_avg_x(parts, n):
+    return sum(parts)/n
 
 
 def reduce_sse(parts, n):
@@ -765,22 +826,30 @@ def allreduce_weights( validators, weights ):
 def validate(meta, compare_function, compare_reduction, evaluate_function,
              evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, weights, validators):
 
-    global average, stddev
+    global average, stddev, average_x
 
     # compute the RSME
     # TODO write reduce_df_compare
     df_compare = pd.DataFrame()
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
+        average_x = []
         original = encode_state_id(state_id.t, state_id.id, 0)
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
         df_vmin = evaluate_wrapper(variables, original, ndims, nprocs, meta, minimum, reduce_minimum, 'minimum', cpc)
-        df_evaluate = df_evaluate.append( pd.concat( [df_vmin, df_vmax], ignore_index=True ), ignore_index=True )
+        df_avg = evaluate_wrapper(variables, original, ndims, nprocs, meta, avg_x, reduce_sum, 'average', cpc)
+        average_x.append(df_avg['value'])
+        print(f"[{original}] average x original: {average_x[0]}")
         for p in cpc[1:]:
             compared = encode_state_id( state_id.t, state_id.id, p.id )
+            df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_sum, 'average', cpc)
+            df_avg = df_avg.append(df_avg_compared, ignore_index=True)
+            average_x.append(df_avg_compared['value'])
+            print(f"[{compared}] average x compared: {average_x[1]}")
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
+        df_evaluate = df_evaluate.append( pd.concat( [df_vmin, df_vmax], ignore_index=True ), ignore_index=True )
 
     df_compare = reduce_compare_df(validators, df_compare)
     print(df_compare)
@@ -814,13 +883,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, 0)
             df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
 
-    df_evaluate = df_evaluate.append( df_zval, ignore_index=True )
+    df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
     # TODO get cycle in a better way
     cycle=state_ids[0].t
-    df_compare.to_csv(experimentPath + f'validation_comp_{cycle}_csv', sep=",")
-    df_evaluate.to_csv(experimentPath + f'validation_eval_{cycle}_csv', sep=",")
+    df_compare.to_csv(experimentPath + f'validation_comp_{cycle}.csv', sep=",")
+    df_evaluate.to_csv(experimentPath + f'validation_eval_{cycle}.csv', sep=",")
 
     print(df_evaluate)
 
