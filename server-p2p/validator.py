@@ -622,6 +622,7 @@ def dfcomp2wrapper( df ):
 
 
 def dfeval2wrapper( df ):
+    print("dfeval2wrapper - df: ", df)
     wrapper = cm.EvaluateDfList()
     for _, row in df.iterrows():
         edfi = cm.EvaluateDf()
