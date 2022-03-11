@@ -851,8 +851,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
             df_rho = df_rho_nominator.copy()
-            df_rho['value'][0] = rho
-            print(f"[{compared}] pearson correlation coefficient: {rho}")
+            df_rho.at[0, 'value'] = rho
+            print(df_rho)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             df_compare = df_compare.append( pd.concat( [df_rmse, df_emax], ignore_index=True ), ignore_index=True )
@@ -891,6 +891,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p)
                 df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
         df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
+        print(df_zval)
 
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
