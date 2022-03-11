@@ -172,7 +172,8 @@ def zval(data, proc, name):
     ssz = 0
     for i, x in enumerate(data):
         if stddev[name][proc][i] == 0:
-            print("zero exception: ", name, x, average[name][proc][i], stddev[name][proc][i-1], i, proc)
+            print(f"[Warning|p:{proc}|i:{i}] ensemble/M-stddev == 0 | name: {name}, value: {x}, ensemble/M-average{average[name][proc][i]}")
+            continue
         ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
 
     return ssz
@@ -545,9 +546,9 @@ def ensemble_stddev(proc, sids, name, meta):
             x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
-        aa = [ii for ii, ee in enumerate(x_stddev) if ee == 0]
-        for aaa in aa:
-            print(f"x_stddev[{aaa}]: {x_stddev[aaa]}, weight: {weight}, data[{aaa}]: {data[aaa]}, average[{name}][{proc}][{aaa}]: {average[name][proc][aaa]}")
+        #aa = [ii for ii, ee in enumerate(x_stddev) if ee == 0]
+        #for aaa in aa:
+        #    print(f"x_stddev[{aaa}]: {x_stddev[aaa]}, weight: {weight}, data[{aaa}]: {data[aaa]}, average[{name}][{proc}][{aaa}]: {average[name][proc][aaa]}")
     return x_stddev
 
 
@@ -887,9 +888,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-                    zeroitems = [ii for ii, ee in enumerate(stddev[name][rank]) if ee == 0]
-                    for kk in zeroitems:
-                        print(f"[p:{p.id}] stddev[{name}][{rank}][{kk}] is zero for avg: {average[name][rank][kk]}")
+                    #zeroitems = [ii for ii, ee in enumerate(stddev[name][rank]) if ee == 0]
+                    #for kk in zeroitems:
+                    #    print(f"[p:{p.id}] stddev[{name}][{rank}][{kk}] is zero for avg: {average[name][rank][kk]}")
                     #print(f"ensemble stddev[{p.id},{name},{rank}]: {stddev[name][rank][0:3]}")
             if global_weights[i].state_id in state_ids:
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
