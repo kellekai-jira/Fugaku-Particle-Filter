@@ -545,7 +545,8 @@ def ensemble_stddev(proc, sids, name, meta):
             x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
-
+        if proc == 5:
+            print(f"x_stddev[957]: {x_stddev[957]}, weight: {weight}, data[957]: {data[957]}, average[{name}][{proc}][957]: {average[name][proc][957]}")
     return x_stddev
 
 
@@ -885,9 +886,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-                    zeroitems = [i for i, e in enumerate(stddev[name][rank]) if e == 0]
+                    zeroitems = [ii for ii, ee in enumerate(stddev[name][rank]) if ee == 0]
                     for i in zeroitems:
-                        print(f"stddev[{name}][{rank}][{i}] is zero for avg: {average[name][rank][i]}")
+                        print(f"[p:{p.id}] stddev[{name}][{rank}][{i}] is zero for avg: {average[name][rank][i]}")
                     #print(f"ensemble stddev[{p.id},{name},{rank}]: {stddev[name][rank][0:3]}")
             if global_weights[i].state_id in state_ids:
                 sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
