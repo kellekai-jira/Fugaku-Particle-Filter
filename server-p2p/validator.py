@@ -563,9 +563,6 @@ def ensemble_stddev(proc, sids, name, meta):
             x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
         else:
             x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
-        #aa = [ii for ii, ee in enumerate(x_stddev) if ee == 0]
-        #for aaa in aa:
-        #    print(f"x_stddev[{aaa}]: {x_stddev[aaa]}, weight: {weight}, data[{aaa}]: {data[aaa]}, average[{name}][{proc}][{aaa}]: {average[name][proc][aaa]}")
     return x_stddev
 
 
@@ -616,18 +613,18 @@ def df2wrapper( df ):
         edfi.id = int(row['id'])
         edfi.rate = row['rate']
         wrapper.items.append(edfi)
-    return(wrapper)
+    return wrapper
 
 
 def receive_evaluate_df( socket ):
-    msg = socket.recv()  # only polling
+    msg = socket.recv()
     wrapper = cm.DfList()
     wrapper.ParseFromString(msg)
     return wrapper2df(wrapper)
 
 
 def receive_compare_df( socket ):
-    msg = socket.recv()  # only polling
+    msg = socket.recv()
     wrapper = cm.DfList()
     wrapper.ParseFromString(msg)
     return wrapper2df(wrapper)
@@ -654,6 +651,7 @@ def bcast_dict( validators, dct ):
         wrapper = dict2wrapper( dct )
         for id in validators:
             send_message(validator_socket[id], wrapper)
+        for id in validators:
             pong(validator_socket[id])
 
     else:
@@ -688,6 +686,7 @@ def allreduce_dict( validators, dct ):
         for id in validators:
             wrapper_send = dict2wrapper( dct )
             send_message(validator_socket[id], wrapper_send)
+        for id in validators:
             pong(validator_socket[id])
     else:
         pong(validator_socket)
@@ -721,27 +720,6 @@ def reduce_dict( validators, dct ):
         send_message(validator_socket, wrapper)
 
     return dct
-
-
-def reduce_compare_df( validators, df ):
-    """
-    reduce dictionary from slave to master validators
-    ping and pong ensure the alternating send/recv and
-    recv/send pattern vor master and slaves
-    """
-    global validator_socket
-
-    if validator_id == 0:
-        for id in validators:
-            ping(validator_socket[id])
-            df_validator = receive_compare_df( validator_socket[id] )
-            df = df.append(df_validator)
-    else:
-        pong(validator_socket)
-        wrapper = df2wrapper(df)
-        send_message(validator_socket, wrapper)
-
-    return df
 
 
 def reduce_evaluate_df( validators, df ):
@@ -792,6 +770,7 @@ def allreduce_weights( validators, weights ):
             weights.extend( receive_weights(validator_socket[id]) )
         for id in validators:
             send_weights(validator_socket[id], weights)
+        for id in validators:
             pong(validator_socket[id])
 
 
