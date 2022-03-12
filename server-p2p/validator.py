@@ -1,4 +1,5 @@
 import struct
+import time
 from multiprocessing import Pool
 import numpy as np
 import configparser
@@ -566,15 +567,23 @@ def ensemble_stddev(proc, sids, name, meta):
     return x_stddev
 
 
-def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validators ):
+def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validators, operation ):
 
     pool = Pool()
 
     dct = {}
+    t0 = time.time()
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
+    t1 = time.time()
+    print(f"computation of '{operation}' took {t1-t0} seconds")
 
-    return reduce_func( validators, dct )
+    t0 = time.time()
+    ret = reduce_func( validators, dct )
+    t1 = time.time()
+    print(f"reduction of '{operation}' took {t1-t0} seconds")
+
+    return ret
 
 
 def receive_wrapper( socket ):
@@ -866,12 +875,12 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
-            average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators)
+            average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators, 'average')
             # correct normalization
             for name in average:
                 for rank, data in enumerate(average[name]):
                     average[name][rank] /= weight_norm
-            stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators)
+            stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators, 'stddev')
             # correct normalization and take root
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
