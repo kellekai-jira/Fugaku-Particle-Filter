@@ -572,16 +572,16 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validato
     pool = Pool()
 
     dct = {}
-    t0 = time.time()
+    #t0 = time.time()
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
-    t1 = time.time()
-    print(f"computation of '{operation}' took {t1-t0} seconds")
+    #t1 = time.time()
+    #print(f"computation of '{operation}' took {t1-t0} seconds")
 
-    t0 = time.time()
+    #t0 = time.time()
     ret = reduce_func( validators, dct )
-    t1 = time.time()
-    print(f"reduction of '{operation}' took {t1-t0} seconds")
+    #t1 = time.time()
+    #print(f"reduction of '{operation}' took {t1-t0} seconds")
 
     return ret
 
@@ -682,14 +682,14 @@ def allreduce_dict( validators, dct ):
 
     if validator_id == 0:
         for id in validators:
-            t0 = time.time()
+            #t0 = time.time()
             ping(validator_socket[id])
-            t1 = time.time()
-            print(f"ping took {t1 - t0} seconds")
-            t0 = time.time()
+            #t1 = time.time()
+            #print(f"ping took {t1 - t0} seconds")
+            #t0 = time.time()
             wrapper_recv = receive_wrapper( validator_socket[id] )
-            t1 = time.time()
-            print(f"receive wrapper took {t1 - t0} seconds")
+            #t1 = time.time()
+            #print(f"receive wrapper took {t1 - t0} seconds")
             for variable in wrapper_recv.variables:
                 for idr, rank in enumerate(variable.ranks):
                     if dct[variable.name][idr].size == 0:
