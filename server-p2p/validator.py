@@ -125,7 +125,10 @@ FTI_CPC_PRECISION   = 2
 
 
 def send_message(socket, data):
+    t0 = time.time()
     msg = data.SerializeToString()
+    t1 = time.time()
+    print(f"serializing data completed in {t1 - t0} seconds")
     print(f"sending {sys.getsizeof(msg)} Bytes")
     socket.send(msg)
 
