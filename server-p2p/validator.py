@@ -682,14 +682,11 @@ def allreduce_dict( validators, dct ):
 
     if validator_id == 0:
         for id in validators:
-            #t0 = time.time()
             ping(validator_socket[id])
-            #t1 = time.time()
-            #print(f"ping took {t1 - t0} seconds")
-            #t0 = time.time()
+            t0 = time.time()
             wrapper_recv = receive_wrapper( validator_socket[id] )
-            #t1 = time.time()
-            #print(f"receive wrapper took {t1 - t0} seconds")
+            t1 = time.time()
+            print(f"receive wrapper took {t1 - t0} seconds")
             for variable in wrapper_recv.variables:
                 for idr, rank in enumerate(variable.ranks):
                     if dct[variable.name][idr].size == 0:
@@ -705,8 +702,12 @@ def allreduce_dict( validators, dct ):
             pong(validator_socket[id])
     else:
         pong(validator_socket)
+        print(f"sending wrapper...")
+        t0 = time.time()
         wrapper_send = dict2wrapper( dct )
         send_message(validator_socket, wrapper_send)
+        t1 = time.time()
+        print(f"send wrapper took {t1 - t0} seconds")
         wrapper_recv = receive_wrapper(validator_socket)
         ping(validator_socket)
         dct = wrapper2dict(wrapper_recv)
