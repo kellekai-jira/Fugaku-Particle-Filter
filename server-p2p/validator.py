@@ -15,6 +15,7 @@ import pandas as pd
 import glob
 import re
 import netCDF4
+import sys
 from functools import reduce as py_reduce
 
 '''
@@ -124,7 +125,9 @@ FTI_CPC_PRECISION   = 2
 
 
 def send_message(socket, data):
-    socket.send(data.SerializeToString())
+    msg = data.SerializeToString()
+    print(f"sending {sys.getsizeof(msg)} Bytes")
+    socket.send(msg)
 
 
 def encode_state_id( t, id, mode ):
