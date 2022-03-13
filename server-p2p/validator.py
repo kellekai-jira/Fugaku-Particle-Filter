@@ -128,9 +128,11 @@ def send_message(socket, data):
     t0 = time.time()
     msg = data.SerializeToString()
     t1 = time.time()
-    print(f"serializing data completed in {t1 - t0} seconds")
-    print(f"sending {sys.getsizeof(msg)} Bytes")
+    print(f"serializing wrapper took: {t1 - t0} seconds")
+    t0 = time.time()
     socket.send(msg)
+    t1 = time.time()
+    print(f"sending of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
 
 
 def encode_state_id( t, id, mode ):
@@ -593,9 +595,15 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validato
 
 
 def receive_wrapper( socket ):
+    t0 = time.time()
     msg = socket.recv()  # only polling
+    t1 = time.time()
+    print(f"receive of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
+    t0 = time.time()
     wrapper = cm.StatisticWrapper()
     wrapper.ParseFromString(msg)
+    t1 = time.time()
+    print(f"parsing wrapper took: {t1-t0} seconds")
     return wrapper
 
 
