@@ -535,7 +535,7 @@ def recv_dictionary( socket ):
         dct[name] = []
         for count  in wrapper[name]:
             packer = struct.Struct(f"{int(count)}d")
-            size += count
+            size += packer.size
             #t0 = time.time()
             data_packed = socket.recv()
             #t1 = time.time()
