@@ -508,7 +508,6 @@ def ensemble_mean(proc, sids, name, meta):
 
 
 def recv_dictionary( socket ):
-    t0_tot = time.time()
     wrapper = socket.recv_json()
     dct = {}
     size = 0
@@ -519,8 +518,6 @@ def recv_dictionary( socket ):
             size += packer.size
             data_packed = socket.recv()
             dct[name].append( np.array(packer.unpack(data_packed)) )
-    t1_tot = time.time()
-    print(f"recv total took: {t1_tot - t0_tot} seconds ({size/1024/1024} Mb)")
     assert(socket.recv_string() == "DONE")
     return dct
 
@@ -585,16 +582,10 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validato
     pool = Pool()
 
     dct = {}
-    #t0 = time.time()
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
-    #t1 = time.time()
-    #print(f"computation of '{operation}' took {t1-t0} seconds")
 
-    #t0 = time.time()
     ret = reduce_func( validators, dct )
-    #t1 = time.time()
-    #print(f"reduction of '{operation}' took {t1-t0} seconds")
 
     return ret
 
