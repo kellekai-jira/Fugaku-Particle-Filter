@@ -105,8 +105,8 @@ run_melissa_da_study(
 #    meta_ckpt_dir='/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz/STATS/Meta',
     show_server_log=False,
     show_simulation_log=False,
-    runner_timeout=60 * 60,  # 60 seconds time for debugging!
-    server_timeout=60 * 60,
+    runner_timeout=1000000,  # no timeout for now
+    server_timeout=1000000,  # no timeout for now
     prepare_runner_dir=prepare_runner_directory,
     additional_env={
         'PYTHONPATH': os.getenv('MELISSA_DA_SOURCE_PATH') + '/examples/lorenz:' + os.getenv('PYTHONPATH'),
