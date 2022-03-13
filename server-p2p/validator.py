@@ -524,23 +524,25 @@ def wrapper2dict( wrapper ):
 
 def recv_dictionary( socket ):
     t0_tot = time.time()
-    t0 = time.time()
+    #t0 = time.time()
     wrapper = socket.recv_json()
-    t1 = time.time()
-    print(f"recv json took: {t1-t0} seconds")
-    print(wrapper)
+    #t1 = time.time()
+    #print(f"recv json took: {t1-t0} seconds")
+    #print(wrapper)
     dct = {}
+    size = 0
     for name in wrapper:
         dct[name] = []
         for count  in wrapper[name]:
             packer = struct.Struct(f"{int(count)}d")
-            t0 = time.time()
+            size += count
+            #t0 = time.time()
             data_packed = socket.recv()
-            t1 = time.time()
+            #t1 = time.time()
             dct[name].append( np.array(packer.unpack(data_packed)) )
-            print(f"recv data ({sys.getsizeof(data_packed)/1024/1024} Mb) took: {t1 - t0} seconds")
+            #print(f"recv data ({sys.getsizeof(data_packed)/1024/1024} Mb) took: {t1 - t0} seconds")
     t1_tot = time.time()
-    print(f"recv total took: {t1_tot - t0_tot} seconds")
+    print(f"recv total took: {t1_tot - t0_tot} seconds ({size/1024/1024} Mb)")
     assert(socket.recv_string() == "DONE")
     return dct
 
