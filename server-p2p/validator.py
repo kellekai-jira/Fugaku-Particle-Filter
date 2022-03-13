@@ -125,14 +125,8 @@ FTI_CPC_PRECISION   = 2
 
 
 def send_message(socket, data):
-    #t0 = time.time()
     msg = data.SerializeToString()
-    #t1 = time.time()
-    #print(f"serializing wrapper took: {t1 - t0} seconds")
-    #t0 = time.time()
     socket.send(msg)
-    #t1 = time.time()
-    #print(f"sending of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
 
 
 def encode_state_id( t, id, mode ):
@@ -513,22 +507,9 @@ def ensemble_mean(proc, sids, name, meta):
     return x_avg
 
 
-def wrapper2dict( wrapper ):
-    d = {}
-    for variable in wrapper.variables:
-        d[variable.name] = []
-        for idx, rank in enumerate(variable.ranks):
-            d[variable.name].append(np.array(rank.data))
-    return d
-
-
 def recv_dictionary( socket ):
     t0_tot = time.time()
-    #t0 = time.time()
     wrapper = socket.recv_json()
-    #t1 = time.time()
-    #print(f"recv json took: {t1-t0} seconds")
-    #print(wrapper)
     dct = {}
     size = 0
     for name in wrapper:
@@ -536,11 +517,8 @@ def recv_dictionary( socket ):
         for count  in wrapper[name]:
             packer = struct.Struct(f"{int(count)}d")
             size += packer.size
-            #t0 = time.time()
             data_packed = socket.recv()
-            #t1 = time.time()
             dct[name].append( np.array(packer.unpack(data_packed)) )
-            #print(f"recv data ({sys.getsizeof(data_packed)/1024/1024} Mb) took: {t1 - t0} seconds")
     t1_tot = time.time()
     print(f"recv total took: {t1_tot - t0_tot} seconds ({size/1024/1024} Mb)")
     assert(socket.recv_string() == "DONE")
@@ -560,19 +538,6 @@ def send_dictionary( socket, dct ):
             data_packed = packer.pack(*data)
             socket.send(data_packed, flags=zmq.SNDMORE )
     socket.send_string("DONE")
-
-
-def dict2wrapper( dct ):
-    wrapper = cm.StatisticWrapper()
-    for name in dct:
-        variable = cm.StatisticVariable()
-        variable.name = name
-        for data in dct[name]:
-            rank = cm.StatisticData()
-            rank.data.extend(data)
-            variable.ranks.append(rank)
-        wrapper.variables.append(variable)
-    return wrapper
 
 
 def ensemble_stddev(proc, sids, name, meta):
@@ -634,19 +599,6 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validato
     return ret
 
 
-def receive_wrapper( socket ):
-    t0 = time.time()
-    msg = socket.recv()  # only polling
-    t1 = time.time()
-    print(f"receive of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
-    t0 = time.time()
-    wrapper = cm.StatisticWrapper()
-    wrapper.ParseFromString(msg)
-    t1 = time.time()
-    print(f"parsing wrapper took: {t1-t0} seconds")
-    return wrapper
-
-
 def wrapper2df( wrapper ):
     dfl = []
     for item in wrapper.items:
@@ -702,29 +654,6 @@ def pong( socket ):
     socket.recv()
 
 
-def bcast_dict( validators, dct ):
-    """
-    broadcast dictionary from master to slave validators
-    ping and pong ensure the alternating send/recv and
-    recv/send pattern vor master and slaves
-    """
-    global validator_socket
-
-    if validator_id == 0:
-        wrapper = dict2wrapper( dct )
-        for id in validators:
-            send_message(validator_socket[id], wrapper)
-        for id in validators:
-            pong(validator_socket[id])
-
-    else:
-        wrapper = receive_wrapper(validator_socket)
-        ping(validator_socket)
-        for variable in wrapper.variables:
-            for idx, rank in enumerate(variable.ranks):
-                dct[variable.name][idx] = rank.data
-
-
 def allreduce_dict( validators, dct ):
     """
     reduce dictionary from slave to master validators
@@ -755,29 +684,6 @@ def allreduce_dict( validators, dct ):
         send_dictionary(validator_socket, dct)
         dct = recv_dictionary(validator_socket)
         ping(validator_socket)
-
-    return dct
-
-
-def reduce_dict( validators, dct ):
-    """
-    reduce dictionary from slave to master validators
-    ping and pong ensure the alternating send/recv and
-    recv/send pattern vor master and slaves
-    """
-    global validator_socket
-
-    if validator_id == 0:
-        for id in validators:
-            ping(validator_socket[id])
-            wrapper = receive_wrapper( validator_socket[id] )
-            for variable in wrapper.variables:
-                for idr, rank in enumerate(variable.ranks):
-                    dct[variable.name][idr] += rank.data
-    else:
-        pong(validator_socket)
-        wrapper = dict2wrapper( dct )
-        send_message(validator_socket, wrapper)
 
     return dct
 
