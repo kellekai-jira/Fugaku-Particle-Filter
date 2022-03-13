@@ -822,12 +822,12 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id}')
+        print('─' * 100)
         z_value = {}
         for name in variables:
             z_value[name] = np.array([])
         for i in range(len(global_weights)):
             print(f'|>  t: {global_weights[i].state_id.t}, id: {global_weights[i].state_id.id}')
-            print('─' * 100)
             sids_M = [encode_state_id(s.t, s.id, p.id) for s in state_ids if s != global_weights[i].state_id]
             weights_M = [w for w in global_weights if w != global_weights[i]]
             weight_norm = 0
