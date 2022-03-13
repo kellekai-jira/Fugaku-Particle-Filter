@@ -522,6 +522,34 @@ def wrapper2dict( wrapper ):
     return d
 
 
+def recv_dictionary( socket ):
+    wrapper = socket.recv_json()
+    dct = {}
+    for name in wrapper:
+        dct[name] = []
+        for rank, count  in enumerate(wrapper[name]):
+            packer = struct.Struct(f"{count[rank]}d")
+            data_packed = socket.recv()
+            dct[name].append( np.array(packer.unpack(data_packed)) )
+    assert(socket.recv_string() == "DONE")
+    return dct
+
+
+def send_dictionary( socket, dct ):
+    wrapper = {}
+    for name in dct:
+        wrapper[name] = []
+        for rank,data  in enumerate(dct[name]):
+            wrapper[name].append( { rank : len(data) } )
+    socket.send_json( wrapper, flags=zmq.SNDMORE )
+    for name in dct:
+        for rank,data  in enumerate(dct[name]):
+            packer = struct.Struct(f"{len(data)}d")
+            data_packed = packer.pack(*data)
+            socket.send(data_packed, flags=zmq.SNDMORE )
+    socket.send_string("DONE")
+
+
 def dict2wrapper( dct ):
     wrapper = cm.StatisticWrapper()
     for name in dct:
@@ -697,31 +725,24 @@ def allreduce_dict( validators, dct ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            t0 = time.time()
-            wrapper_recv = receive_wrapper( validator_socket[id] )
-            t1 = time.time()
-            for variable in wrapper_recv.variables:
-                for idr, rank in enumerate(variable.ranks):
-                    if dct[variable.name][idr].size == 0:
-                        dct[variable.name][idr] = np.array(rank.data)
-                    else:
-                        data = np.array(rank.data)
-                        if data.size > 0:
-                            dct[variable.name][idr] += data
         for id in validators:
-            wrapper_send = dict2wrapper( dct )
-            send_message(validator_socket[id], wrapper_send)
+            dct_recv = recv_dictionary( validator_socket[id] )
+            for name in dct_recv:
+                for idr, data in enumerate(dct_recv[name]):
+                    if dct[name][idr].size == 0:
+                        dct[name][idr] = data
+                    else:
+                        if data.size > 0:
+                            dct[name][idr] += data
+        for id in validators:
+            send_dictionary(validator_socket[id], dct)
         for id in validators:
             pong(validator_socket[id])
     else:
         pong(validator_socket)
-        t0 = time.time()
-        wrapper_send = dict2wrapper( dct )
-        send_message(validator_socket, wrapper_send)
-        t1 = time.time()
-        wrapper_recv = receive_wrapper(validator_socket)
+        send_dictionary(validator_socket, dct)
+        dct = recv_dictionary(validator_socket)
         ping(validator_socket)
-        dct = wrapper2dict(wrapper_recv)
 
     return dct
 
