@@ -125,14 +125,14 @@ FTI_CPC_PRECISION   = 2
 
 
 def send_message(socket, data):
-    t0 = time.time()
+    #t0 = time.time()
     msg = data.SerializeToString()
-    t1 = time.time()
-    print(f"serializing wrapper took: {t1 - t0} seconds")
-    t0 = time.time()
+    #t1 = time.time()
+    #print(f"serializing wrapper took: {t1 - t0} seconds")
+    #t0 = time.time()
     socket.send(msg)
-    t1 = time.time()
-    print(f"sending of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
+    #t1 = time.time()
+    #print(f"sending of {sys.getsizeof(msg)/1024/1024} Mb took: {t1-t0} seconds")
 
 
 def encode_state_id( t, id, mode ):
