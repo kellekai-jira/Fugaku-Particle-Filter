@@ -528,6 +528,7 @@ def recv_dictionary( socket ):
     wrapper = socket.recv_json()
     t1 = time.time()
     print(f"recv json took: {t1-t0} seconds")
+    print(wrapper)
     dct = {}
     for name in wrapper:
         dct[name] = []
