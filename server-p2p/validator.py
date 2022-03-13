@@ -532,8 +532,8 @@ def recv_dictionary( socket ):
     dct = {}
     for name in wrapper:
         dct[name] = []
-        for rank, count  in enumerate(wrapper[name]):
-            packer = struct.Struct(f"{count[rank]}d")
+        for count  in wrapper[name]:
+            packer = struct.Struct(f"{count}d")
             t0 = time.time()
             data_packed = socket.recv()
             t1 = time.time()
@@ -550,7 +550,7 @@ def send_dictionary( socket, dct ):
     for name in dct:
         wrapper[name] = []
         for rank,data  in enumerate(dct[name]):
-            wrapper[name].append( { rank : len(data) } )
+            wrapper[name].append( len(data) )
     socket.send_json( wrapper, flags=zmq.SNDMORE )
     for name in dct:
         for rank,data  in enumerate(dct[name]):
