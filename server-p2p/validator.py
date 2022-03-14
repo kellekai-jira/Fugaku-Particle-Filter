@@ -595,12 +595,14 @@ def recv_dictionary( socket ):
         trigger(START_UNPACK_DICT_VALIDATOR, 0)
         data_flat = packer.unpack(data_packed)
         trigger(STOP_UNPACK_DICT_VALIDATOR, 0)
+        trigger(START_FLATTEN_DICT_VALIDATOR, 0)
         start = 0
         dct[name] = []
         for count in wrapper[name]:
             end = start + count
             dct[name].append(np.array(data_flat[start:end]))
             start = end
+        trigger(STOP_FLATTEN_DICT_VALIDATOR, 0)
 
     assert(socket.recv_string() == "DONE")
 
@@ -682,8 +684,11 @@ def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validato
     pool = Pool()
 
     dct = {}
+
+    trigger(START_ENSEMBLE_WRAPPER_VALIDATOR, 0)
     for name in variables:
         dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
+    trigger(STOP_ENSEMBLE_WRAPPER_VALIDATOR, 0)
 
     ret = reduce_func( validators, dct )
 
@@ -755,6 +760,7 @@ def allreduce_dict( validators, dct ):
             ping(validator_socket[id])
         for id in validators:
             dct_recv = recv_dictionary( validator_socket[id] )
+            trigger(START_COMPUTE_ENCALC_VALIDATOR, 0)
             for name in dct_recv:
                 for idr, data in enumerate(dct_recv[name]):
                     if dct[name][idr].size == 0:
@@ -762,6 +768,7 @@ def allreduce_dict( validators, dct ):
                     else:
                         if data.size > 0:
                             dct[name][idr] += data
+            trigger(STOP_COMPUTE_ENCALC_VALIDATOR, 0)
         for id in validators:
             send_dictionary(validator_socket[id], dct)
         for id in validators:
