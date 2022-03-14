@@ -558,7 +558,7 @@ def send_dictionary( socket, dct ):
             data_packed = packer.pack(*data)
             socket.send(data_packed, flags=zmq.SNDMORE )
     socket.send_string("DONE")
-    trigger(START_SEND_DICT_VALIDATOR,0)
+    trigger(STOP_SEND_DICT_VALIDATOR,0)
 
 
 def ensemble_stddev(proc, sids, name, meta):
