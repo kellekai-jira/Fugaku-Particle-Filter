@@ -407,6 +407,18 @@ def run_melissa_da_study(
                 cluster.UpdateJob(server.job_id)
         if server.state == STATE_RUNNING:
             if server.node_name != '':
+                vr = n_validator
+                while len(validators) < vr:  # TODO depend on check load here!
+                    validator_id = next_validator_id
+                    next_validator_id += 1
+                    debug('Starting validator %d' % validator_id)
+                    validators[validator_id] = Validator(validator_id)
+                else:
+                    while len(validators) > vr:
+                        to_remove = random.choice(list(validators))
+                        log("killing a validator (with id=%d) as too many validators are up" % to_remove)
+                        validators[to_remove].remove()
+                        del validators[to_remove]
                 mr = max_runners()
                 active_runners = num_launched_runners()
                 if active_runners < mr:  # TODO depend on check load here!
@@ -425,18 +437,6 @@ def run_melissa_da_study(
                         runners[to_remove].remove()
                         del runners[to_remove]
                         # TODO: notify server!
-                vr = n_validator
-                while len(validators) < vr:  # TODO depend on check load here!
-                    validator_id = next_validator_id
-                    next_validator_id += 1
-                    debug('Starting validator %d' % validator_id)
-                    validators[validator_id] = Validator(validator_id)
-                else:
-                    while len(validators) > vr:
-                        to_remove = random.choice(list(validators))
-                        log("killing a validator (with id=%d) as too many validators are up" % to_remove)
-                        validators[to_remove].remove()
-                        del validators[to_remove]
 
 
             # Check if the server did not timeout!
