@@ -48,6 +48,22 @@ STOP_CALC_PAR_STATE_IMPORTANCE    =  110
 START_RESAMPLE                    =  112
 STOP_RESAMPLE                     =  113
 
+# Validator only
+START_LOAD_STATE_VALIDATOR        =  1000
+STOP_LOAD_STATE_VALIDATOR         =  1010
+START_ACCEPT_DELETE               =  1020
+STOP_ACCEPT_DELETE                =  1030
+START_ACCEPT_RUNNER_REQUEST       =  1040
+STOP_ACCEPT_RUNNER_REQUEST        =  1050
+START_ACCEPT_PREFETCH             =  1060
+STOP_ACCEPT_PREFETCH              =  1070
+START_HANDLE_JOB_REQ              =  1080
+STOP_HANDLE_JOB_REQ               =  1090
+START_CALC_PAR_STATE_IMPORTANCE   =  1110
+STOP_CALC_PAR_STATE_IMPORTANCE    =  1100
+START_RESAMPLE                    =  1120
+STOP_RESAMPLE                     =  1130
+
 def trigger(what, parameter):
     if trigger.enabled:
         now = time.time() - trigger.null_time
