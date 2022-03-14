@@ -130,6 +130,8 @@ def maybe_write( is_server = True, validator_id = -1 ):  # TODO: rename this in 
 
     # copied from write regions in TimingEvent
 
+    print(trigger.events)
+
     # in seconds
     if time.time() >= maybe_write.report_time:
 
