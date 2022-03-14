@@ -129,7 +129,7 @@ def load_ckpt_data(meta, sid, nranks, name):
                 block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                 data = [*data, *block]
 
-            state_buffer[sid][proc] = data
+            state_buffer[sid][proc] = np.array(data)
 
             ckpt.close()
 
