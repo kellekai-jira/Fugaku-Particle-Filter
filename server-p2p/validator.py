@@ -582,35 +582,46 @@ def ensemble_mean(proc, sids, name, meta):
 def recv_dictionary( socket ):
     wrapper = socket.recv_json()
     dct = {}
-    size = 0
+    size = {}
     for name in wrapper:
+        size[name] = 0
+        for count in wrapper[name]:
+            size[name] += int(count)
+    for name in wrapper:
+        packer = struct.Struct(f"{size[name]}d")
+        trigger(START_RECV_DICT_VALIDATOR, 0)
+        data_packed = socket.recv()
+        trigger(STOP_RECV_DICT_VALIDATOR, 0)
+        trigger(START_UNPACK_DICT_VALIDATOR, 0)
+        data_flat = packer.unpack(data_packed)
+        trigger(STOP_UNPACK_DICT_VALIDATOR, 0)
+        start = 0
         dct[name] = []
-        for count  in wrapper[name]:
-            packer = struct.Struct(f"{int(count)}d")
-            size += packer.size
-            trigger(START_RECV_DICT_VALIDATOR, 0)
-            data_packed = socket.recv()
-            trigger(STOP_RECV_DICT_VALIDATOR, 0)
-            trigger(START_UNPACK_DICT_VALIDATOR, 0)
-            dct[name].append( np.array(packer.unpack(data_packed)) )
-            trigger(STOP_UNPACK_DICT_VALIDATOR, 0)
+        for count in wrapper[name]:
+            end = start + count
+            dct[name].append(np.array(data_flat[start:end]))
+            start = end
+
     assert(socket.recv_string() == "DONE")
+
     return dct
 
 
 def send_dictionary( socket, dct ):
     trigger(START_SEND_DICT_VALIDATOR,0)
     wrapper = {}
+    data_flat = {}
     for name in dct:
         wrapper[name] = []
-        for rank,data  in enumerate(dct[name]):
-            wrapper[name].append( len(data) )
-    socket.send_json( wrapper, flags=zmq.SNDMORE )
+        data_flat[name] = []
+        for rank, data in enumerate(dct[name]):
+            wrapper[name].append(len(data))
+            data_flat[name].extend(data)
+    socket.send_json(wrapper, flags=zmq.SNDMORE)
     for name in dct:
-        for rank,data  in enumerate(dct[name]):
-            packer = struct.Struct(f"{len(data)}d")
-            data_packed = packer.pack(*data)
-            socket.send(data_packed, flags=zmq.SNDMORE )
+        packer = struct.Struct(f"{len(data_flat[name])}d")
+        data_packed = packer.pack(*data_flat[name])
+        socket.send(data_packed, flags=zmq.SNDMORE )
     socket.send_string("DONE")
     trigger(STOP_SEND_DICT_VALIDATOR,0)
 
