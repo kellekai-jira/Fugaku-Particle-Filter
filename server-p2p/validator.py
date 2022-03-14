@@ -112,7 +112,7 @@ def load_ckpt_data(meta, sid, nranks, name):
             ckpt.seek(item['offset'])
             bytes = ckpt.read(item['size'])
 
-            state_buffer[sid][proc] = array.array('d', bytes)
+            state_buffer[sid][proc] = np.array(array.array('d', bytes))
 
         else:
             data = []
