@@ -104,7 +104,7 @@ def load_ckpt_data(meta, sid, nranks, name):
         ckpt_file = item['ckpt_file']
         ckpt = open(ckpt_file, 'rb')
 
-        print(f"loading state id:{sid}|rank:{proc} from file system")
+        #print(f"loading state id:{sid}|rank:{proc} from file system")
 
         trigger(START_LOAD_STATE_VALIDATOR, 0)
 
