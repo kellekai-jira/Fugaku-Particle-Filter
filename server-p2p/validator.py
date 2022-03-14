@@ -815,7 +815,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print(f'|   -> computing avg value of compressed state')
             trigger(START_COMPUTE_XAVG_VALIDATOR, compared)
             df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
-            trigger(START_COMPUTE_XAVG_VALIDATOR, p.id)
+            trigger(STOP_COMPUTE_XAVG_VALIDATOR, p.id)
             print('| ')
             print(f"|       x_avg: {df_avg_compared['value'].iloc[-1]}")
             print('| ')

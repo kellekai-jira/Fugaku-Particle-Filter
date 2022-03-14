@@ -156,7 +156,7 @@ def maybe_write( is_server = True, validator_id = -1 ):  # TODO: rename this in 
                             # REM: -1 as parameter closes last... otherwise same parameter (important for idle and propagate runner events!)
                             if oevt[1] == ett[0] and (oevt[2] == evt[2] or evt[2] == -1 or ett[0] == START_ITERATION):
                                 #D("Popping event and writing region");
-                                f.write(','.join(list(map(str, [oevt[0] * 1000, evt[0] * 1000, ett[2], oevt[2], evt[2]]))) + '\n')
+                                f.write(','.join(list(map(str, [oevt[0] * 100000, evt[0] * 100000, ett[2], oevt[2], evt[2]]))) + '\n')
 
                                 # remove from stack:
                                 del open_events[-i-1]
