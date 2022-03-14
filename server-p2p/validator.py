@@ -53,6 +53,7 @@ addr = "tcp://*:4000"
 server_socket, port_socket = \
     bind_socket(context, zmq.REQ, addr)
 
+validator_socket = None
 
 # validator socket
 def connect_validator_sockets():
@@ -60,13 +61,14 @@ def connect_validator_sockets():
 
     # validator master
     if validator_id == 0:
-        validator_socket = {}
+        if validator_socket == None:
+            validator_socket = {}
         pattern = os.getcwd() + '/worker-*-ip.dat'
         worker_ip_files = glob.glob(pattern)
         p = re.compile("worker-(.*)-ip.dat")
         for fn in worker_ip_files:
             id = int(p.search(os.path.basename(fn)).group(1))
-            if id != 0:
+            if id != 0 and id not in validator_socket:
                 with open(fn, 'r') as file:
                     ip = file.read().rstrip()
                 addr = "tcp://" + ip + ":4001"
@@ -77,9 +79,10 @@ def connect_validator_sockets():
 
     # validator slaves
     else:
-        addr = "tcp://*:4001"
-        validator_socket, port_socket = \
-            bind_socket(context, zmq.REP, addr)
+        if validator_socket == None:
+            addr = "tcp://*:4001"
+            validator_socket, port_socket = \
+                bind_socket(context, zmq.REP, addr)
 
 # set paths
 experimentPath = os.getcwd() + '/'
@@ -906,7 +909,6 @@ class Validator:
         self.m_varnames_cpc = []
         self.m_cycle = []
         self.m_num_cores = len(os.sched_getaffinity(0))
-        self.m_first = True
         self.m_state_ids = []
         self.m_weights = []
         self.init()
@@ -1080,9 +1082,7 @@ class Validator:
             msg = server_socket.recv()
             request = parse(msg)
 
-            if self.m_first:
-                connect_validator_sockets()
-                self.m_first = False
+            connect_validator_sockets()
 
             print("received task... ")
             if request == empty:
