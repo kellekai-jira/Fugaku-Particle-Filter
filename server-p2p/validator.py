@@ -413,7 +413,6 @@ def evaluate(proc, sid, name, meta, func):
     item = meta[sid][proc][name]
     ckpt_file = item['ckpt_file']
     ckpt = open(ckpt_file, 'rb')
-    t, id, p = decode_state_id(sid)
 
     if sid not in state_buffer:
 
@@ -529,6 +528,7 @@ def ensemble_mean(proc, sids, name, meta):
 
 
 def recv_dictionary( socket ):
+    trigger(START_RECV_DICT_VALIDATOR,0)
     wrapper = socket.recv_json()
     dct = {}
     size = 0
@@ -540,10 +540,12 @@ def recv_dictionary( socket ):
             data_packed = socket.recv()
             dct[name].append( np.array(packer.unpack(data_packed)) )
     assert(socket.recv_string() == "DONE")
+    trigger(STOP_RECV_DICT_VALIDATOR,0)
     return dct
 
 
 def send_dictionary( socket, dct ):
+    trigger(START_SEND_DICT_VALIDATOR,0)
     wrapper = {}
     for name in dct:
         wrapper[name] = []
@@ -556,6 +558,7 @@ def send_dictionary( socket, dct ):
             data_packed = packer.pack(*data)
             socket.send(data_packed, flags=zmq.SNDMORE )
     socket.send_string("DONE")
+    trigger(START_SEND_DICT_VALIDATOR,0)
 
 
 def ensemble_stddev(proc, sids, name, meta):
@@ -653,16 +656,11 @@ def df2wrapper( df ):
 
 
 def receive_evaluate_df( socket ):
+    trigger(START_RECV_EVALUATE_DATAFRAME_VALIDATOR, 0)
     msg = socket.recv()
     wrapper = cm.DfList()
     wrapper.ParseFromString(msg)
-    return wrapper2df(wrapper)
-
-
-def receive_compare_df( socket ):
-    msg = socket.recv()
-    wrapper = cm.DfList()
-    wrapper.ParseFromString(msg)
+    trigger(STOP_RECV_EVALUATE_DATAFRAME_VALIDATOR, 0)
     return wrapper2df(wrapper)
 
 
@@ -684,6 +682,7 @@ def allreduce_dict( validators, dct ):
     """
     global validator_socket
 
+    trigger(START_ALLREDUCE_DICT_VALIDATOR, 0)
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
@@ -705,6 +704,7 @@ def allreduce_dict( validators, dct ):
         send_dictionary(validator_socket, dct)
         dct = recv_dictionary(validator_socket)
         ping(validator_socket)
+    trigger(STOP_ALLREDUCE_DICT_VALIDATOR, 0)
 
     return dct
 
@@ -716,7 +716,7 @@ def reduce_evaluate_df( validators, df ):
     recv/send pattern vor master and slaves
     """
     global validator_socket
-
+    trigger(START_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, 0)
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
@@ -726,6 +726,7 @@ def reduce_evaluate_df( validators, df ):
         pong(validator_socket)
         wrapper = df2wrapper(df)
         send_message(validator_socket, wrapper)
+    trigger(STOP_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, 0)
 
     return df
 
