@@ -785,17 +785,23 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         average_x = []
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f'|   -> computing max value')
+        trigger(START_COMPUTE_VMAX_VALIDATOR, state_id.t)
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
+        trigger(STOP_COMPUTE_VMAX_VALIDATOR, state_id.id)
         print('| ')
         print(f"|       x_max: {df_vmax['value'].iloc[-1]}")
         print('| ')
         print(f'|   -> computing min value')
+        trigger(START_COMPUTE_VMIN_VALIDATOR, state_id.t)
         df_vmin = evaluate_wrapper(variables, original, ndims, nprocs, meta, minimum, reduce_minimum, 'minimum', cpc)
+        trigger(STOP_COMPUTE_VMIN_VALIDATOR, state_id.id)
         print('| ')
         print(f"|       x_min: {df_vmin['value'].iloc[-1]}")
         print('| ')
         print(f'|   -> computing avg value')
+        trigger(START_COMPUTE_XAVG_VALIDATOR, original)
         df_avg = evaluate_wrapper(variables, original, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
+        trigger(STOP_COMPUTE_XAVG_VALIDATOR, 0)
         print('| ')
         print(f"|       x_avg: {df_avg['value'].iloc[-1]}")
         print('| ')
@@ -807,17 +813,21 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('─' * 100)
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             print(f'|   -> computing avg value of compressed state')
+            trigger(START_COMPUTE_XAVG_VALIDATOR, compared)
             df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
+            trigger(START_COMPUTE_XAVG_VALIDATOR, p.id)
             print('| ')
             print(f"|       x_avg: {df_avg_compared['value'].iloc[-1]}")
             print('| ')
             average_x.append(df_avg_compared['value'][0])
             print(f'|   -> computing pearson correlation coefficient')
+            trigger(START_COMPUTE_PEARSON_VALIDATOR, compared)
             df_rho_nominator = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, rho_nominator, reduce_sum, 'rho_nominator', cpc)
             df_rho_denumerator_left = evaluate_wrapper(variables, original, ndims, nprocs, meta, rho_denumerator_left, reduce_sum, 'df_rho_denumerator_left', cpc)
             df_rho_denumerator_right = evaluate_wrapper(variables, compared, ndims, nprocs, meta, rho_denumerator_right, reduce_sum, 'df_rho_denumerator_right', cpc)
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
+            trigger(STOP_COMPUTE_PEARSON_VALIDATOR, p.id)
             print('| ')
             print(f"|       rho: {rho}")
             print('| ')
@@ -825,12 +835,16 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_rho_denumerator_right.at[0, 'operation'] = 'rho'
             df_rho = df_rho_denumerator_right
             print(f'|   -> computing RMSE of compressed state')
+            trigger(START_COMPUTE_RMSE_VALIDATOR, compared)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
+            trigger(STOP_COMPUTE_RMSE_VALIDATOR, p.id)
             print('| ')
             print(f"|       RMSE: {df_rmse['value'].iloc[-1]}")
             print('| ')
             print(f'|   -> computing pointwise maximum error of compressed')
+            trigger(START_COMPUTE_PEMAX_VALIDATOR, compared)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
+            trigger(STOP_COMPUTE_PEMAX_VALIDATOR, p.id)
             print('| ')
             print(f"|       PE_max: {df_emax['value'].iloc[-1]}")
             print('| ')
@@ -850,24 +864,30 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             z_value[name] = np.array([])
         for i in range(len(global_weights)):
             print(f'|>  t: {global_weights[i].state_id.t}, id: {global_weights[i].state_id.id}')
+            sid_EXCL = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
             sids_M = [encode_state_id(s.t, s.id, p.id) for s in state_ids if s != global_weights[i].state_id]
             weights_M = [w for w in global_weights if w != global_weights[i]]
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
+            trigger(START_COMPUTE_ENAVG_VALIDATOR, sid_EXCL)
             average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators, 'average')
+            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, p.id)
             # correct normalization
             for name in average:
                 for rank, data in enumerate(average[name]):
                     average[name][rank] /= weight_norm
+            trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, sid_EXCL)
             stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators, 'stddev')
+            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, p.id)
             # correct normalization and take root
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
             if global_weights[i].state_id in state_ids:
-                sid = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
-                df_zval = evaluate_wrapper(variables, sid, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+                trigger(START_COMPUTE_RMSZ_VALIDATOR, sid_EXCL)
+                df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+                trigger(STOP_COMPUTE_RMSZ_VALIDATOR, p.id)
                 df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
                 print(f'|   -> computing RMSZ value')
                 print('| ')
