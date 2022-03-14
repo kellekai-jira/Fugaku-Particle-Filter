@@ -1117,6 +1117,7 @@ class Validator:
                 validators
             )
 
+        maybe_write(is_server=False, validator_id=validator_id)
 
     # main
     def run(self):

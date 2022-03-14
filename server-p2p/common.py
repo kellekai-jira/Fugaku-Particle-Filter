@@ -91,7 +91,7 @@ trigger.null_time = int(os.getenv("MELISSA_TIMING_NULL")) / 1000
 trigger.enabled = True
 
 
-def maybe_write():  # TODO: rename this in maybe_write_timing
+def maybe_write( is_server = True, validator_id = -1 ):  # TODO: rename this in maybe_write_timing
     if not trigger.enabled:
         return False
 
@@ -109,7 +109,24 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
             (START_HANDLE_JOB_REQ              , STOP_HANDLE_JOB_REQ               , '_HANDLE_JOB_REQ'),
             (START_CALC_PAR_STATE_IMPORTANCE   , STOP_CALC_PAR_STATE_IMPORTANCE    , '_CALC_PAR_STATE_IMPORTANCE'),
             (START_RESAMPLE                    , STOP_RESAMPLE                     , '_RESAMPLE'),
-            ]
+            (START_LOAD_STATE_VALIDATOR, STOP_LOAD_STATE_VALIDATOR, '_LOAD_STATE_VALIDATOR'),
+            (START_RECV_DICT_VALIDATOR, STOP_RECV_DICT_VALIDATOR, '_RECV_DICT_VALIDATOR'),
+            (START_SEND_DICT_VALIDATOR, STOP_SEND_DICT_VALIDATOR, '_SEND_DICT_VALIDATOR'),
+            (START_RECV_EVALUATE_DATAFRAME_VALIDATOR, STOP_RECV_EVALUATE_DATAFRAME_VALIDATOR, '_RECV_EVALUATE_DATAFRAME_VALIDATOR'),
+            (START_ALLREDUCE_DICT_VALIDATOR, STOP_ALLREDUCE_DICT_VALIDATOR, '_ALLREDUCE_DICT_VALIDATOR'),
+            (START_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, STOP_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, '_REDUCE_EVALUATE_DATAFRAME_VALIDATOR'),
+            (START_COMPUTE_VMAX_VALIDATOR, STOP_COMPUTE_VMAX_VALIDATOR, '_COMPUTE_VMAX_VALIDATOR'),
+            (START_COMPUTE_VMIN_VALIDATOR, STOP_COMPUTE_VMIN_VALIDATOR, '_COMPUTE_VMIN_VALIDATOR'),
+            (START_COMPUTE_XAVG_VALIDATOR, STOP_COMPUTE_XAVG_VALIDATOR, '_COMPUTE_XAVG_VALIDATOR'),
+            (START_COMPUTE_PEARSON_VALIDATOR, STOP_COMPUTE_PEARSON_VALIDATOR, '_COMPUTE_PEARSON_VALIDATOR'),
+            (START_COMPUTE_RMSE_VALIDATOR, STOP_COMPUTE_RMSE_VALIDATOR, '_COMPUTE_RMSE_VALIDATOR'),
+            (START_COMPUTE_PEMAX_VALIDATOR, STOP_COMPUTE_PEMAX_VALIDATOR, '_COMPUTE_PEMAX_VALIDATOR'),
+            (START_COMPUTE_ENAVG_VALIDATOR, STOP_COMPUTE_ENAVG_VALIDATOR, '_COMPUTE_ENAVG_VALIDATOR'),
+            (START_COMPUTE_ENSTDDEV_VALIDATOR, STOP_COMPUTE_ENSTDDEV_VALIDATOR, '_COMPUTE_ENSTDDEV_VALIDATOR'),
+            (START_COMPUTE_RMSZ_VALIDATOR, STOP_COMPUTE_RMSZ_VALIDATOR, '_COMPUTE_RMSZ_VALIDATOR'),
+
+
+    ]
 
     # copied from write regions in TimingEvent
 
@@ -118,8 +135,9 @@ def maybe_write():  # TODO: rename this in maybe_write_timing
 
         trigger.enabled = False
 
+        trace_fn = 'trace.melissa_p2p_server.csv' if is_server else f'trace.melissa_p2p_validator_{validator_id}.csv'
         print('write region csv for server')
-        with open('trace.melissa_p2p_server.csv', 'w+') as f:
+        with open(trace_fn, 'w+') as f:
             f.write("start_time,end_time,region,parameter_open,parameter_close\n")
 
             open_events = []
