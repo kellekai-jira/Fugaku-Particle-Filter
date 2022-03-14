@@ -426,7 +426,7 @@ def run_melissa_da_study(
                         del runners[to_remove]
                         # TODO: notify server!
                 vr = n_validator
-                if len(validators) < vr:  # TODO depend on check load here!
+                while len(validators) < vr:  # TODO depend on check load here!
                     validator_id = next_validator_id
                     next_validator_id += 1
                     debug('Starting validator %d' % validator_id)
