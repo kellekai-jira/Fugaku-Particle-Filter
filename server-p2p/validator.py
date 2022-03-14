@@ -340,6 +340,8 @@ def compare(proc, sids, name, meta, func):
 
         if proc not in state_buffer[sid]:
 
+            print(f"loading state id:{sid}|rank:{proc} from file system")
+
             trigger(START_LOAD_STATE_VALIDATOR, 0)
 
             item = meta[sid][proc][name]
@@ -420,6 +422,8 @@ def evaluate(proc, sid, name, meta, func):
 
     if proc not in state_buffer[sid]:
 
+        print(f"loading state id:{sid}|rank:{proc} from file system")
+
         trigger(START_LOAD_STATE_VALIDATOR, 0)
 
         if item['mode'] == 0:
@@ -492,6 +496,8 @@ def ensemble_mean(proc, sids, name, meta):
             state_buffer[sid] = {}
 
         if proc not in state_buffer[sid]:
+
+            print(f"loading state id:{sid}|rank:{proc} from file system")
 
             ckpt = open(ckpt_file, 'rb')
 
@@ -576,6 +582,8 @@ def ensemble_stddev(proc, sids, name, meta):
             state_buffer[sid] = {}
 
         if proc not in state_buffer[sid]:
+
+            print(f"loading state id:{sid}|rank:{proc} from file system")
 
             ckpt = open(ckpt_file, 'rb')
 
