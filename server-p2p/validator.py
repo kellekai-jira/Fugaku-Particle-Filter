@@ -567,34 +567,43 @@ def ensemble_stddev(proc, sids, name, meta):
         weight = meta[sid]['weight']
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
         mode = int(item['mode'])
 
-        if mode == 0:
-            ckpt.seek(item['offset'])
-            bytes = ckpt.read(item['size'])
-            data = array.array('d', bytes)
+        if sid not in state_buffer:
+            state_buffer[sid] = {}
 
-        else:
-            data = []
-            n = item['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
+        if proc not in state_buffer[sid]:
 
-            ckpt.seek(item['offset'])
+            ckpt = open(ckpt_file, 'rb')
 
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
+            if mode == 0:
+                ckpt.seek(item['offset'])
+                bytes = ckpt.read(item['size'])
+                data = array.array('d', bytes)
 
-        ckpt.close()
+            else:
+                data = []
+                n = item['count']
+                bs = 1024 * 1024
+                nb = n // bs + (1 if n % bs != 0 else 0)
+
+                ckpt.seek(item['offset'])
+
+                for b in range(nb):
+                    bytes = ckpt.read(8)
+                    bs = int.from_bytes(bytes, byteorder='little')
+                    bytes = ckpt.read(bs)
+                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                    data = [*data, *block]
+
+            state_buffer[sid][proc] = np.array(data)
+
+            ckpt.close()
+
         if x_stddev.size == 0:
-            x_stddev = weight * ( (np.array(data) - average[name][proc]) ** 2 )
+            x_stddev = weight * ( (state_buffer[sid][proc] - average[name][proc]) ** 2 )
         else:
-            x_stddev += weight * ( (np.array(data) - average[name][proc]) ** 2 )
+            x_stddev += weight * ( (state_buffer[sid][proc] - average[name][proc]) ** 2 )
     return x_stddev
 
 
