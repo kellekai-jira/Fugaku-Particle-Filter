@@ -740,8 +740,8 @@ def allreduce_dict( validators, dct ):
 
     trigger(START_ALLREDUCE_DICT_VALIDATOR, 0)
     if validator_id == 0:
-        #for id in validators:
-        #    ping(validator_socket[id])
+        for id in validators:
+            ping(validator_socket[id])
         for id in validators:
             dct_recv = recv_dictionary( validator_socket[id] )
             for name in dct_recv:
@@ -927,9 +927,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for w in weights_M:
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
-            if validator_id == 0:
-                for id in validators:
-                    ping(validator_socket[id])
             average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators, 'average')
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             # correct normalization
