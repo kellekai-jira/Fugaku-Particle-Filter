@@ -195,22 +195,10 @@ def decode_state_id( hash ):
 
 
 def energy(data, proc, name):
-
-    energy_sum = 0
-
-    for val in data:
-        energy_sum += 0.5 * val ** 2
-
-    return energy_sum
+    return sum(0.5*data**2)
 
 def reduce_energy(parts, n):
-
-    energy_avg = 0
-
-    for part in parts:
-        energy_avg += part
-
-    return energy_avg / n
+    return sum(parts)/n
 
 
 def reduce_sum(parts, n):
@@ -222,7 +210,6 @@ def zval(data, proc, name):
         computes the sum of squared z values for
         variable 'name' and rank 'proc'
     """
-
     xsigma = data - average[name][proc]
     msigma = stddev[name][proc]
 
@@ -237,25 +224,6 @@ def rho_nominator(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-
-    d1 = data[0]
-    d2 = data[1]
-
-    avg1 = np.array(average_x[0])
-    avg2 = np.array(average_x[1])
-
-    assert(len(d1) == len(d2))
-
-    return sum((d1-avg1)*(d2-avg2))
-
-
-def rho_denumerator(data, proc, name):
-    """
-        computes the sum of squared differences between two states
-        data[0] <- first state
-        data[1] <- second state
-    """
-
     d1 = data[0]
     d2 = data[1]
 
@@ -295,16 +263,12 @@ def sse(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-    sigma = 0
-    a1 = data[0]
-    a2 = data[1]
+    d1 = data[0]
+    d2 = data[1]
 
-    assert(len(a1) == len(a2))
+    assert(len(d1) == len(d2))
 
-    for i in range(len(a1)):
-        sigma += (a1[i] - a2[i]) ** 2
-
-    return sigma
+    return sum((d1-d2)**2)
 
 
 def avg_x(data, proc, name):
@@ -316,11 +280,7 @@ def reduce_avg_x(parts, n):
 
 
 def reduce_sse(parts, n):
-    sigma = 0
-    for part in parts:
-        sigma += part
-
-    return np.sqrt(sigma / n)
+    return np.sqrt(sum(parts) / n)
 
 
 def maximum(data, proc, name):
@@ -354,27 +314,16 @@ def pme(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-    max_error = 0
     a1 = data[0]
     a2 = data[1]
 
     assert(len(a1) == len(a2))
 
-    for i in range(len(a1)):
-        error = abs(a1[i] - a2[i])
-        if error > max_error:
-            max_error = error
-
-    return max_error
+    return max(np.abs(a1-a2))
 
 
 def reduce_pme(max_errors, n):
-    max_error = 0
-    for error in max_errors:
-        if error > max_error:
-            max_error = error
-
-    return max_error
+    return max(max_errors)
 
 
 def compare(proc, sids, name, meta, func):
@@ -881,7 +830,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in average:
                 for proc, _ in enumerate(average[name]):
                     average[name][proc] /= weight_norm
-            print(f"average: {average['state1'][0][0:3]}")
+            #print(f"average: {average['state1'][0][0:3]}")
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print("|    computing ensemble/M sigma")
@@ -890,7 +839,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for proc, _ in enumerate(stddev[name]):
                     stddev[name][proc] = np.sqrt(stddev[name][proc]/weight_norm)
-            print(f"stddev: {stddev['state1'][0][0:3]}")
+            #print(f"stddev: {stddev['state1'][0][0:3]}")
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print(f'|   -> computing RMSZ value')
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
