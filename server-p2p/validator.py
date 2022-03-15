@@ -598,8 +598,8 @@ def ensemble_mean(proc, weight, cpc, name, meta, proc_data):
             ssum.append(weight.weight * x)
     else:
         for i, x in enumerate(proc_data[proc]):
-            print(f"process: {x} iter: {i}")
             ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
+    print(f"proc '{proc}' finished")
 
     return ssum
 
