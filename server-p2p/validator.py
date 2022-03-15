@@ -527,21 +527,21 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
+def ensemble_wrapper( variables, weights, nprocs, ndim, meta, func, cpc ):
 
     res = {}
     for name in variables:
         with Pool() as pool:
-            res[name] = pool.map(partial(func, weights=weights, cpc=cpc, name=name, meta=meta), range(nprocs))
+            res[name] = pool.map(partial(func, weights=weights, ndim=ndim, cpc=cpc, name=name, meta=meta), range(nprocs))
 
     return res
 
 
-def ensemble_mean(proc, weights, cpc, name, meta):
+def ensemble_mean(proc, weights, ndim, cpc, name, meta):
 
     global state_buffer
 
-    ssum = []
+    ssum = np.zeros(ndim)
 
     for weight in weights:
 
@@ -549,13 +549,14 @@ def ensemble_mean(proc, weights, cpc, name, meta):
 
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
 
         if sid not in state_buffer:
 
             state_buffer[sid] = {}
 
         if proc not in state_buffer[sid]:
+
+            ckpt = open(ckpt_file, 'rb')
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
@@ -588,21 +589,16 @@ def ensemble_mean(proc, weights, cpc, name, meta):
 
             trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
-        if len(ssum) == 0:
-            for x in state_buffer[sid][proc]:
-                ssum.append(weight.weight * x)
-        else:
-            for i, x in enumerate(ssum):
-                ssum[i] += weight.weight * state_buffer[sid][proc][i]
+        ssum += weight.weight * state_buffer[sid][proc]
 
     return ssum
 
 
-def ensemble_stddev(proc, weights, cpc, name, meta):
+def ensemble_stddev(proc, weights, ndim, cpc, name, meta):
 
     global state_buffer
 
-    ssum = []
+    ssum = np.zeros(ndim)
 
     for weight in weights:
 
@@ -610,13 +606,14 @@ def ensemble_stddev(proc, weights, cpc, name, meta):
 
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
 
         if sid not in state_buffer:
 
             state_buffer[sid] = {}
 
         if proc not in state_buffer[sid]:
+
+            ckpt = open(ckpt_file, 'rb')
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
@@ -649,12 +646,7 @@ def ensemble_stddev(proc, weights, cpc, name, meta):
 
             trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
-        if len(ssum) == 0:
-            for i, x in enumerate(state_buffer[sid][proc]):
-                ssum.append(weight.weight * (x - average[name][proc][i])**2)
-        else:
-            for i, x in enumerate(ssum):
-                ssum[i] += x + weight.weight * (state_buffer[sid][proc][i] - average[name][proc][i])**2
+        ssum += weight.weight * (state_buffer[sid][proc] - average[name][proc])**2
 
     return ssum
 
@@ -873,21 +865,19 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
             print("|    computing ensemble/M average")
-            average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
+            average = ensemble_wrapper(variables, weights_M, nprocs, ndims, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
-                for proc, proc_data in enumerate(average[name]):
-                    for i in range(len(proc_data)):
-                        average[name][proc][i] /= weight_norm
+                for proc, _ in enumerate(average[name]):
+                    average[name][proc] /= weight_norm
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print("|    computing ensemble/M sigma")
-            stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, p)
+            stddev = ensemble_wrapper(variables, weights_M, nprocs, ndims, meta, ensemble_stddev, p)
             # correct normalization and take root
             for name in stddev:
-                for proc, proc_data in enumerate(stddev[name]):
-                    for i in range(len(proc_data)):
-                        stddev[name][proc][i] = np.sqrt(stddev[name][proc][i]/weight_norm)
+                for proc, _ in enumerate(stddev[name]):
+                    stddev[name][proc] = np.sqrt(stddev[name][proc]/weight_norm)
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print(f'|   -> computing RMSZ value')
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
