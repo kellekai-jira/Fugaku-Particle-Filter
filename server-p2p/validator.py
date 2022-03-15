@@ -527,21 +527,21 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_wrapper( variables, weights, nprocs, ndim, meta, func, cpc ):
+def ensemble_wrapper( variables, weights, nprocs, ndims, meta, func, cpc ):
 
     res = {}
     for name in variables:
         with Pool() as pool:
-            res[name] = pool.map(partial(func, weights=weights, ndim=ndim, cpc=cpc, name=name, meta=meta), range(nprocs))
+            res[name] = pool.map(partial(func, weights=weights, ndims=ndims, cpc=cpc, name=name, meta=meta), range(nprocs))
 
     return res
 
 
-def ensemble_mean(proc, weights, ndim, cpc, name, meta):
+def ensemble_mean(proc, weights, ndims, cpc, name, meta):
 
     global state_buffer
 
-    ssum = np.zeros(ndim)
+    ssum = np.zeros(ndims[name][proc])
 
     for weight in weights:
 
@@ -594,11 +594,11 @@ def ensemble_mean(proc, weights, ndim, cpc, name, meta):
     return ssum
 
 
-def ensemble_stddev(proc, weights, ndim, cpc, name, meta):
+def ensemble_stddev(proc, weights, ndims, cpc, name, meta):
 
     global state_buffer
 
-    ssum = np.zeros(ndim)
+    ssum = np.zeros(ndims[name][proc])
 
     for weight in weights:
 
@@ -854,11 +854,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id}')
         print('─' * 100)
+        ndims = {}
         for name in variables:
             z_value[name] = np.array([])
         for weight in weights:
             print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
+            ndims[name] = list(map(lambda x: len(x), meta[name][sid_EXCL]))
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
