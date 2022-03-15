@@ -888,7 +888,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for name in stddev:
                 for proc, proc_data in enumerate(stddev[name]):
                     for i in range(len(proc_data)):
-                        stddev[name][proc][i] /= weight_norm
+                        stddev[name][proc][i] = np.sqrt(stddev[name][proc][i]/weight_norm)
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
             df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
             trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
