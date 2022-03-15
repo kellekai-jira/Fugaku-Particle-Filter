@@ -536,7 +536,7 @@ def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
         for weight in weights:
             print(f"sum of state: {weight}")
             res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, ens=ens), range(nprocs))
-            ens[name] = res
+            ens[name] = res.copy()
 
     return ens
 
