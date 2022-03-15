@@ -654,7 +654,7 @@ def ensemble_stddev(proc, weights, cpc, name, meta):
                 ssum.append(weight.weight * (x - average[name][proc][i])**2)
         else:
             for i, x in enumerate(ssum):
-                ssum[i] += weight.weight * (x + (state_buffer[sid][proc][i] - average[name][proc][i])**2)
+                ssum[i] += x + weight.weight * (state_buffer[sid][proc][i] - average[name][proc][i])**2
 
     return ssum
 
@@ -876,6 +876,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
+                print(f"average: {average[name][0][0:3]}")
                 for proc, proc_data in enumerate(average[name]):
                     for i in range(len(proc_data)):
                         average[name][proc][i] /= weight_norm
@@ -886,6 +887,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             # correct normalization and take root
             for name in stddev:
+                print(f"stddev: {stddev[name][0][0:3]}")
                 for proc, proc_data in enumerate(stddev[name]):
                     for i in range(len(proc_data)):
                         stddev[name][proc][i] = np.sqrt(stddev[name][proc][i]/weight_norm)
