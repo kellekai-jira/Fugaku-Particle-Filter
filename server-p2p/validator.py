@@ -600,7 +600,9 @@ def ensemble_stddev(proc, weights, ndims, cpc, name, meta):
 
     global state_buffer
 
-    ssum = np.zeros(ndims[name][proc])
+    stemp = encode_state_id(weights[0].state_id.t, weights[0].state_id.id, 0)
+    ndim = meta[stemp][proc][name]['count']
+    ssum = np.zeros(ndim)
 
     for weight in weights:
 
