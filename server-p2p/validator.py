@@ -133,11 +133,14 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    with Pool() as pool:
-        res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
+    for proc in range(nranks):
+        state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
 
-    for proc, data in enumerate(res):
-        state_buffer[sid][proc] = data
+    #with Pool() as pool:
+    #    res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
+
+    #for proc, data in enumerate(res):
+    #    state_buffer[sid][proc] = data
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     ncfiles = {}
