@@ -542,7 +542,7 @@ def ensemble_mean(proc, weights, ndims, cpc, name, meta):
     global state_buffer
 
     stemp = encode_state_id(weights[0].state_id.t, weights[0].state_id.id, 0)
-    ndim = meta[stemp][name][proc]['count']
+    ndim = meta[stemp][proc][name]['count']
     ssum = np.zeros(ndim)
 
     for weight in weights:
