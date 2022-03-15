@@ -25,7 +25,7 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
     def show(j):
         x = int(size*j/count)
-        file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), j, count))
+        file.write("%s[%s%s] %i/%i\n" % (prefix, "#"*x, "."*(size-x), j, count))
         file.flush()        
     show(0)
     for i, item in enumerate(it):
@@ -140,7 +140,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
 
 
 
-def load_ckpt_data(meta, sid, nranks, name):
+def load_ckpt_data(meta, sid, nranks, name, progress):
 
     global state_buffer
 
@@ -148,7 +148,7 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    for proc in progressbar(range(nranks), f"Loading sid '{sid}': ", 40):
+    for proc in progressbar(range(nranks), f"Loading sid '{sid}' {progress}: ", 40):
         state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
 
     #with Pool() as pool:
@@ -1087,10 +1087,10 @@ class Validator:
         #    for p in self.m_cpc_parameters:
         #        sid = encode_state_id(state.t, state.id, p.id)
         #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
-        for weight in global_weights:
+        for ss, weight in enumerate(global_weights):
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
-                load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+                load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1", f"({ss}/{len(global_weights)})")
 
         if self.m_is_validate:
 
