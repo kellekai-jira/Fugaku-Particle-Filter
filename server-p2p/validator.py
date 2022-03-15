@@ -541,7 +541,9 @@ def ensemble_mean(proc, weights, ndims, cpc, name, meta):
 
     global state_buffer
 
-    ssum = np.zeros(ndims[name][proc])
+    stemp = encode_state_id(weights[0].state_id.t, weights[0].state_id.id, 0)
+    ndim = meta[stemp][name][proc]['count']
+    ssum = np.zeros(ndim)
 
     for weight in weights:
 
@@ -860,7 +862,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for weight in weights:
             print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
-            ndims[name] = list(map(lambda x: len(x), meta[name][sid_EXCL]))
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
