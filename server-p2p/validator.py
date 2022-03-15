@@ -850,9 +850,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('| ')
             df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_emax] , ignore_index=True ), ignore_index=True )
 
-    weights_temp = weights
+    weights_temp = weights.copy()
     global_weights = allreduce_weights( validators, weights )
-    weights = weights_temp
+    weights = weights_temp.copy()
 
     print('[ Compute ensemble statistics ]')
     # TODO compute ensemble average and stddev for full ensemble states
