@@ -537,7 +537,7 @@ def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
             if ens[name] is None:
                 proc_data = None
             else:
-                proc_data = ens[name].copy()
+                proc_data = np.array(ens[name].copy())
             with Pool() as pool:
                 res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, proc_data=proc_data), range(nprocs))
             ens[name] = res.copy()
