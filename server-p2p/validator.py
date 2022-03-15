@@ -19,6 +19,21 @@ from common import *
 import sys
 from functools import reduce as py_reduce
 
+import sys
+
+def progressbar(it, prefix="", size=60, file=sys.stdout):
+    count = len(it)
+    def show(j):
+        x = int(size*j/count)
+        file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), j, count))
+        file.flush()        
+    show(0)
+    for i, item in enumerate(it):
+        yield item
+        show(i+1)
+    file.write("\n")
+    file.flush()
+
 '''
 (from Baker et al, 2014)
 
@@ -133,7 +148,7 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    for proc in range(nranks):
+    for proc in progressbar(range(nranks), f"Loading sid '{sid}': ", 40):
         state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
 
     #with Pool() as pool:
@@ -1073,7 +1088,6 @@ class Validator:
         #        sid = encode_state_id(state.t, state.id, p.id)
         #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
         for weight in global_weights:
-            print(f"load ckpt for weight: {weight}")
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
