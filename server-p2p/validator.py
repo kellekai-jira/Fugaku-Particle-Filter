@@ -879,7 +879,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, proc_data in enumerate(average[name]):
                     for i in range(len(proc_data)):
                         average[name][proc][i] /= weight_norm
-                print(f"average: {average[name][0][0:3]}")
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print("|    computing ensemble/M sigma")
@@ -889,7 +888,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, proc_data in enumerate(stddev[name]):
                     for i in range(len(proc_data)):
                         stddev[name][proc][i] = np.sqrt(stddev[name][proc][i]/weight_norm)
-                print(f"stddev: {stddev[name][0][0:3]}")
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print(f'|   -> computing RMSZ value')
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
