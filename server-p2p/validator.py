@@ -134,7 +134,7 @@ def load_ckpt_data(meta, sid, nranks, name):
     assert(sid not in state_buffer)
 
     with Pool() as pool:
-        state_buffer[sid] = pool.map(partial(evaluate, sid=sid, name=name, meta=meta, func=get_proc_data_ckpt), range(nranks))
+        state_buffer[sid] = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
 
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
