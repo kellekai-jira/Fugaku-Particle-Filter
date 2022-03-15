@@ -865,14 +865,14 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in variables:
             z_value[name] = np.array([])
         for weight in weights:
-            print(f'|>  t: {weight.state_id.t}, id: {weight.state_id.id}')
+            print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
-            print("computing average")
+            print("|    computing ensemble/M average")
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
@@ -882,23 +882,23 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 print(f"average: {average[name][0][0:3]}")
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
-            print("computing standard deviation")
+            print("|    computing ensemble/M sigma")
             stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, p)
-            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             # correct normalization and take root
             for name in stddev:
                 for proc, proc_data in enumerate(stddev[name]):
                     for i in range(len(proc_data)):
                         stddev[name][proc][i] = np.sqrt(stddev[name][proc][i]/weight_norm)
                 print(f"stddev: {stddev[name][0][0:3]}")
+            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            print(f'|   -> computing RMSZ value')
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
             df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
             trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
-            df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
-            print(f'|   -> computing RMSZ value')
             print('| ')
             print(f"|       RSMZ: {df_zval['value'].iloc[-1]}")
             print('| ')
+            df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
 
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
