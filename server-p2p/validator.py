@@ -528,13 +528,13 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
 
 
 def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
-    pool = Pool()
 
     ens = {}
     for name in variables:
         ens[name] = None
         for weight in weights:
             print(f"sum of state: {weight}")
+            pool = Pool()
             ens[name] = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, ens=ens), range(nprocs))
 
     return ens
