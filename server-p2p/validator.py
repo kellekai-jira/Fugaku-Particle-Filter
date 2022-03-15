@@ -62,7 +62,7 @@ def connect_validator_sockets():
 
     # validator master
     if validator_id == 0:
-        if validator_socket == None:
+        if validator_socket is None:
             validator_socket = {}
         pattern = os.getcwd() + '/worker-*-ip.dat'
         worker_ip_files = glob.glob(pattern)
@@ -80,7 +80,7 @@ def connect_validator_sockets():
 
     # validator slaves
     else:
-        if validator_socket == None:
+        if validator_socket is None:
             addr = "tcp://*:4001"
             validator_socket, port_socket = \
                 bind_socket(context, zmq.REP, addr)
@@ -527,172 +527,132 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_mean(proc, sids, name, meta):
+def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
+    pool = Pool()
+
+    ens = {}
+    for name in variables:
+        ens[name] = None
+        for weight in weights:
+            ens[name] = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, ens=ens), range(nprocs))
+
+    return ens
+
+
+def ensemble_mean(proc, weight, cpc, name, meta, ens):
 
     global state_buffer
 
-    x_avg = np.array([])
-    for sid in sids:
-        weight = meta[sid]['weight']
-        item = meta[sid][proc][name]
-        ckpt_file = item['ckpt_file']
-        mode = int(item['mode'])
+    sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc.id)
 
-        if sid not in state_buffer:
-            state_buffer[sid] = {}
+    item = meta[sid][proc][name]
+    ckpt_file = item['ckpt_file']
+    ckpt = open(ckpt_file, 'rb')
 
-        if proc not in state_buffer[sid]:
+    if sid not in state_buffer:
 
-            print(f"loading state id:{sid}|rank:{proc} from file system")
+        state_buffer[sid] = {}
 
-            ckpt = open(ckpt_file, 'rb')
+    if proc not in state_buffer[sid]:
 
-            if mode == 0:
-                ckpt.seek(item['offset'])
-                bytes = ckpt.read(item['size'])
-                data = array.array('d', bytes)
+        print(f"loading state id:{sid}|rank:{proc} from file system")
 
-            else:
-                data = []
-                n = item['count']
-                bs = 1024 * 1024
-                nb = n // bs + (1 if n % bs != 0 else 0)
+        trigger(START_LOAD_STATE_VALIDATOR, 0)
 
-                ckpt.seek(item['offset'])
+        if item['mode'] == 0:
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
 
-                for b in range(nb):
-                    bytes = ckpt.read(8)
-                    bs = int.from_bytes(bytes, byteorder='little')
-                    bytes = ckpt.read(bs)
-                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                    data = [*data, *block]
+            state_buffer[sid][proc] = np.array(array.array('d', bytes))
+
+        else:
+            data = []
+            n = item['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
+
+            ckpt.seek(item['offset'])
+
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
 
             state_buffer[sid][proc] = np.array(data)
 
-            ckpt.close()
+        ckpt.close()
 
-        if x_avg.size == 0:
-            x_avg = weight * state_buffer[sid][proc]
+        trigger(STOP_LOAD_STATE_VALIDATOR, 0)
+
+    res = []
+    if ens[name] is None:
+        for x in state_buffer[sid][proc]:
+            res.append(weight.weight * x)
+    else:
+        for i, x in enumerate(ens[name][proc]):
+            res.append(weight.weight * (x + state_buffer[sid][proc][i]))
+
+    return res
+
+
+def ensemble_stddev(proc, weight, cpc, name, meta, ens):
+
+    global state_buffer
+
+    sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc.id)
+
+    item = meta[sid][proc][name]
+    ckpt_file = item['ckpt_file']
+    ckpt = open(ckpt_file, 'rb')
+
+    if sid not in state_buffer:
+
+        state_buffer[sid] = {}
+
+    if proc not in state_buffer[sid]:
+
+        print(f"loading state id:{sid}|rank:{proc} from file system")
+
+        trigger(START_LOAD_STATE_VALIDATOR, 0)
+
+        if item['mode'] == 0:
+            ckpt.seek(item['offset'])
+            bytes = ckpt.read(item['size'])
+
+            state_buffer[sid][proc] = np.array(array.array('d', bytes))
+
         else:
-            x_avg += weight * state_buffer[sid][proc]
+            data = []
+            n = item['count']
+            bs = 1024 * 1024
+            nb = n // bs + (1 if n % bs != 0 else 0)
 
-    return x_avg
+            ckpt.seek(item['offset'])
 
-
-def recv_dictionary( socket ):
-    wrapper = socket.recv_json()
-    dct = {}
-    size = {}
-    for name in wrapper:
-        size[name] = 0
-        for count in wrapper[name]:
-            size[name] += int(count)
-    for name in wrapper:
-        packer = struct.Struct(f"{size[name]}d")
-        trigger(START_RECV_DICT_VALIDATOR, 0)
-        data_packed = socket.recv()
-        trigger(STOP_RECV_DICT_VALIDATOR, 0)
-        trigger(START_UNPACK_DICT_VALIDATOR, 0)
-        data_flat = packer.unpack(data_packed)
-        trigger(STOP_UNPACK_DICT_VALIDATOR, 0)
-        trigger(START_FLATTEN_DICT_VALIDATOR, 0)
-        start = 0
-        dct[name] = []
-        for count in wrapper[name]:
-            end = start + count
-            dct[name].append(np.array(data_flat[start:end]))
-            start = end
-        trigger(STOP_FLATTEN_DICT_VALIDATOR, 0)
-
-    assert(socket.recv_string() == "DONE")
-
-    return dct
-
-
-def send_dictionary( socket, dct ):
-    trigger(START_SEND_DICT_VALIDATOR,0)
-    wrapper = {}
-    data_flat = {}
-    for name in dct:
-        wrapper[name] = []
-        data_flat[name] = []
-        for rank, data in enumerate(dct[name]):
-            wrapper[name].append(len(data))
-            data_flat[name].extend(data)
-    socket.send_json(wrapper, flags=zmq.SNDMORE)
-    for name in dct:
-        packer = struct.Struct(f"{len(data_flat[name])}d")
-        data_packed = packer.pack(*data_flat[name])
-        socket.send(data_packed, flags=zmq.SNDMORE )
-    socket.send_string("DONE")
-    trigger(STOP_SEND_DICT_VALIDATOR,0)
-
-
-def ensemble_stddev(proc, sids, name, meta):
-
-    global average, state_buffer
-
-    x_stddev = np.array([])
-    for sid in sids:
-        weight = meta[sid]['weight']
-        item = meta[sid][proc][name]
-        ckpt_file = item['ckpt_file']
-        mode = int(item['mode'])
-
-        if sid not in state_buffer:
-            state_buffer[sid] = {}
-
-        if proc not in state_buffer[sid]:
-
-            print(f"loading state id:{sid}|rank:{proc} from file system")
-
-            ckpt = open(ckpt_file, 'rb')
-
-            if mode == 0:
-                ckpt.seek(item['offset'])
-                bytes = ckpt.read(item['size'])
-                data = array.array('d', bytes)
-
-            else:
-                data = []
-                n = item['count']
-                bs = 1024 * 1024
-                nb = n // bs + (1 if n % bs != 0 else 0)
-
-                ckpt.seek(item['offset'])
-
-                for b in range(nb):
-                    bytes = ckpt.read(8)
-                    bs = int.from_bytes(bytes, byteorder='little')
-                    bytes = ckpt.read(bs)
-                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                    data = [*data, *block]
+            for b in range(nb):
+                bytes = ckpt.read(8)
+                bs = int.from_bytes(bytes, byteorder='little')
+                bytes = ckpt.read(bs)
+                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                data = [*data, *block]
 
             state_buffer[sid][proc] = np.array(data)
 
-            ckpt.close()
+        ckpt.close()
 
-        if x_stddev.size == 0:
-            x_stddev = weight * ( (state_buffer[sid][proc] - average[name][proc]) ** 2 )
-        else:
-            x_stddev += weight * ( (state_buffer[sid][proc] - average[name][proc]) ** 2 )
-    return x_stddev
+        trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
+    res = []
+    if ens[name] is None:
+        for i, x in enumerate(state_buffer[sid][proc]):
+            res.append(weight.weight * (x - average[name][proc][i])**2)
+    else:
+        for i, x in enumerate(ens[name][proc]):
+            res.append(weight.weight * (x + (state_buffer[sid][proc][i] - average[name][proc][i])**2))
 
-def ensemble_wrapper( variables, sids, nprocs, meta, func, reduce_func, validators, operation ):
-
-    pool = Pool()
-
-    dct = {}
-
-    trigger(START_ENSEMBLE_WRAPPER_VALIDATOR, 0)
-    for name in variables:
-        dct[name] = pool.map(partial(func, sids=sids, name=name, meta=meta), range(nprocs))
-    trigger(STOP_ENSEMBLE_WRAPPER_VALIDATOR, 0)
-
-    ret = reduce_func( validators, dct )
-
-    return ret
+    return res
 
 
 def wrapper2df( wrapper ):
@@ -743,44 +703,6 @@ def ping( socket ):
 
 def pong( socket ):
     socket.recv()
-
-
-def allreduce_dict( validators, dct ):
-    """
-    reduce dictionary from slave to master validators
-    and broadcast back the reduced dictionary to the slaves
-    ping and pong ensure the alternating send/recv and
-    recv/send pattern vor master and slaves
-    """
-    global validator_socket
-
-    trigger(START_ALLREDUCE_DICT_VALIDATOR, 0)
-    if validator_id == 0:
-        for id in validators:
-            ping(validator_socket[id])
-        for id in validators:
-            dct_recv = recv_dictionary( validator_socket[id] )
-            trigger(START_COMPUTE_ENCALC_VALIDATOR, 0)
-            for name in dct_recv:
-                for idr, data in enumerate(dct_recv[name]):
-                    if dct[name][idr].size == 0:
-                        dct[name][idr] = data
-                    else:
-                        if data.size > 0:
-                            dct[name][idr] += data
-            trigger(STOP_COMPUTE_ENCALC_VALIDATOR, 0)
-        for id in validators:
-            send_dictionary(validator_socket[id], dct)
-        for id in validators:
-            pong(validator_socket[id])
-    else:
-        pong(validator_socket)
-        send_dictionary(validator_socket, dct)
-        dct = recv_dictionary(validator_socket)
-        ping(validator_socket)
-    trigger(STOP_ALLREDUCE_DICT_VALIDATOR, 0)
-
-    return dct
 
 
 def reduce_evaluate_df( validators, df ):
@@ -928,45 +850,44 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
     print('[ Compute ensemble statistics ]')
     # TODO compute ensemble average and stddev for full ensemble states
+    z_value = {}
     for p in cpc:
         print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id}')
         print('─' * 100)
-        z_value = {}
         for name in variables:
             z_value[name] = np.array([])
-        for i in range(len(global_weights)):
-            print(f'|>  t: {global_weights[i].state_id.t}, id: {global_weights[i].state_id.id}')
-            sid_EXCL = encode_state_id(global_weights[i].state_id.t, global_weights[i].state_id.id, p.id)
-            sids_M = [encode_state_id(s.t, s.id, p.id) for s in state_ids if s != global_weights[i].state_id]
-            weights_M = [w for w in global_weights if w != global_weights[i]]
+        for weight in weights:
+            print(f'|>  t: {weight.state_id.t}, id: {weight.state_id.id}')
+            sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
+            sids_M = [encode_state_id(s.t, s.id, p.id) for s in global_weights if s != weight]
+            weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
-            average = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_mean, allreduce_dict, validators, 'average')
-            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
+            average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
                 for rank, data in enumerate(average[name]):
                     average[name][rank] /= weight_norm
+            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
-            stddev = ensemble_wrapper(variables, sids_M, nprocs, meta, ensemble_stddev, allreduce_dict, validators, 'stddev')
+            stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, p)
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             # correct normalization and take root
             for name in stddev:
                 for rank, data in enumerate(stddev[name]):
                     stddev[name][rank] = np.sqrt(data/weight_norm)
-            if global_weights[i].state_id in state_ids:
-                trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
-                df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
-                trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
-                df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
-                print(f'|   -> computing RMSZ value')
-                print('| ')
-                print(f"|       RSMZ: {df_zval['value'].iloc[-1]}")
-                print('| ')
+            trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
+            df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
+            trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
+            df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
+            print(f'|   -> computing RMSZ value')
+            print('| ')
+            print(f"|       RSMZ: {df_zval['value'].iloc[-1]}")
+            print('| ')
 
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
@@ -992,7 +913,7 @@ class cpc_t:
             self.mode = FTI_CPC_SINGLE
         if mode == 'half' or mode == 'hp':
             self.mode = FTI_CPC_HALF
-        assert( self.mode != None )
+        assert(self.mode is not None)
         self.parameter = int(parameter)
         self.id = int(cpc_t.__items)
         cpc_t.__items += 1
@@ -1011,13 +932,13 @@ class Validator:
             compare_reduction=None,
     ):
 
-        if compare_function == None:
+        if compare_function is None:
             self.m_compare_function = sse
-        if compare_reduction == None:
+        if compare_reduction is None:
             self.m_compare_reduction = reduce_sse
-        if evaluation_function == None:
+        if evaluation_function is None:
             self.m_evaluation_function = energy
-        if evaluation_reduction == None:
+        if evaluation_reduction is None:
             self.m_evaluation_reduction = reduce_energy
         self.m_meta = {}
         self.m_meta_compare = {}
