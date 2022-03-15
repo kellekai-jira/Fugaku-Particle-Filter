@@ -119,7 +119,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
             block = fpzip.decompress(bytes, order='C')[0, 0, 0]
             data = [*data, *block]
 
-        out = data
+        out = np.array(data)
 
     ckpt.close()
 
