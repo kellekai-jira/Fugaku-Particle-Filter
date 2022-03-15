@@ -534,14 +534,18 @@ def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
         ens[name] = None
         for weight in weights:
             print(f"sum of state: {weight}")
+            if ens[name] is None:
+                proc_data = None
+            else:
+                proc_data = ens[name].copy()
             with Pool() as pool:
-                res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, ens=ens), range(nprocs))
+                res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, proc_data=proc_data), range(nprocs))
             ens[name] = res.copy()
 
     return ens
 
 
-def ensemble_mean(proc, weight, cpc, name, meta, ens):
+def ensemble_mean(proc, weight, cpc, name, meta, proc_data):
 
     global state_buffer
 
@@ -589,11 +593,11 @@ def ensemble_mean(proc, weight, cpc, name, meta, ens):
         trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
     ssum = []
-    if ens[name] is None:
+    if proc_data is None:
         for x in state_buffer[sid][proc]:
             ssum.append(weight.weight * x)
     else:
-        for i, x in enumerate(ens[name][proc]):
+        for i, x in enumerate(proc_data[proc]):
             ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
 
     return ssum
