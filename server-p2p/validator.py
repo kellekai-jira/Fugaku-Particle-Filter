@@ -529,80 +529,71 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
 
 def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
 
-    ens = {}
     for name in variables:
-        ens[name] = None
-        for weight in weights:
-            print(f"sum of state: {weight}")
-            if ens[name] is None:
-                proc_data = None
-            else:
-                proc_data = np.array(ens[name])
-            with Pool() as pool:
-                proc_data = None
-                res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, proc_data=proc_data), range(nprocs))
-            ens[name] = res.copy()
+        with Pool() as pool:
+            res = pool.map(partial(func, weights=weights, cpc=cpc, name=name, meta=meta), range(nprocs))
 
-    return ens
+    return res
 
 
-def ensemble_mean(proc, weight, cpc, name, meta, proc_data):
+def ensemble_mean(proc, weights, cpc, name, meta):
 
     global state_buffer
 
-    sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc.id)
-
-    item = meta[sid][proc][name]
-    ckpt_file = item['ckpt_file']
-    ckpt = open(ckpt_file, 'rb')
-
-    if sid not in state_buffer:
-
-        state_buffer[sid] = {}
-
-    if proc not in state_buffer[sid]:
-
-        print(f"loading state id:{sid}|rank:{proc} from file system")
-
-        trigger(START_LOAD_STATE_VALIDATOR, 0)
-
-        if item['mode'] == 0:
-            ckpt.seek(item['offset'])
-            bytes = ckpt.read(item['size'])
-
-            state_buffer[sid][proc] = np.array(array.array('d', bytes))
-
-        else:
-            data = []
-            n = item['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(item['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-            state_buffer[sid][proc] = np.array(data)
-
-        ckpt.close()
-
-        trigger(STOP_LOAD_STATE_VALIDATOR, 0)
-
     ssum = []
-    if proc_data is None:
-        for x in state_buffer[sid][proc]:
-            ssum.append(weight.weight * x)
-    else:
-        for x in state_buffer[sid][proc]:
-            ssum.append(weight.weight * (x + x))
-        #for i, x in enumerate(proc_data[proc]):
-        #    ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
-    print(f"proc '{proc}' finished")
+
+    for weight in weights:
+
+        sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc.id)
+
+        item = meta[sid][proc][name]
+        ckpt_file = item['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
+
+        if sid not in state_buffer:
+
+            state_buffer[sid] = {}
+
+        if proc not in state_buffer[sid]:
+
+            print(f"loading state id:{sid}|rank:{proc} from file system")
+
+            trigger(START_LOAD_STATE_VALIDATOR, 0)
+
+            if item['mode'] == 0:
+                ckpt.seek(item['offset'])
+                bytes = ckpt.read(item['size'])
+
+                state_buffer[sid][proc] = np.array(array.array('d', bytes))
+
+            else:
+                data = []
+                n = item['count']
+                bs = 1024 * 1024
+                nb = n // bs + (1 if n % bs != 0 else 0)
+
+                ckpt.seek(item['offset'])
+
+                for b in range(nb):
+                    bytes = ckpt.read(8)
+                    bs = int.from_bytes(bytes, byteorder='little')
+                    bytes = ckpt.read(bs)
+                    block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+                    data = [*data, *block]
+
+                state_buffer[sid][proc] = np.array(data)
+
+            ckpt.close()
+
+            trigger(STOP_LOAD_STATE_VALIDATOR, 0)
+
+        if len(ssum) == 0:
+            for x in state_buffer[sid][proc]:
+                ssum.append(weight.weight * x)
+        else:
+            for i, x in enumerate(ssum):
+                ssum[i] += weight.weight * (x + state_buffer[sid][proc][i])
+        print(f"proc '{proc}' finished")
 
     return ssum
 
