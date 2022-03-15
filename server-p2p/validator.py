@@ -1099,8 +1099,10 @@ class Validator:
         validators = request.validation_request.validator_ids
         validators.remove(0)
 
+        weights_temp = self.m_weights.copy()
         global_weights = allreduce_weights(validators, self.m_weights)
-        print(global_weights)
+        self.m_weights = weights_temp.copy()
+
         self.populate_meta(global_weights, self.m_cpc_parameters)
 
         print(f"state_dimension: {self.m_state_dimension}")
