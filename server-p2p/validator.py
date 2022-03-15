@@ -534,6 +534,7 @@ def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
     for name in variables:
         ens[name] = None
         for weight in weights:
+            print(f"sum of state: {weight}")
             ens[name] = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, ens=ens), range(nprocs))
 
     return ens
@@ -866,6 +867,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             for w in weights_M:
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
+            print("computing average")
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
@@ -873,6 +875,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                     average[name][rank] /= weight_norm
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            print("computing standard deviation")
             stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, p)
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             # correct normalization and take root
