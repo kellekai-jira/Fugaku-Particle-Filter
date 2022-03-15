@@ -125,7 +125,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
 
 
 
-def load_ckpt_data(meta, sid, nranks, name, progress):
+def load_ckpt_data(meta, sid, nranks, name):
 
     global state_buffer
 
@@ -1072,12 +1072,12 @@ class Validator:
         #    for p in self.m_cpc_parameters:
         #        sid = encode_state_id(state.t, state.id, p.id)
         #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
-        ss = 0
+        ss = 1
         for weight in global_weights:
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
                 progress = f"({ss}/{len(global_weights) * len(self.m_cpc_parameters)})"
-                print(f"Loading sid '{sid}' {progress}: ")
+                print(f"Loading sid '{sid}' {progress}")
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
                 ss += 1
 
