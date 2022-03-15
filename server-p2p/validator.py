@@ -874,9 +874,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
-                for proc_data, data in enumerate(average[name]):
-                    for i in proc_data:
-                        average[name][rank][i] /= weight_norm
+                for proc, proc_data in enumerate(average[name]):
+                    for i in range(len(proc_data)):
+                        average[name][proc][i] /= weight_norm
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print("computing standard deviation")
@@ -884,8 +884,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             # correct normalization and take root
             for name in stddev:
-                for rank, data in enumerate(stddev[name]):
-                    stddev[name][rank] = np.sqrt(data/weight_norm)
+                for proc, proc_data in enumerate(stddev[name]):
+                    for i in range(len(proc_data)):
+                        stddev[name][proc][i] /= weight_norm
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
             df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
             trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
