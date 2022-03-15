@@ -96,8 +96,6 @@ def get_proc_data_ckpt(proc, sid, name, meta):
     ckpt_file = item['ckpt_file']
     ckpt = open(ckpt_file, 'rb')
 
-    trigger(START_LOAD_STATE_VALIDATOR, 0)
-
     if item['mode'] == 0:
         ckpt.seek(item['offset'])
         bytes = ckpt.read(item['size'])
@@ -133,9 +131,13 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     assert(sid not in state_buffer)
 
-    with Pool() as pool:
-        state_buffer[sid] = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
+    state_buffer[sid] = {}
 
+    with Pool() as pool:
+        res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
+
+    for proc, data in enumerate(res):
+        state_buffer[sid][proc] = data
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     ncfiles = {}
