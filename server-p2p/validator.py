@@ -1095,9 +1095,13 @@ class Validator:
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
 
-        for state in self.m_state_ids:
+        #for state in self.m_state_ids:
+        #    for p in self.m_cpc_parameters:
+        #        sid = encode_state_id(state.t, state.id, p.id)
+        #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+        for weight in global_weights:
             for p in self.m_cpc_parameters:
-                sid = encode_state_id(state.t, state.id, p.id)
+                sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
 
         if self.m_is_validate:
