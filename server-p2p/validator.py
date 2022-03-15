@@ -537,7 +537,7 @@ def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
             if ens[name] is None:
                 proc_data = None
             else:
-                proc_data = np.array(ens[name].copy())
+                proc_data = np.array(ens[name])
             with Pool() as pool:
                 res = pool.map(partial(func, weight=weight, cpc=cpc, name=name, meta=meta, proc_data=proc_data), range(nprocs))
             ens[name] = res.copy()
@@ -597,8 +597,10 @@ def ensemble_mean(proc, weight, cpc, name, meta, proc_data):
         for x in state_buffer[sid][proc]:
             ssum.append(weight.weight * x)
     else:
-        for i, x in enumerate(proc_data[proc]):
-            ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
+        for x in state_buffer[sid][proc]:
+            ssum.append(weight.weight * (x + x))
+        #for i, x in enumerate(proc_data[proc]):
+        #    ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
     print(f"proc '{proc}' finished")
 
     return ssum
