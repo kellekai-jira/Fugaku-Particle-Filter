@@ -588,15 +588,15 @@ def ensemble_mean(proc, weight, cpc, name, meta, ens):
 
         trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
-    res = []
+    ssum = []
     if ens[name] is None:
         for x in state_buffer[sid][proc]:
-            res.append(weight.weight * x)
+            ssum.append(weight.weight * x)
     else:
         for i, x in enumerate(ens[name][proc]):
-            res.append(weight.weight * (x + state_buffer[sid][proc][i]))
+            ssum.append(weight.weight * (x + state_buffer[sid][proc][i]))
 
-    return res
+    return ssum
 
 
 def ensemble_stddev(proc, weight, cpc, name, meta, ens):
