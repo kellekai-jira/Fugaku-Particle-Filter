@@ -222,12 +222,11 @@ def zval(data, proc, name):
         computes the sum of squared z values for
         variable 'name' and rank 'proc'
     """
-    ssz = 0
-    for i, x in enumerate(data):
-        if stddev[name][proc][i] == 0:
-            print(f"[Warning|p:{proc}|i:{i}] ensemble/M-stddev == 0 | name: {name}, value: {x}, ensemble/M-average{average[name][proc][i]}")
-            continue
-        ssz += ( (x - average[name][proc][i]) / stddev[name][proc][i] ) ** 2
+
+    xsigma = data - average[name][proc]
+    msigma = stddev[name][proc]
+
+    ssz = sum(np.divide(xsigma, msigma, out=np.zeros_like(xsigma), where=msigma != 0) ** 2)
 
     return ssz
 
