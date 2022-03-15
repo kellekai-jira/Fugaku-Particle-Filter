@@ -861,7 +861,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for weight in weights:
             print(f'|>  t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
-            sids_M = [encode_state_id(s.t, s.id, p.id) for s in global_weights if s != weight]
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
