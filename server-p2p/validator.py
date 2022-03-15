@@ -90,48 +90,51 @@ experimentPath = os.getcwd() + '/'
 checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 
 
+def get_proc_data_ckpt(proc, sid, name, meta):
+
+    item = meta[sid][proc][name]
+    ckpt_file = item['ckpt_file']
+    ckpt = open(ckpt_file, 'rb')
+
+    trigger(START_LOAD_STATE_VALIDATOR, 0)
+
+    if item['mode'] == 0:
+        ckpt.seek(item['offset'])
+        bytes = ckpt.read(item['size'])
+
+        out = np.array(array.array('d', bytes))
+
+    else:
+        data = []
+        n = item['count']
+        bs = 1024 * 1024
+        nb = n // bs + (1 if n % bs != 0 else 0)
+
+        ckpt.seek(item['offset'])
+
+        for b in range(nb):
+            bytes = ckpt.read(8)
+            bs = int.from_bytes(bytes, byteorder='little')
+            bytes = ckpt.read(bs)
+            block = fpzip.decompress(bytes, order='C')[0, 0, 0]
+            data = [*data, *block]
+
+        out = data
+
+    ckpt.close()
+
+    return out
+
+
+
 def load_ckpt_data(meta, sid, nranks, name):
 
     global state_buffer
 
     assert(sid not in state_buffer)
 
-    state_buffer[sid] = {}
-
-    for proc in range(nranks):
-
-        item = meta[sid][proc][name]
-        ckpt_file = item['ckpt_file']
-        ckpt = open(ckpt_file, 'rb')
-
-        #print(f"loading state id:{sid}|rank:{proc} from file system")
-
-        trigger(START_LOAD_STATE_VALIDATOR, 0)
-
-        if item['mode'] == 0:
-            ckpt.seek(item['offset'])
-            bytes = ckpt.read(item['size'])
-
-            state_buffer[sid][proc] = np.array(array.array('d', bytes))
-
-        else:
-            data = []
-            n = item['count']
-            bs = 1024 * 1024
-            nb = n // bs + (1 if n % bs != 0 else 0)
-
-            ckpt.seek(item['offset'])
-
-            for b in range(nb):
-                bytes = ckpt.read(8)
-                bs = int.from_bytes(bytes, byteorder='little')
-                bytes = ckpt.read(bs)
-                block = fpzip.decompress(bytes, order='C')[0, 0, 0]
-                data = [*data, *block]
-
-            state_buffer[sid][proc] = np.array(data)
-
-            ckpt.close()
+    with Pool() as pool:
+        state_buffer[sid] = pool.map(partial(evaluate, sid=sid, name=name, meta=meta, func=get_proc_data_ckpt), range(nranks))
 
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
