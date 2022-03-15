@@ -474,7 +474,7 @@ def evaluate(proc, sid, name, meta, func):
             ckpt.seek(item['offset'])
             bytes = ckpt.read(item['size'])
 
-            state_buffer[sid][proc] = array.array('d', bytes)
+            state_buffer[sid][proc] = np.array(array.array('d', bytes))
 
         else:
             data = []
@@ -491,7 +491,7 @@ def evaluate(proc, sid, name, meta, func):
                 block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                 data = [*data, *block]
 
-            state_buffer[sid][proc] = data
+            state_buffer[sid][proc] = np.array(data)
 
         ckpt.close()
 
@@ -527,17 +527,17 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
     return pd.DataFrame(dfl)
 
 
-def ensemble_wrapper( variables, weights, nprocs, ndims, meta, func, cpc ):
+def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
 
     res = {}
     for name in variables:
         with Pool() as pool:
-            res[name] = pool.map(partial(func, weights=weights, ndims=ndims, cpc=cpc, name=name, meta=meta), range(nprocs))
+            res[name] = pool.map(partial(func, weights=weights, cpc=cpc, name=name, meta=meta), range(nprocs))
 
     return res
 
 
-def ensemble_mean(proc, weights, ndims, cpc, name, meta):
+def ensemble_mean(proc, weights, cpc, name, meta):
 
     global state_buffer
 
@@ -596,7 +596,7 @@ def ensemble_mean(proc, weights, ndims, cpc, name, meta):
     return ssum
 
 
-def ensemble_stddev(proc, weights, ndims, cpc, name, meta):
+def ensemble_stddev(proc, weights, cpc, name, meta):
 
     global state_buffer
 
@@ -858,7 +858,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id}')
         print('─' * 100)
-        ndims = {}
         for name in variables:
             z_value[name] = np.array([])
         for weight in weights:
@@ -870,7 +869,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 weight_norm += w.weight
             trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
             print("|    computing ensemble/M average")
-            average = ensemble_wrapper(variables, weights_M, nprocs, ndims, meta, ensemble_mean, p)
+            average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, p)
             # correct normalization
             for name in average:
                 for proc, _ in enumerate(average[name]):
@@ -879,7 +878,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
             trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print("|    computing ensemble/M sigma")
-            stddev = ensemble_wrapper(variables, weights_M, nprocs, ndims, meta, ensemble_stddev, p)
+            stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, p)
             # correct normalization and take root
             for name in stddev:
                 for proc, _ in enumerate(stddev[name]):
