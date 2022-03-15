@@ -133,14 +133,14 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    for proc in range(nranks):
-        state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
+    #for proc in range(nranks):
+    #    state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
 
-    #with Pool() as pool:
-    #    res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
+    with Pool() as pool:
+        res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
 
-    #for proc, data in enumerate(res):
-    #    state_buffer[sid][proc] = data
+    for proc, data in enumerate(res):
+        state_buffer[sid][proc] = data
 
 def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     ncfiles = {}
@@ -1068,10 +1068,6 @@ class Validator:
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
 
-        #for state in self.m_state_ids:
-        #    for p in self.m_cpc_parameters:
-        #        sid = encode_state_id(state.t, state.id, p.id)
-        #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
         ss = 1
         for weight in global_weights:
             for p in self.m_cpc_parameters:
