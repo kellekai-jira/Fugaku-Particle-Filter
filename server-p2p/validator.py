@@ -1090,6 +1090,7 @@ class Validator:
         validators.remove(0)
 
         global_weights = allreduce_weights(validators, self.m_weights)
+        print(global_weights)
         self.populate_meta(global_weights, self.m_cpc_parameters)
 
         print(f"state_dimension: {self.m_state_dimension}")
@@ -1100,6 +1101,7 @@ class Validator:
         #        sid = encode_state_id(state.t, state.id, p.id)
         #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
         for weight in global_weights:
+            print(f"load ckpt for weight: {weight}")
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
