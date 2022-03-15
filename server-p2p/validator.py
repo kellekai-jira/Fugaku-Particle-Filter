@@ -238,16 +238,33 @@ def rho_nominator(data, proc, name):
         data[1] <- second state
     """
 
-    rhon = 0
     d1 = data[0]
     d2 = data[1]
 
+    avg1 = np.array(average_x[0])
+    avg2 = np.array(average_x[1])
+
     assert(len(d1) == len(d2))
 
-    for i in range(len(d1)):
-        rhon += (d1[i] - average_x[0]) * (d2[i] - average_x[1])
+    return sum((d1-avg1)*(d2-avg2))
 
-    return rhon
+
+def rho_denumerator(data, proc, name):
+    """
+        computes the sum of squared differences between two states
+        data[0] <- first state
+        data[1] <- second state
+    """
+
+    d1 = data[0]
+    d2 = data[1]
+
+    avg1 = np.array(average_x[0])
+    avg2 = np.array(average_x[1])
+
+    assert(len(d1) == len(d2))
+
+    return sum((d1-avg1)*(d2-avg2))
 
 
 def rho_denumerator_left(data, proc, name):
@@ -256,13 +273,9 @@ def rho_denumerator_left(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
+    avg = np.array(average_x[0])
 
-    rhod = 0
-
-    for i in range(len(data)):
-        rhod += (data[i] - average_x[0])**2
-
-    return rhod
+    return sum((data-avg)**2)
 
 
 def rho_denumerator_right(data, proc, name):
@@ -271,13 +284,9 @@ def rho_denumerator_right(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
+    avg = np.array(average_x[1])
 
-    rhod = 0
-
-    for i in range(len(data)):
-        rhod += (data[i] - average_x[1])**2
-
-    return rhod
+    return sum((data-avg)**2)
 
 
 def sse(data, proc, name):
@@ -286,7 +295,6 @@ def sse(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-
     sigma = 0
     a1 = data[0]
     a2 = data[1]
