@@ -477,7 +477,7 @@ def receive_message_validator(socket, is_blocking=False):
     msg = None
     try:
 
-        if not is_blocking:
+        if is_blocking:
             msg = socket.recv()  # only polling
         else:
             msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
