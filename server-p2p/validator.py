@@ -99,6 +99,30 @@ def connect_validator_sockets():
 experimentPath = os.getcwd() + '/'
 checkpointPath = os.path.dirname(os.getcwd()) + '/Global/'
 
+def get_parameter_info( cpc ):
+    if  cpc.mode == FTI_CPC_MODE_NONE:
+        return 'uncompressed'
+
+    if cpc.mode == FTI_CPC_SINGLE:
+        return f"method: single-precision (32 bit float)"
+
+    if cpc.mode == FTI_CPC_HALF:
+        return f"method: half-precision (16 bit float)"
+
+    elif cpc.mode == FTI_CPC_FPZIP:
+        return f"method: FPZIP, precision: {cpc.parameter}"
+
+    elif cpc.mode == FTI_CPC_ZFP:
+        if cpc.type == FTI_CPC_PRECISION:
+            return f"method: ZFP, type: PRECISION, precision: {cpc.parameter}"
+        if cpc.type == FTI_CPC_ACCURACY:
+            return f"method: ZFP, type: ACCURACY, tolerance: 1e-{cpc.parameter}"
+        else:
+            return f"method:ZFP <unknown compression type>"
+
+    else:
+        return '<no info available>'
+
 
 def get_proc_data_ckpt(proc, sid, name, meta):
 
@@ -787,7 +811,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
-            print(f'|>  parameter-id: {p.id}')
+            print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
             print('─' * 100)
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             print(f'|   -> computing avg value of compressed state')
@@ -838,7 +862,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for p in cpc:
         print('─' * 100)
         print(f'|>  z-value statistics')
-        print(f'|>  parameter-id: {p.id}')
+        print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
         print('─' * 100)
         for name in variables:
             z_value[name] = np.array([])
@@ -888,7 +912,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
 
 class cpc_t:
     __items = 0
-    def __init__(self, name, mode, parameter):
+    def __init__(self, name, mode, type, parameter):
         self.name = name
         self.mode = int(0)
         if mode == 'none':
@@ -902,6 +926,7 @@ class cpc_t:
         if mode == 'half' or mode == 'hp':
             self.mode = FTI_CPC_HALF
         assert(self.mode is not None)
+        self.type = int(type)
         self.parameter = int(parameter)
         self.id = int(cpc_t.__items)
         cpc_t.__items += 1
@@ -962,7 +987,7 @@ class Validator:
 
         # required to unify the meta data creation
         for name in self.m_varnames:
-            self.m_cpc_parameters.append(cpc_t(name, 'none', 0))
+            self.m_cpc_parameters.append(cpc_t(name, 'none', 0, 0))
 
         if cpc_json['compression']['method'] == 'adapt': return
 
@@ -974,6 +999,7 @@ class Validator:
             self.m_cpc_parameters.append(cpc_t(
                 item['name'],
                 item['mode'],
+                item['type'],
                 item['parameter']
             ))
 
