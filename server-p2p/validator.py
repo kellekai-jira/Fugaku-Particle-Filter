@@ -339,7 +339,8 @@ def maximum(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-    return max(data)
+    return np.max(data)
+
 
 def minimum(data, proc, name):
     """
@@ -347,15 +348,33 @@ def minimum(data, proc, name):
         data[0] <- first state
         data[1] <- second state
     """
-    return min(data)
+    return np.min(data)
+
+
+def maximum_abs(data, proc, name):
+    """
+        computes the maximum value
+        data[0] <- first state
+        data[1] <- second state
+    """
+    return np.max(np.abs(data))
+
+
+def minimum_abs(data, proc, name):
+    """
+        computes the maximum value
+        data[0] <- first state
+        data[1] <- second state
+    """
+    return np.min(np.abs(data))
 
 
 def reduce_maximum(maxima, n):
-    return max(maxima)
+    return np.max(maxima)
 
 
 def reduce_minimum(minima, n):
-    return min(minima)
+    return np.min(minima)
 
 
 def pme(data, proc, name):
@@ -533,6 +552,20 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
         } )
 
     return pd.DataFrame(dfl)
+
+
+def create_dataframe_row( name, operation, value, cpc, t, id, rate, sid ):
+    return pd.DataFrame([{
+        'variable': name,
+        'operation': operation,
+        'value': value,
+        'mode': cpc.mode,
+        'parameter': cpc.parameter,
+        't': t,
+        'id': id,
+        'rate': rate,
+        'sid': sid
+    }])
 
 
 def ensemble_wrapper( variables, weights, nprocs, meta, func, cpc ):
@@ -792,15 +825,25 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         trigger(START_COMPUTE_VMAX_VALIDATOR, 0)
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
         trigger(STOP_COMPUTE_VMAX_VALIDATOR, 0)
+        xmax = df_vmax['value'].iloc[-1]
         print('| ')
-        print(f"|       x_max: {df_vmax['value'].iloc[-1]}")
+        print(f"|       x_max: {xmax}")
+        print('| ')
+        print(f'|   -> computing absolute max value')
+        trigger(START_COMPUTE_VMAX_VALIDATOR, 0)
+        df_vmaxabs = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum_abs, reduce_maximum, 'maximum_abs', cpc)
+        trigger(STOP_COMPUTE_VMAX_VALIDATOR, 0)
+        xmaxabs = df_vmaxabs['value'].iloc[-1]
+        print('| ')
+        print(f"|       x_max_abs: {xmaxabs}")
         print('| ')
         print(f'|   -> computing min value')
         trigger(START_COMPUTE_VMIN_VALIDATOR, 0)
         df_vmin = evaluate_wrapper(variables, original, ndims, nprocs, meta, minimum, reduce_minimum, 'minimum', cpc)
         trigger(STOP_COMPUTE_VMIN_VALIDATOR, 0)
+        xmin = df_vmin['value'].iloc[-1]
         print('| ')
-        print(f"|       x_min: {df_vmin['value'].iloc[-1]}")
+        print(f"|       x_min: {xmin}")
         print('| ')
         print(f'|   -> computing avg value')
         trigger(START_COMPUTE_XAVG_VALIDATOR, 0)
@@ -810,7 +853,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print(f"|       x_avg: {df_avg['value'].iloc[-1]}")
         print('| ')
         average_x.append(df_avg['value'][0])
-        df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin], ignore_index=True ), ignore_index=True )
+        df_range = create_dataframe_row('state1', 'range', xmax - xmin, cpc[0], state_id.t, state_id.id, 1.0, original)
+        df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
             print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -842,8 +886,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             trigger(START_COMPUTE_RMSE_VALIDATOR, 0)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             trigger(STOP_COMPUTE_RMSE_VALIDATOR, 0)
+            rmse = df_rmse['value'].iloc[-1]
             print('| ')
-            print(f"|       RMSE: {df_rmse['value'].iloc[-1]}")
+            print(f"|       RMSE: {rmse}")
             print('| ')
             print(f'|   -> computing pointwise maximum error of compressed')
             trigger(START_COMPUTE_PEMAX_VALIDATOR, 0)
@@ -852,6 +897,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('| ')
             print(f"|       PE_max: {df_emax['value'].iloc[-1]}")
             print('| ')
+            psnr = 20 * np.log10( xmax / rmse )
             df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_emax] , ignore_index=True ), ignore_index=True )
 
     weights_temp = weights.copy()
