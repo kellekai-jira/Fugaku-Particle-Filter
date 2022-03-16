@@ -18,7 +18,7 @@ import netCDF4
 from common import *
 import sys
 from functools import reduce as py_reduce
-import zfpy
+#import zfpy
 
 '''
 (from Baker et al, 2014)
@@ -132,21 +132,21 @@ def get_proc_data_ckpt(proc, sid, name, meta):
             data = [*data, *block]
         out = np.array(data)
 
-    elif item['mode'] == FTI_CPC_ZFP:
-        count = item['count']
-        size = item['size']
-        ckpt.seek(item['offset'])
-        byte_data = ckpt.read(size)
-        if item['type'] == FTI_CPC_ACCURACY:
-            tolerance = 10 ** (-1 * item['parameter'])
-            precision = -1
-        elif item['type'] == FTI_CPC_PRECISION:
-            tolerance = -1
-            precision = item['parameter']
-        else:
-            print("ERROR - unknown compression type")
-            exit(-1)
-        out = zfpy._decompress(byte_data, zfpy.type_double, (count,), tolerance=tolerance, precision=precision)
+    #elif item['mode'] == FTI_CPC_ZFP:
+    #    count = item['count']
+    #    size = item['size']
+    #    ckpt.seek(item['offset'])
+    #    byte_data = ckpt.read(size)
+    #    if item['type'] == FTI_CPC_ACCURACY:
+    #        tolerance = 10 ** (-1 * item['parameter'])
+    #        precision = -1
+    #    elif item['type'] == FTI_CPC_PRECISION:
+    #        tolerance = -1
+    #        precision = item['parameter']
+    #    else:
+    #        print("ERROR - unknown compression type")
+    #        exit(-1)
+    #    out = zfpy._decompress(byte_data, zfpy.type_double, (count,), tolerance=tolerance, precision=precision)
 
     ckpt.close()
 
