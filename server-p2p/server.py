@@ -473,7 +473,7 @@ def accept_prefetch(msg):
     trigger(STOP_ACCEPT_PREFETCH, 0)
 
 
-def receive_message_validator(socket, is_blocking=False):
+def receive_message_validator(socket, is_blocking=True):
     msg = None
     try:
 
