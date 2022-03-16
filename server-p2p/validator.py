@@ -758,7 +758,7 @@ def reduce_evaluate_df( validators, df ):
         for id in validators:
             ping(validator_socket[id])
             df_validator = receive_evaluate_df( validator_socket[id] )
-            df = df.append(df_validator)
+            df = df.append(df_validator, ignore_index=True)
     else:
         pong(validator_socket)
         wrapper = df2wrapper(df)
@@ -853,7 +853,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print(f"|       x_avg: {df_avg['value'].iloc[-1]}")
         print('| ')
         average_x.append(df_avg['value'][0])
+        print(f'|   -> computing range')
         df_range = create_dataframe_row('state1', 'range', xmax - xmin, cpc[0], state_id.t, state_id.id, 1.0, original)
+        print('| ')
+        print(f"|       range: {df_range['value'].iloc[-1]}")
+        print('| ')
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
@@ -867,6 +871,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('| ')
             print(f"|       x_avg: {df_avg_compared['value'].iloc[-1]}")
             print('| ')
+            cpc_rate = df_avg_compared['rate'].iloc[-1]
             average_x.append(df_avg_compared['value'][0])
             print(f'|   -> computing pearson correlation coefficient')
             trigger(START_COMPUTE_PEARSON_VALIDATOR, 0)
@@ -897,8 +902,13 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('| ')
             print(f"|       PE_max: {df_emax['value'].iloc[-1]}")
             print('| ')
+            print(f'|   -> computing peak signal to noise ratio')
             psnr = 20 * np.log10( xmax / rmse )
-            df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_emax] , ignore_index=True ), ignore_index=True )
+            df_psnr = create_dataframe_row('state1', 'psnr', psnr, p, state_id.t, state_id.id, cpc_rate, compared)
+            print('| ')
+            print(f"|       PSNR: {psnr}")
+            print('| ')
+            df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_emax, df_psnr] , ignore_index=True ), ignore_index=True )
 
     weights_temp = weights.copy()
     global_weights = allreduce_weights( validators, weights )
