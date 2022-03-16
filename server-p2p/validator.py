@@ -120,19 +120,16 @@ def get_proc_data_ckpt(proc, sid, name, meta):
 
     elif item['mode'] == FTI_CPC_FPZIP:
         data = []
-        n = item['count']
-        bs = 1024 * 1024
-        nb = n // bs + (1 if n % bs != 0 else 0)
-
+        size = item['size']
         ckpt.seek(item['offset'])
-
-        for b in range(nb):
+        load = 0
+        while load < size:
             bytes = ckpt.read(8)
             bs = int.from_bytes(bytes, byteorder='little')
             bytes = ckpt.read(bs)
+            load += len(bytes)
             block = fpzip.decompress(bytes, order='C')[0, 0, 0]
             data = [*data, *block]
-
         out = np.array(data)
 
     elif item['mode'] == FTI_CPC_ZFP:
