@@ -528,6 +528,7 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
             't' : int(t),
             'id' : int(id),
             'rate' : rate_original,
+            'sid' : encode_state_id(int(t), int(id), int(cpc[p].id))
         } )
 
     return pd.DataFrame(dfl)
