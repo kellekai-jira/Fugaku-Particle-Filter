@@ -15,14 +15,14 @@
         "sigma" : 10e-7,
         "mode" : "fpzip",
         "type" : "accuracy",
-        "parameter" : 34
+        "parameter" : 32
       },
       {
         "name"  : "state1",
         "sigma" : 10e-7,
         "mode" : "fpzip",
         "type" : "accuracy",
-        "parameter" : 44
+        "parameter" : 40
       }
     ],
     "adapted" : [
