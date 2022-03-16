@@ -326,6 +326,19 @@ def accept_weight(msg):
 
     trigger(STOP_ACCEPT_WEIGHT, 0)
 
+    check_for_new_validators()
+
+    if len(validation_sockets) > 0:
+        for id in validation_sockets:
+            print(f"[{id}] connecting to worker...")
+            receive_message_blocking( validation_sockets[id] )
+            req_validator = cm.Message()
+            req_validator.prefetch_request_validator.weight.CopyFrom(msg.weight)
+            print(f"[{id}] sent prefetch request")
+            send_message(validation_sockets[id], req_validator)
+
+
+
     maybe_update()
 
 
@@ -730,6 +743,26 @@ def handle_job_requests(launcher, nsteps):
         trigger(STOP_HANDLE_JOB_REQ, 0)
 
 
+def check_for_new_validators():
+
+    global validator_ids, validation_sockets
+
+    pattern = os.getcwd() + '/worker-*-ip.dat'
+    worker_ip_files = glob.glob(pattern)
+
+    p = re.compile("worker-(.*)-ip.dat")
+    for fn in worker_ip_files:
+        id = int(p.search(os.path.basename(fn)).group(1))
+        if id not in validation_sockets:
+            validator_ids.append(id)
+            with open(fn, 'r') as file:
+                ip = file.read().rstrip()
+            addr = "tcp://" + ip + ":4000"
+            so = context.socket(zmq.REP)
+            so.connect(addr)
+            validation_sockets[id] = so
+
+
 def resample(parent_t, alpha_master_=None):
 
     global validator_ids, validation_sockets
@@ -768,20 +801,7 @@ def resample(parent_t, alpha_master_=None):
     #
     #############################################################
 
-    pattern = os.getcwd() + '/worker-*-ip.dat'
-    worker_ip_files = glob.glob(pattern)
-
-    p = re.compile("worker-(.*)-ip.dat")
-    for fn in worker_ip_files:
-        id = int(p.search(os.path.basename(fn)).group(1))
-        if id not in validation_sockets:
-            validator_ids.append(id)
-            with open(fn, 'r') as file:
-                ip = file.read().rstrip()
-            addr = "tcp://" + ip + ":4000"
-            so = context.socket(zmq.REP)
-            so.connect(addr)
-            validation_sockets[id] = so
+    check_for_new_validators()
 
     if len(validation_sockets) > 0:
         for id in validation_sockets:

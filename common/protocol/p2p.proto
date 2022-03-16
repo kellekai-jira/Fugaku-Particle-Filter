@@ -108,6 +108,10 @@ message PrefetchRequest {
     uint32 free = 3;  // unused on server side so far.
 }
 
+message PrefetchRequestValidator {
+    Weight weight = 1;
+}
+
 message PrefetchResponse {
     repeated StateId pull_states = 1;
     repeated StateId dump_states = 2;  // unused on server side so far.
@@ -195,6 +199,7 @@ message Message {
         StatisticRequest statistic_request = 22;
         StatisticResponse statistic_response = 23;
         PrefetchRequest prefetch_request = 7;
+        PrefetchRequestValidator prefetch_request_validator = 24;
         PrefetchResponse prefetch_response = 8;
         DeleteRequest delete_request = 9;
         DeleteResponse delete_response = 10;

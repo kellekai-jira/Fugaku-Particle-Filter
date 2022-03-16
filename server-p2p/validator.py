@@ -1015,14 +1015,14 @@ class Validator:
 
     def populate_meta( self, states, cpc ):
 
-        # remove old meta data
-        self.m_meta.clear()
-
         for state in states:
 
             for p in cpc:
 
                 sid = encode_state_id(state.state_id.t, state.state_id.id, p.id)
+
+                if sid in self.m_meta:
+                    continue
 
                 self.m_cycle = state.state_id.t
 
@@ -1096,9 +1096,25 @@ class Validator:
 
         global state_buffer
 
-        # remove states from before
-        state_buffer.clear()
+        ty = request.WhichOneof('content')
+        if ty == 'prefetch_request_validator':
+            weight = request.prefetch_request_validator.weight
+            state_id = request.prefetch_request_validator.weight.state_id
+            print(f"[validator received prefetch request for state t:{state_id.t}, id:{state_id.id}]")
+            self.populate_meta([weight], self.m_cpc_parameters)
+            ss = 1
+            for p in self.m_cpc_parameters:
+                sid = encode_state_id(state_id.t, state_id.id, p.id)
+                if sid in state_buffer:
+                    continue
+                progress = f"({ss}/{len(self.m_cpc_parameters)})"
+                print(f"Loading sid '{sid}' {progress}")
+                load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+                ss += 1
+            maybe_write(is_server=False, validator_id=validator_id)
+            return
 
+        print(f"[validator received validation request]")
         self.m_weights = []
         self.m_state_ids = []
         for item in request.validation_request.to_validate:
@@ -1121,6 +1137,8 @@ class Validator:
         for weight in global_weights:
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
+                if sid in state_buffer:
+                    continue
                 progress = f"({ss}/{len(global_weights) * len(self.m_cpc_parameters)})"
                 print(f"Loading sid '{sid}' {progress}")
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
@@ -1142,6 +1160,12 @@ class Validator:
                 self.m_weights,
                 validators
             )
+
+        # remove states from before
+        state_buffer.clear()
+
+        # remove old meta data
+        self.m_meta.clear()
 
         maybe_write(is_server=False, validator_id=validator_id)
 
