@@ -331,13 +331,13 @@ def accept_weight(msg):
     if len(validation_sockets) > 0:
         for id in validation_sockets:
             print(f"[{id}] connecting to worker...")
-            receive_message_blocking( validation_sockets[id] )
-            req_validator = cm.Message()
-            req_validator.prefetch_request_validator.weight.CopyFrom(msg.weight)
-            print(f"[{id}] sent prefetch request")
-            send_message(validation_sockets[id], req_validator)
-
-
+            if receive_message_validator( validation_sockets[id], is_blocking=False ) is None:
+                print(f"[{id}] worker is busy")
+            else:
+                req_validator = cm.Message()
+                req_validator.prefetch_request_validator.weight.CopyFrom(msg.weight)
+                print(f"[{id}] sent prefetch request")
+                send_message(validation_sockets[id], req_validator)
 
     maybe_update()
 
@@ -473,10 +473,15 @@ def accept_prefetch(msg):
     trigger(STOP_ACCEPT_PREFETCH, 0)
 
 
-def receive_message_blocking(socket):
+def receive_message_validator(socket, is_blocking=False):
     msg = None
     try:
-        msg = socket.recv()  # only polling
+
+        if not is_blocking:
+            msg = socket.recv()  # only polling
+        else:
+            msg = socket.recv(flags=zmq.NOBLOCK)  # only polling
+
         msg = parse(msg)
 
     except zmq.error.Again:
@@ -806,7 +811,7 @@ def resample(parent_t, alpha_master_=None):
     if len(validation_sockets) > 0:
         for id in validation_sockets:
             print(f"[{id}] waiting for worker message...")
-            receive_message_blocking( validation_sockets[id] )
+            receive_message_validator( validation_sockets[id] )
             print(f"[{id}] received worker message!")
 
         validate_states = []
