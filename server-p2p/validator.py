@@ -914,7 +914,8 @@ class cpc_t:
     __items = 0
     def __init__(self, name, mode, type, parameter):
         self.name = name
-        self.mode = int(0)
+        self.mode = None
+        self.type = 0
         if mode == 'none':
             self.mode = FTI_CPC_MODE_NONE
         if mode == 'fpzip':
@@ -926,7 +927,10 @@ class cpc_t:
         if mode == 'half' or mode == 'hp':
             self.mode = FTI_CPC_HALF
         assert(self.mode is not None)
-        self.type = int(type)
+        if type == 'accuracy':
+            self.type = FTI_CPC_ACCURACY
+        if type == 'precision':
+            self.type = FTI_CPC_PRECISION
         self.parameter = int(parameter)
         self.id = int(cpc_t.__items)
         cpc_t.__items += 1
