@@ -2,7 +2,21 @@
   "variables" : [ "state1" ],
   "compression" : {
     "method"    : "validate",
-    "validate" : [ 
+    "validate" : [
+      {
+        "name"  : "state1",
+        "sigma" : 10e-7,
+        "mode" : "half",
+        "type" : "accuracy",
+        "parameter" : 0
+      },
+      {
+        "name"  : "state1",
+        "sigma" : 10e-7,
+        "mode" : "single",
+        "type" : "accuracy",
+        "parameter" : 0
+      },
       {
         "name"  : "state1",
         "sigma" : 10e-7,
