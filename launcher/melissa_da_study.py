@@ -513,8 +513,8 @@ def run_melissa_da_study(
                     cluster.UpdateJob(runners[group_id].job_id)
                 elif msg['type'] == MSG_PING:
                     #cmd = 'echo "[LAUNCHER INFO] number of open file descriptors: $(ls -l /proc/self/fd/ | wc -l)"'
-                    cmd = 'bash ' + WORKDIR + '/usage_limits.sh'
-                    os.system(cmd)
+                    #cmd = 'bash ' + WORKDIR + '/usage_limits.sh'
+                    #os.system(cmd)
                     debug('got server ping')
                 elif msg['type'] == MSG_STOP:
                     running = False

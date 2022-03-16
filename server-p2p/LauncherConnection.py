@@ -29,7 +29,7 @@ class Alive:
 
 # Configuration:
 LAUNCHER_PING_INTERVAL = 8  # seconds
-LAUNCHER_TIMEOUT = 6000  # seconds
+LAUNCHER_TIMEOUT = 60000  # seconds
 
 class LauncherConnection:
     def __init__(self, context, server_node_name, launcher_node_name):
