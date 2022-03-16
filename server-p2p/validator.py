@@ -18,6 +18,7 @@ import netCDF4
 from common import *
 import sys
 from functools import reduce as py_reduce
+import zfpy
 
 '''
 (from Baker et al, 2014)
@@ -34,6 +35,15 @@ z-score (see Baker et al, 2014)
 '''
 
 
+FTI_CPC_MODE_NONE   = 0
+FTI_CPC_FPZIP       = 1
+FTI_CPC_ZFP         = 2
+FTI_CPC_SINGLE      = 3
+FTI_CPC_HALF        = 4
+FTI_CPC_STRIP       = 5
+FTI_CPC_TYPE_NONE   = 0
+FTI_CPC_ACCURACY    = 1
+FTI_CPC_PRECISION   = 2
 
 from utils import get_node_name
 from common import bind_socket, parse
@@ -96,13 +106,19 @@ def get_proc_data_ckpt(proc, sid, name, meta):
     ckpt_file = item['ckpt_file']
     ckpt = open(ckpt_file, 'rb')
 
-    if item['mode'] == 0:
+    if item['mode'] == FTI_CPC_MODE_NONE:
         ckpt.seek(item['offset'])
-        bytes = ckpt.read(item['size'])
+        out = np.fromfile(ckpt, dtype=np.float64, count=item['count'])
 
-        out = np.array(array.array('d', bytes))
+    if item['mode'] == FTI_CPC_SINGLE:
+        ckpt.seek(item['offset'])
+        out = np.fromfile(ckpt, dtype=np.float32, count=item['count']).astype('float64')
 
-    else:
+    if item['mode'] == FTI_CPC_HALF:
+        ckpt.seek(item['offset'])
+        out = np.fromfile(ckpt, dtype=np.float16, count=item['count']).astype('float64')
+
+    elif item['mode'] == FTI_CPC_FPZIP:
         data = []
         n = item['count']
         bs = 1024 * 1024
@@ -118,6 +134,22 @@ def get_proc_data_ckpt(proc, sid, name, meta):
             data = [*data, *block]
 
         out = np.array(data)
+
+    elif item['mode'] == FTI_CPC_ZFP:
+        count = item['count']
+        size = item['size']
+        ckpt.seek(item['offset'])
+        byte_data = ckpt.read(size)
+        if item['type'] == FTI_CPC_ACCURACY:
+            tolerance = 10 ** (-1 * item['parameter'])
+            precision = -1
+        elif item['type'] == FTI_CPC_PRECISION:
+            tolerance = -1
+            precision = item['parameter']
+        else:
+            print("ERROR - unknown compression type")
+            exit(-1)
+        out = zfpy._decompress(byte_data, zfpy.type_double, (count,), tolerance=tolerance, precision=precision)
 
     ckpt.close()
 
@@ -166,18 +198,6 @@ def write_lorenz(average, stddev, cycle, num_procs, state_dims):
     for name in average:
         for rank in average[name]:
             ncfiles[rank].close()
-
-
-
-FTI_CPC_MODE_NONE   = 0
-FTI_CPC_FPZIP       = 1
-FTI_CPC_ZFP         = 2
-FTI_CPC_SINGLE      = 3
-FTI_CPC_HALF        = 4
-FTI_CPC_STRIP       = 5
-FTI_CPC_TYPE_NONE   = 0
-FTI_CPC_ACCURACY    = 1
-FTI_CPC_PRECISION   = 2
 
 
 def send_message(socket, data):
