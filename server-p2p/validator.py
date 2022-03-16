@@ -125,6 +125,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
         load = 0
         while load < size:
             bytes = ckpt.read(8)
+            load += len(bytes)
             bs = int.from_bytes(bytes, byteorder='little')
             bytes = ckpt.read(bs)
             load += len(bytes)
