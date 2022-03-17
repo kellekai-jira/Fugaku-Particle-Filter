@@ -34,13 +34,6 @@ double calculate_weight( int cycle );
 //   double a_random_double = unif(re);
 //}
 
-double index_function( size_t idx ) {
-    double norm = 1;
-    double unit = 2*PI/NG;
-    double freq = 100;
-    return norm * cos( (double)(freq * unit * idx) );
-}
-
 const double F = 6;
 const double dt = 0.001;
 const double DT = 0.1;
@@ -59,6 +52,13 @@ std::vector<double> x_b3;
 
 MPI_Fint fcomm_world;
 MPI_Fint fcomm;
+
+double index_function( size_t idx ) {
+    double norm = 1;
+    double unit = 2*PI/NG;
+    double freq = 100;
+    return norm * cos( (double)(freq * unit * idx) );
+}
 
 
 // for noise generation
