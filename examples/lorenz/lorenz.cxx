@@ -34,6 +34,13 @@ double calculate_weight( int cycle );
 //   double a_random_double = unif(re);
 //}
 
+double index_function( size_t idx ) {
+    double norm = 1;
+    double unit = 2*PI/NG;
+    double freq = 100;
+    return norm * cos( (double)(freq * unit * idx) );
+}
+
 const double F = 6;
 const double dt = 0.001;
 const double DT = 0.1;
@@ -190,13 +197,6 @@ void integrate( std::vector<double> & x, double F, double dt ) {
   d96(x_b2, x_b3, F);
   RK_step( x, x, x_b3, 6, dt );
   exchange(x);
-}
-
-double index_function( size_t idx ) {
-    double norm = 1;
-    double unit = 2*PI/NG;
-    double freq = 100;
-    return norm * cos( (double)(freq * unit * idx) );
 }
 
 void init_state() {
