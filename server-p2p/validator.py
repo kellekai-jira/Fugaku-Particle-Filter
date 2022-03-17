@@ -19,6 +19,7 @@ from common import *
 import sys
 from functools import reduce as py_reduce
 import pandas_zmq
+import gc
 #import zfpy
 
 '''
@@ -921,6 +922,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     # TODO compute ensemble average and stddev for full ensemble states
     z_value = {}
     for p in cpc:
+        if p.id > 0:
+            gc.collect()
         ss = 1
         for weight in global_weights:
             if p.id > 0:
