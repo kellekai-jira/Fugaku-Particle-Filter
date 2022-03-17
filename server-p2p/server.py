@@ -326,18 +326,19 @@ def accept_weight(msg):
 
     trigger(STOP_ACCEPT_WEIGHT, 0)
 
-    check_for_new_validators()
+    # TODO only prefetch for dynamic mode. In exploration mode it does not really make sense.
+    #check_for_new_validators()
 
-    if len(validation_sockets) > 0:
-        for id in validation_sockets:
-            print(f"[{id}] connecting to worker...")
-            if receive_message_validator( validation_sockets[id], is_blocking=False ) is None:
-                print(f"[{id}] worker is busy")
-            else:
-                req_validator = cm.Message()
-                req_validator.prefetch_request_validator.weight.CopyFrom(msg.weight)
-                print(f"[{id}] sent prefetch request")
-                send_message(validation_sockets[id], req_validator)
+    #if len(validation_sockets) > 0:
+    #    for id in validation_sockets:
+    #        print(f"[{id}] connecting to worker...")
+    #        if receive_message_validator( validation_sockets[id], is_blocking=False ) is None:
+    #            print(f"[{id}] worker is busy")
+    #        else:
+    #            req_validator = cm.Message()
+    #            req_validator.prefetch_request_validator.weight.CopyFrom(msg.weight)
+    #            print(f"[{id}] sent prefetch request")
+    #            send_message(validation_sockets[id], req_validator)
 
     maybe_update()
 

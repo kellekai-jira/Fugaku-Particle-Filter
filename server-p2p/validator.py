@@ -918,6 +918,18 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     # TODO compute ensemble average and stddev for full ensemble states
     z_value = {}
     for p in cpc:
+        if p.id > 0:
+            ss = 1
+            for weight in global_weights:
+                evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
+                del state_buffer[evict]
+                sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
+                if sid in state_buffer:
+                    continue
+                progress = f"({ss}/{len(global_weights)})"
+                print(f"Loading sid '{sid}' {progress}")
+                load_ckpt_data(meta, sid, nprocs, "state1")
+                ss += 1
         print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -1154,23 +1166,23 @@ class Validator:
 
         global state_buffer
 
-        ty = request.WhichOneof('content')
-        if ty == 'prefetch_request_validator':
-            weight = request.prefetch_request_validator.weight
-            state_id = request.prefetch_request_validator.weight.state_id
-            print(f"[validator received prefetch request for state t:{state_id.t}, id:{state_id.id}]")
-            self.populate_meta([weight], self.m_cpc_parameters)
-            ss = 1
-            for p in self.m_cpc_parameters:
-                sid = encode_state_id(state_id.t, state_id.id, p.id)
-                if sid in state_buffer:
-                    continue
-                progress = f"({ss}/{len(self.m_cpc_parameters)})"
-                print(f"Loading sid '{sid}' {progress}")
-                load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
-                ss += 1
-            maybe_write(is_server=False, validator_id=validator_id)
-            return
+        #ty = request.WhichOneof('content')
+        #if ty == 'prefetch_request_validator':
+        #    weight = request.prefetch_request_validator.weight
+        #    state_id = request.prefetch_request_validator.weight.state_id
+        #    print(f"[validator received prefetch request for state t:{state_id.t}, id:{state_id.id}]")
+        #    self.populate_meta([weight], self.m_cpc_parameters)
+        #    ss = 1
+        #    for p in self.m_cpc_parameters:
+        #        sid = encode_state_id(state_id.t, state_id.id, p.id)
+        #        if sid in state_buffer:
+        #            continue
+        #        progress = f"({ss}/{len(self.m_cpc_parameters)})"
+        #        print(f"Loading sid '{sid}' {progress}")
+        #        load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+        #        ss += 1
+        #    maybe_write(is_server=False, validator_id=validator_id)
+        #    return
 
         print(f"[validator received validation request]")
         self.m_weights = []
@@ -1192,12 +1204,12 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
 
         ss = 1
-        for weight in global_weights:
+        for weight in self.m_weights:
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
                 if sid in state_buffer:
                     continue
-                progress = f"({ss}/{len(global_weights) * len(self.m_cpc_parameters)})"
+                progress = f"({ss}/{len(self.m_weights) * len(self.m_cpc_parameters)})"
                 print(f"Loading sid '{sid}' {progress}")
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
                 ss += 1
