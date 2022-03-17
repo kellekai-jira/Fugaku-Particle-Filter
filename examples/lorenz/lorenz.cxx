@@ -75,9 +75,10 @@ void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
   auto const_dist = std::bind(std::normal_distribution<double>{mean, stddev}, const_generator);
   // FIXME UNTIL HERE
 
+  size_t idx = state_min_p;
   for (auto& x : data) {
     // FIXME RENAME const_dist TO dist AGAIN
-    x = x + const_dist(generator);
+    x = x + const_dist(generator) * index_function( idx++ );;
   }
 
 }
@@ -220,7 +221,7 @@ int main() {
   init_parallel();
 
   //stddev = sqrt(0.0001/NG);
-  stddev = 10e-7;
+  stddev = 10e-5;
      
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
