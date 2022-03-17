@@ -221,7 +221,7 @@ int main() {
   init_parallel();
 
   //stddev = sqrt(0.0001/NG);
-  stddev = 10e-1;
+  stddev = 10e-2;
      
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
