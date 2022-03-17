@@ -204,10 +204,10 @@ def run_melissa_da_study(
     state_refresher = defer(refresh_states)
 
     def num_launched_validators():
-        return sum(list(map(lambda x: len(validators[x].validator_ids), validators.keys()))) if validators else 0
+        return sum(list(map(lambda x: len(validators[x].validator_id), validators.keys()))) if validators else 0
 
     def launched_validators():
-        return [x for validator in validators.keys() for x in validators[runner].validator_ids]
+        return [x for validator in validators.keys() for x in validators[validator].validator_id]
 
     def num_launched_runners():
         return sum(list(map(lambda x: len(runners[x].runner_ids), runners.keys()))) if runners else 0
@@ -408,17 +408,12 @@ def run_melissa_da_study(
         if server.state == STATE_RUNNING:
             if server.node_name != '':
                 vr = n_validator
-                while len(validators) < vr:  # TODO depend on check load here!
-                    validator_id = next_validator_id
-                    next_validator_id += 1
-                    debug('Starting validator %d' % validator_id)
-                    validators[validator_id] = Validator(validator_id)
-                #else:
-                #    while len(validators) > vr:
-                #        to_remove = random.choice(list(validators))
-                #        log("killing a validator (with id=%d) as too many validators are up" % to_remove)
-                #        validators[to_remove].remove()
-                #        del validators[to_remove]
+                if len(validators) < vr:
+                    while len(validators) < vr:  # TODO depend on check load here!
+                        validator_id = next_validator_id
+                        next_validator_id += 1
+                        debug('Starting validator %d' % validator_id)
+                        validators[validator_id] = Validator(validator_id)
                 mr = max_runners()
                 active_runners = num_launched_runners()
                 if active_runners < mr:  # TODO depend on check load here!
@@ -429,7 +424,7 @@ def run_melissa_da_study(
                     group_id = next_group_id
                     next_group_id += 1
                     runners[group_id] = Runner(group_id, runner_ids, server.node_name)
-                    debug('Starting runner(s) %s' % runner_ids)
+                    debug('Starting runner(s) %s (%s/%s)' % (runner_ids,active_runners,mr))
                 else:
                     while num_launched_runners() > mr:
                         to_remove = random.choice(list(runners))
