@@ -18,6 +18,7 @@ import netCDF4
 from common import *
 import sys
 from functools import reduce as py_reduce
+import pandas_zmq
 #import zfpy
 
 '''
@@ -757,12 +758,14 @@ def reduce_evaluate_df( validators, df ):
     if validator_id == 0:
         for id in validators:
             ping(validator_socket[id])
-            df_validator = receive_evaluate_df( validator_socket[id] )
+            df_validator = pandas_zmq.recv_dataframe(validator_socket[id])
+            #df_validator = receive_evaluate_df( validator_socket[id] )
             df = df.append(df_validator, ignore_index=True)
     else:
         pong(validator_socket)
-        wrapper = df2wrapper(df)
-        send_message(validator_socket, wrapper)
+        pandas_zmq.send_dataframe(validator_socket, df)
+        ##wrapper = df2wrapper(df)
+        #send_message(validator_socket, wrapper)
     trigger(STOP_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, 0)
 
     return df
