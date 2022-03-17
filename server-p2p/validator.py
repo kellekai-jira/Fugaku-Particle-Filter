@@ -1172,6 +1172,8 @@ class Validator:
 
         global state_buffer
 
+        gc.collect()
+
         #ty = request.WhichOneof('content')
         #if ty == 'prefetch_request_validator':
         #    weight = request.prefetch_request_validator.weight
