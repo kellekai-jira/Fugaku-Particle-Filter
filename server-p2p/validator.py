@@ -921,18 +921,18 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     # TODO compute ensemble average and stddev for full ensemble states
     z_value = {}
     for p in cpc:
-        if p.id > 0:
-            ss = 1
-            for weight in global_weights:
+        ss = 1
+        for weight in global_weights:
+            if p.id > 0:
                 evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
                 del state_buffer[evict]
-                sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
-                if sid in state_buffer:
-                    continue
-                progress = f"({ss}/{len(global_weights)})"
-                print(f"Loading sid '{sid}' {progress}")
-                load_ckpt_data(meta, sid, nprocs, "state1")
-                ss += 1
+            sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
+            if sid in state_buffer:
+                continue
+            progress = f"({ss}/{len(global_weights)})"
+            print(f"Loading sid '{sid}' {progress}")
+            load_ckpt_data(meta, sid, nprocs, "state1")
+            ss += 1
         print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
