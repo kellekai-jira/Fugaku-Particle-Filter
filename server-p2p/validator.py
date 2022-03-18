@@ -476,6 +476,7 @@ def compare_wrapper( variables, sids, ndim, nprocs, meta, func, reduce_func, ope
             't' : original[0],
             'id' : original[1],
             'rate' : rate_compared,
+            'cid' : compared[2],
             'sid': sids[1]
         } )
 
@@ -552,6 +553,7 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
             't' : int(t),
             'id' : int(id),
             'rate' : rate_original,
+            'cid' : p,
             'sid' : sid
         } )
 
@@ -568,6 +570,7 @@ def create_dataframe_row( name, operation, value, cpc, t, id, rate, sid ):
         't': t,
         'id': id,
         'rate': rate,
+        'cid': cpc.id,
         'sid': sid
     }])
 
@@ -700,47 +703,6 @@ def ensemble_stddev(proc, weights, cpc, name, meta):
     return ssum
 
 
-def wrapper2df( wrapper ):
-    dfl = []
-    for item in wrapper.items:
-        dfl.append({
-            'variable': item.variable,
-            'operation': item.operation,
-            'value': item.value,
-            'mode': int(item.mode),
-            'parameter': int(item.parameter),
-            't': int(item.t),
-            'id': int(item.id),
-            'rate': item.rate,
-        })
-    return pd.DataFrame(dfl)
-
-
-def df2wrapper( df ):
-    wrapper = cm.DfList()
-    for _, row in df.iterrows():
-        edfi = cm.Df()
-        edfi.variable = row['variable']
-        edfi.operation = row['operation']
-        edfi.value = row['value']
-        edfi.mode = int(row['mode'])
-        edfi.parameter = int(row['parameter'])
-        edfi.t = int(row['t'])
-        edfi.id = int(row['id'])
-        edfi.rate = row['rate']
-        wrapper.items.append(edfi)
-    return wrapper
-
-
-def receive_evaluate_df( socket ):
-    trigger(START_RECV_EVALUATE_DATAFRAME_VALIDATOR, 0)
-    msg = socket.recv()
-    wrapper = cm.DfList()
-    wrapper.ParseFromString(msg)
-    trigger(STOP_RECV_EVALUATE_DATAFRAME_VALIDATOR, 0)
-    return wrapper2df(wrapper)
-
-
 def ping( socket ):
     msg = cm.Message()
     send_message( socket, msg )
@@ -762,13 +724,10 @@ def reduce_evaluate_df( validators, df ):
         for id in validators:
             ping(validator_socket[id])
             df_validator = pandas_zmq.recv_dataframe(validator_socket[id])
-            #df_validator = receive_evaluate_df( validator_socket[id] )
             df = df.append(df_validator, ignore_index=True)
     else:
         pong(validator_socket)
         pandas_zmq.send_dataframe(validator_socket, df)
-        ##wrapper = df2wrapper(df)
-        #send_message(validator_socket, wrapper)
     trigger(STOP_REDUCE_EVALUATE_DATAFRAME_VALIDATOR, 0)
 
     return df
