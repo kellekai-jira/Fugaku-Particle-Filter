@@ -189,8 +189,10 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
+    trigger(START_LOAD_STATE_VALIDATOR, 0)
     for proc in range(nranks):
         state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
+    trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
     #with Pool() as pool:
     #    res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
