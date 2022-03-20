@@ -38,6 +38,8 @@ double calculate_weight( int cycle );
 const double F = 6;
 const double dt = 0.001;
 const double DT = 0.1;
+const double dt_init = 0.01;
+const double DT_init = 10;
 const double PI = 3.141592653589793238463;
 
 static int64_t NG;
@@ -220,6 +222,9 @@ void init_state() {
         x_i += index_function( idx++ );
     }
     exchange( x_l );
+    for(int i=0; i<DT_init/dt_init; i++) {
+      integrate( x_l, F, dt );
+    }
 }
 
 int main() {
@@ -231,7 +236,7 @@ int main() {
   init_parallel();
 
   //stddev = sqrt(0.0001/NG);
-  stddev = 10e-2;
+  stddev = 10e-3;
 
   std::uint_least32_t seed;
   sysrandom(&seed, sizeof(seed));
