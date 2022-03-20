@@ -237,7 +237,7 @@ int main() {
   sysrandom(&seed, sizeof(seed));
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
-                              std::mt19937(seed);
+                              std::mt19937(seed));
 
   int64_t zero = 0;
   int64_t nl_i = nl;
