@@ -10,7 +10,7 @@
 #include <sstream>
 #include "../api/melissa_da_api.h"
 #include <cmath>
-#include <ifstream>
+#include <fstream>
 
 #define GETENV( VAR, KEY ) do { \
   VAR = getenv( KEY ); \
