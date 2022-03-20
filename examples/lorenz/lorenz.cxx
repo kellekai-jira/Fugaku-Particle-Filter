@@ -53,6 +53,15 @@ std::vector<double> x_b3;
 MPI_Fint fcomm_world;
 MPI_Fint fcomm;
 
+size_t sysrandom(void* dst, size_t dstlen)
+{
+    char* buffer = reinterpret_cast<char*>(dst);
+    std::ifstream stream("/dev/urandom", std::ios_base::binary | std::ios_base::in);
+    stream.read(buffer, dstlen);
+
+    return dstlen;
+}
+
 double index_function( size_t idx ) {
     double norm = 1;
     double unit = 2*PI/NG;
@@ -68,24 +77,24 @@ double stddev;
 template<typename F>
 void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
   
-  // FIXME REMOVE FOR PRODUCTION RUN
+  // FIXME uncomment for constant seeding
   // (PROVIDE A NOISE FUNCTION IN MELISSA MAYBE)
-  uint64_t seed;
-  uint64_t idl = static_cast<uint64_t>(melissa_da_get_runner_id());
-  uint64_t idm1 = static_cast<uint64_t>(melissa_get_current_step());
-  uint64_t idm2 = static_cast<uint64_t>(comm_rank);
-  uint64_t idr = static_cast<uint64_t>(melissa_get_current_state_id());
+  //uint64_t seed;
+  //uint64_t idl = static_cast<uint64_t>(melissa_da_get_runner_id());
+  //uint64_t idm1 = static_cast<uint64_t>(melissa_get_current_step());
+  //uint64_t idm2 = static_cast<uint64_t>(comm_rank);
+  //uint64_t idr = static_cast<uint64_t>(melissa_get_current_state_id());
 
-  seed = (idl << 48) | (idm1 << 32) | (idm2 << 16) | idr;
-  
-  std::mt19937 const_generator(seed);
-  auto const_dist = std::bind(std::normal_distribution<double>{mean, stddev}, const_generator);
+  //seed = (idl << 48) | (idm1 << 32) | (idm2 << 16) | idr;
+  //
+  //std::mt19937 const_generator(seed);
+  //auto const_dist = std::bind(std::normal_distribution<double>{mean, stddev}, const_generator);
   // FIXME UNTIL HERE
 
   size_t idx = state_min_p;
   for (auto& x : data) {
-    // FIXME RENAME const_dist TO dist AGAIN
-    x = x + const_dist(generator) * index_function( idx++ );;
+    // FIXME RENAME dist TO const_dist AGAIN to enable constant seeding
+    x = x + dist(generator) * index_function( idx++ );;
   }
 
 }
@@ -222,10 +231,12 @@ int main() {
 
   //stddev = sqrt(0.0001/NG);
   stddev = 10e-2;
-     
+
+  std::uint_least32_t seed;
+  sysrandom(&seed, sizeof(seed));
   std::mt19937 generator(std::random_device{}());
   auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
-                              std::mt19937(std::random_device{}()));
+                              std::mt19937(seed);
 
   int64_t zero = 0;
   int64_t nl_i = nl;
