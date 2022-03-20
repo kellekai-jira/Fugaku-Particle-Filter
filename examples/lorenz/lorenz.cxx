@@ -36,8 +36,8 @@ double calculate_weight( int cycle );
 //}
 
 const double F = 6;
-const double dt = 0.001;
-const double DT = 0.1;
+const double dt = 0.01;
+const double DT = 1;
 const double dt_init = 0.01;
 const double DT_init = 10;
 const double PI = 3.141592653589793238463;
@@ -240,9 +240,8 @@ int main() {
 
   std::uint_least32_t seed;
   sysrandom(&seed, sizeof(seed));
-  std::mt19937 generator(std::random_device{}());
-  auto dist = std::bind(std::normal_distribution<double>{mean, stddev},
-                              std::mt19937(seed));
+  std::mt19937 generator(seed);
+  auto dist = std::bind(std::normal_distribution<double>{mean, stddev},generator);
 
   int64_t zero = 0;
   int64_t nl_i = nl;
