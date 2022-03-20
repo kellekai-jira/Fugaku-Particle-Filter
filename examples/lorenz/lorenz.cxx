@@ -223,7 +223,7 @@ void init_state() {
     }
     exchange( x_l );
     for(int i=0; i<DT_init/dt_init; i++) {
-      integrate( x_l, F, dt );
+      integrate( x_l, F, dt_init );
     }
 }
 
