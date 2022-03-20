@@ -97,7 +97,7 @@ void add_noise( std::vector<double>& data, F&& dist, std::mt19937& generator ) {
   size_t idx = state_min_p;
   for (auto& x : data) {
     // FIXME RENAME dist TO const_dist AGAIN to enable constant seeding
-    x = x + dist(generator) * index_function( idx++ );;
+    x = x + dist(generator); //* index_function( idx++ );;
   }
 
 }
@@ -236,7 +236,7 @@ int main() {
   init_parallel();
 
   //stddev = sqrt(0.0001/NG);
-  stddev = 10e-3;
+  stddev = 10e-5;
 
   std::uint_least32_t seed;
   sysrandom(&seed, sizeof(seed));
