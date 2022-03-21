@@ -777,7 +777,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
              evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, weights, validators):
 
     global average, stddev, average_x
-
     print('[ Compute single state statistics ]')
     df_evaluate = pd.DataFrame()
     for state_id in state_ids:
@@ -894,6 +893,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         if p.id > 0:
             gc.collect()
         ss = 1
+        trigger(START_LOAD_STATE_FULL_VALIDATOR, 0)
         for weight in global_weights:
             if p.id > 0:
                 evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
@@ -905,6 +905,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print(f"Loading sid '{sid}' {progress}")
             load_ckpt_data(meta, sid, nprocs, "state1")
             ss += 1
+        trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
         print('─' * 100)
         print(f'|>  z-value statistics')
         print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -912,6 +913,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in variables:
             z_value[name] = np.array([])
         for weight in weights:
+            trigger(START_ZVAL_FULL_VALIDATOR, 0)
             print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
             weights_M = [w for w in global_weights if w != weight]
@@ -944,6 +946,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print(f"|       RSMZ: {df_zval['value'].iloc[-1]}")
             print('| ')
             df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
+            trigger(STOP_ZVAL_FULL_VALIDATOR, 0)
 
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
@@ -1181,6 +1184,7 @@ class Validator:
         print(f"num_procs: {self.m_num_procs}")
 
         ss = 1
+        trigger(START_LOAD_STATE_FULL_VALIDATOR, 0)
         for weight in self.m_weights:
             for p in self.m_cpc_parameters:
                 sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
@@ -1190,9 +1194,10 @@ class Validator:
                 print(f"Loading sid '{sid}' {progress}")
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
                 ss += 1
+        trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
 
         if self.m_is_validate:
-
+            trigger(START_VALIDATE_VALIDATOR, 0)
             validate(
                 self.m_meta,
                 self.m_compare_function,
@@ -1207,6 +1212,7 @@ class Validator:
                 self.m_weights,
                 validators
             )
+            trigger(STOP_VALIDATE_VALIDATOR, 0)
 
         # remove states from before
         state_buffer.clear()
