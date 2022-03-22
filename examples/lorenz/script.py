@@ -81,7 +81,7 @@ __env_num_validators = int(os.environ['MELISSA_LORENZ_NUM_VALIDATORS'])
 __env_state_size_elem = os.environ['MELISSA_LORENZ_STATE_DIMENSION']
 __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
 __env_write_trace = float(os.environ['MELISSA_LORENZ_TIMING_TRACE'])
-__env_zip_json_config = int(os.environ['MELISSA_LORENZ_CPC_CONFIG'])
+__env_zip_json_config = os.environ['MELISSA_LORENZ_CPC_CONFIG']
 
 __precommand_runner = ''
 if "MELISSA_PRECOMMAND_RUNNER" in os.environ:
