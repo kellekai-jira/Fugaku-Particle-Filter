@@ -46,11 +46,14 @@ env = ['MELISSA_LORENZ_ITER_MAX',
         'MELISSA_LORENZ_MEMBERS',
         'MELISSA_LORENZ_RUNNER_GROUP_SIZE',
         'MELISSA_LORENZ_PROCS_RUNNERS',
+        'MELISSA_LORENZ_NODES_RUNNERS',
         'MELISSA_LORENZ_NUM_RUNNERS',
+        'MELISSA_LORENZ_NUM_VALIDATORS',
         'MELISSA_LORENZ_STATE_DIMENSION',
         'MELISSA_LORENZ_OBSERVATION_DIR',
         'MELISSA_LORENZ_EXPERIMENT_DIR',
-        'MELISSA_LORENZ_TIMING_TRACE']
+        'MELISSA_LORENZ_TIMING_TRACE',
+        'MELISSA_LORENZ_CPC_CONFIG']
 
 assert all(x in os.environ for x in env)
 
@@ -70,6 +73,7 @@ print("global directory: " + global_dir)
 
 __env_steps = int(os.environ['MELISSA_LORENZ_ITER_MAX'])
 __env_members = int(os.environ['MELISSA_LORENZ_MEMBERS'])
+__env_runner_group_size = int(os.environ['MELISSA_LORENZ_RUNNER_GROUP_SIZE'])
 __env_procs_runners = int(os.environ['MELISSA_LORENZ_PROCS_RUNNERS'])
 __env_nodes_runners = int(os.environ['MELISSA_LORENZ_NODES_RUNNERS'])
 __env_num_runners = int(os.environ['MELISSA_LORENZ_NUM_RUNNERS'])
@@ -77,7 +81,6 @@ __env_num_validators = int(os.environ['MELISSA_LORENZ_NUM_VALIDATORS'])
 __env_state_size_elem = os.environ['MELISSA_LORENZ_STATE_DIMENSION']
 __env_obs_dir = os.environ['MELISSA_LORENZ_OBSERVATION_DIR']
 __env_write_trace = float(os.environ['MELISSA_LORENZ_TIMING_TRACE'])
-__env_runner_group_size = int(os.environ['MELISSA_LORENZ_RUNNER_GROUP_SIZE'])
 __env_zip_json_config = int(os.environ['MELISSA_LORENZ_CPC_CONFIG'])
 
 __precommand_runner = ''
