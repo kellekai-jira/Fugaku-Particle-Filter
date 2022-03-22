@@ -157,7 +157,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
   if( vars.find(name) == vars.end() ) {
     melissa::zip::zip_t zip_init;
     vars[name].push_back(zip_init);
-    D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
+    MDBG("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   }
 
   
