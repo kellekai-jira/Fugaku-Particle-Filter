@@ -15,7 +15,7 @@ export TIME_TO_WRITE_TRACE=14400 # seconds
 export EXP_SOURCE_PATH="/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz"
 export EXP_BASE_PATH="/2ndfs/ra000012/a04454"
 export EXP_OBS_DIR="/2ndfs/ra000012/a04454/obs_16MB_chaotic"
-export MELISSA_LORENZ_CPC_CONFIG=${EXP_SOURCE_PATH}/compression-zfp-accuracy.json
+export MELISSA_LORENZ_CPC_CONFIG=${EXP_SOURCE_PATH}/compression-zfp-precision.json
 
 # ----------------------------------------------------------------------
 #  SOURCE MELISSA STUFF
