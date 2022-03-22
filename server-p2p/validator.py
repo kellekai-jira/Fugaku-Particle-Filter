@@ -192,10 +192,8 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    trigger(START_LOAD_STATE_VALIDATOR, 0)
     for proc in range(nranks):
         state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
-    trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
     #with Pool() as pool:
     #    res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
@@ -418,8 +416,6 @@ def compare(proc, sids, name, meta, func):
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
-            trigger(START_LOAD_STATE_VALIDATOR, 0)
-
             item = meta[sid][proc][name]
             ckpt_file = item['ckpt_file']
             ckpt = open(ckpt_file, 'rb')
@@ -447,8 +443,6 @@ def compare(proc, sids, name, meta, func):
                 state_buffer[sid][proc] = data
 
             ckpt.close()
-
-            trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
         states.append(state_buffer[sid][proc])
 
@@ -502,8 +496,6 @@ def evaluate(proc, sid, name, meta, func):
 
         print(f"loading state id:{sid}|rank:{proc} from file system")
 
-        trigger(START_LOAD_STATE_VALIDATOR, 0)
-
         if item['mode'] == 0:
             ckpt.seek(item['offset'])
             bytes = ckpt.read(item['size'])
@@ -528,8 +520,6 @@ def evaluate(proc, sid, name, meta, func):
             state_buffer[sid][proc] = np.array(data)
 
         ckpt.close()
-
-        trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
     return func(state_buffer[sid][proc], proc, name)
 
@@ -613,8 +603,6 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
-            trigger(START_LOAD_STATE_VALIDATOR, 0)
-
             if item['mode'] == 0:
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
@@ -639,8 +627,6 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
                 state_buffer[sid][proc] = np.array(data)
 
             ckpt.close()
-
-            trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
         ssum += weight.weight * state_buffer[sid][proc]
 
@@ -672,8 +658,6 @@ def ensemble_stddev(proc, weights, cpc_ids, name, meta):
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
-            trigger(START_LOAD_STATE_VALIDATOR, 0)
-
             if item['mode'] == 0:
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
@@ -698,8 +682,6 @@ def ensemble_stddev(proc, weights, cpc_ids, name, meta):
                 state_buffer[sid][proc] = np.array(data)
 
             ckpt.close()
-
-            trigger(STOP_LOAD_STATE_VALIDATOR, 0)
 
         ssum += weight.weight * (state_buffer[sid][proc] - average[name][proc])**2
 
@@ -833,22 +815,22 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print('─' * 100)
             compared = encode_state_id( state_id.t, state_id.id, p.id )
             print(f'|   -> computing avg value of compressed state')
-            trigger(START_COMPUTE_XAVG_VALIDATOR, 0)
+            trigger(START_COMPUTE_XAVG_VALIDATOR, p.id)
             df_avg_compared = evaluate_wrapper(variables, compared, ndims, nprocs, meta, avg_x, reduce_avg_x, 'average', cpc)
-            trigger(STOP_COMPUTE_XAVG_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_XAVG_VALIDATOR, p.id)
             print('| ')
             print(f"|       x_avg: {df_avg_compared['value'].iloc[-1]}")
             print('| ')
             cpc_rate = df_avg_compared['rate'].iloc[-1]
             average_x.append(df_avg_compared['value'][0])
             print(f'|   -> computing pearson correlation coefficient')
-            trigger(START_COMPUTE_PEARSON_VALIDATOR, 0)
+            trigger(START_COMPUTE_PEARSON_VALIDATOR, p.id)
             df_rho_nominator = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, rho_nominator, reduce_sum, 'rho_nominator', cpc)
             df_rho_denumerator_left = evaluate_wrapper(variables, original, ndims, nprocs, meta, rho_denumerator_left, reduce_sum, 'df_rho_denumerator_left', cpc)
             df_rho_denumerator_right = evaluate_wrapper(variables, compared, ndims, nprocs, meta, rho_denumerator_right, reduce_sum, 'df_rho_denumerator_right', cpc)
             # TODO write function and iterate over variable names to assign rho
             rho = df_rho_nominator['value'][0] / np.sqrt( df_rho_denumerator_left['value'][0] * df_rho_denumerator_right['value'][0])
-            trigger(STOP_COMPUTE_PEARSON_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_PEARSON_VALIDATOR, p.id)
             print('| ')
             print(f"|       rho: {rho}")
             print('| ')
@@ -856,23 +838,23 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_rho_denumerator_right.at[0, 'operation'] = 'rho'
             df_rho = df_rho_denumerator_right
             print(f'|   -> computing RMSE of compressed state')
-            trigger(START_COMPUTE_RMSE_VALIDATOR, 0)
+            trigger(START_COMPUTE_RMSE_VALIDATOR, p.id)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             rmse = df_rmse['value'].iloc[-1]
             nrmse = rmse/range
             df_nrmse = create_dataframe_row('state1', 'nrmse', nrmse, p, state_id.t, state_id.id, cpc_rate, compared)
-            trigger(STOP_COMPUTE_RMSE_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_RMSE_VALIDATOR, p.id)
             print('| ')
             print(f"|       RMSE: {rmse}")
             print(f"|       RMSE (normalized): {nrmse}")
             print('| ')
             print(f'|   -> computing pointwise maximum error of compressed')
-            trigger(START_COMPUTE_PEMAX_VALIDATOR, 0)
+            trigger(START_COMPUTE_PEMAX_VALIDATOR, p.id)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             emax = df_emax['value'].iloc[-1]
             nemax = emax/range
             df_nemax = create_dataframe_row('state1', 'nemax', nemax, p, state_id.t, state_id.id, cpc_rate, compared)
-            trigger(STOP_COMPUTE_PEMAX_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_PEMAX_VALIDATOR, p.id)
             print('| ')
             print(f"|       PE_max: {emax}")
             print(f"|       PE_max (normalized): {nemax}")
@@ -900,7 +882,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             continue
         progress = f"({ss}/{len(global_weights)})"
         print(f"Loading sid '{sid}' {progress}")
+        trigger(START_LOAD_STATE_VALIDATOR, 0)
         load_ckpt_data(meta, sid, nprocs, "state1")
+        trigger(STOP_LOAD_STATE_VALIDATOR, 0)
         ss += 1
     trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
 
@@ -918,7 +902,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             if sid_DEL in state_buffer:
                 del state_buffer[sid_DEL]
                 gc.collect()
-            trigger(START_ZVAL_FULL_VALIDATOR, 0)
+            trigger(START_ZVAL_FULL_VALIDATOR, p.id)
             print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
             sid_DEL = sid_EXCL
@@ -930,7 +914,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
-            trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
+            trigger(START_COMPUTE_ENAVG_VALIDATOR, p.id)
             print("|    computing ensemble/M average")
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, cpc_ids)
             # correct normalization
@@ -938,8 +922,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, _ in enumerate(average[name]):
                     average[name][proc] /= weight_norm
             #print(f"average: {average['state1'][0][0:3]}")
-            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
-            trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, p.id)
+            trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, p.id)
             print("|    computing ensemble/M sigma")
             stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, cpc_ids)
             # correct normalization and take root
@@ -947,20 +931,20 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, _ in enumerate(stddev[name]):
                     stddev[name][proc] = np.sqrt(stddev[name][proc]/weight_norm)
             #print(f"stddev: {stddev['state1'][0][0:3]}")
-            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, p.id)
             print(f'|   -> computing RMSZ value')
-            trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
+            trigger(START_COMPUTE_RMSZ_VALIDATOR, p.id)
             df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
-            trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_RMSZ_VALIDATOR, p.id)
             print('| ')
             print(f"|       RSMZ: {df_zval['value'].iloc[-1]}")
             print('| ')
             df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
-            trigger(STOP_ZVAL_FULL_VALIDATOR, 0)
+            trigger(STOP_ZVAL_FULL_VALIDATOR, p.id)
 
     del state_buffer[sid_DEL]
     gc.collect()
-    
+
     # TODO compute ensemble average and stddev for full ensemble states
     z_value_bias = {}
     for p in cpc:
@@ -968,7 +952,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             continue
         cpc_ids = [p.id] * (len(global_weights)-1)
         ss = 1
-        trigger(START_LOAD_STATE_FULL_VALIDATOR, 0)
+        trigger(START_LOAD_STATE_FULL_VALIDATOR, p.id)
         for weight in global_weights:
             evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
             del state_buffer[evict]
@@ -978,9 +962,11 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 continue
             progress = f"({ss}/{len(global_weights)})"
             print(f"Loading sid '{sid}' {progress}")
+            trigger(START_LOAD_STATE_VALIDATOR, p.id)
             load_ckpt_data(meta, sid, nprocs, "state1")
+            trigger(STOP_LOAD_STATE_VALIDATOR, p.id)
             ss += 1
-        trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
+        trigger(STOP_LOAD_STATE_FULL_VALIDATOR, p.id)
         print('─' * 100)
         print(f'|>  z-value-bias statistics')
         print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -988,14 +974,14 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         for name in variables:
             z_value_bias[name] = np.array([])
         for weight in weights:
-            trigger(START_ZVAL_BIAS_FULL_VALIDATOR, 0)
+            trigger(START_ZVAL_BIAS_FULL_VALIDATOR, p.id)
             print(f'|>  M -> t: {weight.state_id.t}, id: {weight.state_id.id}')
             sid_EXCL = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
-            trigger(START_COMPUTE_ENAVG_VALIDATOR, 0)
+            trigger(START_COMPUTE_ENAVG_VALIDATOR, p.id)
             print("|    computing ensemble/M average")
             average = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_mean, cpc_ids)
             # correct normalization
@@ -1003,8 +989,8 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, _ in enumerate(average[name]):
                     average[name][proc] /= weight_norm
             #print(f"average: {average['state1'][0][0:3]}")
-            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, 0)
-            trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_ENAVG_VALIDATOR, p.id)
+            trigger(START_COMPUTE_ENSTDDEV_VALIDATOR, p.id)
             print("|    computing ensemble/M sigma")
             stddev = ensemble_wrapper(variables, weights_M, nprocs, meta, ensemble_stddev, cpc_ids)
             # correct normalization and take root
@@ -1012,17 +998,17 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 for proc, _ in enumerate(stddev[name]):
                     stddev[name][proc] = np.sqrt(stddev[name][proc]/weight_norm)
             #print(f"stddev: {stddev['state1'][0][0:3]}")
-            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, p.id)
             print(f'|   -> computing RMSZ-bias value')
             # TODO include the other rmsz test mentioned in Bake (X_c,i in X_0,j!=i ensemble)
-            trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
+            trigger(START_COMPUTE_RMSZ_VALIDATOR, p.id)
             df_zval_bias = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value_bias', cpc)
-            trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
+            trigger(STOP_COMPUTE_RMSZ_VALIDATOR, p.id)
             print('| ')
             print(f"|       RSMZ-bias: {df_zval_bias['value'].iloc[-1]}")
             print('| ')
             df_evaluate = df_evaluate.append(df_zval_bias, ignore_index=True)
-            trigger(STOP_ZVAL_BIAS_FULL_VALIDATOR, 0)
+            trigger(STOP_ZVAL_BIAS_FULL_VALIDATOR, p.id)
 
     df_evaluate = reduce_evaluate_df(validators, df_evaluate)
 
@@ -1279,7 +1265,9 @@ class Validator:
                     continue
                 progress = f"({ss}/{len(self.m_weights) * len(self.m_cpc_parameters)})"
                 print(f"Loading sid '{sid}' {progress}")
+                trigger(START_LOAD_STATE_VALIDATOR, 0)
                 load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+                trigger(STOP_LOAD_STATE_VALIDATOR, 0)
                 ss += 1
         trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
 
