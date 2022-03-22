@@ -1,0 +1,28 @@
+{
+  "variables" : [ "state1" ],
+  "compression" : {
+    "method"    : "validate",
+    "validate" : [
+      {
+        "name" : "state1",
+        "mode" : "fpzip",
+        "parameter" : [0,16,24,32,40,48]
+      }
+    ],
+    "adapted" : [
+      {
+        "name"  : "state1",
+        "sigma" : 10e-4,
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : [0,1,2,3,4,5,6,7,8,9,10]
+      },
+      {
+        "name"  : "state1",
+        "mode" : "fpzip",
+        "sigma" : 10e-4,
+        "parameter" : [18,20,22,24,26,28,30,32,34,36,38,40]
+      }
+    ]
+  }
+}
