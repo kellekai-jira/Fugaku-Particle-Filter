@@ -43,8 +43,10 @@ void ZipController::init() {
   m_parameter_id = 0;
 
   m_is_first = true;
-
-  std::ifstream jsonfile("compression.json");
+  
+  assert(getenv("MELISSA_LORENZ_CPC_CONFIG") != NULL && "provide a config file path!");
+  char* cfg_file_path = getenv("MELISSA_LORENZ_CPC_CONFIG");
+  std::ifstream jsonfile(cfg_file_path);
 
   json::value tree = json::parse( stream_as_string(jsonfile) );
   
