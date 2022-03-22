@@ -18,6 +18,42 @@
         "parameter" : 0
       },
       {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : 4
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : 6
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : 8
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "precision",
+        "parameter" : 16
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "precision",
+        "parameter" : 24
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "precision",
+        "parameter" : 32
+      },
+      {
         "name"  : "state1",
         "sigma" : 10e-7,
         "mode" : "fpzip",

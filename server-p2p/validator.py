@@ -20,7 +20,7 @@ import sys
 from functools import reduce as py_reduce
 import pandas_zmq
 import gc
-#import zfpy
+import zfpy
 
 '''
 (from Baker et al, 2014)
@@ -159,21 +159,21 @@ def get_proc_data_ckpt(proc, sid, name, meta):
             data = [*data, *block]
         out = np.array(data)
 
-    #elif item['mode'] == FTI_CPC_ZFP:
-    #    count = item['count']
-    #    size = item['size']
-    #    ckpt.seek(item['offset'])
-    #    byte_data = ckpt.read(size)
-    #    if item['type'] == FTI_CPC_ACCURACY:
-    #        tolerance = 10 ** (-1 * item['parameter'])
-    #        precision = -1
-    #    elif item['type'] == FTI_CPC_PRECISION:
-    #        tolerance = -1
-    #        precision = item['parameter']
-    #    else:
-    #        print("ERROR - unknown compression type")
-    #        exit(-1)
-    #    out = zfpy._decompress(byte_data, zfpy.type_double, (count,), tolerance=tolerance, precision=precision)
+    elif item['mode'] == FTI_CPC_ZFP:
+        count = item['count']
+        size = item['size']
+        ckpt.seek(item['offset'])
+        byte_data = ckpt.read(size)
+        if item['type'] == FTI_CPC_ACCURACY:
+            tolerance = 10 ** (-1 * item['parameter'])
+            precision = -1
+        elif item['type'] == FTI_CPC_PRECISION:
+            tolerance = -1
+            precision = item['parameter']
+        else:
+            print("ERROR - unknown compression type")
+            exit(-1)
+        out = zfpy._decompress(byte_data, zfpy.type_double, (count,), tolerance=tolerance, precision=precision)
 
     ckpt.close()
 
@@ -939,6 +939,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             #print(f"stddev: {stddev['state1'][0][0:3]}")
             trigger(STOP_COMPUTE_ENSTDDEV_VALIDATOR, 0)
             print(f'|   -> computing RMSZ value')
+            # TODO include the other rmsz test mentioned in Bake (X_c,i in X_0,j!=i ensemble)
             trigger(START_COMPUTE_RMSZ_VALIDATOR, 0)
             df_zval = evaluate_wrapper(variables, sid_EXCL, ndims, nprocs, meta, zval, reduce_sse, 'z_value', cpc)
             trigger(STOP_COMPUTE_RMSZ_VALIDATOR, 0)
