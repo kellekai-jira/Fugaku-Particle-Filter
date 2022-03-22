@@ -13,7 +13,7 @@ namespace json = boost::json;
 
 namespace melissa {
   namespace zip {
-    void populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, 
+    int populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, 
         std::map<std::string,int> & num_vars_parameters, std::map<std::string,int> & vars_parameter_id, FTIT_CPC_CASE zcase );
   }
 }
@@ -39,7 +39,7 @@ bool ZipController::to_validate() {
 
 void ZipController::init() {
 
-  m_num_parameters = 1;
+  m_num_parameters = 0;
   m_parameter_id = 0;
 
   m_is_first = true;
@@ -82,9 +82,8 @@ void ZipController::init() {
     for ( ; am_var != root["adapt"].as_array().end(); am_var++ ) {
 
       json::object obj = am_var->as_object();
-
-      melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_ADAPT );
-      m_num_parameters++;
+      int num_params = melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_ADAPT );
+      m_num_parameters += (num_params > 0) ? num_params : 0; 
 
     }
 
@@ -112,8 +111,8 @@ void ZipController::init() {
       
       json::object obj = am_var->as_object();
 
-      melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_VALIDATE );
-      m_num_parameters++;
+      int num_params = melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_VALIDATE );
+      m_num_parameters += (num_params > 0) ? num_params : 0; 
       MDBG("num parameters init zip: %d", m_num_parameters);
     }
     
@@ -125,29 +124,31 @@ void ZipController::init() {
 
 }
 
-void melissa::zip::populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, 
+int melissa::zip::populate( json::object & obj, std::map<std::string, std::vector<melissa::zip::zip_t> > & vars, 
     std::map<std::string,int> & vars_num_parameters, std::map<std::string,int> & vars_parameter_id, FTIT_CPC_CASE zcase ) {
   
   static int id = 1;
 
+  int cnt_params = 0;
+
   if ( obj.find("name") == obj.end() ) {
     std::cerr << "[error] variable without 'name'" << std::endl;
-    return;
+    return -1;
   }
 
   if ( !obj["name"].is_string() ) {
     std::cerr << "[error] variable 'name' has to be a string" << std::endl;
-    return;
+    return -1;
   }
 
   if ( obj.find("mode") == obj.end() ) {
     std::cerr << "[error] variable without 'mode'" << std::endl;
-    return;
+    return -1;
   }
 
   if ( (obj.find("sigma") == obj.end()) && (zcase == FTI_CPC_ADAPT) ) {
     std::cerr << "[error] variable without 'sigma' (i.e., error bound)" << std::endl;
-    return;
+    return -1;
   }   
 
   std::string name = obj["name"].as_string().c_str(); str_to_lower(name);
@@ -157,6 +158,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
   if( vars.find(name) == vars.end() ) {
     melissa::zip::zip_t zip_init;
     vars[name].push_back(zip_init);
+    cnt_params++;
     MDBG("adding cpc -> (%d,%d,%d)", 0, 0, 0);
   }
 
@@ -166,7 +168,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
 
   if ( (obj.find("type") == obj.end()) && (mode == "zfp") ) {
     std::cerr << "[error] for 'mode' = 'zfp', 'type' can not be missing" << std::endl;
-    return;
+    return -1;
   }
 
   std::string type; 
@@ -203,18 +205,21 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    cnt_params++;
     MDBG("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_string() ) {
     zip.parameter = std::stoi( obj["parameter"].as_string().c_str() );
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    cnt_params++;
     MDBG("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_int64() ){
     zip.parameter = obj["parameter"].as_int64();
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    cnt_params++;
     MDBG("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_array() ) {
     auto pit = obj["parameter"].as_array().begin();
@@ -229,9 +234,12 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
         vars_num_parameters["name"]++;
       }
       vars[name].push_back(zip);
+      cnt_params++;
       MDBG("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
     }
   }
+
+  return cnt_params;
 }
 
 
