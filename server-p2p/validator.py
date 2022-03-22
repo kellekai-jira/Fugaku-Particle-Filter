@@ -958,6 +958,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
             trigger(STOP_ZVAL_FULL_VALIDATOR, 0)
 
+    del state_buffer[sid_DEL]
+    gc.collect()
+    
     # TODO compute ensemble average and stddev for full ensemble states
     z_value_bias = {}
     for p in cpc:
