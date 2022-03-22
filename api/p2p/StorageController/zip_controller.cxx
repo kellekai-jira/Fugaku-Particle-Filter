@@ -145,7 +145,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
     return;
   }
 
-  if ( obj.find("sigma") == obj.end() ) {
+  if ( (obj.find("sigma") == obj.end()) && is_adapt() ) {
     std::cerr << "[error] variable without 'sigma' (i.e., error bound)" << std::endl;
     return;
   }   
