@@ -157,6 +157,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
   if( vars.find(name) == vars.end() ) {
     melissa::zip::zip_t zip_init;
     vars[name].push_back(zip_init);
+    D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   }
 
   
@@ -202,16 +203,19 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_string() ) {
     zip.parameter = std::stoi( obj["parameter"].as_string().c_str() );
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_int64() ){
     zip.parameter = obj["parameter"].as_int64();
     zip.id = id++;
     vars_num_parameters["name"]++;
     vars[name].push_back(zip);
+    D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
   } else if ( obj["parameter"].is_array() ) {
     auto pit = obj["parameter"].as_array().begin();
     for ( ; pit != obj["parameter"].as_array().end(); pit++ ) {
@@ -225,6 +229,7 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
         vars_num_parameters["name"]++;
       }
       vars[name].push_back(zip);
+      D("adding cpc -> (%d,%d,%d)", zip.mode, zip.type, zip.parameter);
     }
   }
 }
