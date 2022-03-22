@@ -905,6 +905,7 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
 
     z_value = {}
+    cpc_ids = [0] * (len(global_weights) - 1)
     for p in cpc:
         sid_DEL = -1
         print('─' * 100)
@@ -926,7 +927,6 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
                 print(f"Loading sid '{sid_EXCL}' {progress}")
                 load_ckpt_data(meta, sid_EXCL, nprocs, "state1")
             weights_M = [w for w in global_weights if w != weight]
-            cpc_ids = [p.id if w == weight else 0 for w in global_weights]
             weight_norm = 0
             for w in weights_M:
                 weight_norm += w.weight
@@ -963,11 +963,10 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
     for p in cpc:
         if p.id == 0:
             continue
-        cpc_ids = []
+        cpc_ids = [p.id] * (len(global_weights)-1)
         ss = 1
         trigger(START_LOAD_STATE_FULL_VALIDATOR, 0)
         for weight in global_weights:
-            cpc_ids.append(p.id)
             evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
             del state_buffer[evict]
             gc.collect()
