@@ -598,7 +598,7 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
 
     for idx,weight in enumerate(weights):
 
-        sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc_ids[idx].id)
+        sid = encode_state_id(weight.state_id.t, weight.state_id.id, cpc_ids[idx])
 
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
