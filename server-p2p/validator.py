@@ -52,6 +52,8 @@ from common import bind_socket, parse
 
 assert (os.environ.get('MELISSA_DA_WORKER_ID') is not None)
 validator_id = int(os.getenv('MELISSA_DA_WORKER_ID'))
+assert (os.environ.get('MELISSA_LORENZ_CPC_CONFIG') is not None)
+json_cfg_path = os.getenv('MELISSA_LORENZ_CPC_CONFIG')
 
 print(f"My ID is: {validator_id}")
 
@@ -1087,7 +1089,7 @@ class Validator:
     def init(self):
         global server_socket, validator_socket, validator_id
 
-        with open( experimentPath + 'compression.json') as fp:
+        with open( json_cfg_path ) as fp:
             cpc_json = json.load(fp)
 
         host = get_node_name()
