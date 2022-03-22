@@ -4,9 +4,28 @@
     "method"    : "validate",
     "validate" : [
       {
+        "name"  : "state1",
+        "mode" : "half"
+      },
+      {
+        "name"  : "state1",
+        "mode" : "single"
+      },
+      {
+        "name" : "state1",
+        "mode" : "zfp",
+        "type" : "accuracy",
+        "parameter" : [4,6,8,0]
+      },
+      {
         "name" : "state1",
         "mode" : "zfp",
         "type" : "precision",
+        "parameter" : [16,24,32,40]
+      },
+      {
+        "name"  : "state1",
+        "mode" : "fpzip",
         "parameter" : [16,24,32,40]
       }
     ],
