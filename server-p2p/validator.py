@@ -165,7 +165,10 @@ def get_proc_data_ckpt(proc, sid, name, meta):
         ckpt.seek(item['offset'])
         byte_data = ckpt.read(size)
         if item['type'] == FTI_CPC_ACCURACY:
-            tolerance = 10 ** (-1 * item['parameter'])
+            if item['parameter'] == 0:
+                tolerance = 0
+            else:
+                tolerance = 10 ** (-1 * item['parameter'])
             precision = -1
         elif item['type'] == FTI_CPC_PRECISION:
             tolerance = -1
