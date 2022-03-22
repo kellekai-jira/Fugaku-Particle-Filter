@@ -196,31 +196,37 @@ void melissa::zip::populate( json::object & obj, std::map<std::string, std::vect
   zip.mode    = melissa::zip::string2mode(mode);
   zip.type    = melissa::zip::string2type(type);
   zip.sigma   = sigma;
-  zip.id      = id++;
 
   if ( obj.find("parameter") == obj.end() ) {
     zip.parameter = 0;
+    zip.id = id++;
+    vars_num_parameters["name"]++;
     vars[name].push_back(zip);
   } else if ( obj["parameter"].is_string() ) {
     zip.parameter = std::stoi( obj["parameter"].as_string().c_str() );
+    zip.id = id++;
+    vars_num_parameters["name"]++;
     vars[name].push_back(zip);
   } else if ( obj["parameter"].is_int64() ){
     zip.parameter = obj["parameter"].as_int64();
+    zip.id = id++;
+    vars_num_parameters["name"]++;
     vars[name].push_back(zip);
   } else if ( obj["parameter"].is_array() ) {
     auto pit = obj["parameter"].as_array().begin();
     for ( ; pit != obj["parameter"].as_array().end(); pit++ ) {
       if ( pit->is_string() ) {
         zip.parameter = std::stoi( pit->as_string().c_str() );
+        zip.id = id++;
+        vars_num_parameters["name"]++;
       } else if ( pit->is_int64() ){
         zip.parameter = pit->as_int64();
+        zip.id = id++;
+        vars_num_parameters["name"]++;
       }
       vars[name].push_back(zip);
     }
   }
-    
-  vars_num_parameters["name"]++;
-
 }
 
 
