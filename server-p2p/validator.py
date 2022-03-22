@@ -1047,14 +1047,25 @@ class Validator:
         assert(cpc_json['compression']['method'] == 'validate')
 
         for item in cpc_json['compression']['validate']:
-            if item['name'] not in self.m_varnames_cpc:
-                self.m_varnames_cpc.append(item['name'])
-            self.m_cpc_parameters.append(cpc_t(
-                item['name'],
-                item['mode'],
-                item['type'],
-                item['parameter']
-            ))
+            name = None
+            mode = None
+            type = None
+            if 'name' in item:
+                name = item['name']
+                if item['name'] not in self.m_varnames_cpc:
+                    self.m_varnames_cpc.append(item['name'])
+            if 'mode' in item:
+                mode = item['mode']
+            if 'type' in item:
+                type = item['type']
+            if 'parameter' in item:
+                try:
+                    for p in item['parameter']:
+                        self.m_cpc_parameters.append(cpc_t(name, mode, type, int(p)))
+                except:
+                    self.m_cpc_parameters.append(cpc_t(name, mode, type, int(item['parameter'])))
+            else:
+                self.m_cpc_parameters.append(cpc_t(name, mode, 0, 0))
 
         self.m_is_validate = True
 

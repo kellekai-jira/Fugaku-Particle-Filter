@@ -5,81 +5,28 @@
     "validate" : [
       {
         "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "half",
-        "type" : "accuracy",
-        "parameter" : 0
+        "mode" : "half"
       },
       {
         "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "single",
-        "type" : "accuracy",
-        "parameter" : 0
+        "mode" : "single"
       },
       {
         "name" : "state1",
         "mode" : "zfp",
         "type" : "accuracy",
-        "parameter" : 4
-      },
-      {
-        "name" : "state1",
-        "mode" : "zfp",
-        "type" : "accuracy",
-        "parameter" : 6
-      },
-      {
-        "name" : "state1",
-        "mode" : "zfp",
-        "type" : "accuracy",
-        "parameter" : 8
+        "parameter" : [0,4,6,8]
       },
       {
         "name" : "state1",
         "mode" : "zfp",
         "type" : "precision",
-        "parameter" : 16
-      },
-      {
-        "name" : "state1",
-        "mode" : "zfp",
-        "type" : "precision",
-        "parameter" : 24
-      },
-      {
-        "name" : "state1",
-        "mode" : "zfp",
-        "type" : "precision",
-        "parameter" : 32
+        "parameter" : [16,24,32,40]
       },
       {
         "name"  : "state1",
-        "sigma" : 10e-7,
         "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 24
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 32
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 40
-      },
-      {
-        "name"  : "state1",
-        "sigma" : 10e-7,
-        "mode" : "fpzip",
-        "type" : "accuracy",
-        "parameter" : 0
+        "parameter" : [16,24,32,40,0]
       }
     ],
     "adapted" : [
