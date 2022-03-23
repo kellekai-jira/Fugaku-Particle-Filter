@@ -944,8 +944,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             df_evaluate = df_evaluate.append(df_zval, ignore_index=True)
             trigger(STOP_ZVAL_FULL_VALIDATOR, p.id)
 
-    del state_buffer[sid_DEL]
-    gc.collect()
+    if sid_DEL in state_buffer:
+        del state_buffer[sid_DEL]
+        gc.collect()
 
     # TODO compute ensemble average and stddev for full ensemble states
     z_value_bias = {}
@@ -957,8 +958,9 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         trigger(START_LOAD_STATE_FULL_VALIDATOR, p.id)
         for weight in global_weights:
             evict = encode_state_id(weight.state_id.t, weight.state_id.id, p.id - 1)
-            del state_buffer[evict]
-            gc.collect()
+            if evict in state_buffer:
+                del state_buffer[evict]
+                gc.collect()
             sid = encode_state_id(weight.state_id.t, weight.state_id.id, p.id)
             if sid in state_buffer:
                 continue
