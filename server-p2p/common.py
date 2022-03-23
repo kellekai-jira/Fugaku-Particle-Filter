@@ -216,7 +216,7 @@ if os.getenv("MELISSA_DA_TIMING_REPORT"):
                         % (maybe_write.report_time, maybe_write.report_time - time.time()))
 
 if os.getenv("MELISSA_LORENZ_ITER_MAX"):
-    c = int(float(os.getenv("MELISSA_LORENZ_ITER_MAX"))) - 2
+    c = int(os.getenv("MELISSA_LORENZ_ITER_MAX")) - 2
     trigger.enabled = True
     maybe_write.report_cycle = c
     print("Will report timing information at cycle %d" % c )
