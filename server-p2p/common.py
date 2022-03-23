@@ -109,7 +109,7 @@ trigger.null_time = int(os.getenv("MELISSA_TIMING_NULL")) / 1000
 trigger.enabled = True
 
 
-def maybe_write( is_server = True, validator_id = -1 ):  # TODO: rename this in maybe_write_timing
+def maybe_write( is_server = True, validator_id = -1, cycle = -100 ):  # TODO: rename this in maybe_write_timing
     if not trigger.enabled:
         return False
 
@@ -158,7 +158,7 @@ def maybe_write( is_server = True, validator_id = -1 ):  # TODO: rename this in 
     # copied from write regions in TimingEvent
 
     # in seconds
-    if time.time() >= maybe_write.report_time:
+    if (time.time() >= maybe_write.report_time) or (cycle == maybe_write.report_cycle):
 
         trigger.enabled = False
 

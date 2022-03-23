@@ -28,7 +28,7 @@ import zfpy
 * CHARACTERIZING THE ORIGINAL DATA
 
 CR(F) compressed size/original size                                                     <- rate
-e_max   = max( |compressed_i - original_i| )                                            <- pointwise maximum error 
+e_max   = max( |compressed_i - original_i| )                                            <- pointwise maximum error
 RMSE    = sqrt( 1/N * sum( sq(e_i) ) ), e_i = compressed_i - original_i                 <- root mean square error
 PSNR    = 20 log10( max( original_i ) / RMSE )                                          <- peak signal to noise error
 rho     = ( sum( (orig_i - mean(orig)) * (compr_i - mean(compr)) ) ) \  # => cov(orig,compr)/(s_orig*s_compr) !> 0.99999
@@ -1255,6 +1255,9 @@ class Validator:
 
         self.populate_meta(global_weights, self.m_cpc_parameters)
 
+        # TODO get cycle in a better way
+        cycle=self.m_state_ids[0].t
+
         print(f"state_dimension: {self.m_state_dimension}")
         print(f"num_procs: {self.m_num_procs}")
 
@@ -1297,7 +1300,7 @@ class Validator:
         # remove old meta data
         self.m_meta.clear()
 
-        maybe_write(is_server=False, validator_id=validator_id)
+        maybe_write(is_server=False, validator_id=validator_id, cycle=cycle)
 
     # main
     def run(self):
