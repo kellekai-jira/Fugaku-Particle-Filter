@@ -1,0 +1,64 @@
+#!/bin/bash -x
+#
+#PJM -L "node=132"
+#PJM -L "rscgrp=small"
+#PJM -L "proc-openfd=1048576"
+#PJM -L "elapse=24:00:00"
+#PJM --mpi "proc=6336"
+#PJM --llio localtmp-size=80Gi
+#PJM -s
+
+
+export STATE_SIZE=64
+export TIME_TO_WRITE_TRACE=14400 # seconds
+
+export EXP_SOURCE_PATH="/home/ra000012/a04454/LAB/Melissa/melissa-da-particle-filter/examples/lorenz"
+export EXP_BASE_PATH="/2ndfs/ra000012/a04454"
+export EXP_OBS_DIR="/2ndfs/ra000012/a04454/obs_64MB_chaotic"
+export MELISSA_LORENZ_CPC_CONFIG=${EXP_SOURCE_PATH}/compression-zfp-precision.json
+
+# ----------------------------------------------------------------------
+#  SOURCE MELISSA STUFF
+# ----------------------------------------------------------------------
+
+. /home/ra000012/a04454/LAB/Melissa/env.sh
+
+# ----------------------------------------------------------------------
+#  OBSERVATION SETTINGS
+# ----------------------------------------------------------------------
+
+export STATE_SIZE_ELEM=`expr $STATE_SIZE \/ 8 \* 1048576`
+
+export MELISSA_LORENZ_NUM_RUNNERS=10
+export MELISSA_LORENZ_NUM_VALIDATORS=50
+export MELISSA_LORENZ_RUNNER_GROUP_SIZE=$(( (MELISSA_LORENZ_NUM_RUNNERS + 128 + 2 - 1)/128 ))
+export MELISSA_LORENZ_PROCS_RUNNERS=48
+export MELISSA_LORENZ_NODES_RUNNERS=1
+export MELISSA_LORENZ_MEMBERS=50
+export MELISSA_LORENZ_OBSERVATION_BLOCK_SIZE=1024
+export MELISSA_LORENZ_ITER_MAX=20
+export MELISSA_LORENZ_OBSERVATION_PERCENT=20
+export MELISSA_LORENZ_STATE_DIMENSION=$STATE_SIZE_ELEM
+export MELISSA_LORENZ_OBSERVATION_DIR="$EXP_OBS_DIR"
+
+# ----------------------------------------------------------------------
+#  PERFORM EXPERIMENT
+# ----------------------------------------------------------------------
+
+export MELISSA_LORENZ_TIMING_TRACE=$TIME_TO_WRITE_TRACE
+
+export EXP_TIME=`TZ=UTC-2 date +%^a-%d%m%Y-%H%M`
+
+EXP_FOLDER=${PJM_JOBNAME}_${PJM_JOBID}_M${MELISSA_LORENZ_NUM_RUNNERS}_${STATE_SIZE}MB_${EXP_TIME}
+
+export MELISSA_LORENZ_EXPERIMENT_DIR=${EXP_BASE_PATH}/$EXP_FOLDER
+mkdir -p $MELISSA_LORENZ_EXPERIMENT_DIR && cp ${EXP_SOURCE_PATH}/script.py $MELISSA_LORENZ_EXPERIMENT_DIR && cd $MELISSA_LORENZ_EXPERIMENT_DIR
+
+echo "starting simulation with $MELISSA_LORENZ_NUM_RUNNERS runners and $MELISSA_LORENZ_MEMBERS particles"
+echo "---| experiment directory: $MELISSA_LORENZ_EXPERIMENT_DIR"
+echo "---| observation directory: $MELISSA_LORENZ_OBSERVATION_DIR"
+echo "---| state size: $STATE_SIZE MB"
+echo "---| number of runners: $MELISSA_LORENZ_NUM_RUNNERS"
+echo "---| number of particles: $MELISSA_LORENZ_MEMBERS"
+
+python3 -u script.py > $MELISSA_LORENZ_EXPERIMENT_DIR/launcher.out 2>&1
