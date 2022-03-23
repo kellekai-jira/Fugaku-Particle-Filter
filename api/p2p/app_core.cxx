@@ -537,7 +537,7 @@ void ApiTiming::maybe_report() {
             hostinfo_file << "runner-" << std::setfill('0') << std::setw(5) << runner_id << ".hostinfo.csv";
             print_local_hostname( mpi.comm(), hostinfo_file.str() ); 
 
-            const std::array<EventTypeTranslation, 32> event_type_translations = {{
+            const std::array<EventTypeTranslation, 33> event_type_translations = {{
                 {START_ITERATION, STOP_ITERATION, "Iteration"},
                     {START_PROPAGATE_STATE, STOP_PROPAGATE_STATE, "Propagation"},
                     {START_IDLE_RUNNER, STOP_IDLE_RUNNER, "Runner idle"},
@@ -553,6 +553,7 @@ void ApiTiming::maybe_report() {
                     {START_LOAD_OBS, STOP_LOAD_OBS, "_LOAD_OBS"},
                     {START_PUSH_WEIGHT_TO_HEAD, STOP_PUSH_WEIGHT_TO_HEAD, "_PUSH_WEIGHT_TO_HEAD"},
                     {START_STORE, STOP_STORE, "_STORE"},
+                    {START_FTI_STORE, STOP_FTI_STORE, "_FTI_STORE"},
                     {START_IDLE_FTI_HEAD, STOP_IDLE_FTI_HEAD, "_IDLE_FTI_HEAD"},
                     {START_PUSH_STATE_TO_PFS, STOP_PUSH_STATE_TO_PFS, "_PUSH_STATE_TO_PFS"},
                     {START_PREFETCH, STOP_PREFETCH, "_PREFETCH"},

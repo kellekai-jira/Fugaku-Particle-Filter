@@ -264,13 +264,13 @@ void StorageController::m_pull_head( io_state_id_t state_id ) {
   //}
   if( !m_io->is_local( state_id ) ) {
     int id, t;
-    M_TRIGGER(PFS_PULL, to_ckpt_id(state_id) );
+    M_TRIGGER(PFS_PULL, state_id.t );
     m_io->stage( state_id, IO_STORAGE_L2, IO_STORAGE_L1 );
   }
   m_cached_states.insert( std::pair<io_id_t,io_state_id_t>( to_ckpt_id(state_id), state_id ) );
   assert( m_io->is_local( state_id ) && "state should be local now!" );
   state_pool++;
-  M_TRIGGER(STATE_LOCAL_CREATE, to_ckpt_id(state_id));
+  M_TRIGGER(STATE_LOCAL_CREATE, state_id.param);
 }
 
 void StorageController::m_pull_user( io_state_id_t state_id ) {

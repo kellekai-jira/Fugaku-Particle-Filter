@@ -115,6 +115,8 @@ enum TimingEventType
     STOP_MODEL_MESSAGE                 = 100, //(time only for the request)
     STATE_LOCAL_CREATE          = 101,  // parameter = parent_state.t
     STATE_LOCAL_DELETE           = 102  // parameter = parent_state.id
+    START_FTI_STORE          = 103,  // parameter = parent_state.t
+    STOP_FTI_STORE           = 104,  // parameter = parent_state.id
 
     //Server :  --> python!
     //(these are easily comparable with the old melissa-da measures)

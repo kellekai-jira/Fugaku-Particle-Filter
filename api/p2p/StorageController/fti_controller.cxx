@@ -294,14 +294,16 @@ bool FtiController::load( io_state_id_t state_id, io_level_t level ) {
   M_TRIGGER(START_FTI_LOAD, state_id.t);
   MDBG("try to load ckpt id: %ld", to_ckpt_id(state_id));
   bool res = FTI_Load( to_ckpt_id(state_id), m_io_level_map[level] ) == FTI_SCES;
-  M_TRIGGER(STOP_FTI_LOAD, state_id.id);
+  M_TRIGGER(STOP_FTI_LOAD, state_id.param);
   return res; 
 }
 
 void FtiController::store( io_state_id_t state_id, io_level_t level ) {
   assert( m_io_level_map.count(level) != 0 && "invalid checkpoint level" );
   MDBG("storing state {id:%d | t:%d | p:%d}", state_id.id, state_id.t, get_parameter_id());
+  M_TRIGGER(START_FTI_STORE, state_id.t);
   FTI_Checkpoint( to_ckpt_id(state_id), m_io_level_map[level] );
+  M_TRIGGER(STOP_FTI_STORE, state_id.param);
   //if( (state_id.t == 0) && m_zip_controller.is_validate() ) {
   //  for(int m=1; m<m_zip_controller.num_parameters(); m++) {
   //    for(auto const& var : m_var_id_map) {
@@ -389,7 +391,7 @@ void FtiController::stage( io_state_id_t state_id, io_level_t from, io_level_t t
 void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir, std::string l2_temp_dir,
     std::string l2_ckpt_dir, io_state_id_t state_id  ) {
 
-  M_TRIGGER(START_PUSH_STATE_TO_PFS,0);
+  M_TRIGGER(START_PUSH_STATE_TO_PFS,state_id.t);
   
   if( m_dict_bool["master_global"] ) {
     struct stat info;
@@ -503,14 +505,14 @@ void FtiController::stage_l1l2( std::string l1_ckpt_dir, std::string l1_meta_dir
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 1 << "' to '" << 4 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
   
-  M_TRIGGER(STOP_PUSH_STATE_TO_PFS,0);
+  M_TRIGGER(STOP_PUSH_STATE_TO_PFS,state_id.param);
 
 }
 
 void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir, std::string l1_meta_temp_dir,
     std::string l1_ckpt_dir, std::string l1_meta_dir, io_state_id_t state_id ) {
 
-  M_TRIGGER(START_COPY_STATE_FROM_PFS,0);
+  M_TRIGGER(START_COPY_STATE_FROM_PFS,state_id.t);
   
   MDBG("pulling state_id '{t: %d, id: %d}'", state_id.t, state_id.id);
 
@@ -635,7 +637,7 @@ void FtiController::stage_l2l1( std::string l2_ckpt_dir, std::string l1_temp_dir
   msg << "Conversion of Ckpt." << to_ckpt_id(state_id) << "from level '" << 4 << "' to '" << 1 << "' was successful";
   m_kernel.print(msg.str(), FTI_INFO);
 
-  M_TRIGGER(STOP_COPY_STATE_FROM_PFS,0);
+  M_TRIGGER(STOP_COPY_STATE_FROM_PFS,state_id.param);
 
 }
 
