@@ -1024,6 +1024,6 @@ if __name__ == '__main__':
         time.sleep(0.000001)
 
 
-        if maybe_write():
+        if maybe_write(cycle=assimilation_cycle):
             # also write trigger select events
             write_trigger_select_events()

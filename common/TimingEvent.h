@@ -191,6 +191,7 @@ private:
     std::unique_ptr<std::ofstream> fifo_os;
 
     time_t report_time = 0ll;
+    int m_report_cycle = -100
 
 public:
     std::list<TimingEvent> events;  // a big vector should be more performant!
@@ -209,6 +210,11 @@ public:
                 MPRT("Will report timing information at %lu unix seconds (in %lu seconds)",
                         report_time, report_time - time(NULL));
             }
+        }
+        
+        if (getenv("MELISSA_LORENZ_ITER_MAX")) {
+            m_report_cycle = atoi(getenv("MELISSA_LORENZ_ITER_MAX")) - 2;
+            MPRT("Will report timing information at cycle %d", m_report_cycle);
         }
 
         const char * fifo_file = getenv("MELISSA_DA_TEST_FIFO");
@@ -241,6 +247,24 @@ public:
         if (timing_to_fifo_testing) {
             *fifo_os << type << "," << parameter << std::endl;
             fifo_os->flush();
+        }
+    }
+
+    inline bool is_time_to_write(int cycle) {
+        static bool wrote = false;
+        if (wrote) {
+            // write only once!
+            return false;
+        }
+        // in seconds
+        if (report_time != 0 && time(NULL) >= report_time) {
+            wrote = true;
+            return true;
+        } else if ( m_report_cycle == cycle ){
+            wrote = true;
+            return true;
+        } else {
+            return false;
         }
     }
 
