@@ -516,7 +516,7 @@ void ApiTiming::maybe_report() {
     //if (runner_id != 0) {
         //return;
     //}
-    if (is_time_to_write()) {
+    if (is_time_to_write(field.current_step)) {
 #ifdef REPORT_TIMING  // TODO: clean up defines with all ranks too!
         if(comm_rank == 0 )
         {
