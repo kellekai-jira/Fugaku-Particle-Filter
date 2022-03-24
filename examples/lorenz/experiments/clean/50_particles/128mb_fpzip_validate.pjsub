@@ -1,10 +1,10 @@
 #!/bin/bash -x
 #
-#PJM -L "node=132"
+#PJM -L "node=72"
 #PJM -L "rscgrp=small"
 #PJM -L "proc-openfd=1048576"
 #PJM -L "elapse=24:00:00"
-#PJM --mpi "proc=6336"
+#PJM --mpi "proc=3456"
 #PJM --llio localtmp-size=80Gi
 #PJM -s
 
