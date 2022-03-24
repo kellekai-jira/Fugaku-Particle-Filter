@@ -191,7 +191,7 @@ private:
     std::unique_ptr<std::ofstream> fifo_os;
 
     time_t report_time = 0ll;
-    int m_report_cycle = -100
+    int m_report_cycle = -100;
 
 public:
     std::list<TimingEvent> events;  // a big vector should be more performant!
