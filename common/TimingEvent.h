@@ -213,7 +213,7 @@ public:
         }
         
         if (getenv("MELISSA_LORENZ_ITER_MAX")) {
-            m_report_cycle = atoi(getenv("MELISSA_LORENZ_ITER_MAX")) - 2;
+            m_report_cycle = atoi(getenv("MELISSA_LORENZ_ITER_MAX")) - 5;
             MPRT("Will report timing information at cycle %d", m_report_cycle);
         }
 
