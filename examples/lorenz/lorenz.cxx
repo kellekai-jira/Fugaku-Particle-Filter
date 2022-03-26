@@ -36,9 +36,9 @@ double calculate_weight( int cycle );
 //}
 
 const double F = 6;
-const double dt = 0.01;
+const double dt = 0.05;
 const double DT = 1;
-const double dt_init = 0.01;
+const double dt_init = 0.05;
 const double DT_init = 10;
 const double PI = 3.141592653589793238463;
 
