@@ -486,15 +486,15 @@ def evaluate(proc, sid, name, meta, func):
 
     global state_buffer
 
-    item = meta[sid][proc][name]
-    ckpt_file = item['ckpt_file']
-    ckpt = open(ckpt_file, 'rb')
-
     if sid not in state_buffer:
 
         state_buffer[sid] = {}
 
     if proc not in state_buffer[sid]:
+
+        item = meta[sid][proc][name]
+        ckpt_file = item['ckpt_file']
+        ckpt = open(ckpt_file, 'rb')
 
         print(f"loading state id:{sid}|rank:{proc} from file system")
 
