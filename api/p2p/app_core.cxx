@@ -511,7 +511,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     return nsteps;
 }
 
-void ApiTiming::maybe_report(int report_cycle=-1) {
+void ApiTiming::maybe_report(int report_cycle) {
     /// should be called once in a while to check if it is time to write the timing info now!
     //if (runner_id != 0) {
         //return;
