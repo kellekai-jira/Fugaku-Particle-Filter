@@ -172,7 +172,7 @@ public:
         osr.close();
     }
 
-    void maybe_report();
+    void maybe_report(int cycle = -1);
 };
 
 
