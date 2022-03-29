@@ -96,6 +96,8 @@ void StorageController::callback() {
     }
     storage.m_io->init_core();
     
+    m_cycle = -1;
+
     MDBG("[num_parameters:%d] (init_core) STORAGE CONTROLLER", storage.get_num_parameters());
     MDBG("[num_parameters:%d] (init_core|m_io) STORAGE CONTROLLER", storage.m_io->get_num_parameters());
     
@@ -375,6 +377,8 @@ void StorageController::m_request_post() {
   weight_message.ParseFromArray( buffer.data(), msg_size );
 
   assert( weight_message.has_weight() && "m does not contain a weight" );
+  
+  m_cycle = weight_message.weight().state_id().t();
 
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id(), 0 );
   

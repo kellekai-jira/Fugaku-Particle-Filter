@@ -330,7 +330,7 @@ void push_weight_to_head(double weight)
                     if (comm_rank == 0)
 #endif
                     {
-                    timing->maybe_report();
+                    timing->maybe_report(field.current_step);
                     }
 #endif
     } while (!has_msg(job_socket, 10));
@@ -364,7 +364,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     if (comm_rank == 0)
 #endif
     {
-    timing->maybe_report();
+    timing->maybe_report(field.current_step);
     }
 #endif
 
@@ -511,12 +511,13 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     return nsteps;
 }
 
-void ApiTiming::maybe_report() {
+void ApiTiming::maybe_report(int report_cycle=-1) {
     /// should be called once in a while to check if it is time to write the timing info now!
     //if (runner_id != 0) {
         //return;
     //}
-    if (is_time_to_write(field.current_step)) {
+
+    if (is_time_to_write(report_cycle)) {
 #ifdef REPORT_TIMING  // TODO: clean up defines with all ranks too!
         if(comm_rank == 0 )
         {
