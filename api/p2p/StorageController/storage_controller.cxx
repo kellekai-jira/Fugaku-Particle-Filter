@@ -96,7 +96,7 @@ void StorageController::callback() {
     }
     storage.m_io->init_core();
     
-    m_cycle = -1;
+    storage.m_cycle = -1;
 
     MDBG("[num_parameters:%d] (init_core) STORAGE CONTROLLER", storage.get_num_parameters());
     MDBG("[num_parameters:%d] (init_core|m_io) STORAGE CONTROLLER", storage.m_io->get_num_parameters());
