@@ -164,7 +164,7 @@ void StorageController::callback() {
     if (comm_rank == 0)
 #endif
     {
-  timing->maybe_report();
+  timing->maybe_report(storage.m_cycle);
     }
 #endif
 
@@ -380,6 +380,7 @@ void StorageController::m_request_post() {
   
   m_cycle = weight_message.weight().state_id().t();
 
+  MDBG("HEAD currently at cycle '%d'", m_cycle);
   io_state_id_t state_id( weight_message.weight().state_id().t(), weight_message.weight().state_id().id(), 0 );
   
   if ( storage.is_validate() ) {
