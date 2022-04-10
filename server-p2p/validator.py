@@ -1107,11 +1107,11 @@ class Validator:
         for name in self.m_varnames:
             self.m_cpc_parameters.append(cpc_t(name, 'none', 0, 0))
 
-        if cpc_json['compression']['method'] == 'adapt': return
+        if cpc_json['compression']['method'] == 'dynamic': return
 
-        assert(cpc_json['compression']['method'] == 'validate')
+        assert(cpc_json['compression']['method'] == 'validation')
 
-        for item in cpc_json['compression']['validate']:
+        for item in cpc_json['compression']['validation']:
             name = None
             mode = None
             type = None

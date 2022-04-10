@@ -61,7 +61,7 @@ void ZipController::init() {
     
   MDBG("ZIP INIT: is_adapt() -> %d, is_validate() -> %d!", is_adapt(), is_validate());
   
-  if ( method == "adapt" ) {
+  if ( method == "dynamic" ) {
     
     MDBG("zip mode -> ADAPT");
     
@@ -75,13 +75,13 @@ void ZipController::init() {
      *
      **************************************************************************/
 
-    if ( !root["adapt"].is_array() ) { 
+    if ( !root["dynamic"].is_array() ) { 
       std::cerr << "[error] unexpected structure in json file" << std::endl;
       return;
     }
 
-    auto am_var = root["adapt"].as_array().begin();
-    for ( ; am_var != root["adapt"].as_array().end(); am_var++ ) {
+    auto am_var = root["dynamic"].as_array().begin();
+    for ( ; am_var != root["dynamic"].as_array().end(); am_var++ ) {
 
       json::object obj = am_var->as_object();
       int num_params = melissa::zip::populate( obj, m_vars, m_vars_num_parameters, m_vars_parameter_id, FTI_CPC_ADAPT );
@@ -89,7 +89,7 @@ void ZipController::init() {
 
     }
 
-  } else if ( method == "validate" ) {
+  } else if ( method == "validation" ) {
     
     MDBG("zip mode -> VALIDATE");
 
@@ -103,13 +103,13 @@ void ZipController::init() {
      *
      **************************************************************************/
     
-    if ( !root["validate"].is_array() ) { 
+    if ( !root["validation"].is_array() ) { 
       std::cerr << "[error] unexpected structure in json file" << std::endl;
       return;
     }
 
-    auto am_var = root["validate"].as_array().begin();
-    for ( ; am_var != root["validate"].as_array().end(); am_var++ ) {
+    auto am_var = root["validation"].as_array().begin();
+    for ( ; am_var != root["validation"].as_array().end(); am_var++ ) {
       
       json::object obj = am_var->as_object();
 
