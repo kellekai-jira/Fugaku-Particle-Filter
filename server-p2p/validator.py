@@ -760,8 +760,8 @@ def allreduce_weights( validators, weights ):
     return weights
 
 
-def validate(meta, compare_function, compare_reduction, evaluate_function,
-             evaluate_reduction, ndims, nprocs, variables, cpc, state_ids, weights, validators):
+def validate(meta, compare_functions, compare_reductions, evaluate_functions,
+             evaluate_reductions, ndims, nprocs, variables, cpc, state_ids, weights, validators):
 
     global average, stddev, average_x
     print('[ Compute single state statistics ]')
@@ -811,6 +811,15 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
         print(f"|       range: {range}")
         print('| ')
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
+        # compute user functions
+        for idx in range(len(evaluate_functions)):
+            usr_function = evaluate_functions[idx]
+            usr_reduce = evaluate_reductions[idx]
+            df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
+            print('| ')
+            print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+            print('| ')
+            df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
             print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -868,6 +877,14 @@ def validate(meta, compare_function, compare_reduction, evaluate_function,
             print(f"|       PSNR: {psnr}")
             print('| ')
             df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_nrmse, df_emax, df_nemax, df_psnr] , ignore_index=True ), ignore_index=True )
+            for idx in range(len(compare_functions)):
+                usr_function = compare_functions[idx]
+                usr_reduce = compare_reductions[idx]
+                df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
+                print('| ')
+                print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+                print('| ')
+                df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
 
     weights_temp = weights.copy()
     global_weights = allreduce_weights( validators, weights )
@@ -1061,16 +1078,36 @@ class Validator:
             evaluation_reduction=None,
             compare_function=None,
             compare_reduction=None,
+            write_function=None
     ):
-
+        # compare function
         if compare_function is None:
-            self.m_compare_function = sse
+            self.m_compare_functions = [sse]
+        elif isinstance(compare_function, list):
+            self.m_compare_functions = compare_function
+        else:
+            self.m_compare_functions = [compare_function]
+        # compare reduction
         if compare_reduction is None:
-            self.m_compare_reduction = reduce_sse
+            self.m_compare_reductions = [reduce_sse]
+        elif isinstance(compare_reduction, list):
+            self.m_compare_reductions = compare_reduction
+        else:
+            self.m_compare_reductions = [compare_reduction]
+        # evaluation function
         if evaluation_function is None:
-            self.m_evaluation_function = energy
+            self.m_evaluation_functions = [energy]
+        elif isinstance(evaluation_function, list):
+            self.m_evaluation_functions = evaluation_function
+        else:
+            self.m_evaluation_functions = [evaluation_function]
+        # evaluation reduction
         if evaluation_reduction is None:
-            self.m_evaluation_reduction = reduce_energy
+            self.m_evaluation_reductions = [reduce_energy]
+        elif isinstance(evaluation_reduction, list):
+            self.m_evaluation_reductions = evaluation_reduction
+        else:
+            self.m_evaluation_reductions = [evaluation_reduction]
         self.m_meta = {}
         self.m_meta_compare = {}
         self.m_is_validate = False
@@ -1282,10 +1319,10 @@ class Validator:
             trigger(START_VALIDATE_VALIDATOR, 0)
             validate(
                 self.m_meta,
-                self.m_compare_function,
-                self.m_compare_reduction,
-                self.m_evaluation_function,
-                self.m_evaluation_reduction,
+                self.m_compare_functions,
+                self.m_compare_reductions,
+                self.m_evaluation_functions,
+                self.m_evaluation_reductions,
                 self.m_state_dimension,
                 self.m_num_procs,
                 self.m_varnames,
