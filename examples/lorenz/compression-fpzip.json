@@ -1,15 +1,15 @@
 {
   "variables" : [ "state1" ],
   "compression" : {
-    "method"    : "validate",
-    "validate" : [
+    "method"    : "validation",
+    "validation" : [
       {
         "name" : "state1",
         "mode" : "fpzip",
         "parameter" : [0,16,24,32,40,48]
       }
     ],
-    "adapted" : [
+    "dynamic" : [
       {
         "name"  : "state1",
         "sigma" : 10e-4,
