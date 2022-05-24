@@ -533,6 +533,7 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
         t, id, p = decode_state_id( sid )
         data_size = 0
         size_original = 0
+        print(f"nprocs: {nprocs}")
         for proc in range(nprocs):
             data_size += float(meta[sid][proc][name]['count'] * 8)
             size_original += float(meta[sid][proc][name]['size'])
@@ -774,6 +775,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f'|   -> computing max value')
         trigger(START_COMPUTE_VMAX_VALIDATOR, 0)
+        print(f"nprocs: {nprocs}")
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
         trigger(STOP_COMPUTE_VMAX_VALIDATOR, 0)
         xmax = df_vmax['value'].iloc[-1]
