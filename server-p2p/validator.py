@@ -1069,45 +1069,30 @@ class cpc_t:
         return self.__items
 
 
+def conditional_append( default, user ):
+    if user is None:
+        return [default]
+    if isinstance(user, list):
+        return [default] + user
+    return [default] + [user]
+
+
 class Validator:
 
     # set global class values
     def __init__(
             self,
-            evaluation_function=None,
-            evaluation_reduction=None,
-            compare_function=None,
-            compare_reduction=None,
+            evaluation_functions=None,
+            evaluation_reductions=None,
+            compare_functions=None,
+            compare_reductions=None,
             write_function=None
     ):
-        # compare function
-        if compare_function is None:
-            self.m_compare_functions = [sse]
-        elif isinstance(compare_function, list):
-            self.m_compare_functions = compare_function
-        else:
-            self.m_compare_functions = [compare_function]
-        # compare reduction
-        if compare_reduction is None:
-            self.m_compare_reductions = [reduce_sse]
-        elif isinstance(compare_reduction, list):
-            self.m_compare_reductions = compare_reduction
-        else:
-            self.m_compare_reductions = [compare_reduction]
-        # evaluation function
-        if evaluation_function is None:
-            self.m_evaluation_functions = [energy]
-        elif isinstance(evaluation_function, list):
-            self.m_evaluation_functions = evaluation_function
-        else:
-            self.m_evaluation_functions = [evaluation_function]
-        # evaluation reduction
-        if evaluation_reduction is None:
-            self.m_evaluation_reductions = [reduce_energy]
-        elif isinstance(evaluation_reduction, list):
-            self.m_evaluation_reductions = evaluation_reduction
-        else:
-            self.m_evaluation_reductions = [evaluation_reduction]
+
+        self.m_compare_functions = conditional_append(sse, compare_functions)
+        self.m_compare_reductions = conditional_append(reduce_sse, compare_reductions)
+        self.m_evaluation_functions = conditional_append(energy, evaluation_functions)
+        self.m_evaluation_reductions = conditional_append(reduce_energy, evaluation_reductions)
         self.m_meta = {}
         self.m_meta_compare = {}
         self.m_is_validate = False
