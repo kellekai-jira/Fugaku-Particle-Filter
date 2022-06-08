@@ -806,20 +806,20 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         average_x.append(df_avg['value'][0])
         print(f'|   -> computing range')
         df_range = create_dataframe_row('state1', 'range', xmax - xmin, cpc[0], state_id.t, state_id.id, 1.0, original)
-        range = df_range['value'].iloc[-1]
+        var_range = df_range['value'].iloc[-1]
         print('| ')
-        print(f"|       range: {range}")
+        print(f"|       range: {var_range}")
         print('| ')
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
         # compute user functions
         for idx in range(len(evaluate_functions)):
             usr_function = evaluate_functions[idx]
             usr_reduce = evaluate_reductions[idx]
-        #    df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
+            df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
             print('| ')
-        #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+            print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
             print('| ')
-        #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
+            df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
             print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
@@ -852,7 +852,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             trigger(START_COMPUTE_RMSE_VALIDATOR, p.id)
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             rmse = df_rmse['value'].iloc[-1]
-            nrmse = rmse/range
+            nrmse = rmse/var_range
             df_nrmse = create_dataframe_row('state1', 'nrmse', nrmse, p, state_id.t, state_id.id, cpc_rate, compared)
             trigger(STOP_COMPUTE_RMSE_VALIDATOR, p.id)
             print('| ')
@@ -863,7 +863,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             trigger(START_COMPUTE_PEMAX_VALIDATOR, p.id)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             emax = df_emax['value'].iloc[-1]
-            nemax = emax/range
+            nemax = emax/var_range
             df_nemax = create_dataframe_row('state1', 'nemax', nemax, p, state_id.t, state_id.id, cpc_rate, compared)
             trigger(STOP_COMPUTE_PEMAX_VALIDATOR, p.id)
             print('| ')
@@ -880,11 +880,11 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             for idx in range(len(compare_functions)):
                 usr_function = compare_functions[idx]
                 usr_reduce = compare_reductions[idx]
-            #    df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
+                df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
                 print('| ')
-            #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+                print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
                 print('| ')
-            #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
+                df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
 
     weights_temp = weights.copy()
     global_weights = allreduce_weights( validators, weights )
