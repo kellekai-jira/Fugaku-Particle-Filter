@@ -812,13 +812,13 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         print('| ')
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
         # compute user functions
-        #for idx in range(len(evaluate_functions)):
-        #    usr_function = evaluate_functions[idx]
-        #    usr_reduce = evaluate_reductions[idx]
+        for idx in range(len(evaluate_functions)):
+            usr_function = evaluate_functions[idx]
+            usr_reduce = evaluate_reductions[idx]
         #    df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
-        #    print('| ')
-        #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
-        #    print('| ')
+            print('| ')
+            print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+            print('| ')
         #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
