@@ -880,11 +880,11 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             for idx in range(len(compare_functions)):
                 usr_function = compare_functions[idx]
                 usr_reduce = compare_reductions[idx]
-                df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
+            #    df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
                 print('| ')
                 print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
                 print('| ')
-                df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
+            #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
 
     weights_temp = weights.copy()
     global_weights = allreduce_weights( validators, weights )
