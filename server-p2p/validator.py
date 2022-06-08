@@ -533,7 +533,6 @@ def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, ope
         t, id, p = decode_state_id( sid )
         data_size = 0
         size_original = 0
-        print(f"nprocs: {nprocs}")
         for proc in range(nprocs):
             data_size += float(meta[sid][proc][name]['count'] * 8)
             size_original += float(meta[sid][proc][name]['size'])
@@ -775,7 +774,6 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         original = encode_state_id(state_id.t, state_id.id, 0)
         print(f'|   -> computing max value')
         trigger(START_COMPUTE_VMAX_VALIDATOR, 0)
-        print(f"nprocs: {nprocs}")
         df_vmax = evaluate_wrapper(variables, original, ndims, nprocs, meta, maximum, reduce_maximum, 'maximum', cpc)
         trigger(STOP_COMPUTE_VMAX_VALIDATOR, 0)
         xmax = df_vmax['value'].iloc[-1]
@@ -814,14 +812,14 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         print('| ')
         df_evaluate = df_evaluate.append( pd.concat( [df_avg, df_vmax, df_vmin, df_range], ignore_index=True ), ignore_index=True )
         # compute user functions
-        for idx in range(len(evaluate_functions)):
-            usr_function = evaluate_functions[idx]
-            usr_reduce = evaluate_reductions[idx]
-            df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
-            print('| ')
-            print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
-            print('| ')
-            df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
+        #for idx in range(len(evaluate_functions)):
+        #    usr_function = evaluate_functions[idx]
+        #    usr_reduce = evaluate_reductions[idx]
+        #    df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
+        #    print('| ')
+        #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+        #    print('| ')
+        #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
         for p in cpc[1:]:
             print('─' * 100)
             print(f'|>  parameter-id: {p.id} ' + get_parameter_info(p))
