@@ -817,7 +817,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             usr_reduce = evaluate_reductions[idx]
         #    df_usr = evaluate_wrapper(variables, original, ndims, nprocs, meta, usr_function, usr_reduce, f"user_compare_{idx}", cpc)
             print('| ')
-            print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+        #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
             print('| ')
         #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
         for p in cpc[1:]:
@@ -882,7 +882,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
                 usr_reduce = compare_reductions[idx]
             #    df_usr = compare_wrapper(variables, [original, compared], ndims, nprocs, meta, usr_function, usr_reduce, f"usr_compare{idx}", cpc)
                 print('| ')
-                print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
+            #    print(f"|       usr_compare_{idx}: {df_usr['value'].iloc[-1]}")
                 print('| ')
             #    df_evaluate = df_evaluate.append( df_usr, ignore_index=True )
 
