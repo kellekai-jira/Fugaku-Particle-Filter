@@ -110,7 +110,9 @@ class ZipController {
   int m_parameter_id;
 
   std::map<std::string, std::set<melissa::zip::zip_t> > m_vars_set;
-  
+ 
+  std::set<std::string> m_cpc_var_init;
+
   bool m_is_first;
   bool m_validate_phase;
 

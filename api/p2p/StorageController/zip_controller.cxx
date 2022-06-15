@@ -257,7 +257,8 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
 
     double* original = (double*) data->ptr;
 
-    if( m_is_first ) {
+    if( m_cpc_var_init.find(name) == m_cpc_var_init.end() ) {
+    //if( m_is_first ) {
       select_parameters( data, name, original );
       std::cout << "== m_vars["<<name<<"] <- sorted ->" << std::endl;
       int i = 0;
@@ -269,7 +270,8 @@ void ZipController::adaptParameter ( FTI::data_t* data, std::string name ) {
         std::cout << "==    type      : " << p.type << std::endl;
       }
       fflush(stdout);
-      m_is_first = false;
+      m_cpc_var_init.insert(name);
+      //m_is_first = false;
     } else {
       minimize( data, name, original );
     }
