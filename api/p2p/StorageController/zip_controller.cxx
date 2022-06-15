@@ -332,11 +332,11 @@ void ZipController::select_parameters ( FTI::data_t* data, std::string name, dou
 
     for ( int i=0; i<data_train.count; i++ ) {
       double error = fabs( original[i] - compressed[i] );
+      if ( error > maxErrorTrain ) maxErrorTrain = error;
       if ( error > zip.sigma ) {
         inBound = false;
         break;
       }
-      if ( error > maxErrorTrain ) maxErrorTrain = error;
     }
     
     if ( zip.mode == 0 ) {
