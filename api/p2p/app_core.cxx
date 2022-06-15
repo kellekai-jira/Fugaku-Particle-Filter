@@ -347,6 +347,7 @@ int melissa_p2p_expose(const char* field_name, VEC_T *values, int64_t size, io_t
     static io_state_id_t parent_state;
     static io_state_id_t next_state;
     
+    MDBG( "Expose variable: '%s'", field_name );
     // Update pointer
     storage.protect( std::string(field_name), values, size, io_type );
     // return immediately if just field to expose
