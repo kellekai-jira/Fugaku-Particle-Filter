@@ -805,7 +805,8 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         print('| ')
         average_x.append(df_avg['value'][0])
         print(f'|   -> computing range')
-        df_range = create_dataframe_row('state1', 'range', xmax - xmin, cpc[0], state_id.t, state_id.id, 1.0, original)
+        # TODO FOR ALL VARS
+        #df_range = create_dataframe_row('state1', 'range', xmax - xmin, cpc[0], state_id.t, state_id.id, 1.0, original)
         var_range = df_range['value'].iloc[-1]
         print('| ')
         print(f"|       range: {var_range}")
@@ -853,29 +854,31 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             df_rmse = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, sse, reduce_sse, 'RMSE', cpc)
             rmse = df_rmse['value'].iloc[-1]
             nrmse = rmse/var_range
-            df_nrmse = create_dataframe_row('state1', 'nrmse', nrmse, p, state_id.t, state_id.id, cpc_rate, compared)
-            trigger(STOP_COMPUTE_RMSE_VALIDATOR, p.id)
-            print('| ')
-            print(f"|       RMSE: {rmse}")
-            print(f"|       RMSE (normalized): {nrmse}")
-            print('| ')
-            print(f'|   -> computing pointwise maximum error of compressed')
-            trigger(START_COMPUTE_PEMAX_VALIDATOR, p.id)
+            # TODO FOR ALL VARS
+            #df_nrmse = create_dataframe_row('state1', 'nrmse', nrmse, p, state_id.t, state_id.id, cpc_rate, compared)
+            #trigger(STOP_COMPUTE_RMSE_VALIDATOR, p.id)
+            #print('| ')
+            #print(f"|       RMSE: {rmse}")
+            #print(f"|       RMSE (normalized): {nrmse}")
+            #print('| ')
+            #print(f'|   -> computing pointwise maximum error of compressed')
+            #trigger(START_COMPUTE_PEMAX_VALIDATOR, p.id)
             df_emax = compare_wrapper( variables, [original, compared], ndims, nprocs, meta, pme, reduce_pme, 'PE_max', cpc)
             emax = df_emax['value'].iloc[-1]
             nemax = emax/var_range
-            df_nemax = create_dataframe_row('state1', 'nemax', nemax, p, state_id.t, state_id.id, cpc_rate, compared)
-            trigger(STOP_COMPUTE_PEMAX_VALIDATOR, p.id)
-            print('| ')
-            print(f"|       PE_max: {emax}")
-            print(f"|       PE_max (normalized): {nemax}")
-            print('| ')
-            print(f'|   -> computing peak signal to noise ratio')
-            psnr = 20 * np.log10( xmax / rmse )
-            df_psnr = create_dataframe_row('state1', 'psnr', psnr, p, state_id.t, state_id.id, cpc_rate, compared)
-            print('| ')
-            print(f"|       PSNR: {psnr}")
-            print('| ')
+            # TODO FOR ALL VARS
+            #df_nemax = create_dataframe_row('state1', 'nemax', nemax, p, state_id.t, state_id.id, cpc_rate, compared)
+            #trigger(STOP_COMPUTE_PEMAX_VALIDATOR, p.id)
+            #print('| ')
+            #print(f"|       PE_max: {emax}")
+            #print(f"|       PE_max (normalized): {nemax}")
+            #print('| ')
+            #print(f'|   -> computing peak signal to noise ratio')
+            #psnr = 20 * np.log10( xmax / rmse )
+            #df_psnr = create_dataframe_row('state1', 'psnr', psnr, p, state_id.t, state_id.id, cpc_rate, compared)
+            #print('| ')
+            #print(f"|       PSNR: {psnr}")
+            #print('| ')
             df_evaluate = df_evaluate.append( pd.concat([df_avg_compared, df_rho, df_rmse, df_nrmse, df_emax, df_nemax, df_psnr] , ignore_index=True ), ignore_index=True )
             for idx in range(len(compare_functions)):
                 usr_function = compare_functions[idx]
@@ -902,7 +905,8 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         progress = f"({ss}/{len(global_weights)})"
         print(f"Loading sid '{sid}' {progress}")
         trigger(START_LOAD_STATE_VALIDATOR, 0)
-        load_ckpt_data(meta, sid, nprocs, "state1")
+        for name in self.m_varnames:
+            load_ckpt_data(meta, sid, nprocs, name)
         trigger(STOP_LOAD_STATE_VALIDATOR, 0)
         ss += 1
     trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
@@ -928,7 +932,8 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             if sid_EXCL not in state_buffer:
                 progress = f"(1/1)"
                 print(f"Loading sid '{sid_EXCL}' {progress}")
-                load_ckpt_data(meta, sid_EXCL, nprocs, "state1")
+                for name in self.m_varnames:
+                    load_ckpt_data(meta, sid_EXCL, nprocs, name)
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
