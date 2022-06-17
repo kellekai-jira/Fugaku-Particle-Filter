@@ -186,7 +186,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
 
 
 #TODO remove name from arg list and add name as ke -> state_buffer[sid][name][proc]
-def load_ckpt_data(meta, sid, nranks, name):
+def load_ckpt_data(meta, sid, variables, nranks):
 
     global state_buffer
 
@@ -194,8 +194,10 @@ def load_ckpt_data(meta, sid, nranks, name):
 
     state_buffer[sid] = {}
 
-    for proc in range(nranks):
-        state_buffer[sid][proc] = get_proc_data_ckpt(proc, sid, name, meta)
+    for name in variables:
+        state_buffer[sid][name] = {}
+        for proc in range(nranks):
+            state_buffer[sid][name][proc] = get_proc_data_ckpt(proc, sid, name, meta)
 
     #with Pool() as pool:
     #    res = pool.map(partial(get_proc_data_ckpt, sid=sid, name=name, meta=meta), range(nranks))
@@ -414,7 +416,11 @@ def compare(proc, sids, name, meta, func):
 
             state_buffer[sid] = {}
 
-        if proc not in state_buffer[sid]:
+        if name not in state_buffer[sid]:
+
+            state_buffer[sid][name] = {}
+
+        if proc not in state_buffer[sid][name]:
 
             print(f"loading state id:{sid}|rank:{proc} from file system")
 
@@ -425,7 +431,7 @@ def compare(proc, sids, name, meta, func):
             if item['mode'] == 0:
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
-                state_buffer[sid][proc] = array.array('d', bytes)
+                state_buffer[sid][name][proc] = array.array('d', bytes)
 
             else:
                 data = []
@@ -442,11 +448,11 @@ def compare(proc, sids, name, meta, func):
                     block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                     data = [*data, *block]
 
-                state_buffer[sid][proc] = data
+                state_buffer[sid][name][proc] = data
 
             ckpt.close()
 
-        states.append(state_buffer[sid][proc])
+        states.append(state_buffer[sid][name][proc])
 
     return func(states, proc, name)
 
@@ -490,7 +496,11 @@ def evaluate(proc, sid, name, meta, func):
 
         state_buffer[sid] = {}
 
-    if proc not in state_buffer[sid]:
+    if name not in state_buffer[sid]:
+
+        state_buffer[sid][name] = {}
+
+    if proc not in state_buffer[sid][name]:
 
         item = meta[sid][proc][name]
         ckpt_file = item['ckpt_file']
@@ -502,7 +512,7 @@ def evaluate(proc, sid, name, meta, func):
             ckpt.seek(item['offset'])
             bytes = ckpt.read(item['size'])
 
-            state_buffer[sid][proc] = np.array(array.array('d', bytes))
+            state_buffer[sid][name][proc] = np.array(array.array('d', bytes))
 
         else:
             data = []
@@ -519,11 +529,11 @@ def evaluate(proc, sid, name, meta, func):
                 block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                 data = [*data, *block]
 
-            state_buffer[sid][proc] = np.array(data)
+            state_buffer[sid][name][proc] = np.array(data)
 
         ckpt.close()
 
-    return func(state_buffer[sid][proc], proc, name)
+    return func(state_buffer[sid][name][proc], proc, name)
 
 def evaluate_wrapper( variables, sid, ndim, nprocs, meta, func, reduce_func, operation, cpc ):
     pool = Pool()
@@ -599,7 +609,11 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
 
             state_buffer[sid] = {}
 
-        if proc not in state_buffer[sid]:
+        if name not in state_buffer[sid]:
+
+            state_buffer[sid][name] = {}
+
+        if proc not in state_buffer[sid][name]:
 
             ckpt = open(ckpt_file, 'rb')
 
@@ -609,7 +623,7 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
 
-                state_buffer[sid][proc] = np.array(array.array('d', bytes))
+                state_buffer[sid][name][proc] = np.array(array.array('d', bytes))
 
             else:
                 data = []
@@ -626,11 +640,11 @@ def ensemble_mean(proc, weights, cpc_ids, name, meta):
                     block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                     data = [*data, *block]
 
-                state_buffer[sid][proc] = np.array(data)
+                state_buffer[sid][name][proc] = np.array(data)
 
             ckpt.close()
 
-        ssum += weight.weight * state_buffer[sid][proc]
+        ssum += weight.weight * state_buffer[sid][name][proc]
 
     return ssum
 
@@ -654,7 +668,11 @@ def ensemble_stddev(proc, weights, cpc_ids, name, meta):
 
             state_buffer[sid] = {}
 
-        if proc not in state_buffer[sid]:
+        if name not in state_buffer[sid]:
+
+            state_buffer[sid][name] = {}
+
+        if proc not in state_buffer[sid][name]:
 
             ckpt = open(ckpt_file, 'rb')
 
@@ -664,7 +682,7 @@ def ensemble_stddev(proc, weights, cpc_ids, name, meta):
                 ckpt.seek(item['offset'])
                 bytes = ckpt.read(item['size'])
 
-                state_buffer[sid][proc] = np.array(array.array('d', bytes))
+                state_buffer[sid][name][proc] = np.array(array.array('d', bytes))
 
             else:
                 data = []
@@ -681,11 +699,11 @@ def ensemble_stddev(proc, weights, cpc_ids, name, meta):
                     block = fpzip.decompress(bytes, order='C')[0, 0, 0]
                     data = [*data, *block]
 
-                state_buffer[sid][proc] = np.array(data)
+                state_buffer[sid][name][proc] = np.array(data)
 
             ckpt.close()
 
-        ssum += weight.weight * (state_buffer[sid][proc] - average[name][proc])**2
+        ssum += weight.weight * (state_buffer[sid][name][proc] - average[name][proc])**2
 
     return ssum
 
@@ -905,8 +923,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
         progress = f"({ss}/{len(global_weights)})"
         print(f"Loading sid '{sid}' {progress}")
         trigger(START_LOAD_STATE_VALIDATOR, 0)
-        for name in self.m_varnames:
-            load_ckpt_data(meta, sid, nprocs, name)
+        load_ckpt_data(meta, sid, variables, nprocs)
         trigger(STOP_LOAD_STATE_VALIDATOR, 0)
         ss += 1
     trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
@@ -933,7 +950,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
                 progress = f"(1/1)"
                 print(f"Loading sid '{sid_EXCL}' {progress}")
                 for name in self.m_varnames:
-                    load_ckpt_data(meta, sid_EXCL, nprocs, name)
+                    load_ckpt_data(meta, sid_EXCL, variables, nprocs)
             weights_M = [w for w in global_weights if w != weight]
             weight_norm = 0
             for w in weights_M:
@@ -989,7 +1006,7 @@ def validate(meta, compare_functions, compare_reductions, evaluate_functions,
             progress = f"({ss}/{len(global_weights)})"
             print(f"Loading sid '{sid}' {progress}")
             trigger(START_LOAD_STATE_VALIDATOR, p.id)
-            load_ckpt_data(meta, sid, nprocs, "state1")
+            load_ckpt_data(meta, sid, variables, nprocs)
             trigger(STOP_LOAD_STATE_VALIDATOR, p.id)
             ss += 1
         trigger(STOP_LOAD_STATE_FULL_VALIDATOR, p.id)
@@ -1300,7 +1317,7 @@ class Validator:
                 progress = f"({ss}/{len(self.m_weights) * len(self.m_cpc_parameters)})"
                 print(f"Loading sid '{sid}' {progress}")
                 trigger(START_LOAD_STATE_VALIDATOR, 0)
-                load_ckpt_data(self.m_meta, sid, self.m_num_procs, "state1")
+                load_ckpt_data(self.m_meta, sid, self.m_varnames, self.m_num_procs)
                 trigger(STOP_LOAD_STATE_VALIDATOR, 0)
                 ss += 1
         trigger(STOP_LOAD_STATE_FULL_VALIDATOR, 0)
