@@ -185,7 +185,7 @@ def get_proc_data_ckpt(proc, sid, name, meta):
     return out
 
 
-
+#TODO remove name from arg list and add name as ke -> state_buffer[sid][name][proc]
 def load_ckpt_data(meta, sid, nranks, name):
 
     global state_buffer
