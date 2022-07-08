@@ -9,6 +9,61 @@
 #include <map>
 #include <cassert>
 #include "mpi_controller_impl.hpp"
+    
+struct topo_t {
+  topo_t() :
+    nbProc(-1),
+    nbNodes(-1),
+    myRank(-1),
+    splitRank(-1),
+    nodeSize(-1),
+    nbHeads(-1),
+    nbApprocs(-1),
+    groupSize(-1),
+    sectorID(-1),
+    nodeID(-1),
+    groupID(-1),
+    amIaHead(-1),
+    headRank(-1),
+    headRankNode(-1),
+    nodeRank(-1),
+    masterLocal(false),
+    masterGlobal(false),
+    groupRank(-1),
+    right(-1),
+    left(-1) {
+    body.resize(FTI_BUFS);
+  }
+  int nbProc;
+  int nbNodes;
+  int myRank;
+  int splitRank;
+  int nodeSize;
+  int nbHeads;
+  int nbApprocs;
+  int groupSize;
+  int sectorID;
+  int nodeID;
+  int groupID;
+  int amIaHead;
+  int headRank;
+  int headRankNode;
+  int nodeRank;
+  bool masterLocal;
+  bool masterGlobal;
+  int groupRank;
+  int right;
+  int left;
+  std::vector<int> body;
+};
+ 
+struct exec_t {
+  exec_t() :
+    globalComm(MPI_COMM_NULL) {}
+  MPI_Comm globalComm;
+  std::string id;
+};
+ 
 
 inline bool operator==(const io_state_id_t& lhs, const io_state_id_t& rhs) {
     return lhs.t == rhs.t && lhs.id == rhs.id;
@@ -98,6 +153,8 @@ class FtiController : public IoController {
     FTI::Kernel m_kernel;
     ZipController m_zip_controller;
     int m_runner_id;
+    topo_t m_topo;
+    exec_t m_exec;
 };
 
 #endif // _FTI_CONTROLLER_H_

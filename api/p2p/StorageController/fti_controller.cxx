@@ -148,7 +148,7 @@ void FtiController::init_core() {
   mpi.register_comm( "fti_comm_world", FTI_COMM_WORLD );
   mpi.set_comm( "fti_comm_world" );
   char tmp[FTI_BUFS];
-  if( FTI_AmIaHead() ) {
+  if( m_topo.amIaHead ) {
     snprintf(tmp, FTI_BUFS, "%s.head", m_kernel.conf->mTmpDir);
   } else {
     snprintf(tmp, FTI_BUFS, "%s.app", m_kernel.conf->mTmpDir);
@@ -210,44 +210,181 @@ void FtiController::init_core() {
 }
 
 void FtiController::sendrecv( const void* send_buffer, void* recv_buffer, int send_size, int recv_size, io_tag_t tag, io_msg_t message_type  ) {
-  if( FTI_AmIaHead() ) {
-    FTI_HeadRecv( recv_buffer, recv_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
-    FTI_HeadSend( send_buffer, send_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+  if( m_topo.amIaHead ) {
+    if( message_type == IO_MSG_ONE ) {
+      MPI_Recv(recv_buffer, recv_size, MPI_CHAR, m_topo.body[0],
+          m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+    } else if( message_type == IO_MSG_ALL ) {
+      int i=0; for(; i<m_topo.nbApprocs; i++) {
+        MPI_Recv(recv_buffer+i*recv_size, recv_size, MPI_CHAR, m_topo.body[i],
+            m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if ( message_type == IO_MSG_MST ) {
+      if ( m_topo.splitRank == 0 ) {
+        MPI_Recv(recv_buffer, recv_size, MPI_CHAR, m_topo.body[0],
+            m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else {
+      MERR("Unknownd mode");
+    }
+    if( message_type == IO_MSG_ONE ) {
+      MPI_Send(send_buffer, send_size, MPI_CHAR, m_topo.body[0],
+          m_io_tag_map[tag], m_exec.globalComm);
+    } else if( message_type == IO_MSG_ALL ) {
+      int i=0; for(; i<m_topo.nbApprocs; i++) {
+        MPI_Send(send_buffer, send_size, MPI_CHAR, m_topo.body[i],
+            m_io_tag_map[tag], m_exec.globalComm);
+      }
+    } else {
+      MERR("Unknownd mode");
+    }
   } else {
-    FTI_AppSend( send_buffer, send_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
-    FTI_AppRecv( recv_buffer, recv_size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Send(send_buffer, send_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Send(send_buffer, send_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Send(send_buffer, send_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+          m_exec.globalComm);
+    } else {
+      MERR("Unknownd mode");
+    }
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Recv(recv_buffer, recv_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Recv(recv_buffer, recv_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Recv(recv_buffer, recv_size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+          m_exec.globalComm, MPI_STATUS_IGNORE);
+    } else {
+      MERR("Unknownd mode");
+    }
   }
 }
 
 void FtiController::send( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
-  if( FTI_AmIaHead() ) {
-    FTI_HeadSend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+  if( m_topo.amIaHead ) {
+    if( message_type == IO_MSG_ONE ) {
+      MPI_Send(send_buffer, size, MPI_CHAR, m_topo.body[0],
+          m_io_tag_map[tag], m_exec.globalComm);
+    } else if( message_type == IO_MSG_ALL ) {
+      int i=0; for(; i<m_topo.nbApprocs; i++) {
+        MPI_Send(send_buffer, size, MPI_CHAR, m_topo.body[i],
+            m_io_tag_map[tag], m_exec.globalComm);
+      }
+    } else {
+      MERR("Unknownd mode");
+    }
   } else {
-    FTI_AppSend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Send(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Send(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Send(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+          m_exec.globalComm);
+    } else {
+      MERR("Unknownd mode");
+    }
   }
 }
 
 void FtiController::isend( const void* send_buffer, int size, io_tag_t tag, io_msg_t message_type, mpi_request_t & req  ) {
-  if( FTI_AmIaHead() ) {
-    FTI_HeadIsend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type], &req.mpi_request );
+  if( m_topo.amIaHead ) {
+		if( message_type == IO_MSG_ONE ) {
+			if( m_topo.masterLocal) {
+				MPI_Isend(send_buffer, size, MPI_CHAR, m_topo.body[0], m_io_tag_map[tag],
+						m_exec.globalComm, &req.mpi_request);
+			}
+		} else if( message_type == IO_MSG_ALL ) {
+			int i=0; for(; i<m_topo.nbApprocs; i++) {
+				MPI_Isend(send_buffer, size, MPI_CHAR, m_topo.body[i],
+						m_io_tag_map[tag], m_exec.globalComm, &req.mpi_request);
+			}
+		} else {
+			MERR("Unknownd mode");
+		}
   } else {
-    FTI_AppIsend( send_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type], &req.mpi_request );
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Isend(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, &req.mpi_request);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Isend(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, &req.mpi_request);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Isend(send_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+          m_exec.globalComm, &req.mpi_request);
+    } else {
+      MERR("Unknownd mode");
+    }
   }
 }
 
 void FtiController::recv( void* recv_buffer, int size, io_tag_t tag, io_msg_t message_type  ) {
   static int count = 0;
-  if( FTI_AmIaHead() ) {
+  if( m_topo.amIaHead ) {
     std::cout << "called : " << count << " times ["<<tag<<"]" << std::endl;
-    FTI_HeadRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    if( message_type == IO_MSG_ONE ) {
+      MPI_Recv(recv_buffer, size, MPI_CHAR, m_topo.body[0],
+          m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+    } else if( message_type == IO_MSG_ALL ) {
+      int i=0; for(; i<m_topo.nbApprocs; i++) {
+        MPI_Recv(recv_buffer+i*size, size, MPI_CHAR, m_topo.body[i],
+            m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if ( message_type == IO_MSG_MST ) {
+      if ( m_topo.splitRank == 0 ) {
+        MPI_Recv(recv_buffer, size, MPI_CHAR, m_topo.body[0],
+            m_io_tag_map[tag], m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else {
+      MERR("Unknownd mode");
+    }
     count++;
   } else {
-    FTI_AppRecv( recv_buffer, size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Recv(recv_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Recv(recv_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+            m_exec.globalComm, MPI_STATUS_IGNORE);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Recv(recv_buffer, size, MPI_CHAR, m_topo.headRank, m_io_tag_map[tag],
+          m_exec.globalComm, MPI_STATUS_IGNORE);
+    } else {
+      MERR("Unknownd mode");
+    }
   }
 }
 
 bool FtiController::probe( io_tag_t tag ) {
-  if( FTI_AmIaHead() ) {
+  if( m_topo.amIaHead ) {
     if( m_dict_bool["master_global"] ) { 
       if( tag == IO_TAG_PULL ) {
         return !m_state_pull_requests.empty();
@@ -260,7 +397,10 @@ bool FtiController::probe( io_tag_t tag ) {
         }
         return false;
       } else {
-        return FTI_HeadProbe( m_io_tag_map[tag] );
+        int flag = 0;
+        MPI_Iprobe(MPI_ANY_SOURCE, m_io_tag_map[tag], m_exec.globalComm,
+            &flag, MPI_STATUS_IGNORE); 
+        return (flag == 1);
       }
     } else {
       int flag; MPI_Iprobe( 0, tag, mpi.comm(), &flag, MPI_STATUS_IGNORE ); 
@@ -272,15 +412,51 @@ bool FtiController::probe( io_tag_t tag ) {
       return (bool)flag;
     }
   } else {
-    return FTI_AppProbe( m_io_tag_map[tag] );
+    int flag = 0;
+    MPI_Iprobe(m_topo.headRank, m_io_tag_map[tag], m_exec.globalComm,
+        &flag, MPI_STATUS_IGNORE); 
+    return (flag == 1);
   }
 }
 
 void FtiController::get_message_size( int* size, io_tag_t tag, io_msg_t message_type  ) {
-  if( FTI_AmIaHead() ) {
-    FTI_HeadGetMessageSize( size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+  if( m_topo.amIaHead ) {
+    std::vector<MPI_Status> status(m_topo.nbApprocs);
+    if( message_type == IO_MSG_ONE ) {
+      MPI_Probe( m_topo.body[0], m_io_tag_map[tag], m_exec.globalComm, &status[0] );
+      MPI_Get_count( &status[0], MPI_CHAR, size);
+    } else if( message_type == IO_MSG_ALL ) {
+      MERR("No implemented!");
+      //int i=0; for(; i<m_topo.nbApprocs; i++) {
+      //  MPI_Probe( m_topo.body[i], m_io_tag_map[tag], m_exec.globalComm, &status[i] );
+      //  MPI_Get_count( &status[i], MPI_CHAR, &sizes[i]);
+      //}
+    } else if ( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Probe( m_topo.body[0], m_io_tag_map[tag], m_exec.globalComm, &status[0] );
+        MPI_Get_count( &status[0], MPI_CHAR, size);
+      }
+    } else {
+      MERR("Unknownd mode");
+    }
   } else {
-    FTI_AppGetMessageSize( size, m_io_tag_map[tag], m_io_msg_map[message_type] );
+    MPI_Status status;
+    if( message_type == IO_MSG_ONE ) {
+      if( m_topo.masterLocal) {
+        MPI_Probe( m_topo.headRank, m_io_tag_map[tag], m_exec.globalComm, &status );
+        MPI_Get_count( &status, MPI_CHAR, size);
+      }
+    } else if( message_type == IO_MSG_MST ) {
+      if( m_topo.splitRank == 0 ) {
+        MPI_Probe( m_topo.headRank, m_io_tag_map[tag], m_exec.globalComm, &status );
+        MPI_Get_count( &status, MPI_CHAR, size);
+      }
+    } else if( message_type == IO_MSG_ALL ) {
+      MPI_Probe( m_topo.headRank, m_io_tag_map[tag], m_exec.globalComm, &status );
+      MPI_Get_count( &status, MPI_CHAR, size);
+    } else {
+      MERR("Unknownd mode");
+    }
   }
 }
 
